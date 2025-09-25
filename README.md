@@ -95,19 +95,30 @@ To access these services from outside your home network, configure port forwardi
 ### Router Configuration
 1. Access your router's admin panel (usually `192.168.1.1` or `192.168.0.1`)
 2. Navigate to "Port Forwarding" or "Virtual Servers" section
-3. Add the following port forwarding rules:
+3. Add port forwarding rules based on your needs:
 
-| Service | External Port | Internal IP | Internal Port | Protocol |
-|---------|---------------|-------------|---------------|----------|
-| AdGuard Home (DNS) | 53 | SERVER_IP | 53 | UDP |
-| AdGuard Home (Admin) | 8080 | SERVER_IP | 80 | TCP |
-| n8n | 5678 | SERVER_IP | 5678 | TCP |
-| Ollama | 11434 | SERVER_IP | 11434 | TCP |
+**Recommended for Remote Access (Most Common):**
+| Service | External Port | Internal IP | Internal Port | Protocol | Purpose |
+|---------|---------------|-------------|---------------|----------|---------|
+| n8n | 5678 | SERVER_IP | 5678 | TCP | Remote workflow management |
+| Ollama (Optional) | 11434 | SERVER_IP | 11434 | TCP | Remote AI API access |
+
+**AdGuard Home Port Information:**
+- **Port 3000**: Initial setup only (do not forward - use local access)
+- **Port 80**: Admin interface after setup (only forward if you need remote admin access)
+- **Port 53**: DNS service (only forward if you want to provide public DNS service - NOT recommended for home use)
+
+**Additional Ports (Only if Needed):**
+| Service | External Port | Internal IP | Internal Port | Protocol | Purpose |
+|---------|---------------|-------------|---------------|----------|---------|
+| AdGuard Admin | 8080 | SERVER_IP | 80 | TCP | Remote admin access (consider VPN instead) |
 
 ### Security Considerations
-- Consider using non-standard external ports for better security
-- Set up VPN access instead of direct port forwarding when possible
-- Regularly update your services and monitor access logs
+- **AdGuard Home**: Keep admin interface (port 80) local-only for security. Access remotely via VPN if needed
+- **DNS Service**: Do NOT forward port 53 unless you specifically want to run a public DNS service
+- **Use VPN**: Consider setting up WireGuard/OpenVPN instead of exposing services directly
+- **Non-standard ports**: Use different external ports (e.g., 15678 instead of 5678) for better security
+- **Regular updates**: Keep all services updated and monitor access logs
 
 ### Dynamic DNS (Optional)
 If your ISP provides a dynamic IP address, consider using a Dynamic DNS service like:
