@@ -68,7 +68,7 @@ services:
       - homeserver
 
   ollama-setup:
-    image: alpine/curl:latest
+    image: alpine:latest
     container_name: ollama-setup
     restart: "no"
     depends_on:
@@ -77,15 +77,19 @@ services:
       - homeserver
     command: >
       sh -c "
+        apk add --no-cache curl &&
         echo 'Waiting for Ollama to be ready...' &&
         sleep 15 &&
         echo 'Testing Ollama connectivity...' &&
         curl -f http://ollama:11434/api/version || (echo 'Ollama not ready, exiting' && exit 1) &&
-        echo 'Pulling coding model: deepseek-coder-v2...' &&
-        curl -X POST http://ollama:11434/api/pull -d '{\"name\":\"deepseek-coder-v2\"}' &&
-        echo 'Pulling chat model: llama3.1:8b...' &&
-        curl -X POST http://ollama:11434/api/pull -d '{\"name\":\"llama3.1:8b\"}' &&
-        echo 'Models installation initiated successfully!'
+        echo 'Starting model downloads...' &&
+        echo 'Pulling deepseek-coder-v2 (this may take several minutes)...' &&
+        curl -X POST http://ollama:11434/api/pull -d '{\"name\":\"deepseek-coder-v2\"}' -m 1800 &&
+        echo 'Waiting 30 seconds before next download...' &&
+        sleep 30 &&
+        echo 'Pulling llama3.1:8b (this may take several minutes)...' &&
+        curl -X POST http://ollama:11434/api/pull -d '{\"name\":\"llama3.1:8b\"}' -m 1800 &&
+        echo 'Model downloads initiated. Check progress with: docker exec ollama ollama ps'
       "
 
 networks:
