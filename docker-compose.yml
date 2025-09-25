@@ -60,6 +60,8 @@ services:
       - "${SERVER_IP}:11434:11434"
     environment:
       - OLLAMA_HOST=0.0.0.0
+      - OLLAMA_NUM_PARALLEL=${OLLAMA_NUM_PARALLEL:-1}
+      - OLLAMA_MAX_LOADED_MODELS=${OLLAMA_MAX_LOADED_MODELS:-1}
     volumes:
       - ./data/ollama:/root/.ollama
     networks:
