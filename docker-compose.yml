@@ -6,10 +6,10 @@ services:
     container_name: adguard-home
     restart: unless-stopped
     ports:
-      - "${SERVER_IP:-192.168.1.100}:53:53/tcp"
-      - "${SERVER_IP:-192.168.1.100}:53:53/udp"
-      - "${SERVER_IP:-192.168.1.100}:3000:3000/tcp"
-      - "${SERVER_IP:-192.168.1.100}:80:80/tcp"
+      - "${SERVER_IP}:53:53/tcp"
+      - "${SERVER_IP}:53:53/udp"
+      - "${SERVER_IP}:3000:3000/tcp"
+      - "${SERVER_IP}:80:80/tcp"
     volumes:
       - ./data/adguard/work:/opt/adguardhome/work
       - ./data/adguard/conf:/opt/adguardhome/conf
@@ -21,16 +21,16 @@ services:
     container_name: n8n
     restart: unless-stopped
     ports:
-      - "${SERVER_IP:-192.168.1.100}:5678:5678"
+      - "${SERVER_IP}:5678:5678"
     environment:
       - N8N_BASIC_AUTH_ACTIVE=true
-      - N8N_BASIC_AUTH_USER=${N8N_USER:-admin}
+      - N8N_BASIC_AUTH_USER=${N8N_USER}
       - N8N_BASIC_AUTH_PASSWORD=${N8N_PASSWORD}
-      - N8N_HOST=${SERVER_IP:-192.168.1.100}
+      - N8N_HOST=${SERVER_IP}
       - N8N_PORT=5678
       - N8N_PROTOCOL=http
-      - WEBHOOK_URL=http://${SERVER_IP:-192.168.1.100}:5678/
-      - GENERIC_TIMEZONE=${TIMEZONE:-UTC}
+      - WEBHOOK_URL=http://${SERVER_IP}:5678/
+      - GENERIC_TIMEZONE=${TIMEZONE}
     volumes:
       - ./data/n8n:/home/node/.n8n
     networks:
@@ -43,7 +43,7 @@ services:
     container_name: ollama
     restart: unless-stopped
     ports:
-      - "${SERVER_IP:-192.168.1.100}:11434:11434"
+      - "${SERVER_IP}:11434:11434"
     environment:
       - OLLAMA_HOST=0.0.0.0
     volumes:
