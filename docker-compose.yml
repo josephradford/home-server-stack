@@ -66,24 +66,24 @@ services:
       - homeserver
 
   ollama-setup:
-    image: ollama/ollama:latest
+    image: alpine/curl:latest
     container_name: ollama-setup
     restart: "no"
     depends_on:
       - ollama
-    volumes:
-      - ./scripts:/scripts
     networks:
       - homeserver
     command: >
       sh -c "
         echo 'Waiting for Ollama to be ready...' &&
-        sleep 10 &&
+        sleep 15 &&
+        echo 'Testing Ollama connectivity...' &&
+        curl -f http://ollama:11434/api/version || (echo 'Ollama not ready, exiting' && exit 1) &&
         echo 'Pulling coding model: deepseek-coder-v2...' &&
-        ollama --host ollama:11434 pull deepseek-coder-v2 &&
+        curl -X POST http://ollama:11434/api/pull -d '{\"name\":\"deepseek-coder-v2\"}' &&
         echo 'Pulling chat model: llama3.1:8b...' &&
-        ollama --host ollama:11434 pull llama3.1:8b &&
-        echo 'Models installed successfully!'
+        curl -X POST http://ollama:11434/api/pull -d '{\"name\":\"llama3.1:8b\"}' &&
+        echo 'Models installation initiated successfully!'
       "
 
 networks:
