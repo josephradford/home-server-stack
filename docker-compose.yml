@@ -43,6 +43,7 @@ services:
       - N8N_PROTOCOL=http
       - WEBHOOK_URL=http://${SERVER_IP}:5678/
       - GENERIC_TIMEZONE=${TIMEZONE}
+      - N8N_SECURE_COOKIE=${N8N_SECURE_COOKIE}
     volumes:
       - ./data/n8n:/home/node/.n8n
     networks:
