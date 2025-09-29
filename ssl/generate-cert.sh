@@ -19,11 +19,12 @@ openssl genrsa -out "$KEY_FILE" 2048
 # Generate certificate signing request
 openssl req -new -key "$KEY_FILE" -out server.csr -subj "/C=US/ST=Development/L=Development/O=Development/OU=Development/CN=$DOMAIN"
 
-# Generate self-signed certificate
+# Generate self-signed certificate with proper web server extensions
 openssl x509 -req -days "$DAYS" -in server.csr -signkey "$KEY_FILE" -out "$CERT_FILE" -extensions v3_req -extfile <(
 cat <<EOF
 [v3_req]
-keyUsage = keyEncipherment, dataEncipherment
+basicConstraints = CA:FALSE
+keyUsage = critical, digitalSignature, keyEncipherment
 extendedKeyUsage = serverAuth
 subjectAltName = @alt_names
 
