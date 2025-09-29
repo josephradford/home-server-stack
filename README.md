@@ -216,9 +216,38 @@ Expected resource consumption:
 - **Storage**: 20-30 GB for models and data
 - **CPU**: Low idle usage, higher during AI inference
 
+## Contributing
+
+We welcome contributions to improve this home server stack! Please see our [Contributing Guidelines](CONTRIBUTING.md) for details on:
+
+- How to submit bug reports and feature requests
+- Development workflow and branching strategy
+- Pull request process
+- Code review guidelines
+
+### Quick Contribution Guide
+
+1. **Fork the repository** on GitHub
+2. **Create a feature branch**: `git checkout -b feature/your-feature-name`
+3. **Make your changes** and test them locally
+4. **Commit your changes**: Use descriptive commit messages
+5. **Push to your fork**: `git push origin feature/your-feature-name`
+6. **Submit a pull request** using our PR template
+
+### Reporting Issues
+
+- **Bug reports**: Use the bug report template
+- **Feature requests**: Use the feature request template
+- **Questions**: Use the question template or GitHub Discussions
+
 ## Support
 
 For issues specific to individual services:
 - AdGuard Home: [Official Documentation](https://adguard.com/kb/)
 - n8n: [Official Documentation](https://docs.n8n.io/)
 - Ollama: [Official Documentation](https://ollama.ai/)
+
+For issues with this repository:
+- Check existing [GitHub Issues](https://github.com/josephradford/home-server-stack/issues)
+- Create a new issue using the appropriate template
+- See our [Contributing Guidelines](CONTRIBUTING.md) for more help

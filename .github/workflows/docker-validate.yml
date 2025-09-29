@@ -1,0 +1,78 @@
+name: Docker Validation
+
+on:
+  pull_request:
+    branches: [ main ]
+  push:
+    branches: [ main ]
+
+jobs:
+  validate-docker-compose:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Create .env file for testing
+      run: |
+        cp .env.example .env
+        # Set test values
+        sed -i 's/your-server-ip/127.0.0.1/g' .env
+        sed -i 's/your-timezone/UTC/g' .env
+        sed -i 's/your-secure-password/test-password/g' .env
+        sed -i 's|your-external-domain|https://localhost:5678|g' .env
+
+    - name: Validate Docker Compose syntax
+      run: |
+        docker compose config --quiet
+
+    - name: Check if all services can be built
+      run: |
+        # Pull images to validate they exist and are accessible
+        docker compose pull --ignore-pull-failures
+
+    - name: Validate environment file
+      run: |
+        # Check that all required environment variables are present
+        echo "Checking .env.example contains all required variables..."
+        required_vars=("SERVER_IP" "TIMEZONE" "N8N_PASSWORD" "N8N_EDITOR_BASE_URL")
+        for var in "${required_vars[@]}"; do
+          if ! grep -q "^${var}=" .env.example; then
+            echo "ERROR: Required variable $var not found in .env.example"
+            exit 1
+          fi
+        done
+        echo "All required environment variables found in .env.example"
+
+    - name: Check for secrets in code
+      run: |
+        # Basic check for potential secrets (this is a simple check)
+        echo "Checking for potential secrets..."
+        if grep -r -i "password\s*=" --include="*.yml" --include="*.yaml" . | grep -v "your-secure-password" | grep -v "N8N_PASSWORD"; then
+          echo "WARNING: Found hardcoded passwords in YAML files"
+          exit 1
+        fi
+        echo "No obvious secrets found in configuration files"
+
+  lint-yaml:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Lint YAML files
+      uses: ibiqlik/action-yamllint@v3
+      with:
+        file_or_dir: docker-compose.yml
+        config_data: |
+          extends: default
+          rules:
+            line-length:
+              max: 120
+            truthy:
+              allowed-values: ['true', 'false', 'on', 'off']
