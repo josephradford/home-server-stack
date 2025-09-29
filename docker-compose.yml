@@ -48,6 +48,7 @@ services:
       - N8N_EDITOR_BASE_URL=${N8N_EDITOR_BASE_URL}
       - GENERIC_TIMEZONE=${TIMEZONE}
       - N8N_SECURE_COOKIE=${N8N_SECURE_COOKIE}
+      - N8N_RUNNERS_TASK_TIMEOUT=${N8N_RUNNERS_TASK_TIMEOUT}
     volumes:
       - ./data/n8n:/home/node/.n8n
       - ./ssl:/ssl:ro
