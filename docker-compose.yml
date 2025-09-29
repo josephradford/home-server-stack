@@ -42,6 +42,7 @@ services:
       - N8N_PORT=5678
       - N8N_PROTOCOL=http
       - WEBHOOK_URL=http://${SERVER_IP}:5678/
+      - N8N_EDITOR_BASE_URL=${N8N_EDITOR_BASE_URL}
       - GENERIC_TIMEZONE=${TIMEZONE}
       - N8N_SECURE_COOKIE=${N8N_SECURE_COOKIE}
     volumes:
