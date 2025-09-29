@@ -40,13 +40,16 @@ services:
       - N8N_BASIC_AUTH_PASSWORD=${N8N_PASSWORD}
       - N8N_HOST=${SERVER_IP}
       - N8N_PORT=5678
-      - N8N_PROTOCOL=http
-      - WEBHOOK_URL=http://${SERVER_IP}:5678/
+      - N8N_PROTOCOL=${N8N_PROTOCOL}
+      - N8N_SSL_KEY=${N8N_SSL_KEY}
+      - N8N_SSL_CERT=${N8N_SSL_CERT}
+      - WEBHOOK_URL=https://${SERVER_IP}:5678/
       - N8N_EDITOR_BASE_URL=${N8N_EDITOR_BASE_URL}
       - GENERIC_TIMEZONE=${TIMEZONE}
       - N8N_SECURE_COOKIE=${N8N_SECURE_COOKIE}
     volumes:
       - ./data/n8n:/home/node/.n8n
+      - ./ssl:/ssl:ro
     networks:
       - homeserver
     depends_on:

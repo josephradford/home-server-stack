@@ -35,13 +35,21 @@ A complete Docker Compose setup for running AdGuard Home, n8n, and Ollama on you
    - `SERVER_IP`: Your server's local IP address
    - `TIMEZONE`: Your local timezone (e.g., `America/New_York`, `Europe/London`)
    - `N8N_PASSWORD`: A secure password for n8n access
+   - `N8N_EDITOR_BASE_URL`: Your external domain (e.g., `https://your-domain.ddns.net:5678`)
 
-3. **Start the services**
+3. **Generate SSL certificates** (for HTTPS support)
+   ```bash
+   cd ssl
+   ./generate-cert.sh your-domain.ddns.net
+   cd ..
+   ```
+
+4. **Start the services**
    ```bash
    docker compose up -d
    ```
 
-4. **Initial model setup** (runs automatically)
+5. **Initial model setup** (runs automatically)
    The setup will automatically download two optimized models:
    - `deepseek-coder-v2`: Lightweight coding assistant (8B parameters)
    - `llama3.1:8b`: General chat model (8B parameters)
@@ -51,7 +59,7 @@ A complete Docker Compose setup for running AdGuard Home, n8n, and Ollama on you
 After deployment, access your services at:
 
 - **AdGuard Home**: `http://SERVER_IP:3000` (initial setup) then `http://SERVER_IP:80`
-- **n8n**: `http://SERVER_IP:5678`
+- **n8n**: `https://SERVER_IP:5678` (HTTPS with self-signed certificate)
 - **Ollama**: `http://SERVER_IP:11434` (API endpoint)
 
 Replace `SERVER_IP` with your actual server IP address.
@@ -66,9 +74,12 @@ Replace `SERVER_IP` with your actual server IP address.
 5. After setup, access the admin panel at `http://SERVER_IP:80`
 
 ### n8n Setup
-1. Navigate to `http://SERVER_IP:5678`
-2. Login with credentials from your `.env` file
-3. Create your first workflow
+1. Navigate to `https://SERVER_IP:5678`
+2. Accept the self-signed certificate warning in your browser
+3. Login with credentials from your `.env` file
+4. Create your first workflow
+
+**Note**: When accessing n8n via HTTPS with a self-signed certificate, your browser will show a security warning. This is expected for development certificates. Click "Advanced" and "Proceed to [your-domain]" to continue.
 
 ### Ollama Usage
 Test the AI models:
@@ -100,7 +111,7 @@ To access these services from outside your home network, configure port forwardi
 **Recommended for Remote Access (Most Common):**
 | Service | External Port | Internal IP | Internal Port | Protocol | Purpose |
 |---------|---------------|-------------|---------------|----------|---------|
-| n8n | 5678 | SERVER_IP | 5678 | TCP | Remote workflow management |
+| n8n | 5678 | SERVER_IP | 5678 | TCP | Remote workflow management (HTTPS) |
 | Ollama (Optional) | 11434 | SERVER_IP | 11434 | TCP | Remote AI API access |
 
 **AdGuard Home Port Information:**

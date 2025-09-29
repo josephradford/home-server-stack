@@ -1,0 +1,9 @@
+# Ignore SSL certificate files
+*.key
+*.crt
+*.csr
+*.pem
+
+# Keep the generation script
+!generate-cert.sh
+!.gitignore
