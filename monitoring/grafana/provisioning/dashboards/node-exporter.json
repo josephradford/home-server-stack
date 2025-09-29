@@ -1,66 +1,64 @@
 {
-  "dashboard": {
-    "id": null,
-    "title": "Node Exporter Full",
-    "tags": ["prometheus", "node-exporter"],
-    "timezone": "browser",
-    "panels": [
-      {
-        "id": 1,
-        "title": "CPU Usage",
-        "type": "stat",
-        "targets": [
-          {
-            "expr": "100 - (avg by (instance) (irate(node_cpu_seconds_total{mode=\"idle\"}[5m])) * 100)",
-            "legendFormat": "CPU Usage %"
-          }
-        ],
-        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0}
-      },
-      {
-        "id": 2,
-        "title": "Memory Usage",
-        "type": "stat",
-        "targets": [
-          {
-            "expr": "(1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100",
-            "legendFormat": "Memory Usage %"
-          }
-        ],
-        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0}
-      },
-      {
-        "id": 3,
-        "title": "Disk Usage",
-        "type": "stat",
-        "targets": [
-          {
-            "expr": "(1 - (node_filesystem_avail_bytes{fstype!=\"tmpfs\"} / node_filesystem_size_bytes{fstype!=\"tmpfs\"})) * 100",
-            "legendFormat": "Disk Usage % - {{mountpoint}}"
-          }
-        ],
-        "gridPos": {"h": 8, "w": 24, "x": 0, "y": 8}
-      },
-      {
-        "id": 4,
-        "title": "Network Traffic",
-        "type": "graph",
-        "targets": [
-          {
-            "expr": "irate(node_network_receive_bytes_total{device!=\"lo\"}[5m])",
-            "legendFormat": "Receive - {{device}}"
-          },
-          {
-            "expr": "irate(node_network_transmit_bytes_total{device!=\"lo\"}[5m])",
-            "legendFormat": "Transmit - {{device}}"
-          }
-        ],
-        "gridPos": {"h": 8, "w": 24, "x": 0, "y": 16}
-      }
-    ],
-    "time": {"from": "now-1h", "to": "now"},
-    "refresh": "30s",
-    "schemaVersion": 27,
-    "version": 1
-  }
+  "id": null,
+  "title": "Node Exporter Full",
+  "tags": ["prometheus", "node-exporter"],
+  "timezone": "browser",
+  "panels": [
+    {
+      "id": 1,
+      "title": "CPU Usage",
+      "type": "stat",
+      "targets": [
+        {
+          "expr": "100 - (avg by (instance) (irate(node_cpu_seconds_total{mode=\"idle\"}[5m])) * 100)",
+          "legendFormat": "CPU Usage %"
+        }
+      ],
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0}
+    },
+    {
+      "id": 2,
+      "title": "Memory Usage",
+      "type": "stat",
+      "targets": [
+        {
+          "expr": "(1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100",
+          "legendFormat": "Memory Usage %"
+        }
+      ],
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0}
+    },
+    {
+      "id": 3,
+      "title": "Disk Usage",
+      "type": "stat",
+      "targets": [
+        {
+          "expr": "(1 - (node_filesystem_avail_bytes{fstype!=\"tmpfs\"} / node_filesystem_size_bytes{fstype!=\"tmpfs\"})) * 100",
+          "legendFormat": "Disk Usage % - {{mountpoint}}"
+        }
+      ],
+      "gridPos": {"h": 8, "w": 24, "x": 0, "y": 8}
+    },
+    {
+      "id": 4,
+      "title": "Network Traffic",
+      "type": "graph",
+      "targets": [
+        {
+          "expr": "irate(node_network_receive_bytes_total{device!=\"lo\"}[5m])",
+          "legendFormat": "Receive - {{device}}"
+        },
+        {
+          "expr": "irate(node_network_transmit_bytes_total{device!=\"lo\"}[5m])",
+          "legendFormat": "Transmit - {{device}}"
+        }
+      ],
+      "gridPos": {"h": 8, "w": 24, "x": 0, "y": 16}
+    }
+  ],
+  "time": {"from": "now-1h", "to": "now"},
+  "refresh": "30s",
+  "schemaVersion": 27,
+  "version": 1
 }
