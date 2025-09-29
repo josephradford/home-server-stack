@@ -85,4 +85,4 @@ volumes:
 
 networks:
   homeserver:
-    external: true
+    driver: bridge
