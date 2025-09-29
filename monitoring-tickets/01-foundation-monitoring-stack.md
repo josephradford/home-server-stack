@@ -8,14 +8,14 @@
 Implement the core monitoring infrastructure using Prometheus, Grafana, AlertManager, Node Exporter, and cAdvisor. This provides the foundation for all subsequent monitoring capabilities.
 
 ## Acceptance Criteria
-- [ ] Monitoring services added to docker-compose configuration
-- [ ] Prometheus collecting metrics from all containers
-- [ ] Grafana accessible with pre-configured dashboards
-- [ ] AlertManager configured for basic alerting
-- [ ] Node Exporter providing host metrics
-- [ ] cAdvisor providing container metrics
-- [ ] Data persistence configured for all monitoring services
-- [ ] Services accessible via defined ports
+- [x] Monitoring services added to docker-compose configuration
+- [x] Prometheus collecting metrics from all containers
+- [x] Grafana accessible with pre-configured dashboards
+- [x] AlertManager configured for basic alerting
+- [x] Node Exporter providing host metrics
+- [x] cAdvisor providing container metrics
+- [x] Data persistence configured for all monitoring services
+- [x] Services accessible via defined ports
 
 ## Technical Implementation Details
 
