@@ -21,10 +21,10 @@ jobs:
       run: |
         cp .env.example .env
         # Set test values
-        sed -i 's/your-server-ip/127.0.0.1/g' .env
-        sed -i 's/your-timezone/UTC/g' .env
-        sed -i 's/your-secure-password/test-password/g' .env
-        sed -i 's|your-external-domain|https://localhost:5678|g' .env
+        sed -i 's/192.168.1.100/127.0.0.1/g' .env
+        sed -i 's/your_secure_password_here/test-password/g' .env
+        sed -i 's/your_secure_grafana_password/test-grafana-password/g' .env
+        sed -i 's|https://your-domain:5678|https://localhost:5678|g' .env
 
     - name: Validate Docker Compose syntax
       run: |
@@ -39,7 +39,7 @@ jobs:
       run: |
         # Check that all required environment variables are present
         echo "Checking .env.example contains all required variables..."
-        required_vars=("SERVER_IP" "TIMEZONE" "N8N_PASSWORD" "N8N_EDITOR_BASE_URL")
+        required_vars=("SERVER_IP" "TIMEZONE" "N8N_PASSWORD" "N8N_EDITOR_BASE_URL" "GRAFANA_PASSWORD")
         for var in "${required_vars[@]}"; do
           if ! grep -q "^${var}=" .env.example; then
             echo "ERROR: Required variable $var not found in .env.example"
@@ -52,7 +52,7 @@ jobs:
       run: |
         # Basic check for potential secrets (this is a simple check)
         echo "Checking for potential secrets..."
-        if grep -r -i "password\s*=" --include="*.yml" --include="*.yaml" . | grep -v "your-secure-password" | grep -v "N8N_PASSWORD"; then
+        if grep -r -i "password\s*=" --include="*.yml" --include="*.yaml" . | grep -v "your-secure-password" | grep -v "N8N_PASSWORD" | grep -v "GF_SECURITY_ADMIN_PASSWORD"; then
           echo "WARNING: Found hardcoded passwords in YAML files"
           exit 1
         fi
