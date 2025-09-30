@@ -39,8 +39,40 @@ Foundation monitoring stack implemented with Prometheus, Grafana, AlertManager, 
 - **Node Exporter:** http://SERVER_IP:9100
 
 ## Pre-configured Dashboards
+- System Overview (CPU, memory, disk, network)
+- Container Health (Docker container status and resources)
+- Resource Utilization (Historical trends and top consumers)
 - Node Exporter Full (System metrics)
 - Docker Container Monitoring (Container metrics)
+
+## Troubleshooting
+
+### Grafana Not Starting - "data source not found" Error
+
+If Grafana fails to start with the error `Datasource provisioning error: data source not found`, the Grafana database may have corrupted state. To fix:
+
+```bash
+# Stop all services
+docker compose -f docker-compose.yml -f docker-compose.monitoring.yml down
+
+# Remove the Grafana volume to reset its database
+docker volume rm home-server-stack_grafana_data
+
+# Start services again - Grafana will re-provision from scratch
+docker compose -f docker-compose.yml -f docker-compose.monitoring.yml up -d
+
+# Verify Grafana is running
+docker logs grafana
+```
+
+**Note:** This will reset Grafana's database (users, manual dashboard changes, etc.), but all provisioned dashboards and datasources will be recreated automatically from the configuration files.
+
+### Dashboards Not Showing Data
+
+If dashboards load but show no data:
+1. Verify Prometheus is scraping targets: http://SERVER_IP:9090/targets
+2. Check that all exporters are running: `docker ps | grep -E "(node-exporter|cadvisor)"`
+3. Verify the Prometheus datasource in Grafana: Configuration → Data sources → Prometheus → Test
 
 ## Alert Rules
 - Instance Down (5 minute threshold)
