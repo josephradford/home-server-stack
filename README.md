@@ -52,7 +52,7 @@ A complete Docker Compose setup for running AdGuard Home, n8n, and Ollama on you
 5. **Initial model setup** (runs automatically)
    The setup will automatically download two optimized models:
    - `deepseek-coder-v2`: Lightweight coding assistant (8B parameters)
-   - `llama3.1:8b`: General chat model (8B parameters)
+   - `llama3.2:3b`: General chat model (3B parameters)
 
 ## Service Access
 
@@ -86,7 +86,7 @@ Test the AI models:
 ```bash
 # Chat with the general model
 curl http://SERVER_IP:11434/api/generate -d '{
-  "model": "llama3.1:8b",
+  "model": "llama3.2:3b",
   "prompt": "Hello, how are you?",
   "stream": false
 }'
