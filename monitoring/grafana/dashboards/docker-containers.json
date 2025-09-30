@@ -1,7 +1,10 @@
 {
   "id": null,
   "title": "Docker Container Monitoring",
-  "tags": ["docker", "cadvisor"],
+  "tags": [
+    "docker",
+    "cadvisor"
+  ],
   "timezone": "browser",
   "panels": [
     {
@@ -11,10 +14,19 @@
       "targets": [
         {
           "expr": "rate(container_cpu_usage_seconds_total{name!=\"\"}[5m]) * 100",
-          "legendFormat": "{{name}}"
+          "legendFormat": "{{name}}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          }
         }
       ],
-      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0}
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 0
+      }
     },
     {
       "id": 2,
@@ -23,10 +35,19 @@
       "targets": [
         {
           "expr": "container_memory_usage_bytes{name!=\"\"}",
-          "legendFormat": "{{name}}"
+          "legendFormat": "{{name}}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          }
         }
       ],
-      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0}
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 0
+      }
     },
     {
       "id": 3,
@@ -35,14 +56,27 @@
       "targets": [
         {
           "expr": "rate(container_network_receive_bytes_total{name!=\"\"}[5m])",
-          "legendFormat": "Receive - {{name}}"
+          "legendFormat": "Receive - {{name}}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          }
         },
         {
           "expr": "rate(container_network_transmit_bytes_total{name!=\"\"}[5m])",
-          "legendFormat": "Transmit - {{name}}"
+          "legendFormat": "Transmit - {{name}}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          }
         }
       ],
-      "gridPos": {"h": 8, "w": 24, "x": 0, "y": 8}
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 8
+      }
     },
     {
       "id": 4,
@@ -51,13 +85,25 @@
       "targets": [
         {
           "expr": "count by (name) (container_last_seen{name!=\"\"})",
-          "legendFormat": "{{name}}"
+          "legendFormat": "{{name}}",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          }
         }
       ],
-      "gridPos": {"h": 8, "w": 24, "x": 0, "y": 16}
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 16
+      }
     }
   ],
-  "time": {"from": "now-1h", "to": "now"},
+  "time": {
+    "from": "now-1h",
+    "to": "now"
+  },
   "refresh": "30s",
   "schemaVersion": 27,
   "version": 1
