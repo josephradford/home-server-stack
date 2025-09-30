@@ -96,8 +96,8 @@ services:
         curl -X POST http://ollama:11434/api/pull -d '{\"name\":\"deepseek-coder-v2\"}' -m 1800 &&
         echo 'Waiting 30 seconds before next download...' &&
         sleep 30 &&
-        echo 'Pulling llama3.1:8b (this may take several minutes)...' &&
-        curl -X POST http://ollama:11434/api/pull -d '{\"name\":\"llama3.1:8b\"}' -m 1800 &&
+        echo 'Pulling llama3.2:3b (this may take several minutes)...' &&
+        curl -X POST http://ollama:11434/api/pull -d '{\"name\":\"llama3.2:3b\"}' -m 1800 &&
         echo 'Model downloads initiated. Check progress with: docker exec ollama ollama ps'
       "
 
