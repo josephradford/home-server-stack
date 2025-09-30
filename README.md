@@ -64,6 +64,19 @@ After deployment, access your services at:
 
 Replace `SERVER_IP` with your actual server IP address.
 
+### Monitoring Stack (Optional)
+
+If you've deployed the monitoring stack with `docker-compose.monitoring.yml`, access these services:
+
+- **Grafana**: `http://SERVER_IP:3001` (login with credentials from `.env` file)
+- **Prometheus**: `http://SERVER_IP:9090` (metrics database)
+- **Alertmanager**: `http://SERVER_IP:9093` (alert management)
+
+**Grafana Dashboards:**
+- **System Overview**: `http://SERVER_IP:3001/d/system-overview` - CPU, memory, disk, and network metrics
+- **Container Health**: `http://SERVER_IP:3001/d/container-health` - Docker container status and resource usage
+- **Resource Utilization**: `http://SERVER_IP:3001/d/resource-utilization` - Historical trends and top consumers
+
 ## Initial Configuration
 
 ### AdGuard Home Setup
@@ -149,6 +162,11 @@ All service data is stored in the `./data/` directory:
 **Start services:**
 ```bash
 docker compose up -d
+```
+
+**Start with monitoring stack:**
+```bash
+docker compose -f docker-compose.yml -f docker-compose.monitoring.yml up -d
 ```
 
 **Stop services:**

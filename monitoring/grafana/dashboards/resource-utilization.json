@@ -19,7 +19,32 @@
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
   "id": null,
-  "links": [],
+  "links": [
+    {
+      "asDropdown": false,
+      "icon": "external link",
+      "includeVars": false,
+      "keepTime": true,
+      "tags": [],
+      "targetBlank": false,
+      "title": "System Overview",
+      "tooltip": "View current system metrics",
+      "type": "link",
+      "url": "/d/system-overview"
+    },
+    {
+      "asDropdown": false,
+      "icon": "external link",
+      "includeVars": false,
+      "keepTime": true,
+      "tags": [],
+      "targetBlank": false,
+      "title": "Container Health",
+      "tooltip": "View container status and health",
+      "type": "link",
+      "url": "/d/container-health"
+    }
+  ],
   "panels": [
     {
       "datasource": {
@@ -112,7 +137,8 @@
         }
       ],
       "title": "CPU Usage by Core",
-      "type": "timeseries"
+      "type": "timeseries",
+      "description": "Individual CPU core utilization over time. Helps identify single-threaded bottlenecks."
     },
     {
       "datasource": {
@@ -232,7 +258,8 @@
         }
       ],
       "title": "Memory Usage Trends",
-      "type": "timeseries"
+      "type": "timeseries",
+      "description": "Historical memory consumption breakdown showing used, buffers, cached, and available memory."
     },
     {
       "datasource": {
@@ -343,7 +370,8 @@
         }
       ],
       "title": "Disk I/O Trends",
-      "type": "timeseries"
+      "type": "timeseries",
+      "description": "Disk read and write throughput over time. Negative values show write operations."
     },
     {
       "datasource": {
@@ -454,7 +482,8 @@
         }
       ],
       "title": "Network Traffic Patterns",
-      "type": "timeseries"
+      "type": "timeseries",
+      "description": "Network bandwidth utilization trends for all interfaces. Negative values show transmit."
     },
     {
       "datasource": {
@@ -543,7 +572,8 @@
         }
       ],
       "title": "Container CPU Allocation",
-      "type": "timeseries"
+      "type": "timeseries",
+      "description": "Stacked view of CPU usage by container showing relative resource consumption."
     },
     {
       "datasource": {
@@ -691,7 +721,8 @@
           }
         }
       ],
-      "type": "table"
+      "type": "table",
+      "description": "Ranking of containers by CPU and memory usage. Useful for identifying resource-intensive workloads."
     }
   ],
   "refresh": "30s",

@@ -19,7 +19,32 @@
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
   "id": null,
-  "links": [],
+  "links": [
+    {
+      "asDropdown": false,
+      "icon": "external link",
+      "includeVars": false,
+      "keepTime": true,
+      "tags": [],
+      "targetBlank": false,
+      "title": "System Overview",
+      "tooltip": "View overall system metrics",
+      "type": "link",
+      "url": "/d/system-overview"
+    },
+    {
+      "asDropdown": false,
+      "icon": "external link",
+      "includeVars": false,
+      "keepTime": true,
+      "tags": [],
+      "targetBlank": false,
+      "title": "Resource Utilization",
+      "tooltip": "View historical resource trends",
+      "type": "link",
+      "url": "/d/resource-utilization"
+    }
+  ],
   "panels": [
     {
       "datasource": {
@@ -79,7 +104,8 @@
         }
       ],
       "title": "Containers Running",
-      "type": "stat"
+      "type": "stat",
+      "description": "Total number of active Docker containers currently running on the system."
     },
     {
       "datasource": {
@@ -133,7 +159,8 @@
         }
       ],
       "title": "Container Status",
-      "type": "piechart"
+      "type": "piechart",
+      "description": "Distribution of running containers by name. Each slice represents one container."
     },
     {
       "datasource": {
@@ -226,7 +253,8 @@
         }
       ],
       "title": "Container CPU Usage",
-      "type": "timeseries"
+      "type": "timeseries",
+      "description": "CPU usage percentage for each container over time."
     },
     {
       "datasource": {
@@ -319,7 +347,8 @@
         }
       ],
       "title": "Container Memory Usage",
-      "type": "timeseries"
+      "type": "timeseries",
+      "description": "Memory consumption in bytes for each running container."
     },
     {
       "datasource": {
@@ -430,7 +459,8 @@
         }
       ],
       "title": "Container Network I/O",
-      "type": "timeseries"
+      "type": "timeseries",
+      "description": "Network traffic rates for all containers. Negative values show transmit."
     },
     {
       "datasource": {
@@ -519,7 +549,8 @@
           }
         }
       ],
-      "type": "table"
+      "type": "table",
+      "description": "Number of container restarts in the past hour. Non-zero values may indicate issues."
     }
   ],
   "refresh": "30s",

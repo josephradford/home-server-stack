@@ -19,7 +19,32 @@
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
   "id": null,
-  "links": [],
+  "links": [
+    {
+      "asDropdown": false,
+      "icon": "external link",
+      "includeVars": false,
+      "keepTime": true,
+      "tags": [],
+      "targetBlank": false,
+      "title": "Container Health",
+      "tooltip": "View detailed container metrics",
+      "type": "link",
+      "url": "/d/container-health"
+    },
+    {
+      "asDropdown": false,
+      "icon": "external link",
+      "includeVars": false,
+      "keepTime": true,
+      "tags": [],
+      "targetBlank": false,
+      "title": "Resource Utilization",
+      "tooltip": "View historical resource trends",
+      "type": "link",
+      "url": "/d/resource-utilization"
+    }
+  ],
   "panels": [
     {
       "datasource": {
@@ -87,7 +112,8 @@
         }
       ],
       "title": "CPU Usage",
-      "type": "gauge"
+      "type": "gauge",
+      "description": "Overall CPU utilization across all cores. Yellow at 70%, red at 85%."
     },
     {
       "datasource": {
@@ -155,7 +181,8 @@
         }
       ],
       "title": "Memory Usage",
-      "type": "gauge"
+      "type": "gauge",
+      "description": "System memory usage including cache and buffers. Yellow at 80%, red at 90%."
     },
     {
       "datasource": {
@@ -223,7 +250,8 @@
         }
       ],
       "title": "Disk Usage",
-      "type": "gauge"
+      "type": "gauge",
+      "description": "Root filesystem usage. Yellow at 80%, red at 90%."
     },
     {
       "datasource": {
@@ -330,7 +358,8 @@
         }
       ],
       "title": "Load Average",
-      "type": "timeseries"
+      "type": "timeseries",
+      "description": "System load averages over 1, 5, and 15 minutes. Compare to CPU core count."
     },
     {
       "datasource": {
@@ -441,7 +470,8 @@
         }
       ],
       "title": "Network I/O",
-      "type": "timeseries"
+      "type": "timeseries",
+      "description": "Network traffic rates for all interfaces excluding loopback. Negative values show transmit."
     },
     {
       "datasource": {
@@ -502,7 +532,8 @@
         }
       ],
       "title": "System Uptime",
-      "type": "stat"
+      "type": "stat",
+      "description": "Time elapsed since last system boot."
     }
   ],
   "refresh": "30s",
