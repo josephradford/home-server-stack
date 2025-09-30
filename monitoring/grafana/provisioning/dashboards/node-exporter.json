@@ -29,18 +29,6 @@
       "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0}
     },
     {
-      "id": 3,
-      "title": "Disk Usage",
-      "type": "stat",
-      "targets": [
-        {
-          "expr": "(1 - (node_filesystem_avail_bytes{fstype!=\"tmpfs\",fstype!=\"squashfs\",device!~\"/dev/loop.*\",mountpoint!~\"/boot.*\"} / node_filesystem_size_bytes{fstype!=\"tmpfs\",fstype!=\"squashfs\",device!~\"/dev/loop.*\",mountpoint!~\"/boot.*\"})) * 100",
-          "legendFormat": "Disk Usage % - {{mountpoint}}"
-        }
-      ],
-      "gridPos": {"h": 8, "w": 24, "x": 0, "y": 8}
-    },
-    {
       "id": 4,
       "title": "Network Traffic",
       "type": "graph",
@@ -54,7 +42,7 @@
           "legendFormat": "Transmit - {{device}}"
         }
       ],
-      "gridPos": {"h": 8, "w": 24, "x": 0, "y": 16}
+      "gridPos": {"h": 8, "w": 24, "x": 0, "y": 8}
     }
   ],
   "time": {"from": "now-1h", "to": "now"},
