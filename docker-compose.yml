@@ -92,8 +92,8 @@ services:
         echo 'Testing Ollama connectivity...' &&
         curl -f http://ollama:11434/api/version || (echo 'Ollama not ready, exiting' && exit 1) &&
         echo 'Starting model downloads...' &&
-        echo 'Pulling deepseek-coder-v2 (this may take several minutes)...' &&
-        curl -X POST http://ollama:11434/api/pull -d '{\"name\":\"deepseek-coder-v2\"}' -m 1800 &&
+        echo 'Pulling deepseek-coder:6.7b (this may take several minutes)...' &&
+        curl -X POST http://ollama:11434/api/pull -d '{\"name\":\"deepseek-coder:6.7b\"}' -m 1800 &&
         echo 'Waiting 30 seconds before next download...' &&
         sleep 30 &&
         echo 'Pulling llama3.2:3b (this may take several minutes)...' &&
