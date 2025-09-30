@@ -34,7 +34,7 @@
       "type": "stat",
       "targets": [
         {
-          "expr": "(1 - (node_filesystem_avail_bytes{fstype!=\"tmpfs\",fstype!=\"squashfs\",device!~\"/dev/loop.*\"} / node_filesystem_size_bytes{fstype!=\"tmpfs\",fstype!=\"squashfs\",device!~\"/dev/loop.*\"})) * 100",
+          "expr": "(1 - (node_filesystem_avail_bytes{fstype!=\"tmpfs\",fstype!=\"squashfs\",device!~\"/dev/loop.*\",mountpoint!~\"/boot.*\"} / node_filesystem_size_bytes{fstype!=\"tmpfs\",fstype!=\"squashfs\",device!~\"/dev/loop.*\",mountpoint!~\"/boot.*\"})) * 100",
           "legendFormat": "Disk Usage % - {{mountpoint}}"
         }
       ],
