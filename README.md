@@ -51,8 +51,14 @@ A complete Docker Compose setup for running AdGuard Home, n8n, and Ollama on you
 
 5. **Initial model setup** (runs automatically)
    The setup will automatically download two optimized models:
-   - `deepseek-coder-v2`: Lightweight coding assistant (8B parameters)
+   - `deepseek-coder:6.7b`: Efficient coding assistant (6.7B parameters, quantized for better performance)
    - `llama3.2:3b`: General chat model (3B parameters)
+
+   **Why DeepSeek Coder 6.7B?**
+   - Optimized 4-bit quantization reduces memory footprint by ~75%
+   - Faster inference while maintaining code quality
+   - Better balance of performance vs. resource usage for home servers
+   - Designed specifically for code completion and programming tasks
 
 ## Service Access
 
@@ -106,7 +112,7 @@ curl http://SERVER_IP:11434/api/generate -d '{
 
 # Get coding help
 curl http://SERVER_IP:11434/api/generate -d '{
-  "model": "deepseek-coder-v2",
+  "model": "deepseek-coder:6.7b",
   "prompt": "Write a Python function to calculate fibonacci numbers",
   "stream": false
 }'
