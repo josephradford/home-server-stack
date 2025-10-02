@@ -251,7 +251,7 @@
       ],
       "title": "Disk Usage",
       "type": "gauge",
-      "description": "Root filesystem usage. Yellow at 80%, red at 90%."
+      "description": "Root filesystem usage. Yellow at 80%, red at 90%.\n\n⚠️ KNOWN ISSUE: Currently showing 0% due to node-exporter seeing container overlay filesystem instead of host filesystem. Actual disk usage can be checked with: df -h /"
     },
     {
       "datasource": {
