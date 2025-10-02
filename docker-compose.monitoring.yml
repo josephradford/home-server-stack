@@ -63,7 +63,7 @@ services:
       - homeserver
 
   cadvisor:
-    image: gcr.io/cadvisor/cadvisor:latest
+    image: gcr.io/cadvisor/cadvisor:v0.47.2
     container_name: cadvisor
     restart: unless-stopped
     ports:
@@ -73,11 +73,27 @@ services:
       - /var/run:/var/run:ro
       - /sys:/sys:ro
       - /dev/disk/:/dev/disk:ro
-    privileged: true
+    cap_add:
+      - SYS_PTRACE    # Required for process inspection
+      - SYS_ADMIN     # Required for cgroup access
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+      - apparmor=unconfined  # Required for cAdvisor to access system metrics
     devices:
-      - /dev/kmsg
+      - /dev/kmsg:/dev/kmsg:r  # Read-only access
+    read_only: true
+    tmpfs:
+      - /tmp
     networks:
       - homeserver
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
 volumes:
   prometheus_data:
