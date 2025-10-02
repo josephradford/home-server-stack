@@ -29,10 +29,11 @@ Replaced the blanket `privileged: true` flag with specific Linux capabilities re
 
 **Additional Security Measures:**
 1. **No New Privileges:** Prevents privilege escalation within the container
-2. **AppArmor Unconfined:** Required for cAdvisor to access system metrics (necessary trade-off)
-3. **Pinned Image Version:** Using `v0.47.2` instead of `latest` for reproducibility
-4. **Health Check:** Automated health monitoring to detect failures
-5. **Read-only Device Access:** `/dev/kmsg` mounted with minimal permissions
+2. **Read-only Root Filesystem:** Container filesystem is read-only with tmpfs for `/tmp`
+3. **AppArmor Unconfined:** Required for cAdvisor to access system metrics (necessary trade-off)
+4. **Pinned Image Version:** Using `v0.47.2` instead of `latest` for reproducibility
+5. **Health Check:** Automated health monitoring to detect failures
+6. **Read-only Device Access:** `/dev/kmsg` mounted with explicit read-only flag
 
 #### Security Impact
 
@@ -45,6 +46,7 @@ Replaced the blanket `privileged: true` flag with specific Linux capabilities re
 **After:**
 - Container limited to specific capabilities (SYS_PTRACE, SYS_ADMIN)
 - No privilege escalation possible
+- Read-only root filesystem prevents runtime modifications
 - Restricted device access
 - Attack surface reduction: ~95%
 
@@ -62,15 +64,33 @@ Replaced the blanket `privileged: true` flag with specific Linux capabilities re
 
 #### Validation
 
-Metrics collection verified:
+**Testing Performed (2025-10-02):**
+
+Container Status:
+- ✅ Container starts successfully with read-only filesystem
+- ✅ Health check passing (status: healthy)
+- ✅ No critical errors in container logs
+- ✅ Capabilities correctly configured (verified via docker inspect)
+
+Metrics Collection:
 - ✅ Container CPU metrics
 - ✅ Container memory metrics
 - ✅ Container network metrics
 - ✅ Container filesystem metrics
 - ✅ Block I/O metrics
-- ❌ OOM events (acceptable limitation)
+- ❌ OOM events (acceptable limitation - /dev/kmsg permission denied)
 
-Health check status: **Healthy**
+Integration Testing:
+- ✅ Metrics endpoint responding (http://localhost:8080/metrics)
+- ✅ Prometheus successfully scraping cAdvisor metrics
+- ⚠️ Grafana dashboards - not tested (Grafana not running in test environment)
+
+Read-only Filesystem:
+- ✅ Container operates successfully with `read_only: true`
+- ✅ Tmpfs mounted at `/tmp` for temporary files
+- ✅ No filesystem write errors observed
+
+Overall Status: **Production Ready**
 
 #### References
 - [Docker Security Best Practices](https://docs.docker.com/engine/security/)
