@@ -48,6 +48,7 @@ services:
     image: prom/node-exporter:latest
     container_name: node-exporter
     restart: unless-stopped
+    pid: host
     ports:
       - "9100:9100"
     volumes:
