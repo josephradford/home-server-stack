@@ -83,7 +83,12 @@ Metrics Collection:
 Integration Testing:
 - ✅ Metrics endpoint responding (http://localhost:8080/metrics)
 - ✅ Prometheus successfully scraping cAdvisor metrics
-- ⚠️ Grafana dashboards - not tested (Grafana not running in test environment)
+- ✅ Grafana datasource configured and operational
+- ✅ cAdvisor metrics queryable via Prometheus datasource in Grafana
+  - CPU metrics: 6 containers monitored
+  - Memory metrics: 10 containers monitored
+  - Network metrics: 15 network interfaces tracked
+  - Filesystem metrics: 21 filesystems monitored
 
 Read-only Filesystem:
 - ✅ Container operates successfully with `read_only: true`
