@@ -1,38 +1,141 @@
 groups:
-  - name: basic_alerts
+  - name: critical-alerts
     rules:
-      - alert: InstanceDown
+      - alert: ServiceDown
         expr: up == 0
-        for: 5m
+        for: 30s
         labels:
           severity: critical
         annotations:
-          summary: "Instance {{ $labels.instance }} down"
-          description: "{{ $labels.instance }} of job {{ $labels.job }} has been down for more than 5 minutes."
+          summary: "Service {{ $labels.job }} is down"
+          description: "Service {{ $labels.job }} on {{ $labels.instance }} has been down for more than 30 seconds"
 
       - alert: HighCPUUsage
-        expr: 100 - (avg by(instance) (irate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80
-        for: 10m
-        labels:
-          severity: warning
-        annotations:
-          summary: "High CPU usage on {{ $labels.instance }}"
-          description: "CPU usage is above 80% for more than 10 minutes on {{ $labels.instance }}."
-
-      - alert: HighMemoryUsage
-        expr: (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 85
-        for: 10m
-        labels:
-          severity: warning
-        annotations:
-          summary: "High memory usage on {{ $labels.instance }}"
-          description: "Memory usage is above 85% for more than 10 minutes on {{ $labels.instance }}."
-
-      - alert: DiskSpaceLow
-        expr: (1 - (node_filesystem_avail_bytes / node_filesystem_size_bytes)) * 100 > 90
+        expr: 100 - (avg(rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 85
         for: 5m
         labels:
           severity: critical
         annotations:
-          summary: "Disk space low on {{ $labels.instance }}"
-          description: "Disk usage is above 90% on {{ $labels.instance }} filesystem {{ $labels.mountpoint }}."
+          summary: "High CPU usage detected"
+          description: "CPU usage is above 85% for more than 5 minutes (current value: {{ printf \"%.2f\" $value }}%)"
+
+      - alert: HighMemoryUsage
+        expr: (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 90
+        for: 3m
+        labels:
+          severity: critical
+        annotations:
+          summary: "High memory usage detected"
+          description: "Memory usage is above 90% for more than 3 minutes (current value: {{ printf \"%.2f\" $value }}%)"
+
+      - alert: DiskSpaceLow
+        expr: 100 - ((node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"}) * 100) > 90
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Disk space critically low"
+          description: "Disk space usage on {{ $labels.instance }} is above 90% for more than 5 minutes (current value: {{ printf \"%.2f\" $value }}%)"
+
+      - alert: ContainerDown
+        expr: time() - container_last_seen{name=~"adguard|n8n|ollama"} > 60
+        for: 0m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Container {{ $labels.name }} is down"
+          description: "Container {{ $labels.name }} has not been seen for more than 1 minute"
+
+      - alert: ContainerHighCPU
+        expr: rate(container_cpu_usage_seconds_total{name=~".+"}[5m]) * 100 > 80
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Container {{ $labels.name }} high CPU usage"
+          description: "Container {{ $labels.name }} CPU usage is above 80% for more than 10 minutes (current value: {{ printf \"%.2f\" $value }}%)"
+
+      - alert: ContainerHighMemory
+        expr: (container_memory_usage_bytes{name=~".+"} / container_spec_memory_limit_bytes{name=~".+"}) * 100 > 85
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Container {{ $labels.name }} high memory usage"
+          description: "Container {{ $labels.name }} memory usage is above 85% for more than 10 minutes (current value: {{ printf \"%.2f\" $value }}%)"
+
+      - alert: ContainerRestartLoop
+        expr: increase(container_start_time_seconds{name=~".+"}[1h]) > 3
+        for: 0m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Container {{ $labels.name }} restarting frequently"
+          description: "Container {{ $labels.name }} has restarted {{ printf \"%.0f\" $value }} times in the last hour"
+
+  - name: service-specific-alerts
+    rules:
+      - alert: PrometheusTargetDown
+        expr: up{job=~"prometheus|node-exporter|cadvisor"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Monitoring target {{ $labels.job }} is down"
+          description: "{{ $labels.job }} monitoring target on {{ $labels.instance }} has been down for more than 1 minute"
+
+      - alert: AdGuardDown
+        expr: up{job="adguard"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "AdGuard DNS service is down"
+          description: "AdGuard service is not responding for more than 1 minute"
+
+      - alert: N8nDown
+        expr: up{job="n8n"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "n8n automation service is down"
+          description: "n8n service is not responding for more than 2 minutes"
+
+      - alert: OllamaDown
+        expr: up{job="ollama"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Ollama AI service is down"
+          description: "Ollama API is not responding for more than 2 minutes"
+
+  - name: resource-alerts
+    rules:
+      - alert: HighDiskIOWait
+        expr: rate(node_disk_io_time_seconds_total[5m]) > 0.5
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High disk I/O wait time"
+          description: "Disk I/O wait time is high on {{ $labels.instance }} for more than 10 minutes"
+
+      - alert: HighNetworkTraffic
+        expr: rate(node_network_receive_bytes_total{device!~"lo|docker.*"}[5m]) > 100000000
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High network traffic detected"
+          description: "Network interface {{ $labels.device }} on {{ $labels.instance }} is receiving high traffic for more than 10 minutes"
+
+      - alert: SystemLoadHigh
+        expr: node_load15 / count(node_cpu_seconds_total{mode="idle"}) without (cpu, mode) > 2
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "System load is high"
+          description: "15-minute load average on {{ $labels.instance }} is above 2x CPU count for more than 10 minutes"
