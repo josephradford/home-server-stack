@@ -49,8 +49,7 @@ services:
     container_name: node-exporter
     restart: unless-stopped
     pid: host
-    ports:
-      - "9100:9100"
+    network_mode: host
     volumes:
       - /proc:/host/proc:ro
       - /sys:/host/sys:ro
@@ -60,8 +59,6 @@ services:
       - '--path.rootfs=/rootfs'
       - '--path.sysfs=/host/sys'
       - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
-    networks:
-      - homeserver
 
   cadvisor:
     image: gcr.io/cadvisor/cadvisor:latest
