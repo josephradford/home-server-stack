@@ -101,6 +101,35 @@ services:
         echo 'Model downloads initiated. Check progress with: docker exec ollama ollama ps'
       "
 
+  wireguard:
+    image: lscr.io/linuxserver/wireguard:latest
+    container_name: wireguard
+    restart: unless-stopped
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=${TIMEZONE}
+      - SERVERURL=${WIREGUARD_SERVERURL}
+      - SERVERPORT=${WIREGUARD_PORT:-51820}
+      - PEERS=${WIREGUARD_PEERS:-5}
+      - PEERDNS=${SERVER_IP}
+      - INTERNAL_SUBNET=${WIREGUARD_SUBNET:-10.13.13.0}
+      - ALLOWEDIPS=${WIREGUARD_ALLOWEDIPS:-0.0.0.0/0}
+      - LOG_CONFS=${WIREGUARD_LOG_CONFS:-true}
+    ports:
+      - "${WIREGUARD_PORT:-51820}:51820/udp"
+      - "${SERVER_IP}:51821:51821/tcp"
+    volumes:
+      - ./data/wireguard:/config
+      - /lib/modules:/lib/modules:ro
+    sysctls:
+      - net.ipv4.conf.all.src_valid_mark=1
+    networks:
+      - homeserver
+
 networks:
   homeserver:
     driver: bridge
