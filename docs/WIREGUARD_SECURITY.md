@@ -16,6 +16,7 @@ WireGuard is the **primary security boundary** for the home server stack. All ad
 ✅ **AdGuard Home** - DNS admin interface
 ✅ **n8n UI** - Workflow admin interface
 ✅ **Ollama API** - AI model inference
+✅ **Habitica** - Habit and task tracking
 ✅ **Bookwyrm** - Social reading and book tracking
 
 **Access Method:** Connect to WireGuard VPN first, then access via internal IPs (e.g., `http://192.168.1.100`)
