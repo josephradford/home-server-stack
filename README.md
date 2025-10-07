@@ -30,9 +30,20 @@ nano .env  # Update SERVER_IP, TIMEZONE, passwords
 # 3. Generate SSL certificates (optional, for HTTPS)
 cd ssl && ./generate-cert.sh your-domain.com && cd ..
 
-# 4. Start services
-docker compose up -d
+# 4. Run first-time setup
+make setup
+
+# Or with optional monitoring stack:
+make setup-monitoring
 ```
+
+**Using the Makefile:**
+- `make help` - Show all available commands
+- `make setup` - First time setup (builds from source, pulls images, starts services)
+- `make update` - Update all services to latest versions
+- `make start` / `make stop` - Start/stop services
+- `make logs` - View logs from all services
+- See `make help` for complete list of commands
 
 **Access Services:**
 - AdGuard Home: `http://SERVER_IP:80`
