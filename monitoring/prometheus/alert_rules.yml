@@ -251,3 +251,80 @@ groups:
         annotations:
           summary: "WireGuard container health check failing"
           description: "WireGuard health check has been failing for 5+ minutes."
+
+  # Immich Monitoring Alerts
+  # Self-hosted photo and video management with AI features
+  - name: immich_alerts
+    interval: 30s
+    rules:
+      # Monitor main Immich web service availability
+      - alert: ImmichDown
+        expr: absent(container_last_seen{name="immich-server"}) or (time() - container_last_seen{name="immich-server"} > 120)
+        for: 2m
+        labels:
+          severity: critical
+          category: availability
+          service: immich
+        annotations:
+          summary: "Immich photo management service is down"
+          description: "Immich server container has been down for more than 2 minutes. Photo upload and access unavailable."
+
+      # Monitor Immich health check status
+      - alert: ImmichUnhealthy
+        expr: container_health_status{name="immich-server",status!="healthy"} == 1
+        for: 5m
+        labels:
+          severity: warning
+          category: reliability
+          service: immich
+        annotations:
+          summary: "Immich container health check failing"
+          description: "Immich health check has been failing for 5+ minutes. Check application logs."
+
+      # Monitor PostgreSQL database availability
+      - alert: ImmichDatabaseDown
+        expr: absent(container_last_seen{name="immich-postgres"}) or (time() - container_last_seen{name="immich-postgres"} > 120)
+        for: 2m
+        labels:
+          severity: critical
+          category: availability
+          service: immich
+        annotations:
+          summary: "Immich database is down"
+          description: "PostgreSQL database for Immich has been down for more than 2 minutes. All photo operations will fail."
+
+      # Monitor machine learning service for AI features
+      - alert: ImmichMachineLearningDown
+        expr: absent(container_last_seen{name="immich-machine-learning"}) or (time() - container_last_seen{name="immich-machine-learning"} > 120)
+        for: 5m
+        labels:
+          severity: warning
+          category: availability
+          service: immich
+        annotations:
+          summary: "Immich machine learning service is down"
+          description: "ML service down for 5+ minutes. Face recognition and object detection unavailable."
+
+      # Monitor Redis cache availability
+      - alert: ImmichRedisDown
+        expr: absent(container_last_seen{name="immich-redis"}) or (time() - container_last_seen{name="immich-redis"} > 120)
+        for: 2m
+        labels:
+          severity: critical
+          category: availability
+          service: immich
+        annotations:
+          summary: "Immich Redis cache is down"
+          description: "Redis cache has been down for more than 2 minutes. Performance degradation expected."
+
+      # Monitor for container restart loops
+      - alert: ImmichFrequentRestarts
+        expr: rate(container_start_time_seconds{name=~"immich-.*"}[15m]) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+          category: reliability
+          service: immich
+        annotations:
+          summary: "Immich container restarting frequently"
+          description: "Container {{ $labels.name }} has restarted {{ $value }} times in 15 minutes. Check logs for errors."
