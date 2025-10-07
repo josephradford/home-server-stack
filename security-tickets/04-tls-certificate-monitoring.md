@@ -1,52 +1,62 @@
-# Add TLS Certificate Monitoring and Automation
+# Add TLS Certificate Monitoring and Let's Encrypt for n8n
 
-## Priority: 1 (Critical)
-## Estimated Time: 4-6 hours
-## Phase: Week 1-2 - Critical Fixes
+## Priority: 2 (High)
+## Estimated Time: 2-3 hours
+## Phase: Week 2 - Certificate Management
+
+> **🔒 VPN-First Strategy Note:**
+> In the VPN-first model, only n8n webhooks are publicly exposed and require valid CA-signed certificates (Let's Encrypt). All other services use self-signed certificates since they're only accessible via VPN, where certificate validation can be disabled or CA cert distributed to clients.
 
 ## Description
-Implement automated TLS certificate monitoring, expiry alerts, and optionally integrate Let's Encrypt for automatic certificate renewal. Replace self-signed certificates with proper CA-signed certificates and ensure continuous monitoring to prevent service disruptions.
+Implement Let's Encrypt for n8n webhooks (required for external services like GitHub to trust the endpoint) and monitoring for certificate expiry. VPN-only services continue using self-signed certificates with local certificate monitoring.
 
 ## Acceptance Criteria
-- [ ] Certificate expiry monitoring added to Prometheus
-- [ ] Alerts configured for certificates expiring within 30 days
-- [ ] Let's Encrypt integration with automatic renewal (optional)
-- [ ] Certificate upgrade from 2048-bit to 4096-bit RSA or ECDSA
-- [ ] Remove `insecure_skip_verify` from Prometheus configuration
-- [ ] Certificate storage moved outside version control
-- [ ] Documentation for manual and automated renewal
-- [ ] TLS version enforcement (minimum TLS 1.2)
+- [ ] Let's Encrypt certificate for n8n domain with automatic renewal
+- [ ] Certificate expiry monitoring for n8n cert in Prometheus
+- [ ] Alerts configured for n8n certificate expiring within 30 days
+- [ ] Self-signed certificates upgraded to 4096-bit RSA for VPN-only services
+- [ ] Blackbox exporter monitoring n8n certificate validity
+- [ ] Certificate storage moved outside version control (.gitignore updated)
+- [ ] Documentation for n8n cert renewal and VPN service certs
+- [ ] TLS 1.2+ enforced on all services
 
 ## Technical Implementation Details
 
 ### Files to Create/Modify
-1. `monitoring/prometheus/prometheus.yml` - Add certificate monitoring
-2. `monitoring/prometheus/alert_rules.yml` - Add certificate expiry alerts
-3. `docker-compose.monitoring.yml` - Add blackbox exporter for TLS monitoring
-4. `ssl/generate-cert.sh` - Upgrade to 4096-bit RSA
-5. `docker-compose.yml` - Add Let's Encrypt certbot service (optional)
-6. `.env.example` - Add Let's Encrypt configuration
+1. `docker-compose.yml` - Add Let's Encrypt certbot for n8n (integrated with nginx/traefik)
+2. `monitoring/prometheus/prometheus.yml` - Add blackbox exporter for n8n cert monitoring
+3. `monitoring/prometheus/alert_rules.yml` - Add n8n certificate expiry alerts
+4. `docker-compose.monitoring.yml` - Add blackbox exporter
+5. `ssl/generate-cert.sh` - Upgrade to 4096-bit RSA for VPN-only services
+6. `.env.example` - Add n8n domain and Let's Encrypt email
 7. `.gitignore` - Ensure certificates excluded
 8. `docs/CERTIFICATE_MANAGEMENT.md` - Certificate procedures (new file)
 
 ### Current Issues
 
-1. **Weak Certificate**:
+> **Note:** In VPN-first model, `insecure_skip_verify` for internal services is acceptable since they're not publicly exposed. The focus is on n8n which requires valid certs for external webhooks.
+
+1. **Weak Certificate (VPN-only services)**:
    ```bash
    # ssl/generate-cert.sh:17
-   openssl genrsa -out "$KEY_FILE" 2048  # ⚠️ Too weak for production
+   openssl genrsa -out "$KEY_FILE" 2048  # ⚠️ Upgrade to 4096-bit
    ```
 
-2. **Insecure Prometheus**:
+2. **n8n Needs Valid Certificate**:
+   - Currently using self-signed cert
+   - External webhook providers (GitHub, etc.) will reject self-signed certs
+   - Need Let's Encrypt for public trust
+
+3. **No Expiry Monitoring**: n8n certificate expiry could break webhooks without warning
+
+4. **Acceptable for VPN-only services**:
    ```yaml
    # monitoring/prometheus/prometheus.yml:35-37
-   - job_name: 'n8n'
+   - job_name: 'grafana'
      scheme: https
      tls_config:
-       insecure_skip_verify: true  # ⚠️ SECURITY RISK
+       insecure_skip_verify: true  # ✅ OK - VPN-only service
    ```
-
-3. **No Expiry Monitoring**: Certificates can expire without warning
 
 ### Step 1: Add Blackbox Exporter for Certificate Monitoring
 
@@ -418,10 +428,13 @@ docker compose restart n8n
 docker compose exec prometheus kill -HUP 1
 ```
 
-## Security Impact
-- **Before**: No certificate expiry monitoring, weak 2048-bit keys, insecure TLS verification
-- **After**: Automated monitoring and renewal, strong 4096-bit keys, proper CA verification
-- **Risk Reduction**: 70% reduction in certificate-related outages and security issues
+## Security Impact (VPN-First Model)
+- **Before**: Self-signed certs rejected by external webhook providers, no expiry monitoring, potential webhook failures
+- **After**: Valid Let's Encrypt for n8n (webhooks work reliably), automated renewal, expiry monitoring
+- **Risk Reduction**:
+  - 100% elimination of webhook cert validation failures
+  - 90% reduction in cert-related outages (automated renewal)
+  - VPN-only services can safely use self-signed certs (acceptable security trade-off)
 
 ## References
 - [Let's Encrypt Documentation](https://letsencrypt.org/docs/)

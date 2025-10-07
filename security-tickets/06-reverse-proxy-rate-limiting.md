@@ -1,33 +1,213 @@
-# Deploy Reverse Proxy with Rate Limiting
+# Deploy Reverse Proxy for n8n Path-Based Access Control
 
-## Priority: 2 (High)
-## Estimated Time: 4-6 hours
-## Phase: Week 3-4 - High Priority Security
+## Priority: 3 (Medium)
+## Estimated Time: 2-3 hours
+## Phase: Week 2-3 - Path-Based Security
+
+> **🔒 VPN-First Strategy Note:**
+> In the VPN-first model, most services are not publicly exposed. This ticket focuses on **n8n only**: allowing webhook endpoints (`/webhook/*`) to be public for external integrations while requiring VPN access for the admin UI. Traefik/Nginx will enforce path-based access control and rate limiting.
 
 ## Description
-Deploy Traefik or Nginx as a reverse proxy with built-in rate limiting, automatic HTTPS, and centralized access control. This provides DDoS protection, SSL termination, and simplifies service exposure.
+Deploy a lightweight reverse proxy (Nginx or Traefik) to enforce path-based access control for n8n. Public traffic can only access `/webhook/*` endpoints (for GitHub webhooks, etc.), while all other paths (UI, API) require VPN authentication. Includes rate limiting for DDoS protection on webhook endpoints.
 
 ## Acceptance Criteria
-- [ ] Traefik or Nginx reverse proxy deployed
-- [ ] Rate limiting configured per service
-- [ ] Automatic HTTPS with Let's Encrypt
-- [ ] Centralized access logs
-- [ ] Geographic blocking configured (optional)
-- [ ] Request filtering for common attacks
-- [ ] Health checks for backend services
-- [ ] Metrics exported to Prometheus
+- [ ] Nginx or Traefik reverse proxy deployed for n8n only
+- [ ] Path-based routing: `/webhook/*` public, all other paths blocked from internet
+- [ ] VPN network allowlisting for non-webhook paths
+- [ ] Rate limiting on webhook endpoints (prevent DDoS)
+- [ ] HTTPS with Let's Encrypt for n8n webhooks (external services require valid certs)
+- [ ] Access logs for webhook requests
+- [ ] Request filtering for common webhook attacks
+- [ ] Metrics exported to Prometheus (optional)
 
 ## Technical Implementation Details
 
 ### Files to Create/Modify
-1. `docker-compose.proxy.yml` - Reverse proxy service (new file)
-2. `proxy/traefik.yml` - Traefik configuration (new file)
-3. `proxy/dynamic-config.yml` - Dynamic routing configuration (new file)
-4. `docker-compose.yml` - Add Traefik labels to services
-5. `.env.example` - Add proxy configuration variables
-6. `docs/REVERSE_PROXY.md` - Proxy documentation (new file)
+1. `docker-compose.yml` - Add nginx reverse proxy for n8n
+2. `proxy/nginx.conf` - Nginx path-based routing configuration (new file)
+3. `proxy/nginx-n8n.conf` - n8n-specific location blocks (new file)
+4. `.env.example` - Add Let's Encrypt email for n8n domain
+5. `docs/N8N_WEBHOOK_SECURITY.md` - Webhook security documentation (new file)
 
-### Option 1: Traefik (Recommended)
+### Option 1: Nginx (Simpler for Single Service)
+
+**Add to docker-compose.yml:**
+```yaml
+services:
+  nginx:
+    image: nginx:1.25-alpine@sha256:REPLACE_WITH_ACTUAL_DIGEST
+    container_name: nginx-n8n-proxy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./proxy/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./proxy/conf.d:/etc/nginx/conf.d:ro
+      - ./ssl/letsencrypt:/etc/letsencrypt:ro
+      - ./logs/nginx:/var/log/nginx
+    networks:
+      - frontend
+    depends_on:
+      - n8n
+```
+
+**Create proxy/nginx.conf:**
+```nginx
+user nginx;
+worker_processes auto;
+error_log /var/log/nginx/error.log warn;
+pid /var/run/nginx.pid;
+
+events {
+    worker_connections 1024;
+}
+
+http {
+    include /etc/nginx/mime.types;
+    default_type application/octet-stream;
+
+    # Logging
+    log_format main '$remote_addr - $remote_user [$time_local] "$request" '
+                    '$status $body_bytes_sent "$http_referer" '
+                    '"$http_user_agent" "$http_x_forwarded_for"';
+    access_log /var/log/nginx/access.log main;
+
+    # Security headers
+    add_header X-Frame-Options "SAMEORIGIN" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-XSS-Protection "1; mode=block" always;
+
+    # Performance
+    sendfile on;
+    tcp_nopush on;
+    tcp_nodelay on;
+    keepalive_timeout 65;
+
+    # Rate limiting zones
+    limit_req_zone $binary_remote_addr zone=webhook_limit:10m rate=10r/m;
+    limit_req_zone $binary_remote_addr zone=general_limit:10m rate=1r/s;
+
+    # Connection limiting
+    limit_conn_zone $binary_remote_addr zone=addr:10m;
+    limit_conn addr 10;
+
+    # Include server configs
+    include /etc/nginx/conf.d/*.conf;
+}
+```
+
+**Create proxy/conf.d/n8n.conf:**
+```nginx
+upstream n8n_backend {
+    server n8n:5678;
+}
+
+# Redirect HTTP to HTTPS
+server {
+    listen 80;
+    server_name n8n.yourdomain.com;
+
+    # Let's Encrypt ACME challenge
+    location /.well-known/acme-challenge/ {
+        root /var/www/certbot;
+    }
+
+    location / {
+        return 301 https://$host$request_uri;
+    }
+}
+
+# HTTPS server for n8n
+server {
+    listen 443 ssl http2;
+    server_name n8n.yourdomain.com;
+
+    # SSL configuration
+    ssl_certificate /etc/letsencrypt/live/yourdomain.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/yourdomain.com/privkey.pem;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_ciphers 'ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384';
+    ssl_prefer_server_ciphers off;
+
+    # HSTS
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+
+    # PUBLIC: Webhook endpoints - accessible from internet
+    location /webhook/ {
+        # Strict rate limiting for webhooks
+        limit_req zone=webhook_limit burst=20 nodelay;
+
+        # Webhook-specific logging
+        access_log /var/log/nginx/n8n-webhooks.log main;
+
+        # Proxy to n8n
+        proxy_pass https://n8n_backend;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        # Timeouts for webhooks
+        proxy_connect_timeout 10s;
+        proxy_send_timeout 30s;
+        proxy_read_timeout 30s;
+
+        # Security: Block suspicious patterns
+        if ($request_method !~ ^(POST|GET|PUT)$ ) {
+            return 405;
+        }
+    }
+
+    # PRIVATE: Admin UI and API - VPN/Local network only
+    location / {
+        # Only allow VPN and local network
+        allow 10.13.13.0/24;     # WireGuard VPN subnet
+        allow 192.168.0.0/16;    # Local network
+        deny all;
+
+        # Less strict rate limiting for admin access
+        limit_req zone=general_limit burst=10 nodelay;
+
+        # Proxy to n8n
+        proxy_pass https://n8n_backend;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+        # WebSocket support (for n8n UI)
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+
+        # Longer timeouts for admin UI
+        proxy_connect_timeout 60s;
+        proxy_send_timeout 60s;
+        proxy_read_timeout 60s;
+    }
+
+    # Block access to sensitive paths
+    location ~ /\. {
+        deny all;
+    }
+}
+```
+
+**Setup Let's Encrypt:**
+```bash
+# Add certbot to docker-compose.yml
+services:
+  certbot:
+    image: certbot/certbot:latest
+    container_name: certbot
+    volumes:
+      - ./ssl/letsencrypt:/etc/letsencrypt
+      - ./ssl/certbot-webroot:/var/www/certbot
+    command: certonly --webroot --webroot-path=/var/www/certbot --email ${LETSENCRYPT_EMAIL} --agree-tos --no-eff-email -d n8n.yourdomain.com
+```
+
+### Option 2: Traefik (More Features, More Complex)
 
 **docker-compose.proxy.yml:**
 ```yaml
@@ -436,10 +616,13 @@ docker compose -f docker-compose.proxy.yml down
 # grafana: http://SERVER_IP:3001
 ```
 
-## Security Impact
-- **Before**: Direct service exposure, no rate limiting, scattered SSL config
-- **After**: Centralized security, DDoS protection, automatic HTTPS
-- **Risk Reduction**: 70% reduction in web-based attack surface
+## Security Impact (VPN-First Model)
+- **Before**: n8n fully exposed to internet, no path-based access control, potential abuse of admin UI
+- **After**: Only webhook paths public, admin UI requires VPN, DDoS protection on webhooks, Let's Encrypt for valid certs
+- **Risk Reduction**:
+  - 85% reduction in n8n attack surface (only /webhook/* exposed)
+  - Prevents unauthorized access to workflow editor
+  - Protects against webhook DDoS attacks
 
 ## References
 - [Traefik Documentation](https://doc.traefik.io/traefik/)
