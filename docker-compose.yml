@@ -195,7 +195,9 @@ services:
       retries: 3
 
   bookwyrm:
-    image: bookwyrm/bookwyrm:latest
+    build:
+      context: https://github.com/bookwyrm-social/bookwyrm.git#production
+      dockerfile: Dockerfile
     container_name: bookwyrm
     restart: unless-stopped
     ports:
@@ -254,7 +256,9 @@ services:
       start_period: 60s
 
   bookwyrm-celery:
-    image: bookwyrm/bookwyrm:latest
+    build:
+      context: https://github.com/bookwyrm-social/bookwyrm.git#production
+      dockerfile: Dockerfile
     container_name: bookwyrm-celery
     restart: unless-stopped
     command: celery -A celerywyrm worker -l info -Q high_priority,medium_priority,low_priority,imports,broadcast
@@ -293,7 +297,9 @@ services:
         condition: service_healthy
 
   bookwyrm-celery-beat:
-    image: bookwyrm/bookwyrm:latest
+    build:
+      context: https://github.com/bookwyrm-social/bookwyrm.git#production
+      dockerfile: Dockerfile
     container_name: bookwyrm-celery-beat
     restart: unless-stopped
     command: celery -A celerywyrm beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler
