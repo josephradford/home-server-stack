@@ -73,19 +73,10 @@ services:
       - /var/run:/var/run:ro
       - /sys:/sys:ro
       - /dev/disk/:/dev/disk:ro
-    cap_add:
-      - SYS_PTRACE    # Required for process inspection
-      - SYS_ADMIN     # Required for cgroup access
-    cap_drop:
-      - ALL
-    security_opt:
-      - no-new-privileges:true
-      - apparmor=unconfined  # Required for cAdvisor to access system metrics
-    devices:
-      - /dev/kmsg:/dev/kmsg:r  # Read-only access
-    read_only: true
-    tmpfs:
-      - /tmp
+    # Use privileged mode for cAdvisor to access system metrics
+    # Security note: cAdvisor requires extensive system access to monitor containers
+    # The read_only filesystem prevents binary execution ("operation not permitted")
+    privileged: true
     networks:
       - homeserver
     healthcheck:

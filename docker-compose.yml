@@ -108,10 +108,9 @@ services:
     cap_add:
       - NET_ADMIN
       - SYS_MODULE
-    cap_drop:
-      - ALL
-    security_opt:
-      - no-new-privileges:true
+    # Security note: LinuxServer.io containers use s6-overlay init system
+    # Dropping all capabilities or no-new-privileges prevents init from executing
+    # Keep only the required NET_ADMIN and SYS_MODULE capabilities
     environment:
       - PUID=1000
       - PGID=1000
