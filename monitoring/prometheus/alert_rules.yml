@@ -252,6 +252,83 @@ groups:
           summary: "WireGuard container health check failing"
           description: "WireGuard health check has been failing for 5+ minutes."
 
+  # Bookwyrm Monitoring Alerts
+  # Monitors Bookwyrm social reading platform availability and health
+  - name: bookwyrm_alerts
+    interval: 30s
+    rules:
+      # Monitor Bookwyrm web service availability
+      - alert: BookwyrmDown
+        expr: up{job="bookwyrm"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          category: availability
+          service: bookwyrm
+        annotations:
+          summary: "Bookwyrm service is down"
+          description: "Bookwyrm web service is not responding for more than 2 minutes."
+
+      # Monitor Bookwyrm container health
+      - alert: BookwyrmUnhealthy
+        expr: absent(container_last_seen{name="bookwyrm"}) or (time() - container_last_seen{name="bookwyrm"} > 120)
+        for: 2m
+        labels:
+          severity: critical
+          category: availability
+          service: bookwyrm
+        annotations:
+          summary: "Bookwyrm container is down"
+          description: "Bookwyrm container has been down for more than 2 minutes."
+
+      # Monitor Bookwyrm database health
+      - alert: BookwyrmDatabaseDown
+        expr: absent(container_last_seen{name="bookwyrm-db"}) or (time() - container_last_seen{name="bookwyrm-db"} > 120)
+        for: 2m
+        labels:
+          severity: critical
+          category: availability
+          service: bookwyrm
+        annotations:
+          summary: "Bookwyrm database is down"
+          description: "Bookwyrm PostgreSQL database has been down for more than 2 minutes."
+
+      # Monitor Bookwyrm Celery worker
+      - alert: BookwyrmCeleryWorkerDown
+        expr: absent(container_last_seen{name="bookwyrm-celery"}) or (time() - container_last_seen{name="bookwyrm-celery"} > 120)
+        for: 3m
+        labels:
+          severity: warning
+          category: reliability
+          service: bookwyrm
+        annotations:
+          summary: "Bookwyrm Celery worker is down"
+          description: "Bookwyrm background task worker has been down for more than 3 minutes. Background tasks will queue up."
+
+      # Monitor Redis instances
+      - alert: BookwyrmRedisDown
+        expr: absent(container_last_seen{name=~"bookwyrm-redis.*"}) or (time() - container_last_seen{name=~"bookwyrm-redis.*"} > 120)
+        for: 2m
+        labels:
+          severity: critical
+          category: availability
+          service: bookwyrm
+        annotations:
+          summary: "Bookwyrm Redis instance down"
+          description: "One or more Bookwyrm Redis instances have been down for more than 2 minutes."
+
+      # Monitor for frequent container restarts
+      - alert: BookwyrmFrequentRestarts
+        expr: rate(container_start_time_seconds{name=~"bookwyrm.*"}[15m]) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+          category: reliability
+          service: bookwyrm
+        annotations:
+          summary: "Bookwyrm container restarting frequently"
+          description: "Bookwyrm container {{ $labels.name }} has restarted {{ $value }} times in 15 minutes."
+       
   # Habitica Monitoring Alerts
   # Gamified habit and task tracker
   - name: habitica_alerts
