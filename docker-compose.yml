@@ -108,6 +108,10 @@ services:
     cap_add:
       - NET_ADMIN
       - SYS_MODULE
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
     environment:
       - PUID=1000
       - PGID=1000
@@ -116,9 +120,12 @@ services:
       - SERVERPORT=${WIREGUARD_PORT:-51820}
       - PEERS=${WIREGUARD_PEERS:-5}
       - PEERDNS=${SERVER_IP}
-      - INTERNAL_SUBNET=${WIREGUARD_SUBNET:-10.13.13.0}
-      - ALLOWEDIPS=${WIREGUARD_ALLOWEDIPS:-0.0.0.0/0}
+      # CRITICAL: Split tunneling - only route home network traffic through VPN
+      # DO NOT use 0.0.0.0/0 unless you want full tunneling (not recommended)
+      - INTERNAL_SUBNET=${WIREGUARD_SUBNET:-10.13.13.0/24}
+      - ALLOWEDIPS=${WIREGUARD_ALLOWEDIPS:-192.168.1.0/24,10.13.13.0/24}
       - LOG_CONFS=${WIREGUARD_LOG_CONFS:-true}
+      - PERSISTENTKEEPALIVE_PEERS=${WIREGUARD_KEEPALIVE:-25}
     ports:
       - "${WIREGUARD_PORT:-51820}:51820/udp"
       - "${SERVER_IP}:51821:51821/tcp"
@@ -127,8 +134,15 @@ services:
       - /lib/modules:/lib/modules:ro
     sysctls:
       - net.ipv4.conf.all.src_valid_mark=1
+      - net.ipv4.ip_forward=1
     networks:
       - homeserver
+    healthcheck:
+      test: ["CMD", "test", "-f", "/config/wg0.conf"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
 
 networks:
   homeserver:

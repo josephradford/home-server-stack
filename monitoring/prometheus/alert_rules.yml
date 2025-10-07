@@ -195,3 +195,59 @@ groups:
         annotations:
           summary: "System load is high"
           description: "15-minute load average on {{ $labels.instance }} is above 2x CPU count for more than 10 minutes"
+
+  # VPN Monitoring Alerts
+  # Monitors WireGuard VPN as the primary security boundary
+  # Critical for maintaining secure remote access
+  - name: vpn_alerts
+    interval: 30s
+    rules:
+      # Monitor WireGuard service availability
+      # This is critical as VPN is the primary remote access method
+      - alert: WireGuardContainerDown
+        expr: absent(container_last_seen{name="wireguard"}) or (time() - container_last_seen{name="wireguard"} > 120)
+        for: 2m
+        labels:
+          severity: critical
+          category: availability
+          service: wireguard
+        annotations:
+          summary: "WireGuard VPN container is down"
+          description: "WireGuard container has been down for more than 2 minutes. All remote VPN access is unavailable."
+
+      # Monitor for excessive connection attempts (possible attack)
+      # High rate of failed handshakes could indicate brute force or scanning
+      - alert: WireGuardExcessiveConnectionAttempts
+        expr: rate(container_network_receive_packets_total{name="wireguard"}[5m]) > 1000
+        for: 3m
+        labels:
+          severity: warning
+          category: security
+          service: wireguard
+        annotations:
+          summary: "Unusual WireGuard connection activity"
+          description: "High rate of network packets to WireGuard ({{ $value }} packets/sec). Possible port scanning or attack."
+
+      # Monitor container restarts (could indicate crashes or issues)
+      - alert: WireGuardFrequentRestarts
+        expr: rate(container_start_time_seconds{name="wireguard"}[15m]) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+          category: reliability
+          service: wireguard
+        annotations:
+          summary: "WireGuard container restarting frequently"
+          description: "WireGuard has restarted {{ $value }} times in 15 minutes. Check logs for errors."
+
+      # Monitor container health status
+      - alert: WireGuardUnhealthy
+        expr: container_health_status{name="wireguard",status!="healthy"} == 1
+        for: 5m
+        labels:
+          severity: warning
+          category: reliability
+          service: wireguard
+        annotations:
+          summary: "WireGuard container health check failing"
+          description: "WireGuard health check has been failing for 5+ minutes."
