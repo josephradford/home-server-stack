@@ -251,3 +251,44 @@ groups:
         annotations:
           summary: "WireGuard container health check failing"
           description: "WireGuard health check has been failing for 5+ minutes."
+
+  # Actual Budget Monitoring Alerts
+  # Local-first personal finance management
+  - name: actual_budget_alerts
+    interval: 30s
+    rules:
+      # Monitor Actual Budget service availability
+      - alert: ActualBudgetDown
+        expr: absent(container_last_seen{name="actual-budget"}) or (time() - container_last_seen{name="actual-budget"} > 120)
+        for: 2m
+        labels:
+          severity: critical
+          category: availability
+          service: actual-budget
+        annotations:
+          summary: "Actual Budget finance app is down"
+          description: "Actual Budget container has been down for more than 2 minutes. Budget access unavailable."
+
+      # Monitor Actual Budget health check status
+      - alert: ActualBudgetUnhealthy
+        expr: container_health_status{name="actual-budget",status!="healthy"} == 1
+        for: 5m
+        labels:
+          severity: warning
+          category: reliability
+          service: actual-budget
+        annotations:
+          summary: "Actual Budget container health check failing"
+          description: "Actual Budget health check has been failing for 5+ minutes. Check application logs."
+
+      # Monitor for container restart loops
+      - alert: ActualBudgetFrequentRestarts
+        expr: rate(container_start_time_seconds{name="actual-budget"}[15m]) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+          category: reliability
+          service: actual-budget
+        annotations:
+          summary: "Actual Budget container restarting frequently"
+          description: "Actual Budget has restarted {{ $value }} times in 15 minutes. Check logs for errors."

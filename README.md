@@ -9,6 +9,7 @@ A complete self-hosted infrastructure for home automation, AI, and network servi
 - **[n8n](https://github.com/n8n-io/n8n)** - Workflow automation platform with AI capabilities
 - **[Ollama](https://github.com/ollama/ollama)** - Local AI models (deepseek-coder:6.7b, llama3.2:3b)
 - **[WireGuard](https://github.com/wireguard)** - VPN for secure remote access
+- **[Actual Budget](https://github.com/actualbudget/actual)** - Local-first personal finance management
 
 **Optional:**
 - **Monitoring Stack** - Grafana, Prometheus, Alertmanager, Node Exporter, cAdvisor
@@ -37,6 +38,7 @@ docker compose up -d
 - AdGuard Home: `http://SERVER_IP:80`
 - n8n: `https://SERVER_IP:5678`
 - Ollama API: `http://SERVER_IP:11434`
+- Actual Budget: `http://SERVER_IP:5006`
 
 See **[docs/SETUP.md](docs/SETUP.md)** for detailed installation instructions.
 

@@ -10,6 +10,7 @@ Currently deployed and active services.
 - **[n8n](https://github.com/n8n-io/n8n)** - Fair-code workflow automation platform with native AI capabilities
 - **[Ollama](https://github.com/ollama/ollama)** - Get up and running with local large language models (deepseek-coder:6.7b, llama3.2:3b)
 - **[WireGuard](https://github.com/wireguard)** - Fast, modern, secure VPN tunnel for remote access
+- **[Actual Budget](https://github.com/actualbudget/actual)** - Local-first personal finance app with sync support
 - **[Grafana](https://github.com/grafana/grafana)** - The open and composable observability and data visualization platform (optional monitoring stack)
 - **[Prometheus](https://github.com/prometheus/prometheus)** - The Prometheus monitoring system and time series database (optional monitoring stack)
 - **[Alertmanager](https://github.com/prometheus/alertmanager)** - Prometheus Alertmanager for handling alerts (optional monitoring stack)
@@ -24,7 +25,6 @@ Services queued for implementation.
 - [ ] **[Immich](https://github.com/immich-app/immich)** - High performance self-hosted photo and video management solution (Apple Photos alternative)
 - [ ] **[Tandoor Recipes](https://github.com/TandoorRecipes/recipes)** - Application for managing recipes, planning meals, and building shopping lists
 - [ ] **[BookWyrm](https://github.com/bookwyrm-social/bookwyrm)** - Social reading and reviewing, decentralized with ActivityPub
-- [ ] **[Actual Budget](https://github.com/actualbudget/actual)** - A local-first personal finance app
 - [ ] **[Watchtower](https://github.com/containrrr/watchtower)** - A process for automating Docker container base image updates
 - [ ] **[Fail2ban](https://github.com/fail2ban/fail2ban)** - Daemon to ban hosts that cause multiple authentication errors
 - [ ] **[SearXNG](https://github.com/searxng/searxng)** - Free internet metasearch engine which aggregates results from various search services
