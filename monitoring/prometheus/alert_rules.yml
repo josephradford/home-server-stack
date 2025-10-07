@@ -251,3 +251,68 @@ groups:
         annotations:
           summary: "WireGuard container health check failing"
           description: "WireGuard health check has been failing for 5+ minutes."
+
+  # Habitica Monitoring Alerts
+  # Gamified habit and task tracker
+  - name: habitica_alerts
+    interval: 30s
+    rules:
+      # Monitor Habitica client (frontend) availability
+      - alert: HabiticaDown
+        expr: absent(container_last_seen{name="habitica-client"}) or (time() - container_last_seen{name="habitica-client"} > 120)
+        for: 2m
+        labels:
+          severity: critical
+          category: availability
+          service: habitica
+        annotations:
+          summary: "Habitica habit tracker is down"
+          description: "Habitica client container has been down for more than 2 minutes. Habit tracking unavailable."
+
+      # Monitor Habitica server (backend) availability
+      - alert: HabiticaServerDown
+        expr: absent(container_last_seen{name="habitica-server"}) or (time() - container_last_seen{name="habitica-server"} > 120)
+        for: 2m
+        labels:
+          severity: critical
+          category: availability
+          service: habitica
+        annotations:
+          summary: "Habitica API server is down"
+          description: "Habitica server container has been down for more than 2 minutes. All operations will fail."
+
+      # Monitor MongoDB database availability
+      - alert: HabiticaDatabaseDown
+        expr: absent(container_last_seen{name="habitica-mongo"}) or (time() - container_last_seen{name="habitica-mongo"} > 120)
+        for: 2m
+        labels:
+          severity: critical
+          category: availability
+          service: habitica
+        annotations:
+          summary: "Habitica database is down"
+          description: "MongoDB database for Habitica has been down for more than 2 minutes. Data persistence unavailable."
+
+      # Monitor Habitica health check status
+      - alert: HabiticaUnhealthy
+        expr: container_health_status{name=~"habitica-(client|server)",status!="healthy"} == 1
+        for: 5m
+        labels:
+          severity: warning
+          category: reliability
+          service: habitica
+        annotations:
+          summary: "Habitica container health check failing"
+          description: "Container {{ $labels.name }} health check has been failing for 5+ minutes."
+
+      # Monitor for container restart loops
+      - alert: HabiticaFrequentRestarts
+        expr: rate(container_start_time_seconds{name=~"habitica-.*"}[15m]) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+          category: reliability
+          service: habitica
+        annotations:
+          summary: "Habitica container restarting frequently"
+          description: "Container {{ $labels.name }} has restarted {{ $value }} times in 15 minutes. Check logs for errors."

@@ -10,6 +10,7 @@ Currently deployed and active services.
 - **[n8n](https://github.com/n8n-io/n8n)** - Fair-code workflow automation platform with native AI capabilities
 - **[Ollama](https://github.com/ollama/ollama)** - Get up and running with local large language models (deepseek-coder:6.7b, llama3.2:3b)
 - **[WireGuard](https://github.com/wireguard)** - Fast, modern, secure VPN tunnel for remote access
+- **[Habitica](https://github.com/HabitRPG/habitica)** - Gamified habit and task tracker (RPG-style productivity)
 - **[Grafana](https://github.com/grafana/grafana)** - The open and composable observability and data visualization platform (optional monitoring stack)
 - **[Prometheus](https://github.com/prometheus/prometheus)** - The Prometheus monitoring system and time series database (optional monitoring stack)
 - **[Alertmanager](https://github.com/prometheus/alertmanager)** - Prometheus Alertmanager for handling alerts (optional monitoring stack)
@@ -29,7 +30,6 @@ Services queued for implementation.
 - [ ] **[Fail2ban](https://github.com/fail2ban/fail2ban)** - Daemon to ban hosts that cause multiple authentication errors
 - [ ] **[SearXNG](https://github.com/searxng/searxng)** - Free internet metasearch engine which aggregates results from various search services
 - [ ] **[CrowdSec](https://github.com/crowdsecurity/crowdsec)** - Open-source and participative security solution with crowdsourced protection against malicious IPs
-- [ ] **[Habitica](https://github.com/HabitRPG/habitica)** - A habit tracker app which treats your goals like a Role Playing Game
 - [ ] **[HortusFox](https://github.com/danielbrendel/hortusfox-web)** - Self-hosted collaborative plant management system for plant enthusiasts
 - [ ] **[Glance](https://github.com/glanceapp/glance)** - A self-hosted dashboard that puts all your feeds in one place
 - [ ] **[Jellyfin](https://github.com/jellyfin/jellyfin)** - The Free Software Media System for movies, TV shows, and music
