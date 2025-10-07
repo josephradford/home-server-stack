@@ -2,10 +2,13 @@
 
 ## Priority: 2 (High)
 ## Estimated Time: 3-4 hours
-## Phase: Week 3 - High Priority Security
+## Phase: Week 2 - High Priority Security
+
+> **🔒 VPN-First Strategy Note:**
+> This ticket implements network segmentation for a **hybrid VPN + selective exposure** architecture. Most services are only accessible via WireGuard VPN (ticket #17). Only n8n webhooks are publicly exposed for external integrations. Network segmentation provides defense-in-depth if the VPN is compromised.
 
 ## Description
-Implement multiple Docker networks to segment services based on their security requirements and trust levels. This creates isolation layers that limit lateral movement in case of compromise and follows the principle of defense in depth.
+Implement multiple Docker networks to segment services based on their security requirements and trust levels. This creates isolation layers that limit lateral movement in case of VPN or service compromise. In the VPN-first model, frontend network hosts services accessible via VPN, while only n8n webhook paths are exposed to the public internet.
 
 ## Acceptance Criteria
 - [ ] Three-tier network architecture implemented (frontend, backend, monitoring)
@@ -130,16 +133,17 @@ services:
       - monitoring
 ```
 
-### Host Firewall Configuration
+### Host Firewall Configuration (VPN-First Model)
 
 Create `scripts/firewall-rules.sh`:
 ```bash
 #!/bin/bash
-# UFW firewall rules for home server
+# UFW firewall rules for home server (VPN-First Strategy)
+# Only WireGuard VPN and n8n webhooks are publicly exposed
 
 set -e
 
-echo "Configuring UFW firewall rules..."
+echo "Configuring UFW firewall rules (VPN-First)..."
 
 # Reset UFW
 ufw --force reset
@@ -148,28 +152,42 @@ ufw --force reset
 ufw default deny incoming
 ufw default allow outgoing
 
-# SSH access (adjust port if needed)
-ufw allow 22/tcp comment 'SSH access'
+# SSH access (adjust port if needed - consider restricting to local network)
+ufw allow from 192.168.0.0/16 to any port 22 proto tcp comment 'SSH - local network only'
 
-# DNS (AdGuard Home) - only from local network
-ufw allow from 192.168.0.0/16 to any port 53 proto tcp comment 'DNS TCP'
-ufw allow from 192.168.0.0/16 to any port 53 proto udp comment 'DNS UDP'
+# WireGuard VPN - PRIMARY PUBLIC ENTRY POINT
+ufw allow 51820/udp comment 'WireGuard VPN'
 
-# AdGuard Home admin (local network only)
-ufw allow from 192.168.0.0/16 to any port 80 proto tcp comment 'AdGuard HTTP'
-ufw allow from 192.168.0.0/16 to any port 3000 proto tcp comment 'AdGuard setup'
+# n8n webhooks ONLY - for external integrations (GitHub, etc.)
+# Note: Use reverse proxy to restrict to /webhook/* paths only
+ufw allow 5678/tcp comment 'n8n webhooks (public)'
 
-# n8n (HTTPS only, can be exposed externally)
-ufw allow 5678/tcp comment 'n8n workflows'
+# DNS (AdGuard Home) - LOCAL NETWORK ONLY
+# Access via VPN after connection
+ufw allow from 192.168.0.0/16 to any port 53 proto tcp comment 'DNS TCP - local'
+ufw allow from 192.168.0.0/16 to any port 53 proto udp comment 'DNS UDP - local'
+ufw allow from 10.13.13.0/24 to any port 53 proto tcp comment 'DNS TCP - VPN'
+ufw allow from 10.13.13.0/24 to any port 53 proto udp comment 'DNS UDP - VPN'
 
-# Grafana (local network only)
-ufw allow from 192.168.0.0/16 to any port 3001 proto tcp comment 'Grafana'
+# AdGuard Home admin - VPN/LOCAL ONLY
+ufw allow from 192.168.0.0/16 to any port 80 proto tcp comment 'AdGuard HTTP - local'
+ufw allow from 192.168.0.0/16 to any port 3000 proto tcp comment 'AdGuard setup - local'
+ufw allow from 10.13.13.0/24 to any port 80 proto tcp comment 'AdGuard HTTP - VPN'
+ufw allow from 10.13.13.0/24 to any port 3000 proto tcp comment 'AdGuard setup - VPN'
 
-# Prometheus (local network only - sensitive metrics)
-ufw allow from 192.168.0.0/16 to any port 9090 proto tcp comment 'Prometheus'
+# Grafana - VPN/LOCAL ONLY
+ufw allow from 192.168.0.0/16 to any port 3001 proto tcp comment 'Grafana - local'
+ufw allow from 10.13.13.0/24 to any port 3001 proto tcp comment 'Grafana - VPN'
 
-# BLOCK Ollama from external access
-# ufw deny 11434/tcp comment 'Ollama - internal only'
+# Prometheus - VPN/LOCAL ONLY (sensitive metrics)
+ufw allow from 192.168.0.0/16 to any port 9090 proto tcp comment 'Prometheus - local'
+ufw allow from 10.13.13.0/24 to any port 9090 proto tcp comment 'Prometheus - VPN'
+
+# n8n Admin UI - VPN/LOCAL ONLY (non-webhook paths handled by reverse proxy)
+# The reverse proxy will enforce /webhook/* public, everything else VPN-only
+
+# BLOCK Ollama from external access - internal Docker network only
+ufw deny 11434/tcp comment 'Ollama - internal only'
 
 # Docker network interfaces
 ufw allow in on docker0
@@ -182,6 +200,13 @@ ufw --force enable
 ufw status numbered
 
 echo "✅ Firewall configured successfully"
+echo ""
+echo "Public exposure:"
+echo "  - WireGuard VPN: 51820/udp"
+echo "  - n8n webhooks: 5678/tcp (restrict to /webhook/* in reverse proxy)"
+echo ""
+echo "VPN/Local only:"
+echo "  - AdGuard, Grafana, Prometheus, n8n UI"
 ```
 
 ### Network Policy Documentation
@@ -221,63 +246,84 @@ Create `docs/NETWORK_ARCHITECTURE.md`:
 
 **Security**: Internal only, contains sensitive metrics
 
-## Communication Flows
+## Communication Flows (VPN-First Hybrid Model)
 
 ```
-┌─────────────────────────────────────────────────┐
-│                   Internet                      │
-└────────────────────┬────────────────────────────┘
+┌─────────────────────────────────────────────────────────┐
+│                       Internet                          │
+└──────────┬────────────────────────────┬─────────────────┘
+           │                            │
+           │ WireGuard VPN         n8n Webhooks Only
+           │ (51820/udp)           (5678/tcp /webhook/*)
+           │                            │
+    ┌──────▼──────┐              ┌─────▼──────┐
+    │  VPN Tunnel │              │  Reverse   │
+    │  (Primary)  │              │   Proxy    │
+    └──────┬──────┘              └─────┬──────┘
+           │                            │
+           │ Authenticated Access       │ Public Webhooks
+           │                            │
+┌──────────▼────────────────────────────▼───────────────┐
+│              Frontend Network (VPN + Public)          │
+│  ┌──────────┐  ┌──────┐  ┌─────────┐  ┌──────────┐   │
+│  │ AdGuard  │  │ n8n  │  │ Grafana │  │WireGuard │   │
+│  │  (VPN)   │  │(Hyb) │  │  (VPN)  │  │          │   │
+│  └──────────┘  └───┬──┘  └─────────┘  └──────────┘   │
+└────────────────────┼──────────────────────────────────┘
                      │
 ┌────────────────────▼────────────────────────────┐
-│              Frontend Network                   │
-│  ┌──────────┐  ┌──────┐  ┌─────────┐           │
-│  │ AdGuard  │  │ n8n  │  │ Grafana │           │
-│  └──────────┘  └───┬──┘  └─────────┘           │
-└────────────────────┼─────────────────────────────┘
-                     │
-┌────────────────────▼────────────────────────────┐
-│              Backend Network                    │
+│         Backend Network (Internal Only)         │
 │  ┌──────────┐  ┌────────────┐                  │
 │  │ Ollama   │◄─┤ n8n (API)  │                  │
+│  │(Internal)│  │            │                  │
 │  └──────────┘  └────────────┘                  │
 └─────────────────────────────────────────────────┘
                      │
 ┌────────────────────▼────────────────────────────┐
-│           Monitoring Network                    │
+│      Monitoring Network (Internal Only)         │
 │  ┌────────────┐  ┌──────────┐  ┌──────────┐    │
 │  │ Prometheus │  │ cAdvisor │  │ NodeExp  │    │
+│  │   (VPN)    │  │  (VPN)   │  │  (VPN)   │    │
 │  └────────────┘  └──────────┘  └──────────┘    │
 └─────────────────────────────────────────────────┘
 ```
 
-## Access Control Matrix
+## Access Control Matrix (VPN-First)
 
-| Service | Frontend | Backend | Monitoring | External |
-|---------|----------|---------|------------|----------|
-| AdGuard Home | ✅ | ❌ | ✅ | ✅ (DNS only) |
-| n8n | ✅ | ✅ | ✅ | ✅ (webhooks) |
-| Ollama | ❌ | ✅ | ✅ | ❌ |
-| Prometheus | ❌ | ❌ | ✅ | ❌ |
-| Grafana | ✅ | ❌ | ✅ | 🔶 (VPN only) |
+| Service | Frontend | Backend | Monitoring | External | VPN Required |
+|---------|----------|---------|------------|----------|--------------|
+| WireGuard | ✅ | ✅ | ✅ | ✅ (Public) | N/A |
+| n8n UI | ✅ | ✅ | ✅ | ❌ | ✅ Yes |
+| n8n Webhooks | ✅ | ✅ | ✅ | ✅ (Public) | ❌ No |
+| AdGuard Home | ✅ | ❌ | ✅ | ❌ | ✅ Yes |
+| Grafana | ✅ | ❌ | ✅ | ❌ | ✅ Yes |
+| Prometheus | ❌ | ❌ | ✅ | ❌ | ✅ Yes |
+| Ollama | ❌ | ✅ | ✅ | ❌ | ✅ Yes |
 
-## Port Exposure Policy
+## Port Exposure Policy (VPN-First)
 
-### Exposed to Internet
-- 5678/tcp - n8n (HTTPS only, with auth)
-- 53/udp - AdGuard DNS (if configured)
+### ✅ Exposed to Public Internet
+- **51820/udp** - WireGuard VPN (PRIMARY ENTRY POINT)
+- **5678/tcp** - n8n webhooks ONLY (`/webhook/*` paths)
+  - Reverse proxy enforces path restrictions
+  - Rate limiting required
+  - All other n8n paths require VPN
 
-### Local Network Only
-- 80/tcp - AdGuard admin
-- 3000/tcp - AdGuard setup
-- 3001/tcp - Grafana
-- 9090/tcp - Prometheus
+### 🔐 VPN or Local Network Only
+- **53/tcp+udp** - AdGuard DNS
+- **80/tcp** - AdGuard admin
+- **3000/tcp** - AdGuard setup
+- **3001/tcp** - Grafana
+- **9090/tcp** - Prometheus
+- **5678/tcp** - n8n UI (non-webhook paths)
 
-### Internal Docker Networks Only
-- 11434/tcp - Ollama
-- 8080/tcp - cAdvisor
-- 9093/tcp - Alertmanager
-- 9100/tcp - Node Exporter
-- 9115/tcp - Blackbox Exporter
+### 🔒 Internal Docker Networks Only (Not exposed to host)
+- **11434/tcp** - Ollama (backend network only)
+- **8080/tcp** - cAdvisor
+- **9093/tcp** - Alertmanager
+- **9100/tcp** - Node Exporter
+- **9115/tcp** - Blackbox Exporter
+- **51821/tcp** - WireGuard admin UI (bound to SERVER_IP only)
 ```
 
 ### Testing Commands
@@ -352,10 +398,13 @@ docker compose up -d
 sudo ufw disable
 ```
 
-## Security Impact
-- **Before**: Flat network, any compromised container can reach all others
-- **After**: Layered defense, limited lateral movement, internal services protected
-- **Risk Reduction**: 60% reduction in lateral movement attack surface
+## Security Impact (VPN-First Model)
+- **Before**: Flat network, any compromised container can reach all others, multiple public-facing services
+- **After**: Layered defense with VPN boundary, limited lateral movement, only VPN + n8n webhooks exposed
+- **Risk Reduction**:
+  - 90% reduction in public attack surface (only 2 ports vs many)
+  - 60% reduction in lateral movement if VPN compromised
+  - Defense-in-depth: VPN breach still limited by network segmentation
 
 ## References
 - [Docker Network Security](https://docs.docker.com/network/network-tutorial-standalone/)

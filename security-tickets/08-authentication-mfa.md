@@ -1,20 +1,24 @@
-# Configure Proper Authentication for All Services
+# Configure Centralized Authentication and MFA (Optional)
 
-## Priority: 2 (High)
+## Priority: 4 (Low - Optional)
 ## Estimated Time: 6-8 hours
-## Phase: Week 4 - High Priority Security
+## Phase: Month 3+ - Nice-to-Have Enhancement
+
+> **🔒 VPN-First Strategy Note:**
+> In the VPN-first model, **WireGuard provides the primary authentication layer**. This ticket is now **optional** and provides defense-in-depth by adding a second authentication layer within the VPN. Only implement this if you want SSO convenience or additional security after VPN authentication.
 
 ## Description
-Implement centralized authentication with Multi-Factor Authentication (MFA) support using Authelia or OAuth2 Proxy. Replace basic authentication with strong authentication mechanisms and enable MFA for all services.
+**OPTIONAL:** Implement centralized authentication with Multi-Factor Authentication (MFA) using Authelia or OAuth2 Proxy for services accessed via VPN. This provides SSO convenience and an additional authentication layer, but is not critical since VPN already authenticates users.
 
-## Acceptance Criteria
-- [ ] Authelia or OAuth2 Proxy deployed
-- [ ] MFA enabled (TOTP or WebAuthn)
-- [ ] All services protected by authentication
-- [ ] SSO (Single Sign-On) configured
+## Acceptance Criteria (Optional - Only if Implementing)
+- [ ] Authelia or OAuth2 Proxy deployed for VPN-accessible services
+- [ ] MFA enabled (TOTP or WebAuthn) as second factor after VPN
+- [ ] SSO (Single Sign-On) for internal services (Grafana, n8n UI, etc.)
 - [ ] Failed login attempts tracked and alerted
 - [ ] Session management configured
 - [ ] Account lockout policies implemented
+
+**Note:** VPN authentication is the primary security boundary. This adds SSO convenience and defense-in-depth.
 
 ## Technical Implementation Details
 
@@ -394,10 +398,14 @@ docker compose -f docker-compose.auth.yml down
 # Update /etc/hosts to bypass Traefik temporarily
 ```
 
-## Security Impact
-- **Before**: Basic auth, no MFA, no account lockout
-- **After**: Centralized auth, MFA required, brute force protection
-- **Risk Reduction**: 85% reduction in unauthorized access risk
+## Security Impact (VPN-First Model - Optional)
+- **Before**: VPN authentication only, individual service logins
+- **After**: VPN + centralized SSO + optional MFA, improved user experience
+- **Risk Reduction**:
+  - Minimal additional security (VPN already provides strong auth)
+  - Primary benefit: SSO convenience, not security
+  - Defense-in-depth: 20% additional protection if VPN is compromised
+  - **Recommendation**: Skip unless you need SSO convenience
 
 ## References
 - [Authelia Documentation](https://www.authelia.com/)
