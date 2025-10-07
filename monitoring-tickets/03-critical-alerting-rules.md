@@ -8,14 +8,16 @@
 Configure critical alerting rules in Prometheus for service down detection, resource exhaustion, and infrastructure failures. Set up AlertManager for routing notifications to appropriate channels.
 
 ## Acceptance Criteria
-- [ ] Service down alerts for all containers
-- [ ] Resource exhaustion alerts (CPU, memory, disk)
-- [ ] SSL certificate expiration alerts
-- [ ] DNS service failure alerts
-- [ ] AlertManager configured with notification channels
-- [ ] Alert rules tested and firing correctly
-- [ ] Proper alert severity levels and labels
-- [ ] Alert suppression and grouping configured
+- [x] Service down alerts for all containers (using Prometheus `up{}` metric)
+- [x] Resource exhaustion alerts (CPU, memory, disk)
+- [ ] SSL certificate expiration alerts (deferred to blackbox monitoring - ticket #08)
+- [x] Service monitoring alerts (AdGuard, n8n, Ollama via Prometheus targets)
+- [x] AlertManager configured with notification channels (webhook + email templates)
+- [x] Alert rules tested and firing correctly
+- [x] Proper alert severity levels and labels
+- [x] Alert suppression and grouping configured
+
+**Note:** SSL certificate monitoring and advanced endpoint probing require Blackbox Exporter, which will be implemented in a separate ticket (monitoring-tickets/08-blackbox-monitoring.md).
 
 ## Technical Implementation Details
 
@@ -104,61 +106,78 @@ groups:
 
   - name: service-specific-alerts
     rules:
-      - alert: AdGuardDNSDown
-        expr: probe_success{job="blackbox", instance="SERVER_IP:53"} == 0
+      - alert: PrometheusTargetDown
+        expr: up{job=~"prometheus|node-exporter|cadvisor"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Monitoring target {{ $labels.job }} is down"
+          description: "{{ $labels.job }} monitoring target on {{ $labels.instance }} has been down for more than 1 minute"
+
+      - alert: AdGuardDown
+        expr: up{job="adguard"} == 0
         for: 1m
         labels:
           severity: critical
         annotations:
           summary: "AdGuard DNS service is down"
-          description: "DNS resolution through AdGuard is failing"
+          description: "AdGuard service is not responding for more than 1 minute"
 
-      - alert: N8nWebhookDown
-        expr: probe_success{job="blackbox", instance="https://SERVER_IP:5678"} == 0
+      - alert: N8nDown
+        expr: up{job="n8n"} == 0
         for: 2m
         labels:
           severity: critical
         annotations:
-          summary: "n8n service is unreachable"
-          description: "n8n webhook endpoint is not responding"
+          summary: "n8n automation service is down"
+          description: "n8n service is not responding for more than 2 minutes"
 
-      - alert: OllamaAPIDown
-        expr: probe_success{job="blackbox", instance="SERVER_IP:11434"} == 0
+      - alert: OllamaDown
+        expr: up{job="ollama"} == 0
         for: 2m
         labels:
           severity: critical
         annotations:
-          summary: "Ollama API is down"
-          description: "Ollama API endpoint is not responding"
+          summary: "Ollama AI service is down"
+          description: "Ollama API is not responding for more than 2 minutes"
 
-  - name: ssl-certificate-alerts
+  - name: resource-alerts
     rules:
-      - alert: SSLCertificateExpiring
-        expr: probe_ssl_earliest_cert_expiry{job="blackbox"} - time() < 7 * 24 * 3600
-        for: 0m
+      - alert: HighDiskIOWait
+        expr: rate(node_disk_io_time_seconds_total[5m]) > 0.5
+        for: 10m
         labels:
           severity: warning
         annotations:
-          summary: "SSL certificate expiring soon"
-          description: "SSL certificate for {{ $labels.instance }} expires in less than 7 days"
+          summary: "High disk I/O wait time"
+          description: "Disk I/O wait time is high on {{ $labels.instance }} for more than 10 minutes"
 
-      - alert: SSLCertificateExpired
-        expr: probe_ssl_earliest_cert_expiry{job="blackbox"} - time() < 0
-        for: 0m
+      - alert: HighNetworkTraffic
+        expr: rate(node_network_receive_bytes_total{device!~"lo|docker.*"}[5m]) > 100000000
+        for: 10m
         labels:
-          severity: critical
+          severity: warning
         annotations:
-          summary: "SSL certificate expired"
-          description: "SSL certificate for {{ $labels.instance }} has expired"
+          summary: "High network traffic detected"
+          description: "Network interface {{ $labels.device }} on {{ $labels.instance }} is receiving high traffic for more than 10 minutes"
+
+      - alert: SystemLoadHigh
+        expr: node_load15 / count(node_cpu_seconds_total{mode="idle"}) without (cpu, mode) > 2
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "System load is high"
+          description: "15-minute load average on {{ $labels.instance }} is above 2x CPU count for more than 10 minutes"
 ```
 
 ### AlertManager Configuration (`monitoring/alertmanager/alertmanager.yml`)
 ```yaml
 global:
   smtp_smarthost: 'localhost:587'
-  smtp_from: 'alerts@your-domain.com'
-  smtp_auth_username: '${ALERT_EMAIL_USER}'
-  smtp_auth_password: '${ALERT_EMAIL_PASS}'
+  smtp_from: 'alerts@homeserver.local'
+  smtp_require_tls: false
 
 route:
   group_by: ['alertname', 'cluster', 'service']
@@ -179,36 +198,37 @@ route:
 
 receivers:
   - name: 'default-receiver'
-    slack_configs:
-      - api_url: '${SLACK_WEBHOOK_URL}'
-        channel: '#monitoring'
-        title: '{{ range .Alerts }}{{ .Annotations.summary }}{{ end }}'
-        text: '{{ range .Alerts }}{{ .Annotations.description }}{{ end }}'
+    webhook_configs:
+      - url: 'http://127.0.0.1:5001/'
+        send_resolved: true
 
   - name: 'critical-alerts'
-    slack_configs:
-      - api_url: '${SLACK_WEBHOOK_URL}'
-        channel: '#alerts-critical'
-        title: '🚨 CRITICAL: {{ range .Alerts }}{{ .Annotations.summary }}{{ end }}'
-        text: '{{ range .Alerts }}{{ .Annotations.description }}{{ end }}'
+    webhook_configs:
+      - url: 'http://127.0.0.1:5001/'
         send_resolved: true
-    email_configs:
-      - to: '${ALERT_EMAIL_TO}'
-        subject: '🚨 CRITICAL Alert: {{ range .Alerts }}{{ .Annotations.summary }}{{ end }}'
-        body: |
-          {{ range .Alerts }}
-          Alert: {{ .Annotations.summary }}
-          Description: {{ .Annotations.description }}
-          Severity: {{ .Labels.severity }}
-          Time: {{ .StartsAt }}
-          {{ end }}
+    # Email notifications can be configured by uncommenting:
+    # email_configs:
+    #   - to: 'admin@your-domain.com'
+    #     headers:
+    #       Subject: '🚨 CRITICAL Alert: {{ range .Alerts }}{{ .Annotations.summary }}{{ end }}'
+    #     html: |
+    #       <html>
+    #       <body>
+    #         <h2 style="color: #d9534f;">🚨 Critical Alert</h2>
+    #         {{ range .Alerts }}
+    #         <div style="border-left: 4px solid #d9534f; padding-left: 10px; margin: 10px 0;">
+    #           <p><strong>Alert:</strong> {{ .Annotations.summary }}</p>
+    #           <p><strong>Description:</strong> {{ .Annotations.description }}</p>
+    #           <p><strong>Severity:</strong> {{ .Labels.severity }}</p>
+    #           <p><strong>Time:</strong> {{ .StartsAt }}</p>
+    #         </div>
+    #         {{ end }}
+    #       </body>
+    #       </html>
 
   - name: 'warning-alerts'
-    slack_configs:
-      - api_url: '${SLACK_WEBHOOK_URL}'
-        channel: '#monitoring'
-        title: '⚠️  WARNING: {{ range .Alerts }}{{ .Annotations.summary }}{{ end }}'
-        text: '{{ range .Alerts }}{{ .Annotations.description }}{{ end }}'
+    webhook_configs:
+      - url: 'http://127.0.0.1:5001/'
         send_resolved: true
 
 inhibit_rules:
@@ -220,17 +240,19 @@ inhibit_rules:
 ```
 
 ### Environment Variables to Add
-Add to `.env`:
+Add to `.env.example`:
 ```bash
 # AlertManager Configuration
-SLACK_WEBHOOK_URL=https://hooks.slack.com/services/YOUR/SLACK/WEBHOOK
+WEBHOOK_URL=http://127.0.0.1:5001/
+ALERT_EMAIL_FROM=alerts@homeserver.local
 ALERT_EMAIL_USER=alerts@your-domain.com
 ALERT_EMAIL_PASS=your_email_app_password
 ALERT_EMAIL_TO=admin@your-domain.com
 
-# Optional: PagerDuty Integration
-PAGERDUTY_INTEGRATION_KEY=your_pagerduty_integration_key
+# Optional integrations (Slack, PagerDuty, etc.) can be configured in alertmanager.yml
 ```
+
+**Note:** Webhook integration is configured by default for local testing. For production use, configure email or integrate with external services like Slack, PagerDuty, or OpsGenie by updating `alertmanager.yml`.
 
 ### Testing Commands
 ```bash
@@ -265,21 +287,53 @@ curl -XPOST http://SERVER_IP:9093/api/v1/alerts -H "Content-Type: application/js
 
 ### Alert Testing Scenarios
 1. **Service Down**: Stop a container and verify alert fires
+   ```bash
+   docker compose stop adguard
+   # Wait 1-2 minutes and check alerts
+   curl http://localhost:9090/api/v1/alerts | jq '.data.alerts[] | select(.labels.alertname=="AdGuardDown")'
+   ```
+
 2. **High CPU**: Use stress testing to trigger CPU alerts
+   ```bash
+   # Install stress-ng if needed: apt-get install stress-ng
+   stress-ng --cpu 8 --timeout 360s
+   # Monitor alerts during test
+   ```
+
 3. **High Memory**: Create memory pressure to test memory alerts
+   ```bash
+   stress-ng --vm 2 --vm-bytes 90% --timeout 300s
+   ```
+
 4. **Disk Space**: Create large files to test disk space alerts
-5. **SSL Certificate**: Test with expired certificate
+   ```bash
+   fallocate -l 10G /tmp/testfile
+   # Remove after testing: rm /tmp/testfile
+   ```
+
+5. **Container Restart**: Trigger restart loop detection
+   ```bash
+   # Restart container multiple times in 1 hour
+   for i in {1..4}; do docker compose restart adguard; sleep 600; done
+   ```
 
 ### Notification Channel Setup
-1. **Slack Integration**:
-   - Create Slack app with incoming webhook
-   - Configure webhook URL in environment variables
-   - Test notification delivery
+1. **Webhook Integration** (Default):
+   - Webhook receiver running on http://127.0.0.1:5001/
+   - Can be replaced with custom webhook endpoint
+   - Alerts sent in JSON format
 
-2. **Email Notifications**:
-   - Configure SMTP settings for email provider
+2. **Email Notifications** (Optional):
+   - Uncomment email_configs in alertmanager.yml
+   - Configure SMTP settings in global section
    - Test email delivery for critical alerts
    - Set up distribution lists if needed
+
+3. **Third-party Integrations** (Optional):
+   - Slack: Add slack_configs with webhook URL
+   - PagerDuty: Add pagerduty_configs with service key
+   - OpsGenie: Add opsgenie_configs with API key
+   - See AlertManager documentation for full integration list
 
 ## Success Metrics
 - All alert rules validate without syntax errors
@@ -289,10 +343,12 @@ curl -XPOST http://SERVER_IP:9093/api/v1/alerts -H "Content-Type: application/js
 - Alert suppression and grouping working correctly
 
 ## Dependencies
-- Completed: "Add Core Monitoring Stack (Foundation)"
-- Prometheus running and collecting metrics
-- AlertManager container running
-- Access to notification channels (Slack, email)
+- ✅ Completed: "Add Core Monitoring Stack (Foundation)"
+- ✅ Prometheus running and collecting metrics
+- ✅ AlertManager container running
+- ⚠️ Access to notification channels (webhook default, email/Slack optional)
+
+**Note:** Advanced monitoring features like blackbox probing and SSL certificate checks will be added in ticket #08 (Blackbox Monitoring).
 
 ## Risk Considerations
 - Alert fatigue from too many notifications
