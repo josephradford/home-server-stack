@@ -143,6 +143,61 @@ services:
       retries: 3
       start_period: 10s
 
+  # HortusFox - Collaborative plant management system
+  hortusfox-db:
+    image: mariadb:${HORTUSFOX_MARIADB_VERSION:-latest}
+    container_name: hortusfox-db
+    restart: unless-stopped
+    environment:
+      - MARIADB_ROOT_PASSWORD=${HORTUSFOX_DB_ROOT_PASSWORD}
+      - MARIADB_DATABASE=${HORTUSFOX_DB_NAME:-hortusfox}
+      - MARIADB_USER=${HORTUSFOX_DB_USER:-hortusfox}
+      - MARIADB_PASSWORD=${HORTUSFOX_DB_PASSWORD}
+      - TZ=${TIMEZONE}
+    volumes:
+      - ./data/hortusfox/db:/var/lib/mysql
+    networks:
+      - homeserver
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  hortusfox:
+    image: ghcr.io/danielbrendel/hortusfox-web:${HORTUSFOX_VERSION:-latest}
+    container_name: hortusfox
+    restart: unless-stopped
+    ports:
+      - "${SERVER_IP}:8181:80"
+    environment:
+      - APP_ADMIN_EMAIL=${HORTUSFOX_ADMIN_EMAIL}
+      - APP_ADMIN_PASSWORD=${HORTUSFOX_ADMIN_PASSWORD}
+      - APP_TIMEZONE=${TIMEZONE}
+      - DB_HOST=hortusfox-db
+      - DB_PORT=3306
+      - DB_DATABASE=${HORTUSFOX_DB_NAME:-hortusfox}
+      - DB_USERNAME=${HORTUSFOX_DB_USER:-hortusfox}
+      - DB_PASSWORD=${HORTUSFOX_DB_PASSWORD}
+    volumes:
+      - ./data/hortusfox/images:/var/www/html/public/img
+      - ./data/hortusfox/logs:/var/www/html/app/logs
+      - ./data/hortusfox/backup:/var/www/html/public/backup
+      - ./data/hortusfox/themes:/var/www/html/public/themes
+      - ./data/hortusfox/migrate:/var/www/html/app/migrations
+    networks:
+      - homeserver
+    depends_on:
+      hortusfox-db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget --quiet --tries=1 --spider http://localhost:80 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
 networks:
   homeserver:
     driver: bridge

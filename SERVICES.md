@@ -13,6 +13,7 @@ Currently deployed and active services.
 - **[WireGuard](https://github.com/wireguard)** - Fast, modern, secure VPN tunnel for remote access
 - **[Habitica](https://github.com/HabitRPG/habitica)** - Gamified habit and task tracker (RPG-style productivity)
 - **[Bookwyrm](https://github.com/bookwyrm-social/bookwyrm)** - Social reading and reviewing, decentralized with ActivityPub (via [bookwyrm-docker wrapper](https://github.com/josephradford/bookwyrm-docker))
+- **[HortusFox](https://github.com/danielbrendel/hortusfox-web)** - Self-hosted collaborative plant management system
 
 ### Monitoring Stack
 - **[Grafana](https://github.com/grafana/grafana)** - The open and composable observability and data visualization platform
@@ -33,7 +34,6 @@ Services queued for implementation.
 - [ ] **[Fail2ban](https://github.com/fail2ban/fail2ban)** - Daemon to ban hosts that cause multiple authentication errors
 - [ ] **[SearXNG](https://github.com/searxng/searxng)** - Free internet metasearch engine which aggregates results from various search services
 - [ ] **[CrowdSec](https://github.com/crowdsecurity/crowdsec)** - Open-source and participative security solution with crowdsourced protection against malicious IPs
-- [ ] **[HortusFox](https://github.com/danielbrendel/hortusfox-web)** - Self-hosted collaborative plant management system for plant enthusiasts
 - [ ] **[Glance](https://github.com/glanceapp/glance)** - A self-hosted dashboard that puts all your feeds in one place
 - [ ] **[Jellyfin](https://github.com/jellyfin/jellyfin)** - The Free Software Media System for movies, TV shows, and music
 - [ ] **[Navidrome](https://github.com/navidrome/navidrome)** - Modern Music Server and Streamer compatible with Subsonic/Airsonic (alternative to Jellyfin for music)
