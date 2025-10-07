@@ -1,277 +1,120 @@
 # Home Server Stack
 
-A complete Docker Compose setup for running AdGuard Home, n8n, and Ollama on your home server.
+A complete self-hosted infrastructure for home automation, AI, and network services using Docker Compose.
 
-## Services Included
+## 🚀 Services
 
-- **AdGuard Home**: Network-wide ad blocking and DNS server
-- **n8n**: Workflow automation platform
-- **Ollama**: Local AI models for coding assistance and general chat
+**Core Services:**
+- **[AdGuard Home](https://github.com/AdguardTeam/AdGuardHome)** - Network-wide ad blocking and DNS server
+- **[n8n](https://github.com/n8n-io/n8n)** - Workflow automation platform with AI capabilities
+- **[Ollama](https://github.com/ollama/ollama)** - Local AI models (deepseek-coder:6.7b, llama3.2:3b)
+- **[WireGuard](https://github.com/wireguard)** - VPN for secure remote access
 
-## System Requirements
+**Optional:**
+- **Monitoring Stack** - Grafana, Prometheus, Alertmanager, Node Exporter, cAdvisor
 
-**Minimum Requirements:**
-- 8 GB RAM (16 GB recommended)
-- 500 GB available storage (1 TB recommended for AI models)
-- Linux-based OS (tested on Ubuntu Server 24.04 LTS)
-- Docker and Docker Compose installed
-- Static IP address configured for your server
+See [SERVICES.md](SERVICES.md) for the complete catalog including planned services.
 
-## Quick Setup
+## 📋 Quick Start
 
-1. **Clone or download this repository**
-   ```bash
-   git clone <your-repo-url>
-   cd home-server-stack
-   ```
-
-2. **Configure environment variables**
-   ```bash
-   cp .env.example .env
-   nano .env
-   ```
-
-   Update the following:
-   - `SERVER_IP`: Your server's local IP address
-   - `TIMEZONE`: Your local timezone (e.g., `America/New_York`, `Europe/London`)
-   - `N8N_PASSWORD`: A secure password for n8n access
-   - `N8N_EDITOR_BASE_URL`: Your external domain (e.g., `https://your-domain.ddns.net:5678`)
-
-3. **Generate SSL certificates** (for HTTPS support)
-   ```bash
-   cd ssl
-   ./generate-cert.sh your-domain.ddns.net
-   cd ..
-   ```
-
-4. **Start the services**
-   ```bash
-   docker compose up -d
-   ```
-
-5. **Initial model setup** (runs automatically)
-   The setup will automatically download two optimized models:
-   - `deepseek-coder:6.7b`: Efficient coding assistant (6.7B parameters, quantized for better performance)
-   - `llama3.2:3b`: General chat model (3B parameters)
-
-   **Why DeepSeek Coder 6.7B?**
-   - Optimized 4-bit quantization reduces memory footprint by ~75%
-   - Faster inference while maintaining code quality
-   - Better balance of performance vs. resource usage for home servers
-   - Designed specifically for code completion and programming tasks
-
-## Service Access
-
-After deployment, access your services at:
-
-- **AdGuard Home**: `http://SERVER_IP:3000` (initial setup) then `http://SERVER_IP:80`
-- **n8n**: `https://SERVER_IP:5678` (HTTPS with self-signed certificate)
-- **Ollama**: `http://SERVER_IP:11434` (API endpoint)
-
-Replace `SERVER_IP` with your actual server IP address.
-
-### Monitoring Stack (Optional)
-
-If you've deployed the monitoring stack with `docker-compose.monitoring.yml`, access these services:
-
-- **Grafana**: `http://SERVER_IP:3001` (login with credentials from `.env` file)
-- **Prometheus**: `http://SERVER_IP:9090` (metrics database)
-- **Alertmanager**: `http://SERVER_IP:9093` (alert management)
-
-**Grafana Dashboards:**
-- **System Overview**: `http://SERVER_IP:3001/d/system-overview` - CPU, memory, disk, and network metrics
-- **Container Health**: `http://SERVER_IP:3001/d/container-health` - Docker container status and resource usage
-- **Resource Utilization**: `http://SERVER_IP:3001/d/resource-utilization` - Historical trends and top consumers
-
-## Initial Configuration
-
-### AdGuard Home Setup
-1. Navigate to `http://SERVER_IP:3000`
-2. Follow the initial setup wizard
-3. Set admin username and password
-4. Configure DNS settings as needed
-5. After setup, access the admin panel at `http://SERVER_IP:80`
-
-### n8n Setup
-1. Navigate to `https://SERVER_IP:5678`
-2. Accept the self-signed certificate warning in your browser
-3. Login with credentials from your `.env` file
-4. Create your first workflow
-
-**Note**: When accessing n8n via HTTPS with a self-signed certificate, your browser will show a security warning. This is expected for development certificates. Click "Advanced" and "Proceed to [your-domain]" to continue.
-
-### Ollama Usage
-Test the AI models:
 ```bash
-# Chat with the general model
-curl http://SERVER_IP:11434/api/generate -d '{
-  "model": "llama3.2:3b",
-  "prompt": "Hello, how are you?",
-  "stream": false
-}'
+# 1. Clone the repository
+git clone <your-repo-url>
+cd home-server-stack
 
-# Get coding help
-curl http://SERVER_IP:11434/api/generate -d '{
-  "model": "deepseek-coder:6.7b",
-  "prompt": "Write a Python function to calculate fibonacci numbers",
-  "stream": false
-}'
-```
+# 2. Configure environment
+cp .env.example .env
+nano .env  # Update SERVER_IP, TIMEZONE, passwords
 
-## Remote Access Setup
+# 3. Generate SSL certificates (optional, for HTTPS)
+cd ssl && ./generate-cert.sh your-domain.com && cd ..
 
-To access these services from outside your home network, configure port forwarding on your router:
-
-### Router Configuration
-1. Access your router's admin panel (usually `192.168.1.1` or `192.168.0.1`)
-2. Navigate to "Port Forwarding" or "Virtual Servers" section
-3. Add port forwarding rules based on your needs:
-
-**Recommended for Remote Access (Most Common):**
-| Service | External Port | Internal IP | Internal Port | Protocol | Purpose |
-|---------|---------------|-------------|---------------|----------|---------|
-| n8n | 5678 | SERVER_IP | 5678 | TCP | Remote workflow management (HTTPS) |
-| Ollama (Optional) | 11434 | SERVER_IP | 11434 | TCP | Remote AI API access |
-
-**AdGuard Home Port Information:**
-- **Port 3000**: Initial setup only (do not forward - use local access)
-- **Port 80**: Admin interface after setup (only forward if you need remote admin access)
-- **Port 53**: DNS service (only forward if you want to provide public DNS service - NOT recommended for home use)
-
-**Additional Ports (Only if Needed):**
-| Service | External Port | Internal IP | Internal Port | Protocol | Purpose |
-|---------|---------------|-------------|---------------|----------|---------|
-| AdGuard Admin | 8080 | SERVER_IP | 80 | TCP | Remote admin access (consider VPN instead) |
-
-### Security Considerations
-- **AdGuard Home**: Keep admin interface (port 80) local-only for security. Access remotely via VPN if needed
-- **DNS Service**: Do NOT forward port 53 unless you specifically want to run a public DNS service
-- **Use VPN**: Consider setting up WireGuard/OpenVPN instead of exposing services directly
-- **Non-standard ports**: Use different external ports (e.g., 15678 instead of 5678) for better security
-- **Regular updates**: Keep all services updated and monitor access logs
-
-### Dynamic DNS (Optional)
-If your ISP provides a dynamic IP address, consider using a Dynamic DNS service like:
-- No-IP
-- DuckDNS
-- Cloudflare DDNS
-
-## Data Persistence
-
-All service data is stored in the `./data/` directory:
-- `./data/adguard/`: AdGuard Home configuration and data
-- `./data/n8n/`: n8n workflows and data
-- `./data/ollama/`: Downloaded AI models and data
-
-## Managing the Stack
-
-**Start services:**
-```bash
+# 4. Start services
 docker compose up -d
 ```
 
-**Start with monitoring stack:**
-```bash
-docker compose -f docker-compose.yml -f docker-compose.monitoring.yml up -d
-```
+**Access Services:**
+- AdGuard Home: `http://SERVER_IP:80`
+- n8n: `https://SERVER_IP:5678`
+- Ollama API: `http://SERVER_IP:11434`
 
-**Stop services:**
-```bash
-docker compose down
-```
+See **[docs/SETUP.md](docs/SETUP.md)** for detailed installation instructions.
 
-**View logs:**
-```bash
-docker compose logs -f [service_name]
-```
+## 📚 Documentation
 
-**Update services:**
-```bash
-docker compose pull
-docker compose up -d
-```
+### Getting Started
+- **[Setup Guide](docs/SETUP.md)** - Complete installation and initial setup
+- **[Configuration Guide](docs/CONFIGURATION.md)** - Service configuration and customization
+- **[Requirements](docs/REQUIREMENTS.md)** - System requirements and resource usage
 
-**Restart a specific service:**
-```bash
-docker compose restart [service_name]
-```
+### Operations
+- **[Operations Guide](docs/OPERATIONS.md)** - Managing services, updates, backups
+- **[Troubleshooting](docs/TROUBLESHOOTING.md)** - Common issues and solutions
+- **[Monitoring Deployment](docs/MONITORING_DEPLOYMENT.md)** - Optional monitoring stack setup
 
-## Model Management
+### Monitoring & Alerts
+- **[Alerts Reference](docs/ALERTS.md)** - Alert definitions and response procedures
+- **[Operations Runbook](docs/RUNBOOK.md)** - Detailed troubleshooting for all alerts
+- **[Known Issues](docs/KNOWN_ISSUES.md)** - Known bugs and workarounds
 
-**List downloaded models:**
-```bash
-docker exec ollama ollama list
-```
+### Advanced
+- **[Remote Access Setup](docs/REMOTE_ACCESS.md)** - Port forwarding and VPN configuration
+- **[AI Models Guide](docs/AI_MODELS.md)** - Ollama model management
+- **[Architecture Overview](docs/ARCHITECTURE.md)** - System design and data persistence
 
-**Download additional models:**
-```bash
-docker exec ollama ollama pull model_name
-```
+### Implementation Tickets
+- **[Monitoring Tickets](monitoring-tickets/README.md)** - Monitoring implementation roadmap
+- **[Security Tickets](security-tickets/README.md)** - Security hardening roadmap (VPN-first strategy)
 
-**Remove models:**
-```bash
-docker exec ollama ollama rm model_name
-```
+## 🔐 Security
 
-## Troubleshooting
+This project follows a **VPN-first security model**. See [security-tickets/README.md](security-tickets/README.md) for the complete security roadmap.
 
-**Services not starting:**
-- Check if ports are already in use: `sudo netstat -tlnp`
-- Verify Docker is running: `sudo systemctl status docker`
-- Check logs: `docker compose logs`
+**Key Security Features:**
+- VPN-first access (WireGuard primary boundary)
+- Selective public exposure (n8n webhooks only)
+- Pre-commit secret scanning
+- Pinned Docker image versions
+- Regular security audits
 
-**DNS not working:**
-- Ensure port 53 isn't blocked by systemd-resolved
-- Check AdGuard Home logs: `docker compose logs adguard`
+See **[SECURITY.md](SECURITY.md)** for security policy and reporting vulnerabilities.
 
-**Ollama models not downloading:**
-- Check available disk space
-- Monitor download progress: `docker compose logs ollama-setup`
+## 🤝 Contributing
 
-**Cannot access from outside network:**
-- Verify port forwarding rules on router
-- Check if ISP blocks residential hosting
-- Confirm firewall settings on server
-
-## Resource Usage
-
-Expected resource consumption:
-- **RAM**: 6-8 GB (varies with AI model usage)
-- **Storage**: 20-30 GB for models and data
-- **CPU**: Low idle usage, higher during AI inference
-
-## Contributing
-
-We welcome contributions to improve this home server stack! Please see our [Contributing Guidelines](CONTRIBUTING.md) for details on:
-
-- How to submit bug reports and feature requests
+Contributions are welcome! See **[CONTRIBUTING.md](CONTRIBUTING.md)** for guidelines on:
+- Submitting bug reports and feature requests
 - Development workflow and branching strategy
 - Pull request process
-- Code review guidelines
 
-### Quick Contribution Guide
+## 📊 System Requirements
 
-1. **Fork the repository** on GitHub
-2. **Create a feature branch**: `git checkout -b feature/your-feature-name`
-3. **Make your changes** and test them locally
-4. **Commit your changes**: Use descriptive commit messages
-5. **Push to your fork**: `git push origin feature/your-feature-name`
-6. **Submit a pull request** using our PR template
+**Minimum:**
+- 8 GB RAM (16 GB recommended)
+- 500 GB storage (1 TB recommended)
+- Linux-based OS (tested on Ubuntu Server 24.04 LTS)
+- Docker and Docker Compose installed
 
-### Reporting Issues
+See **[docs/REQUIREMENTS.md](docs/REQUIREMENTS.md)** for detailed requirements.
 
-- **Bug reports**: Use the bug report template
-- **Feature requests**: Use the feature request template
-- **Questions**: Use the question template or GitHub Discussions
+## 📄 License
 
-## Support
+This project is open source. Individual services maintain their own licenses:
+- AdGuard Home: GPL-3.0
+- n8n: Fair-code (Sustainable Use License)
+- Ollama: MIT
+- Grafana: AGPL-3.0
+- Prometheus: Apache-2.0
 
-For issues specific to individual services:
-- AdGuard Home: [Official Documentation](https://adguard.com/kb/)
-- n8n: [Official Documentation](https://docs.n8n.io/)
-- Ollama: [Official Documentation](https://ollama.ai/)
+## 💬 Support
 
-For issues with this repository:
-- Check existing [GitHub Issues](https://github.com/josephradford/home-server-stack/issues)
-- Create a new issue using the appropriate template
-- See our [Contributing Guidelines](CONTRIBUTING.md) for more help
+- **Documentation**: Check the [docs/](docs/) directory
+- **Issues**: [GitHub Issues](https://github.com/josephradford/home-server-stack/issues)
+- **Service-specific docs**:
+  - [AdGuard Home](https://adguard.com/kb/)
+  - [n8n](https://docs.n8n.io/)
+  - [Ollama](https://ollama.ai/)
+
+---
+
+**Project Status:** Active Development
+**Latest Update:** 2025-01-07
