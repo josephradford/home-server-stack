@@ -2,19 +2,19 @@
 # Simplifies deployment and maintenance operations
 
 .PHONY: help setup update start stop restart logs build build-bookwyrm pull status clean validate env-check
-.PHONY: setup-monitoring start-monitoring stop-monitoring restart-monitoring update-monitoring logs-monitoring status-monitoring
+.PHONY: setup-all start-all stop-all restart-all update-all logs-all status-all clean-all
 
 # Compose file flags
 COMPOSE_BASE := docker compose
-COMPOSE_MONITORING := docker compose -f docker-compose.yml -f docker-compose.monitoring.yml
+COMPOSE_ALL := docker compose -f docker-compose.yml -f docker-compose.monitoring.yml
 
 # Default target - show help
 help:
 	@echo "Home Server Stack - Available Commands"
 	@echo ""
 	@echo "Setup & Deployment:"
-	@echo "  make setup              - First time setup (builds Bookwyrm, pulls images, starts services)"
-	@echo "  make setup-monitoring   - Setup with optional monitoring stack (Grafana, Prometheus)"
+	@echo "  make setup              - First time setup (base services only)"
+	@echo "  make setup-all          - Setup with monitoring stack (Grafana, Prometheus, etc.)"
 	@echo "  make env-check          - Verify .env file exists and is configured"
 	@echo ""
 	@echo "Service Management (Base Stack):"
@@ -23,22 +23,22 @@ help:
 	@echo "  make restart            - Restart base services"
 	@echo "  make status             - Show status of base services"
 	@echo ""
-	@echo "Service Management (With Monitoring):"
-	@echo "  make start-monitoring   - Start all services including monitoring"
-	@echo "  make stop-monitoring    - Stop all services including monitoring"
-	@echo "  make restart-monitoring - Restart all services including monitoring"
-	@echo "  make status-monitoring  - Show status of all services including monitoring"
+	@echo "Service Management (All Services):"
+	@echo "  make start-all          - Start ALL services (base + monitoring)"
+	@echo "  make stop-all           - Stop ALL services (base + monitoring)"
+	@echo "  make restart-all        - Restart ALL services (base + monitoring)"
+	@echo "  make status-all         - Show status of ALL services (base + monitoring)"
 	@echo ""
 	@echo "Updates & Maintenance:"
 	@echo "  make update             - Update base services (rebuild Bookwyrm, pull latest images)"
-	@echo "  make update-monitoring  - Update all services including monitoring"
+	@echo "  make update-all         - Update ALL services (base + monitoring)"
 	@echo "  make pull               - Pull latest images (except Bookwyrm)"
 	@echo "  make build              - Build all services that require building"
 	@echo "  make build-bookwyrm     - Rebuild Bookwyrm images from source"
 	@echo ""
 	@echo "Logs & Debugging:"
 	@echo "  make logs               - Show logs from base services"
-	@echo "  make logs-monitoring    - Show logs from all services including monitoring"
+	@echo "  make logs-all           - Show logs from ALL services (base + monitoring)"
 	@echo "  make logs-bookwyrm      - Show Bookwyrm logs only"
 	@echo "  make logs-n8n           - Show n8n logs only"
 	@echo "  make logs-wireguard     - Show WireGuard logs only"
@@ -46,7 +46,7 @@ help:
 	@echo "Validation & Cleanup:"
 	@echo "  make validate           - Validate docker-compose configuration"
 	@echo "  make clean              - Remove base containers and volumes (WARNING: destroys data)"
-	@echo "  make clean-monitoring   - Remove all containers and volumes including monitoring"
+	@echo "  make clean-all          - Remove ALL containers and volumes (WARNING: destroys all data)"
 	@echo ""
 
 # Check that .env file exists
@@ -112,31 +112,31 @@ setup: env-check validate
 	@echo "Note: First-time container initialization may take a few minutes."
 	@echo "Check logs with: make logs"
 
-# Setup with monitoring stack
-setup-monitoring: env-check validate
-	@echo "Starting setup with monitoring stack..."
+# Setup with ALL services (base + monitoring)
+setup-all: env-check validate
+	@echo "Starting setup with ALL services (base + monitoring)..."
 	@echo ""
 	@echo "Step 1/4: Building Bookwyrm from source..."
 	@$(COMPOSE_BASE) build bookwyrm bookwyrm-celery bookwyrm-celery-beat
 	@echo ""
 	@echo "Step 2/4: Pulling pre-built images..."
-	@$(COMPOSE_MONITORING) pull --ignore-pull-failures
+	@$(COMPOSE_ALL) pull --ignore-pull-failures
 	@echo ""
-	@echo "Step 3/4: Starting services with monitoring..."
-	@$(COMPOSE_MONITORING) up -d
+	@echo "Step 3/4: Starting all services..."
+	@$(COMPOSE_ALL) up -d
 	@echo ""
 	@echo "Step 4/4: Waiting for services to be ready..."
 	@sleep 10
-	@$(COMPOSE_MONITORING) ps
+	@$(COMPOSE_ALL) ps
 	@echo ""
-	@echo "✓ Setup complete! Services are running with monitoring."
+	@echo "✓ Setup complete! All services are running (base + monitoring)."
 	@echo ""
 	@echo "Access your services:"
 	@echo "  - Grafana:      http://$$SERVER_IP:3001"
 	@echo "  - Prometheus:   http://$$SERVER_IP:9090"
 	@echo "  - Alertmanager: http://$$SERVER_IP:9093"
 	@echo ""
-	@echo "Note: Use 'make start-monitoring', 'make stop-monitoring', etc. to manage all services."
+	@echo "Note: Use 'make start-all', 'make stop-all', etc. to manage all services."
 
 # Update base services
 update: env-check validate
@@ -155,22 +155,22 @@ update: env-check validate
 	@echo ""
 	@echo "Check status with: make status"
 
-# Update all services including monitoring
-update-monitoring: env-check validate
-	@echo "Updating all services including monitoring..."
+# Update ALL services (base + monitoring)
+update-all: env-check validate
+	@echo "Updating ALL services (base + monitoring)..."
 	@echo ""
 	@echo "Step 1/3: Rebuilding Bookwyrm from latest production branch..."
 	@$(COMPOSE_BASE) build --no-cache bookwyrm bookwyrm-celery bookwyrm-celery-beat
 	@echo ""
 	@echo "Step 2/3: Pulling latest images for all services..."
-	@$(COMPOSE_MONITORING) pull --ignore-pull-failures
+	@$(COMPOSE_ALL) pull --ignore-pull-failures
 	@echo ""
 	@echo "Step 3/3: Restarting all services with new images..."
-	@$(COMPOSE_MONITORING) up -d
+	@$(COMPOSE_ALL) up -d
 	@echo ""
 	@echo "✓ Update complete! All services restarted with latest versions."
 	@echo ""
-	@echo "Check status with: make status-monitoring"
+	@echo "Check status with: make status-all"
 
 # Start base services
 start: env-check
@@ -178,11 +178,11 @@ start: env-check
 	@$(COMPOSE_BASE) up -d
 	@echo "✓ Base services started"
 
-# Start all services including monitoring
-start-monitoring: env-check
-	@echo "Starting all services including monitoring..."
-	@$(COMPOSE_MONITORING) up -d
-	@echo "✓ All services started (including monitoring)"
+# Start ALL services (base + monitoring)
+start-all: env-check
+	@echo "Starting ALL services (base + monitoring)..."
+	@$(COMPOSE_ALL) up -d
+	@echo "✓ All services started"
 
 # Stop base services
 stop:
@@ -190,11 +190,11 @@ stop:
 	@$(COMPOSE_BASE) down
 	@echo "✓ Base services stopped"
 
-# Stop all services including monitoring
-stop-monitoring:
-	@echo "Stopping all services including monitoring..."
-	@$(COMPOSE_MONITORING) down
-	@echo "✓ All services stopped (including monitoring)"
+# Stop ALL services (base + monitoring)
+stop-all:
+	@echo "Stopping ALL services (base + monitoring)..."
+	@$(COMPOSE_ALL) down
+	@echo "✓ All services stopped"
 
 # Restart base services
 restart: env-check
@@ -202,27 +202,27 @@ restart: env-check
 	@$(COMPOSE_BASE) restart
 	@echo "✓ Base services restarted"
 
-# Restart all services including monitoring
-restart-monitoring: env-check
-	@echo "Restarting all services including monitoring..."
-	@$(COMPOSE_MONITORING) restart
-	@echo "✓ All services restarted (including monitoring)"
+# Restart ALL services (base + monitoring)
+restart-all: env-check
+	@echo "Restarting ALL services (base + monitoring)..."
+	@$(COMPOSE_ALL) restart
+	@echo "✓ All services restarted"
 
 # Show base service status
 status:
 	@$(COMPOSE_BASE) ps
 
-# Show all service status including monitoring
-status-monitoring:
-	@$(COMPOSE_MONITORING) ps
+# Show ALL service status (base + monitoring)
+status-all:
+	@$(COMPOSE_ALL) ps
 
 # View logs from base services
 logs:
 	@$(COMPOSE_BASE) logs -f
 
-# View logs from all services including monitoring
-logs-monitoring:
-	@$(COMPOSE_MONITORING) logs -f
+# View logs from ALL services (base + monitoring)
+logs-all:
+	@$(COMPOSE_ALL) logs -f
 
 # View logs from specific services
 logs-bookwyrm:
@@ -246,11 +246,11 @@ clean:
 	@$(COMPOSE_BASE) down -v
 	@echo "✓ Base stack cleanup complete"
 
-# Clean up everything including monitoring (WARNING: destroys data)
-clean-monitoring:
-	@echo "WARNING: This will remove ALL containers and volumes including monitoring, destroying all data!"
+# Clean up ALL services (base + monitoring) - WARNING: destroys all data
+clean-all:
+	@echo "WARNING: This will remove ALL containers and volumes (base + monitoring), destroying all data!"
 	@echo "Press Ctrl+C to cancel, or Enter to continue..."
 	@read confirm
 	@echo "Stopping and removing all containers..."
-	@$(COMPOSE_MONITORING) down -v
+	@$(COMPOSE_ALL) down -v
 	@echo "✓ Complete cleanup finished"

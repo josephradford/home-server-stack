@@ -31,18 +31,18 @@ nano .env  # Update SERVER_IP, TIMEZONE, passwords
 cd ssl && ./generate-cert.sh your-domain.com && cd ..
 
 # 4. Run first-time setup
-make setup
-
-# Or with optional monitoring stack:
-make setup-monitoring
+make setup              # Base services only
+# OR
+make setup-all          # Base + monitoring (Grafana, Prometheus)
 ```
 
 **Using the Makefile:**
 - `make help` - Show all available commands
-- `make setup` - First time setup (builds from source, pulls images, starts services)
-- `make update` - Update all services to latest versions
-- `make start` / `make stop` - Start/stop services
-- `make logs` - View logs from all services
+- `make setup` / `make setup-all` - First time setup
+- `make update` / `make update-all` - Update services to latest versions
+- `make start` / `make start-all` - Start services
+- `make stop` / `make stop-all` - Stop services
+- `make logs` / `make logs-all` - View logs from services
 - See `make help` for complete list of commands
 
 **Access Services:**
