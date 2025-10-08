@@ -10,10 +10,14 @@ A complete self-hosted infrastructure for home automation, AI, and network servi
 - **[Ollama](https://github.com/ollama/ollama)** - Local AI models (deepseek-coder:6.7b, llama3.2:3b)
 - **[WireGuard](https://github.com/wireguard)** - VPN for secure remote access
 - **[Habitica](https://github.com/HabitRPG/habitica)** - Gamified habit and task tracker
-- **[Bookwyrm](https://github.com/bookwyrm-social/bookwyrm)** - Social reading and book tracking
+- **[Bookwyrm](https://github.com/bookwyrm-social/bookwyrm)** - Social reading and book tracking (via [external wrapper](https://github.com/josephradford/bookwyrm-docker))
 
-**Optional:**
-- **Monitoring Stack** - Grafana, Prometheus, Alertmanager, Node Exporter, cAdvisor
+**Monitoring Stack:**
+- **[Grafana](https://github.com/grafana/grafana)** - Metrics visualization and dashboards
+- **[Prometheus](https://github.com/prometheus/prometheus)** - Metrics collection and alerting
+- **[Alertmanager](https://github.com/prometheus/alertmanager)** - Alert routing and management
+- **[Node Exporter](https://github.com/prometheus/node_exporter)** - System metrics exporter
+- **[cAdvisor](https://github.com/google/cadvisor)** - Container metrics
 
 See [SERVICES.md](SERVICES.md) for the complete catalog including planned services.
 
@@ -31,19 +35,19 @@ nano .env  # Update SERVER_IP, TIMEZONE, passwords
 # 3. Generate SSL certificates (optional, for HTTPS)
 cd ssl && ./generate-cert.sh your-domain.com && cd ..
 
-# 4. Run first-time setup
-make setup              # Base services only
-# OR
-make setup-all          # Base + monitoring (Grafana, Prometheus)
+# 4. Run first-time setup (includes all services + monitoring + Bookwyrm)
+make setup
 ```
+
+**Note:** On first run, `make setup` will clone the Bookwyrm wrapper and prompt you to configure it. After configuration, run `make setup` again to complete deployment.
 
 **Using the Makefile:**
 - `make help` - Show all available commands
-- `make setup` / `make setup-all` - First time setup
-- `make update` / `make update-all` - Update services to latest versions
-- `make start` / `make start-all` - Start services
-- `make stop` / `make stop-all` - Stop services
-- `make logs` / `make logs-all` - View logs from services
+- `make setup` - First time setup (all services + monitoring + Bookwyrm)
+- `make update` - Update all services to latest versions
+- `make start` - Start all services
+- `make stop` - Stop all services
+- `make logs` - View logs from all services
 - See `make help` for complete list of commands
 
 **Access Services:**
@@ -52,6 +56,9 @@ make setup-all          # Base + monitoring (Grafana, Prometheus)
 - Ollama API: `http://SERVER_IP:11434`
 - Habitica: `http://SERVER_IP:8080`
 - Bookwyrm: `http://SERVER_IP:8000`
+- Grafana: `http://SERVER_IP:3001`
+- Prometheus: `http://SERVER_IP:9090`
+- Alertmanager: `http://SERVER_IP:9093`
 
 See **[docs/SETUP.md](docs/SETUP.md)** for detailed installation instructions.
 

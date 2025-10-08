@@ -15,11 +15,11 @@ help:
 	@echo "Home Server Stack - Available Commands"
 	@echo ""
 	@echo "Setup & Deployment:"
-	@echo "  make setup              - First time setup (all services + monitoring)"
+	@echo "  make setup              - First time setup (all services + monitoring + Bookwyrm)"
 	@echo "  make env-check          - Verify .env file exists and is configured"
 	@echo ""
 	@echo "Service Management:"
-	@echo "  make start              - Start all services (base + monitoring + Bookwyrm if present)"
+	@echo "  make start              - Start all services (base + monitoring + Bookwyrm)"
 	@echo "  make stop               - Stop all services"
 	@echo "  make restart            - Restart all services"
 	@echo "  make status             - Show status of all services"
@@ -29,16 +29,16 @@ help:
 	@echo "  make pull               - Pull latest images"
 	@echo "  make build              - Build all services that require building"
 	@echo ""
-	@echo "Bookwyrm (External Wrapper):"
-	@echo "  make bookwyrm-setup     - Setup Bookwyrm (clone wrapper if needed)"
-	@echo "  make bookwyrm-start     - Start Bookwyrm services"
-	@echo "  make bookwyrm-stop      - Stop Bookwyrm services"
+	@echo "Bookwyrm Management:"
+	@echo "  make bookwyrm-setup     - Setup Bookwyrm wrapper (auto-run during setup)"
+	@echo "  make bookwyrm-start     - Start Bookwyrm services (auto-run during start)"
+	@echo "  make bookwyrm-stop      - Stop Bookwyrm services (auto-run during stop)"
 	@echo "  make bookwyrm-restart   - Restart Bookwyrm services"
 	@echo "  make bookwyrm-status    - Show Bookwyrm status"
 	@echo "  make bookwyrm-logs      - Show Bookwyrm logs"
-	@echo "  make bookwyrm-update    - Update Bookwyrm to latest version"
+	@echo "  make bookwyrm-update    - Update Bookwyrm (auto-run during update)"
 	@echo "  make bookwyrm-init      - Re-run Bookwyrm initialization"
-	@echo "  See docs/BOOKWYRM.md for detailed integration guide"
+	@echo "  See docs/BOOKWYRM.md for integration details"
 	@echo ""
 	@echo "Logs & Debugging:"
 	@echo "  make logs               - Show logs from all services"
@@ -82,16 +82,15 @@ pull: validate
 setup: env-check validate
 	@echo "Starting first-time setup..."
 	@echo ""
-	@echo "Step 1/2: Pulling pre-built images..."
+	@echo "Step 1/3: Setting up Bookwyrm..."
+	@$(MAKE) bookwyrm-setup
+	@echo ""
+	@echo "Step 2/3: Pulling pre-built images..."
 	@$(COMPOSE) pull --ignore-pull-failures
 	@echo ""
-	@echo "Step 2/2: Starting services..."
+	@echo "Step 3/3: Starting services..."
 	@$(COMPOSE) up -d
 	@echo ""
-	@if [ -d "$(BOOKWYRM_DIR)" ]; then \
-		$(MAKE) bookwyrm-start; \
-		echo ""; \
-	fi
 	@$(COMPOSE) ps
 	@echo ""
 	@echo "✓ Setup complete! All services are running."
@@ -101,17 +100,11 @@ setup: env-check validate
 	@echo "  - n8n:          https://$$SERVER_IP:5678"
 	@echo "  - Ollama API:   http://$$SERVER_IP:11434"
 	@echo "  - Habitica:     http://$$SERVER_IP:8080"
+	@echo "  - Bookwyrm:     http://$$SERVER_IP:8000"
 	@echo "  - Grafana:      http://$$SERVER_IP:3001"
 	@echo "  - Prometheus:   http://$$SERVER_IP:9090"
 	@echo "  - Alertmanager: http://$$SERVER_IP:9093"
-	@if [ -d "$(BOOKWYRM_DIR)" ]; then \
-		echo "  - Bookwyrm:     http://$$SERVER_IP:8000"; \
-	fi
 	@echo ""
-	@if [ ! -d "$(BOOKWYRM_DIR)" ]; then \
-		echo "To add Bookwyrm, run: make bookwyrm-setup"; \
-		echo ""; \
-	fi
 	@echo "Note: First-time container initialization may take a few minutes."
 	@echo "Check logs with: make logs"
 
@@ -141,8 +134,8 @@ start: env-check
 # Stop all services
 stop:
 	@echo "Stopping all services..."
-	@$(COMPOSE) down
 	@$(MAKE) bookwyrm-stop
+	@$(COMPOSE) down
 	@echo "✓ All services stopped"
 
 # Restart all services
@@ -183,6 +176,7 @@ clean:
 
 # Bookwyrm wrapper integration targets
 # These commands delegate to the external bookwyrm-docker wrapper project
+# Bookwyrm is a mandatory part of the stack
 
 bookwyrm-setup:
 	@if [ ! -d "$(BOOKWYRM_DIR)" ]; then \
@@ -205,51 +199,55 @@ bookwyrm-setup:
 	@echo "See docs/BOOKWYRM.md for integration details"
 
 bookwyrm-start:
-	@if [ -d "$(BOOKWYRM_DIR)" ]; then \
-		echo "Starting Bookwyrm..."; \
-		cd $(BOOKWYRM_DIR) && $(MAKE) start; \
+	@if [ ! -d "$(BOOKWYRM_DIR)" ]; then \
+		echo "ERROR: Bookwyrm wrapper not found. Run: make setup"; \
+		exit 1; \
 	fi
+	@echo "Starting Bookwyrm..."
+	@cd $(BOOKWYRM_DIR) && $(MAKE) start
 
 bookwyrm-stop:
-	@if [ -d "$(BOOKWYRM_DIR)" ]; then \
-		echo "Stopping Bookwyrm..."; \
-		cd $(BOOKWYRM_DIR) && $(MAKE) stop; \
+	@if [ ! -d "$(BOOKWYRM_DIR)" ]; then \
+		echo "ERROR: Bookwyrm wrapper not found. Run: make setup"; \
+		exit 1; \
 	fi
+	@echo "Stopping Bookwyrm..."
+	@cd $(BOOKWYRM_DIR) && $(MAKE) stop
 
 bookwyrm-restart:
-	@if [ -d "$(BOOKWYRM_DIR)" ]; then \
-		echo "Restarting Bookwyrm..."; \
-		cd $(BOOKWYRM_DIR) && $(MAKE) restart; \
+	@if [ ! -d "$(BOOKWYRM_DIR)" ]; then \
+		echo "ERROR: Bookwyrm wrapper not found. Run: make setup"; \
+		exit 1; \
 	fi
+	@echo "Restarting Bookwyrm..."
+	@cd $(BOOKWYRM_DIR) && $(MAKE) restart
 
 bookwyrm-status:
-	@if [ -d "$(BOOKWYRM_DIR)" ]; then \
-		cd $(BOOKWYRM_DIR) && $(MAKE) status; \
+	@if [ ! -d "$(BOOKWYRM_DIR)" ]; then \
+		echo "Bookwyrm: Not installed (run: make setup)"; \
 	else \
-		echo "Bookwyrm not installed (run: make bookwyrm-setup)"; \
+		cd $(BOOKWYRM_DIR) && $(MAKE) status; \
 	fi
 
 bookwyrm-logs:
-	@if [ -d "$(BOOKWYRM_DIR)" ]; then \
-		cd $(BOOKWYRM_DIR) && $(MAKE) logs; \
-	else \
-		echo "ERROR: Bookwyrm wrapper not found at $(BOOKWYRM_DIR)"; \
-		echo "Run: make bookwyrm-setup"; \
+	@if [ ! -d "$(BOOKWYRM_DIR)" ]; then \
+		echo "ERROR: Bookwyrm wrapper not found. Run: make setup"; \
 		exit 1; \
 	fi
+	@cd $(BOOKWYRM_DIR) && $(MAKE) logs
 
 bookwyrm-update:
-	@if [ -d "$(BOOKWYRM_DIR)" ]; then \
-		echo "Updating Bookwyrm..."; \
-		cd $(BOOKWYRM_DIR) && $(MAKE) update; \
-	fi
-
-bookwyrm-init:
-	@if [ -d "$(BOOKWYRM_DIR)" ]; then \
-		echo "Re-running Bookwyrm initialization..."; \
-		cd $(BOOKWYRM_DIR) && $(MAKE) init; \
-	else \
-		echo "ERROR: Bookwyrm wrapper not found at $(BOOKWYRM_DIR)"; \
-		echo "Run: make bookwyrm-setup"; \
+	@if [ ! -d "$(BOOKWYRM_DIR)" ]; then \
+		echo "ERROR: Bookwyrm wrapper not found. Run: make setup"; \
 		exit 1; \
 	fi
+	@echo "Updating Bookwyrm..."
+	@cd $(BOOKWYRM_DIR) && $(MAKE) update
+
+bookwyrm-init:
+	@if [ ! -d "$(BOOKWYRM_DIR)" ]; then \
+		echo "ERROR: Bookwyrm wrapper not found. Run: make setup"; \
+		exit 1; \
+	fi
+	@echo "Re-running Bookwyrm initialization..."
+	@cd $(BOOKWYRM_DIR) && $(MAKE) init

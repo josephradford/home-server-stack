@@ -1,6 +1,6 @@
 # Bookwyrm Integration Guide
 
-This home server stack uses the standalone [bookwyrm-docker](https://github.com/josephradford/bookwyrm-docker) wrapper project for deploying Bookwyrm. This approach keeps the complexity of Bookwyrm deployment isolated while allowing seamless integration with the home server network and monitoring stack.
+This home server stack uses the standalone [bookwyrm-docker](https://github.com/josephradford/bookwyrm-docker) wrapper project for deploying Bookwyrm. Bookwyrm is a **mandatory component** of the stack and is automatically deployed during setup.
 
 ## Why Use the Wrapper?
 
@@ -11,22 +11,29 @@ The bookwyrm-docker wrapper project:
 - ✅ Is maintained separately, benefiting the broader Bookwyrm community
 - ✅ Reduces the size of this repository's docker-compose.yml
 
-## Quick Start
+## Automatic Deployment
 
-### 1. Clone the Bookwyrm Wrapper
+Bookwyrm is automatically deployed when you run `make setup`. The wrapper is cloned to `external/bookwyrm-docker/` and integrated with the main stack.
+
+**First-time setup flow:**
+1. Run `make setup` - wrapper is cloned automatically
+2. Setup pauses and prompts you to configure Bookwyrm `.env`
+3. Configure `external/bookwyrm-docker/.env` (see below)
+4. Run `make setup` again - Bookwyrm deploys automatically
+
+## Manual Configuration
+
+### 1. Navigate to Wrapper Directory
 
 ```bash
-cd /path/to/home-server-stack
-mkdir -p external
-cd external
-git clone https://github.com/josephradford/bookwyrm-docker.git
-cd bookwyrm-docker
+cd external/bookwyrm-docker
 ```
 
 ### 2. Configure Bookwyrm
 
 ```bash
 cp .env.example .env
+nano .env  # Edit configuration
 ```
 
 **Minimal required configuration in `.env`:**
