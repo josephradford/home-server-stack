@@ -32,22 +32,24 @@ cd home-server-stack
 cp .env.example .env
 nano .env  # Update SERVER_IP, TIMEZONE, passwords
 
-# 3. Generate SSL certificates (optional, for HTTPS)
-cd ssl && ./generate-cert.sh your-domain.com && cd ..
-
-# 4. Run first-time setup (includes all services + monitoring)
+# 3. Run first-time setup (includes all services + monitoring)
+# SSL certificates are automatically generated
 make setup
 
-# 5. Configure Bookwyrm (one-time)
+# 4. Configure Bookwyrm (one-time)
 cd external/bookwyrm-docker
 cp .env.example .env
 nano .env  # Configure Bookwyrm settings
 
-# 6. Deploy Bookwyrm
+# 5. Deploy Bookwyrm
 make bookwyrm-setup
 ```
 
-**Note:** The first `make setup` will deploy all core services and monitoring, and clone the Bookwyrm wrapper. You can then configure and deploy Bookwyrm separately using `make bookwyrm-setup`.
+**Note:**
+- SSL certificates for n8n are automatically generated during `make setup`
+- To regenerate with a custom domain: `make regenerate-ssl DOMAIN=your-domain.com`
+- The first `make setup` will deploy all core services and monitoring, and clone the Bookwyrm wrapper
+- Configure and deploy Bookwyrm separately using `make bookwyrm-setup`
 
 **Using the Makefile:**
 - `make help` - Show all available commands
