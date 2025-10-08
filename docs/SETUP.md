@@ -48,30 +48,57 @@ nano .env
 
 See [CONFIGURATION.md](CONFIGURATION.md) for detailed configuration options.
 
-### 3. Generate SSL Certificates (Optional)
+### 3. Deploy Stack
 
-For HTTPS support with n8n:
+Run the automated setup which will:
+- Generate SSL certificates automatically (for n8n HTTPS)
+- Pull and start all services (core + monitoring)
+- Clone the Bookwyrm wrapper
 
 ```bash
-cd ssl
-./generate-cert.sh your-domain.ddns.net
-cd ..
+make setup
 ```
 
-This generates a self-signed certificate. For production, use Let's Encrypt (see [security-tickets/04-tls-certificate-monitoring.md](../security-tickets/04-tls-certificate-monitoring.md)).
+**What happens during setup:**
+- ✅ Environment validation (`.env` file check)
+- ✅ SSL certificate generation (if not present)
+- ✅ Docker Compose validation
+- ✅ Image pulling
+- ✅ Services deployment (AdGuard, n8n, Ollama, WireGuard, Habitica, Grafana, Prometheus, etc.)
+- ✅ Bookwyrm wrapper cloning
 
-**Note:** Self-signed certificates will trigger browser warnings. This is expected for development.
-
-### 4. Start Services
-
-**Basic Stack (AdGuard, n8n, Ollama, WireGuard):**
+**Note:** SSL certificates are automatically generated for localhost. To regenerate with a custom domain:
 ```bash
-docker compose up -d
+make regenerate-ssl DOMAIN=your-domain.ddns.net
+make restart  # Restart services to use new certificates
 ```
 
-**With Monitoring Stack (Grafana, Prometheus, etc.):**
+For production TLS certificates, see [security-tickets/04-tls-certificate-monitoring.md](../security-tickets/04-tls-certificate-monitoring.md).
+
+### 4. Configure and Deploy Bookwyrm
+
+After `make setup` completes, configure Bookwyrm:
+
 ```bash
-docker compose -f docker-compose.yml -f docker-compose.monitoring.yml up -d
+cd external/bookwyrm-docker
+cp .env.example .env
+nano .env  # Configure Bookwyrm settings
+```
+
+**Required Bookwyrm configuration:**
+- `BOOKWYRM_DOMAIN` - Domain or IP for Bookwyrm
+- `BOOKWYRM_SECRET_KEY` - Generate with `openssl rand -base64 45`
+- `BOOKWYRM_DB_PASSWORD` - Generate with `openssl rand -base64 32`
+- `BOOKWYRM_REDIS_ACTIVITY_PASSWORD` - Generate with `openssl rand -base64 32`
+- `BOOKWYRM_REDIS_BROKER_PASSWORD` - Generate with `openssl rand -base64 32`
+
+See [BOOKWYRM.md](BOOKWYRM.md) for detailed Bookwyrm configuration.
+
+Then deploy Bookwyrm:
+
+```bash
+cd ../..  # Return to home-server-stack root
+make bookwyrm-setup
 ```
 
 ### 5. Verify Deployment
@@ -79,21 +106,28 @@ docker compose -f docker-compose.yml -f docker-compose.monitoring.yml up -d
 Check that all services are running:
 
 ```bash
-docker compose ps
+make status
 ```
 
-Expected output:
-```
-NAME                 STATUS          PORTS
-adguard-home         Up 2 minutes    53/tcp, 53/udp, 80/tcp, 3000/tcp
-n8n                  Up 2 minutes    0.0.0.0:5678->5678/tcp
-ollama               Up 2 minutes    0.0.0.0:11434->11434/tcp
-wireguard            Up 2 minutes    51820/udp, 51821/tcp
-```
+Expected output includes:
+- adguard-home
+- n8n
+- ollama, ollama-setup
+- wireguard
+- habitica-mongo, habitica-server, habitica-client
+- grafana, prometheus, alertmanager, node-exporter, cadvisor
+- bookwyrm services (if deployed)
 
 View logs to check for errors:
 ```bash
-docker compose logs -f
+make logs
+```
+
+Or view specific service logs:
+```bash
+make logs-n8n
+make logs-wireguard
+make bookwyrm-logs
 ```
 
 ## Initial Configuration
@@ -216,9 +250,39 @@ curl https://192.168.1.100:5678  # n8n
 
 See [REMOTE_ACCESS.md](REMOTE_ACCESS.md) for advanced VPN configuration.
 
-## Monitoring Stack Setup (Optional)
+### Habitica Setup
 
-If you deployed with monitoring stack:
+Habitica is automatically deployed and accessible at `http://SERVER_IP:8080`.
+
+1. Navigate to `http://SERVER_IP:8080`
+2. Create your account:
+   - Email address
+   - Username
+   - Password
+3. Complete the character creation wizard
+4. Start tracking your habits and tasks!
+
+See the [Habitica documentation](https://habitica.fandom.com/wiki/Habitica_Wiki) for usage guides.
+
+### Bookwyrm Setup
+
+After deploying Bookwyrm with `make bookwyrm-setup`:
+
+1. Navigate to `http://SERVER_IP:8000`
+2. Create admin account using the admin code from setup logs:
+   ```bash
+   make bookwyrm-logs | grep "admin code"
+   ```
+3. Configure your Bookwyrm instance:
+   - Site name and description
+   - Registration settings (open/invite-only)
+   - Federated network preferences
+
+See [BOOKWYRM.md](BOOKWYRM.md) for detailed configuration and usage.
+
+## Monitoring Stack
+
+The monitoring stack is automatically deployed and provides comprehensive observability:
 
 ### Access Grafana
 

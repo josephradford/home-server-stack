@@ -4,48 +4,65 @@ Day-to-day management of the Home Server Stack.
 
 ## Managing Services
 
+All services (core + monitoring + Bookwyrm) are managed using the Makefile. The Makefile provides a simplified interface to Docker Compose operations.
+
 ### Start/Stop Services
 
 ```bash
-# Start all services
-docker compose up -d
-
-# Start with monitoring
-docker compose -f docker-compose.yml -f docker-compose.monitoring.yml up -d
+# Start all services (core + monitoring + Bookwyrm if configured)
+make start
 
 # Stop all services
-docker compose down
-
-# Stop but keep data
-docker compose stop
+make stop
 
 # Restart all services
-docker compose restart
-
-# Restart specific service
-docker compose restart n8n
+make restart
 ```
 
 ### Service Status
 
 ```bash
-# Check running containers
-docker compose ps
+# Check status of all services
+make status
 
 # Check resource usage
 docker stats
 
 # View service logs
+make logs               # All services
+make logs-n8n           # n8n only
+make logs-wireguard     # WireGuard only
+make logs-ollama        # Ollama only
+make bookwyrm-logs      # Bookwyrm only
+
+# View logs with Docker Compose directly
 docker compose logs [service_name]
+docker compose logs -f [service_name]  # Follow in real-time
+docker compose logs --tail=100 [service_name]  # Last 100 lines
+```
 
-# Follow logs in real-time
-docker compose logs -f [service_name]
+### Bookwyrm Management
 
-# View last 100 lines
-docker compose logs --tail=100 [service_name]
+Bookwyrm is managed separately but integrates with base commands:
+
+```bash
+# Bookwyrm-specific commands
+make bookwyrm-start     # Start Bookwyrm
+make bookwyrm-stop      # Stop Bookwyrm
+make bookwyrm-restart   # Restart Bookwyrm
+make bookwyrm-status    # Check Bookwyrm status
+make bookwyrm-logs      # View Bookwyrm logs
+make bookwyrm-init      # Re-run initialization
+
+# Bookwyrm is automatically included in base commands
+make start              # Includes Bookwyrm
+make stop               # Includes Bookwyrm
+make restart            # Includes Bookwyrm
 ```
 
 ### Individual Service Management
+
+For fine-grained control, use Docker Compose directly:
 
 ```bash
 # Restart services individually
@@ -53,6 +70,8 @@ docker compose restart adguard
 docker compose restart n8n
 docker compose restart ollama
 docker compose restart wireguard
+docker compose restart grafana
+docker compose restart prometheus
 
 # Rebuild and restart after config changes
 docker compose up -d --force-recreate [service_name]
@@ -66,19 +85,21 @@ docker compose up -d [service_name]
 
 ### Update All Services
 
+Use the Makefile to update all services (core + monitoring + Bookwyrm):
+
 ```bash
-# Pull latest images
-docker compose pull
+# Update all services
+make update
 
-# Recreate containers with new images
-docker compose up -d
-
-# Verify updates
-docker compose ps
-docker compose logs
+# This will:
+# 1. Pull latest images for core + monitoring services
+# 2. Restart services with new images
+# 3. Update Bookwyrm (if deployed)
 ```
 
 ### Update Specific Service
+
+For individual service updates, use Docker Compose directly:
 
 ```bash
 # Pull specific image
@@ -91,12 +112,17 @@ docker compose up -d n8n
 docker compose ps n8n
 ```
 
-### Update Docker Images (Monitoring)
+### Update Bookwyrm
 
 ```bash
-# With monitoring stack
-docker compose -f docker-compose.yml -f docker-compose.monitoring.yml pull
-docker compose -f docker-compose.yml -f docker-compose.monitoring.yml up -d
+# Update Bookwyrm to latest version
+make bookwyrm-update
+
+# This will:
+# 1. Pull latest Bookwyrm source code
+# 2. Rebuild Bookwyrm containers
+# 3. Run database migrations
+# 4. Restart Bookwyrm services
 ```
 
 ### Rollback
