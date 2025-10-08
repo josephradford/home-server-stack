@@ -269,8 +269,8 @@ services:
     restart: unless-stopped
     working_dir: /app
     command: gunicorn bookwyrm.wsgi:application --bind 0.0.0.0:8000
-    ports:
-      - "${SERVER_IP}:8000:8000"
+    expose:
+      - 8000
     environment:
       # Domain and Security
       - DOMAIN=${BOOKWYRM_DOMAIN}
@@ -311,6 +311,7 @@ services:
     volumes:
       - ./bookwyrm:/app
       - ./data/bookwyrm/images:/app/bookwyrm/static/images
+      - bookwyrm_static:/app/static
     networks:
       - homeserver
     depends_on:
@@ -424,6 +425,30 @@ services:
     depends_on:
       - bookwyrm-celery
 
+  bookwyrm-nginx:
+    image: nginx:alpine
+    container_name: bookwyrm-nginx
+    restart: unless-stopped
+    ports:
+      - "${SERVER_IP}:8000:80"
+    volumes:
+      - ./config/bookwyrm/nginx.conf:/etc/nginx/nginx.conf:ro
+      - bookwyrm_static:/app/static:ro
+      - ./data/bookwyrm/images:/app/bookwyrm/static/images:ro
+    networks:
+      - homeserver
+    depends_on:
+      - bookwyrm
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:80"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
 networks:
   homeserver:
     driver: bridge
+
+volumes:
+  bookwyrm_static:
