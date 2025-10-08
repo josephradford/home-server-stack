@@ -293,12 +293,15 @@ services:
       - REDIS_BROKER_PASSWORD=${BOOKWYRM_REDIS_BROKER_PASSWORD}
       - CELERY_BROKER=redis://:${BOOKWYRM_REDIS_BROKER_PASSWORD}@bookwyrm-redis-broker:6379/0
 
-      # Email (optional)
-      - EMAIL_HOST=${BOOKWYRM_EMAIL_HOST:-}
+      # Email (optional - defaults to localhost which won't send emails)
+      - EMAIL_HOST=${BOOKWYRM_EMAIL_HOST:-localhost}
       - EMAIL_PORT=${BOOKWYRM_EMAIL_PORT:-587}
-      - EMAIL_HOST_USER=${BOOKWYRM_EMAIL_USER:-}
-      - EMAIL_HOST_PASSWORD=${BOOKWYRM_EMAIL_PASSWORD:-}
-      - EMAIL_USE_TLS=${BOOKWYRM_EMAIL_USE_TLS:-true}
+      - EMAIL_HOST_USER=${BOOKWYRM_EMAIL_USER:-bookwyrm@localhost}
+      - EMAIL_HOST_PASSWORD=${BOOKWYRM_EMAIL_PASSWORD:-unused}
+      - EMAIL_USE_TLS=${BOOKWYRM_EMAIL_USE_TLS:-false}
+      - EMAIL_USE_SSL=${BOOKWYRM_EMAIL_USE_SSL:-false}
+      - EMAIL_SENDER_NAME=${BOOKWYRM_EMAIL_SENDER_NAME:-BookWyrm}
+      - EMAIL_SENDER_DOMAIN=${BOOKWYRM_EMAIL_SENDER_DOMAIN:-${BOOKWYRM_DOMAIN}}
 
       # Other settings
       - TZ=${TIMEZONE}
@@ -353,6 +356,16 @@ services:
       - REDIS_BROKER_PASSWORD=${BOOKWYRM_REDIS_BROKER_PASSWORD}
       - CELERY_BROKER=redis://:${BOOKWYRM_REDIS_BROKER_PASSWORD}@bookwyrm-redis-broker:6379/0
 
+      # Email (optional - defaults to localhost which won't send emails)
+      - EMAIL_HOST=${BOOKWYRM_EMAIL_HOST:-localhost}
+      - EMAIL_PORT=${BOOKWYRM_EMAIL_PORT:-587}
+      - EMAIL_HOST_USER=${BOOKWYRM_EMAIL_USER:-bookwyrm@localhost}
+      - EMAIL_HOST_PASSWORD=${BOOKWYRM_EMAIL_PASSWORD:-unused}
+      - EMAIL_USE_TLS=${BOOKWYRM_EMAIL_USE_TLS:-false}
+      - EMAIL_USE_SSL=${BOOKWYRM_EMAIL_USE_SSL:-false}
+      - EMAIL_SENDER_NAME=${BOOKWYRM_EMAIL_SENDER_NAME:-BookWyrm}
+      - EMAIL_SENDER_DOMAIN=${BOOKWYRM_EMAIL_SENDER_DOMAIN:-${BOOKWYRM_DOMAIN}}
+
       # Other settings
       - TZ=${TIMEZONE}
     volumes:
@@ -392,6 +405,16 @@ services:
       - REDIS_BROKER_PORT=6379
       - REDIS_BROKER_PASSWORD=${BOOKWYRM_REDIS_BROKER_PASSWORD}
       - CELERY_BROKER=redis://:${BOOKWYRM_REDIS_BROKER_PASSWORD}@bookwyrm-redis-broker:6379/0
+
+      # Email (optional - defaults to localhost which won't send emails)
+      - EMAIL_HOST=${BOOKWYRM_EMAIL_HOST:-localhost}
+      - EMAIL_PORT=${BOOKWYRM_EMAIL_PORT:-587}
+      - EMAIL_HOST_USER=${BOOKWYRM_EMAIL_USER:-bookwyrm@localhost}
+      - EMAIL_HOST_PASSWORD=${BOOKWYRM_EMAIL_PASSWORD:-unused}
+      - EMAIL_USE_TLS=${BOOKWYRM_EMAIL_USE_TLS:-false}
+      - EMAIL_USE_SSL=${BOOKWYRM_EMAIL_USE_SSL:-false}
+      - EMAIL_SENDER_NAME=${BOOKWYRM_EMAIL_SENDER_NAME:-BookWyrm}
+      - EMAIL_SENDER_DOMAIN=${BOOKWYRM_EMAIL_SENDER_DOMAIN:-${BOOKWYRM_DOMAIN}}
 
       # Other settings
       - TZ=${TIMEZONE}
