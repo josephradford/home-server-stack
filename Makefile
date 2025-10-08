@@ -1,7 +1,7 @@
 # Home Server Stack Makefile
 # Simplifies deployment and maintenance operations
 
-.PHONY: help setup update start stop restart logs build build-bookwyrm pull status clean validate env-check clone-bookwyrm
+.PHONY: help setup update start stop restart logs build build-bookwyrm pull status clean validate env-check clone-bookwyrm migrate-bookwyrm
 .PHONY: setup-all start-all stop-all restart-all update-all logs-all status-all clean-all
 
 # Compose file flags
@@ -93,6 +93,14 @@ build-bookwyrm: validate clone-bookwyrm
 	@$(COMPOSE_BASE) build --no-cache bookwyrm bookwyrm-celery bookwyrm-celery-beat
 	@echo "✓ Bookwyrm build complete"
 
+# Run Bookwyrm database migrations (creates tables, applies schema changes)
+migrate-bookwyrm:
+	@echo "Running Bookwyrm database migrations..."
+	@echo "Waiting for Bookwyrm container to be ready..."
+	@sleep 5
+	@docker exec bookwyrm python manage.py migrate --no-input
+	@echo "✓ Bookwyrm migrations complete"
+
 # Pull latest images for services using pre-built images
 pull: validate
 	@echo "Pulling latest Docker images for base services..."
@@ -103,17 +111,22 @@ pull: validate
 setup: env-check validate clone-bookwyrm
 	@echo "Starting first-time setup..."
 	@echo ""
-	@echo "Step 1/4: Building Bookwyrm from source (this takes several minutes)..."
+	@echo "Step 1/5: Building Bookwyrm from source (this takes several minutes)..."
 	@$(COMPOSE_BASE) build bookwyrm bookwyrm-celery bookwyrm-celery-beat
 	@echo ""
-	@echo "Step 2/4: Pulling pre-built images..."
+	@echo "Step 2/5: Pulling pre-built images..."
 	@$(COMPOSE_BASE) pull --ignore-pull-failures
 	@echo ""
-	@echo "Step 3/4: Starting services..."
+	@echo "Step 3/5: Starting services..."
 	@$(COMPOSE_BASE) up -d
 	@echo ""
-	@echo "Step 4/4: Waiting for services to be ready..."
+	@echo "Step 4/5: Running Bookwyrm database migrations..."
 	@sleep 10
+	@docker exec bookwyrm python manage.py migrate --no-input
+	@echo ""
+	@echo "Step 5/5: Restarting Bookwyrm services..."
+	@$(COMPOSE_BASE) restart bookwyrm bookwyrm-celery bookwyrm-celery-beat
+	@sleep 5
 	@$(COMPOSE_BASE) ps
 	@echo ""
 	@echo "✓ Setup complete! Base services are running."
@@ -131,17 +144,22 @@ setup: env-check validate clone-bookwyrm
 setup-all: env-check validate clone-bookwyrm
 	@echo "Starting setup with ALL services (base + monitoring)..."
 	@echo ""
-	@echo "Step 1/4: Building Bookwyrm from source..."
+	@echo "Step 1/5: Building Bookwyrm from source..."
 	@$(COMPOSE_BASE) build bookwyrm bookwyrm-celery bookwyrm-celery-beat
 	@echo ""
-	@echo "Step 2/4: Pulling pre-built images..."
+	@echo "Step 2/5: Pulling pre-built images..."
 	@$(COMPOSE_ALL) pull --ignore-pull-failures
 	@echo ""
-	@echo "Step 3/4: Starting all services..."
+	@echo "Step 3/5: Starting all services..."
 	@$(COMPOSE_ALL) up -d
 	@echo ""
-	@echo "Step 4/4: Waiting for services to be ready..."
+	@echo "Step 4/5: Running Bookwyrm database migrations..."
 	@sleep 10
+	@docker exec bookwyrm python manage.py migrate --no-input
+	@echo ""
+	@echo "Step 5/5: Restarting Bookwyrm services..."
+	@$(COMPOSE_ALL) restart bookwyrm bookwyrm-celery bookwyrm-celery-beat
+	@sleep 5
 	@$(COMPOSE_ALL) ps
 	@echo ""
 	@echo "✓ Setup complete! All services are running (base + monitoring)."
