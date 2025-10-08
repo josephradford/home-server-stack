@@ -6,17 +6,20 @@ A comprehensive catalog of all services in this homelab stack - running, planned
 
 Currently deployed and active services.
 
+### Core Services
 - **[AdGuard Home](https://github.com/AdguardTeam/AdGuardHome)** - Network-wide ads & trackers blocking DNS server
 - **[n8n](https://github.com/n8n-io/n8n)** - Fair-code workflow automation platform with native AI capabilities
 - **[Ollama](https://github.com/ollama/ollama)** - Get up and running with local large language models (deepseek-coder:6.7b, llama3.2:3b)
 - **[WireGuard](https://github.com/wireguard)** - Fast, modern, secure VPN tunnel for remote access
 - **[Habitica](https://github.com/HabitRPG/habitica)** - Gamified habit and task tracker (RPG-style productivity)
-- **[Bookwyrm](https://github.com/bookwyrm-social/bookwyrm)** - Social reading and reviewing, decentralized with ActivityPub
-- **[Grafana](https://github.com/grafana/grafana)** - The open and composable observability and data visualization platform (optional monitoring stack)
-- **[Prometheus](https://github.com/prometheus/prometheus)** - The Prometheus monitoring system and time series database (optional monitoring stack)
-- **[Alertmanager](https://github.com/prometheus/alertmanager)** - Prometheus Alertmanager for handling alerts (optional monitoring stack)
-- **[Node Exporter](https://github.com/prometheus/node_exporter)** - Exporter for machine metrics (optional monitoring stack)
-- **[cAdvisor](https://github.com/google/cadvisor)** - Analyzes resource usage and performance characteristics of running containers (optional monitoring stack)
+- **[Bookwyrm](https://github.com/bookwyrm-social/bookwyrm)** - Social reading and reviewing, decentralized with ActivityPub (via [bookwyrm-docker wrapper](https://github.com/josephradford/bookwyrm-docker))
+
+### Monitoring Stack
+- **[Grafana](https://github.com/grafana/grafana)** - The open and composable observability and data visualization platform
+- **[Prometheus](https://github.com/prometheus/prometheus)** - The Prometheus monitoring system and time series database
+- **[Alertmanager](https://github.com/prometheus/alertmanager)** - Prometheus Alertmanager for handling alerts
+- **[Node Exporter](https://github.com/prometheus/node_exporter)** - Exporter for machine metrics
+- **[cAdvisor](https://github.com/google/cadvisor)** - Analyzes resource usage and performance characteristics of running containers
 
 ## Planned
 

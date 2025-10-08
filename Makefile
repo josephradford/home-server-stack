@@ -1,61 +1,57 @@
 # Home Server Stack Makefile
 # Simplifies deployment and maintenance operations
 
-.PHONY: help setup update start stop restart logs build build-bookwyrm pull status clean validate env-check clone-bookwyrm init-bookwyrm migrate-bookwyrm
-.PHONY: setup-all start-all stop-all restart-all update-all logs-all status-all clean-all
+.PHONY: help setup update start stop restart logs build pull status clean validate env-check ssl-check regenerate-ssl
+.PHONY: bookwyrm-setup bookwyrm-start bookwyrm-stop bookwyrm-restart bookwyrm-status bookwyrm-logs bookwyrm-update bookwyrm-init
 
-# Compose file flags
-COMPOSE_BASE := docker compose
-COMPOSE_ALL := docker compose -f docker-compose.yml -f docker-compose.monitoring.yml
+# Compose file flags - always include monitoring
+COMPOSE := docker compose -f docker-compose.yml -f docker-compose.monitoring.yml
 
-# Bookwyrm repository
-BOOKWYRM_REPO := https://github.com/bookwyrm-social/bookwyrm.git
-BOOKWYRM_BRANCH := production
+# Bookwyrm wrapper project location
+BOOKWYRM_DIR := external/bookwyrm-docker
 
 # Default target - show help
 help:
 	@echo "Home Server Stack - Available Commands"
 	@echo ""
 	@echo "Setup & Deployment:"
-	@echo "  make setup              - First time setup (base services only)"
-	@echo "  make setup-all          - Setup with monitoring stack (Grafana, Prometheus, etc.)"
+	@echo "  make setup              - First time setup (all services + monitoring + Bookwyrm)"
 	@echo "  make env-check          - Verify .env file exists and is configured"
-	@echo "  make clone-bookwyrm     - Clone Bookwyrm repository (automatic during setup)"
 	@echo ""
-	@echo "Service Management (Base Stack):"
-	@echo "  make start              - Start base services (AdGuard, n8n, Ollama, WireGuard, Bookwyrm)"
-	@echo "  make stop               - Stop base services"
-	@echo "  make restart            - Restart base services"
-	@echo "  make status             - Show status of base services"
-	@echo ""
-	@echo "Service Management (All Services):"
-	@echo "  make start-all          - Start ALL services (base + monitoring)"
-	@echo "  make stop-all           - Stop ALL services (base + monitoring)"
-	@echo "  make restart-all        - Restart ALL services (base + monitoring)"
-	@echo "  make status-all         - Show status of ALL services (base + monitoring)"
+	@echo "Service Management:"
+	@echo "  make start              - Start all services (base + monitoring + Bookwyrm)"
+	@echo "  make stop               - Stop all services"
+	@echo "  make restart            - Restart all services"
+	@echo "  make status             - Show status of all services"
 	@echo ""
 	@echo "Updates & Maintenance:"
-	@echo "  make update             - Update base services (pull latest Bookwyrm, rebuild, update images)"
-	@echo "  make update-all         - Update ALL services (base + monitoring)"
-	@echo "  make pull               - Pull latest images (except Bookwyrm)"
+	@echo "  make update             - Update all services (pull latest images)"
+	@echo "  make pull               - Pull latest images"
 	@echo "  make build              - Build all services that require building"
-	@echo "  make build-bookwyrm     - Rebuild Bookwyrm images from source"
 	@echo ""
-	@echo "Bookwyrm Specific:"
-	@echo "  make init-bookwyrm      - Initialize Bookwyrm (migrations, database, themes, static files)"
-	@echo "  make migrate-bookwyrm   - Run Bookwyrm database migrations only (for updates)"
+	@echo "Bookwyrm Management:"
+	@echo "  make bookwyrm-setup     - Setup Bookwyrm wrapper (auto-run during setup)"
+	@echo "  make bookwyrm-start     - Start Bookwyrm services (auto-run during start)"
+	@echo "  make bookwyrm-stop      - Stop Bookwyrm services (auto-run during stop)"
+	@echo "  make bookwyrm-restart   - Restart Bookwyrm services"
+	@echo "  make bookwyrm-status    - Show Bookwyrm status"
+	@echo "  make bookwyrm-logs      - Show Bookwyrm logs"
+	@echo "  make bookwyrm-update    - Update Bookwyrm (auto-run during update)"
+	@echo "  make bookwyrm-init      - Re-run Bookwyrm initialization"
+	@echo "  See docs/BOOKWYRM.md for integration details"
 	@echo ""
 	@echo "Logs & Debugging:"
-	@echo "  make logs               - Show logs from base services"
-	@echo "  make logs-all           - Show logs from ALL services (base + monitoring)"
-	@echo "  make logs-bookwyrm      - Show Bookwyrm logs only"
+	@echo "  make logs               - Show logs from all services"
 	@echo "  make logs-n8n           - Show n8n logs only"
 	@echo "  make logs-wireguard     - Show WireGuard logs only"
 	@echo ""
+	@echo "SSL Certificates:"
+	@echo "  make regenerate-ssl     - Regenerate SSL certificates (optional)"
+	@echo "  make regenerate-ssl DOMAIN=example.com - Regenerate with custom domain"
+	@echo ""
 	@echo "Validation & Cleanup:"
 	@echo "  make validate           - Validate docker-compose configuration"
-	@echo "  make clean              - Remove base containers and volumes (WARNING: destroys data)"
-	@echo "  make clean-all          - Remove ALL containers and volumes (WARNING: destroys all data)"
+	@echo "  make clean              - Remove all containers and volumes (WARNING: destroys data)"
 	@echo ""
 
 # Check that .env file exists
@@ -68,248 +64,238 @@ env-check:
 	fi
 	@echo "✓ .env file exists"
 
+# Generate SSL certificates if they don't exist
+ssl-check:
+	@if [ ! -f ssl/server.key ] || [ ! -f ssl/server.crt ]; then \
+		echo "Generating SSL certificates for n8n..."; \
+		cd ssl && ./generate-cert.sh localhost 365; \
+		echo "✓ SSL certificates generated"; \
+	else \
+		echo "✓ SSL certificates exist"; \
+	fi
+
+# Regenerate SSL certificates (optional - use custom domain)
+# Usage: make regenerate-ssl DOMAIN=your-domain.com
+regenerate-ssl:
+	@echo "Regenerating SSL certificates..."
+	@cd ssl && ./generate-cert.sh $(if $(DOMAIN),$(DOMAIN),localhost) 365
+	@echo "✓ SSL certificates regenerated"
+	@echo ""
+	@echo "Note: Restart n8n for changes to take effect: make restart
+
 # Validate docker-compose configuration
 validate: env-check
 	@echo "Validating docker-compose configuration..."
-	@$(COMPOSE_BASE) config --quiet
+	@$(COMPOSE) config --quiet
 	@echo "✓ Docker Compose configuration is valid"
 
-# Clone Bookwyrm repository if not already present
-clone-bookwyrm:
-	@if [ ! -d "bookwyrm" ]; then \
-		echo "Cloning Bookwyrm repository ($(BOOKWYRM_BRANCH) branch)..."; \
-		git clone -b $(BOOKWYRM_BRANCH) $(BOOKWYRM_REPO) bookwyrm; \
-		echo "✓ Bookwyrm repository cloned"; \
-	else \
-		echo "✓ Bookwyrm repository already exists"; \
-	fi
-
-# Build services that require building (Bookwyrm)
-build: validate clone-bookwyrm
+# Build services that require building
+build: validate
 	@echo "Building services from source..."
-	@$(COMPOSE_BASE) build
+	@$(COMPOSE) build
 	@echo "✓ Build complete"
-
-# Build Bookwyrm specifically (takes longer, done from Git)
-build-bookwyrm: validate clone-bookwyrm
-	@echo "Building Bookwyrm from official Git repository..."
-	@echo "This will take several minutes on first run..."
-	@$(COMPOSE_BASE) build --no-cache bookwyrm bookwyrm-celery bookwyrm-celery-beat
-	@echo "✓ Bookwyrm build complete"
-
-# Initialize Bookwyrm database and static files (complete setup)
-init-bookwyrm:
-	@echo "Initializing Bookwyrm (migrations, database, themes, static files)..."
-	@echo "Waiting for Bookwyrm container to be ready..."
-	@sleep 5
-	@echo "Step 1/5: Running database migrations..."
-	@docker exec bookwyrm python manage.py migrate --no-input
-	@echo "Step 2/5: Initializing database with default data..."
-	@if docker exec bookwyrm-db psql -U bookwyrm -d bookwyrm -tAc "SELECT COUNT(*) FROM bookwyrm_connector" | grep -q "^0$$"; then \
-		echo "Database is empty, running initdb..."; \
-		docker exec bookwyrm python manage.py initdb; \
-	else \
-		echo "Database already initialized, skipping initdb..."; \
-	fi
-	@echo "Step 3/5: Compiling theme files..."
-	@docker exec bookwyrm python manage.py compile_themes
-	@echo "Step 4/5: Collecting static files..."
-	@docker exec bookwyrm python manage.py collectstatic --no-input
-	@echo "Step 5/5: Generating admin code..."
-	@docker exec bookwyrm python manage.py admin_code || echo "Note: Admin code generation may fail if admin already exists"
-	@echo "✓ Bookwyrm initialization complete"
-	@echo ""
-	@echo "Use the admin code above to create your first admin account (if shown)"
-
-# Run Bookwyrm database migrations only (for updates)
-migrate-bookwyrm:
-	@echo "Running Bookwyrm database migrations..."
-	@docker exec bookwyrm python manage.py migrate --no-input
-	@echo "✓ Bookwyrm migrations complete"
 
 # Pull latest images for services using pre-built images
 pull: validate
-	@echo "Pulling latest Docker images for base services..."
-	@$(COMPOSE_BASE) pull --ignore-pull-failures
-	@echo "✓ Base images pulled"
+	@echo "Pulling latest Docker images..."
+	@$(COMPOSE) pull --ignore-pull-failures
+	@echo "✓ Images pulled"
 
-# First time setup (base stack only)
-setup: env-check validate clone-bookwyrm
+# First time setup
+setup: env-check ssl-check validate
 	@echo "Starting first-time setup..."
 	@echo ""
-	@echo "Step 1/4: Building Bookwyrm from source (this takes several minutes)..."
-	@$(COMPOSE_BASE) build bookwyrm bookwyrm-celery bookwyrm-celery-beat
+	@echo "Step 1/3: Pulling pre-built images..."
+	@$(COMPOSE) pull --ignore-pull-failures
 	@echo ""
-	@echo "Step 2/4: Pulling pre-built images..."
-	@$(COMPOSE_BASE) pull --ignore-pull-failures
+	@echo "Step 2/3: Starting services..."
+	@$(COMPOSE) up -d
 	@echo ""
-	@echo "Step 3/4: Starting services..."
-	@$(COMPOSE_BASE) up -d
+	@echo "Step 3/3: Setting up Bookwyrm..."
+	@if [ ! -d "$(BOOKWYRM_DIR)" ]; then \
+		echo "Cloning bookwyrm-docker wrapper..."; \
+		mkdir -p external; \
+		cd external && git clone https://github.com/josephradford/bookwyrm-docker.git; \
+		echo "✓ Bookwyrm wrapper cloned"; \
+		echo ""; \
+		echo "⚠️  Bookwyrm requires configuration:"; \
+		echo "1. cd $(BOOKWYRM_DIR)"; \
+		echo "2. cp .env.example .env"; \
+		echo "3. Edit .env with your configuration"; \
+		echo "4. Run: make bookwyrm-setup"; \
+	elif [ ! -f "$(BOOKWYRM_DIR)/.env" ]; then \
+		echo "⚠️  Bookwyrm not configured yet:"; \
+		echo "1. cd $(BOOKWYRM_DIR)"; \
+		echo "2. cp .env.example .env"; \
+		echo "3. Edit .env with your configuration"; \
+		echo "4. Run: make bookwyrm-setup"; \
+	else \
+		$(MAKE) bookwyrm-setup; \
+	fi
 	@echo ""
-	@echo "Step 4/4: Initializing Bookwyrm..."
-	@sleep 10
-	@$(MAKE) init-bookwyrm
+	@$(COMPOSE) ps
 	@echo ""
-	@$(COMPOSE_BASE) ps
-	@echo ""
-	@echo "✓ Setup complete! Base services are running."
+	@echo "✓ Setup complete! Services are running."
 	@echo ""
 	@echo "Access your services:"
 	@echo "  - AdGuard Home: http://$$SERVER_IP:80"
 	@echo "  - n8n:          https://$$SERVER_IP:5678"
-	@echo "  - Bookwyrm:     http://$$SERVER_IP:8000"
 	@echo "  - Ollama API:   http://$$SERVER_IP:11434"
-	@echo ""
-	@echo "Note: First-time container initialization may take a few minutes."
-	@echo "Check logs with: make logs"
-
-# Setup with ALL services (base + monitoring)
-setup-all: env-check validate clone-bookwyrm
-	@echo "Starting setup with ALL services (base + monitoring)..."
-	@echo ""
-	@echo "Step 1/4: Building Bookwyrm from source..."
-	@$(COMPOSE_BASE) build bookwyrm bookwyrm-celery bookwyrm-celery-beat
-	@echo ""
-	@echo "Step 2/4: Pulling pre-built images..."
-	@$(COMPOSE_ALL) pull --ignore-pull-failures
-	@echo ""
-	@echo "Step 3/4: Starting all services..."
-	@$(COMPOSE_ALL) up -d
-	@echo ""
-	@echo "Step 4/4: Initializing Bookwyrm..."
-	@sleep 10
-	@$(MAKE) init-bookwyrm
-	@echo ""
-	@$(COMPOSE_ALL) ps
-	@echo ""
-	@echo "✓ Setup complete! All services are running (base + monitoring)."
-	@echo ""
-	@echo "Access your services:"
+	@echo "  - Habitica:     http://$$SERVER_IP:8080"
 	@echo "  - Grafana:      http://$$SERVER_IP:3001"
 	@echo "  - Prometheus:   http://$$SERVER_IP:9090"
 	@echo "  - Alertmanager: http://$$SERVER_IP:9093"
+	@if [ -d "$(BOOKWYRM_DIR)" ] && [ -f "$(BOOKWYRM_DIR)/.env" ]; then \
+		echo "  - Bookwyrm:     http://$$SERVER_IP:8000"; \
+	fi
 	@echo ""
-	@echo "Note: Use 'make start-all', 'make stop-all', etc. to manage all services."
+	@if [ ! -d "$(BOOKWYRM_DIR)" ] || [ ! -f "$(BOOKWYRM_DIR)/.env" ]; then \
+		echo "⚠️  To complete setup, configure and start Bookwyrm (see above)"; \
+		echo ""; \
+	fi
+	@echo "Note: First-time container initialization may take a few minutes."
+	@echo "Check logs with: make logs"
 
-# Update base services
-update: env-check validate clone-bookwyrm
-	@echo "Updating base services..."
+# Update all services
+update: env-check validate
+	@echo "Updating all services..."
 	@echo ""
-	@echo "Step 1/4: Pulling latest Bookwyrm source code..."
-	@cd bookwyrm && git pull origin $(BOOKWYRM_BRANCH)
+	@echo "Step 1/2: Pulling latest images..."
+	@$(COMPOSE) pull --ignore-pull-failures
 	@echo ""
-	@echo "Step 2/4: Rebuilding Bookwyrm from latest production branch..."
-	@$(COMPOSE_BASE) build --no-cache bookwyrm bookwyrm-celery bookwyrm-celery-beat
+	@echo "Step 2/2: Restarting services with new images..."
+	@$(COMPOSE) up -d
 	@echo ""
-	@echo "Step 3/4: Pulling latest images for other services..."
-	@$(COMPOSE_BASE) pull --ignore-pull-failures
-	@echo ""
-	@echo "Step 4/4: Restarting services with new images..."
-	@$(COMPOSE_BASE) up -d
-	@echo ""
-	@echo "✓ Update complete! Base services restarted with latest versions."
-	@echo ""
-	@echo "Check status with: make status"
-
-# Update ALL services (base + monitoring)
-update-all: env-check validate clone-bookwyrm
-	@echo "Updating ALL services (base + monitoring)..."
-	@echo ""
-	@echo "Step 1/4: Pulling latest Bookwyrm source code..."
-	@cd bookwyrm && git pull origin $(BOOKWYRM_BRANCH)
-	@echo ""
-	@echo "Step 2/4: Rebuilding Bookwyrm from latest production branch..."
-	@$(COMPOSE_BASE) build --no-cache bookwyrm bookwyrm-celery bookwyrm-celery-beat
-	@echo ""
-	@echo "Step 3/4: Pulling latest images for all services..."
-	@$(COMPOSE_ALL) pull --ignore-pull-failures
-	@echo ""
-	@echo "Step 4/4: Restarting all services with new images..."
-	@$(COMPOSE_ALL) up -d
+	@$(MAKE) bookwyrm-update
 	@echo ""
 	@echo "✓ Update complete! All services restarted with latest versions."
 	@echo ""
-	@echo "Check status with: make status-all"
+	@echo "Check status with: make status"
 
-# Start base services
+# Start all services
 start: env-check
-	@echo "Starting base services..."
-	@$(COMPOSE_BASE) up -d
-	@echo "✓ Base services started"
-
-# Start ALL services (base + monitoring)
-start-all: env-check
-	@echo "Starting ALL services (base + monitoring)..."
-	@$(COMPOSE_ALL) up -d
+	@echo "Starting all services..."
+	@$(COMPOSE) up -d
+	@$(MAKE) bookwyrm-start
 	@echo "✓ All services started"
 
-# Stop base services
+# Stop all services
 stop:
-	@echo "Stopping base services..."
-	@$(COMPOSE_BASE) down
-	@echo "✓ Base services stopped"
-
-# Stop ALL services (base + monitoring)
-stop-all:
-	@echo "Stopping ALL services (base + monitoring)..."
-	@$(COMPOSE_ALL) down
+	@echo "Stopping all services..."
+	@$(MAKE) bookwyrm-stop
+	@$(COMPOSE) down
 	@echo "✓ All services stopped"
 
-# Restart base services
+# Restart all services
 restart: env-check
-	@echo "Restarting base services..."
-	@$(COMPOSE_BASE) restart
-	@echo "✓ Base services restarted"
-
-# Restart ALL services (base + monitoring)
-restart-all: env-check
-	@echo "Restarting ALL services (base + monitoring)..."
-	@$(COMPOSE_ALL) restart
+	@echo "Restarting all services..."
+	@$(COMPOSE) restart
+	@$(MAKE) bookwyrm-restart
 	@echo "✓ All services restarted"
 
-# Show base service status
+# Show service status
 status:
-	@$(COMPOSE_BASE) ps
+	@$(COMPOSE) ps
+	@echo ""
+	@$(MAKE) bookwyrm-status
 
-# Show ALL service status (base + monitoring)
-status-all:
-	@$(COMPOSE_ALL) ps
-
-# View logs from base services
+# View logs from all services
 logs:
-	@$(COMPOSE_BASE) logs -f
-
-# View logs from ALL services (base + monitoring)
-logs-all:
-	@$(COMPOSE_ALL) logs -f
+	@$(COMPOSE) logs -f
 
 # View logs from specific services
-logs-bookwyrm:
-	@$(COMPOSE_BASE) logs -f bookwyrm bookwyrm-celery bookwyrm-celery-beat
-
 logs-n8n:
-	@$(COMPOSE_BASE) logs -f n8n
+	@$(COMPOSE) logs -f n8n
 
 logs-wireguard:
-	@$(COMPOSE_BASE) logs -f wireguard
+	@$(COMPOSE) logs -f wireguard
 
 logs-ollama:
-	@$(COMPOSE_BASE) logs -f ollama
+	@$(COMPOSE) logs -f ollama
 
-# Clean up base stack (WARNING: destroys data)
+# Clean up all services (WARNING: destroys data)
 clean:
-	@echo "WARNING: This will remove base containers and volumes, destroying all data!"
-	@echo "Press Ctrl+C to cancel, or Enter to continue..."
-	@read confirm
-	@echo "Stopping and removing base containers..."
-	@$(COMPOSE_BASE) down -v
-	@echo "✓ Base stack cleanup complete"
-
-# Clean up ALL services (base + monitoring) - WARNING: destroys all data
-clean-all:
-	@echo "WARNING: This will remove ALL containers and volumes (base + monitoring), destroying all data!"
+	@echo "WARNING: This will remove all containers and volumes, destroying all data!"
 	@echo "Press Ctrl+C to cancel, or Enter to continue..."
 	@read confirm
 	@echo "Stopping and removing all containers..."
-	@$(COMPOSE_ALL) down -v
-	@echo "✓ Complete cleanup finished"
+	@$(COMPOSE) down -v
+	@echo "✓ Cleanup complete"
+
+# Bookwyrm wrapper integration targets
+# These commands delegate to the external bookwyrm-docker wrapper project
+# Bookwyrm is a mandatory part of the stack
+
+bookwyrm-setup:
+	@if [ ! -d "$(BOOKWYRM_DIR)" ]; then \
+		echo "Cloning bookwyrm-docker wrapper..."; \
+		mkdir -p external; \
+		cd external && git clone https://github.com/josephradford/bookwyrm-docker.git; \
+		echo "✓ Bookwyrm wrapper cloned"; \
+		echo ""; \
+		echo "Next steps:"; \
+		echo "1. cd $(BOOKWYRM_DIR)"; \
+		echo "2. cp .env.example .env"; \
+		echo "3. Edit .env with your configuration"; \
+		echo "4. Run: make bookwyrm-setup (again to deploy)"; \
+		exit 0; \
+	fi
+	@echo "Setting up Bookwyrm via wrapper..."
+	@cd $(BOOKWYRM_DIR) && $(MAKE) setup
+	@echo ""
+	@echo "✓ Bookwyrm setup complete!"
+	@echo "See docs/BOOKWYRM.md for integration details"
+
+bookwyrm-start:
+	@if [ ! -d "$(BOOKWYRM_DIR)" ]; then \
+		echo "ERROR: Bookwyrm wrapper not found. Run: make setup"; \
+		exit 1; \
+	fi
+	@echo "Starting Bookwyrm..."
+	@cd $(BOOKWYRM_DIR) && $(MAKE) start
+
+bookwyrm-stop:
+	@if [ ! -d "$(BOOKWYRM_DIR)" ]; then \
+		echo "ERROR: Bookwyrm wrapper not found. Run: make setup"; \
+		exit 1; \
+	fi
+	@echo "Stopping Bookwyrm..."
+	@cd $(BOOKWYRM_DIR) && $(MAKE) stop
+
+bookwyrm-restart:
+	@if [ ! -d "$(BOOKWYRM_DIR)" ]; then \
+		echo "ERROR: Bookwyrm wrapper not found. Run: make setup"; \
+		exit 1; \
+	fi
+	@echo "Restarting Bookwyrm..."
+	@cd $(BOOKWYRM_DIR) && $(MAKE) restart
+
+bookwyrm-status:
+	@if [ ! -d "$(BOOKWYRM_DIR)" ]; then \
+		echo "Bookwyrm: Not installed (run: make setup)"; \
+	else \
+		cd $(BOOKWYRM_DIR) && $(MAKE) status; \
+	fi
+
+bookwyrm-logs:
+	@if [ ! -d "$(BOOKWYRM_DIR)" ]; then \
+		echo "ERROR: Bookwyrm wrapper not found. Run: make setup"; \
+		exit 1; \
+	fi
+	@cd $(BOOKWYRM_DIR) && $(MAKE) logs
+
+bookwyrm-update:
+	@if [ ! -d "$(BOOKWYRM_DIR)" ]; then \
+		echo "ERROR: Bookwyrm wrapper not found. Run: make setup"; \
+		exit 1; \
+	fi
+	@echo "Updating Bookwyrm..."
+	@cd $(BOOKWYRM_DIR) && $(MAKE) update
+
+bookwyrm-init:
+	@if [ ! -d "$(BOOKWYRM_DIR)" ]; then \
+		echo "ERROR: Bookwyrm wrapper not found. Run: make setup"; \
+		exit 1; \
+	fi
+	@echo "Re-running Bookwyrm initialization..."
+	@cd $(BOOKWYRM_DIR) && $(MAKE) init
