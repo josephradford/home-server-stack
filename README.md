@@ -35,15 +35,24 @@ nano .env  # Update SERVER_IP, TIMEZONE, passwords
 # 3. Generate SSL certificates (optional, for HTTPS)
 cd ssl && ./generate-cert.sh your-domain.com && cd ..
 
-# 4. Run first-time setup (includes all services + monitoring + Bookwyrm)
+# 4. Run first-time setup (includes all services + monitoring)
 make setup
+
+# 5. Configure Bookwyrm (one-time)
+cd external/bookwyrm-docker
+cp .env.example .env
+nano .env  # Configure Bookwyrm settings
+
+# 6. Deploy Bookwyrm
+make bookwyrm-setup
 ```
 
-**Note:** On first run, `make setup` will clone the Bookwyrm wrapper and prompt you to configure it. After configuration, run `make setup` again to complete deployment.
+**Note:** The first `make setup` will deploy all core services and monitoring, and clone the Bookwyrm wrapper. You can then configure and deploy Bookwyrm separately using `make bookwyrm-setup`.
 
 **Using the Makefile:**
 - `make help` - Show all available commands
-- `make setup` - First time setup (all services + monitoring + Bookwyrm)
+- `make setup` - First time setup (all services + monitoring)
+- `make bookwyrm-setup` - Deploy Bookwyrm (after configuring .env)
 - `make update` - Update all services to latest versions
 - `make start` - Start all services
 - `make stop` - Stop all services

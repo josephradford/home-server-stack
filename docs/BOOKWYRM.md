@@ -1,6 +1,6 @@
 # Bookwyrm Integration Guide
 
-This home server stack uses the standalone [bookwyrm-docker](https://github.com/josephradford/bookwyrm-docker) wrapper project for deploying Bookwyrm. Bookwyrm is a **mandatory component** of the stack and is automatically deployed during setup.
+This home server stack uses the standalone [bookwyrm-docker](https://github.com/josephradford/bookwyrm-docker) wrapper project for deploying Bookwyrm. The wrapper is automatically cloned during setup and deployed via `make bookwyrm-setup`.
 
 ## Why Use the Wrapper?
 
@@ -11,15 +11,17 @@ The bookwyrm-docker wrapper project:
 - ✅ Is maintained separately, benefiting the broader Bookwyrm community
 - ✅ Reduces the size of this repository's docker-compose.yml
 
-## Automatic Deployment
+## Deployment Flow
 
-Bookwyrm is automatically deployed when you run `make setup`. The wrapper is cloned to `external/bookwyrm-docker/` and integrated with the main stack.
+Bookwyrm is deployed separately after the main stack setup. The wrapper is automatically cloned during `make setup`.
 
 **First-time setup flow:**
-1. Run `make setup` - wrapper is cloned automatically
-2. Setup pauses and prompts you to configure Bookwyrm `.env`
-3. Configure `external/bookwyrm-docker/.env` (see below)
-4. Run `make setup` again - Bookwyrm deploys automatically
+1. Run `make setup` - Deploys core services, monitoring, and clones Bookwyrm wrapper
+2. Configure `external/bookwyrm-docker/.env` (see below)
+3. Run `make bookwyrm-setup` - Deploys Bookwyrm
+
+**Subsequent operations:**
+All base commands (`make start`, `make stop`, etc.) automatically include Bookwyrm once it's deployed.
 
 ## Manual Configuration
 

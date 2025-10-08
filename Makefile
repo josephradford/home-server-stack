@@ -82,29 +82,54 @@ pull: validate
 setup: env-check validate
 	@echo "Starting first-time setup..."
 	@echo ""
-	@echo "Step 1/3: Setting up Bookwyrm..."
-	@$(MAKE) bookwyrm-setup
-	@echo ""
-	@echo "Step 2/3: Pulling pre-built images..."
+	@echo "Step 1/3: Pulling pre-built images..."
 	@$(COMPOSE) pull --ignore-pull-failures
 	@echo ""
-	@echo "Step 3/3: Starting services..."
+	@echo "Step 2/3: Starting services..."
 	@$(COMPOSE) up -d
+	@echo ""
+	@echo "Step 3/3: Setting up Bookwyrm..."
+	@if [ ! -d "$(BOOKWYRM_DIR)" ]; then \
+		echo "Cloning bookwyrm-docker wrapper..."; \
+		mkdir -p external; \
+		cd external && git clone https://github.com/josephradford/bookwyrm-docker.git; \
+		echo "✓ Bookwyrm wrapper cloned"; \
+		echo ""; \
+		echo "⚠️  Bookwyrm requires configuration:"; \
+		echo "1. cd $(BOOKWYRM_DIR)"; \
+		echo "2. cp .env.example .env"; \
+		echo "3. Edit .env with your configuration"; \
+		echo "4. Run: make bookwyrm-setup"; \
+	elif [ ! -f "$(BOOKWYRM_DIR)/.env" ]; then \
+		echo "⚠️  Bookwyrm not configured yet:"; \
+		echo "1. cd $(BOOKWYRM_DIR)"; \
+		echo "2. cp .env.example .env"; \
+		echo "3. Edit .env with your configuration"; \
+		echo "4. Run: make bookwyrm-setup"; \
+	else \
+		$(MAKE) bookwyrm-setup; \
+	fi
 	@echo ""
 	@$(COMPOSE) ps
 	@echo ""
-	@echo "✓ Setup complete! All services are running."
+	@echo "✓ Setup complete! Services are running."
 	@echo ""
 	@echo "Access your services:"
 	@echo "  - AdGuard Home: http://$$SERVER_IP:80"
 	@echo "  - n8n:          https://$$SERVER_IP:5678"
 	@echo "  - Ollama API:   http://$$SERVER_IP:11434"
 	@echo "  - Habitica:     http://$$SERVER_IP:8080"
-	@echo "  - Bookwyrm:     http://$$SERVER_IP:8000"
 	@echo "  - Grafana:      http://$$SERVER_IP:3001"
 	@echo "  - Prometheus:   http://$$SERVER_IP:9090"
 	@echo "  - Alertmanager: http://$$SERVER_IP:9093"
+	@if [ -d "$(BOOKWYRM_DIR)" ] && [ -f "$(BOOKWYRM_DIR)/.env" ]; then \
+		echo "  - Bookwyrm:     http://$$SERVER_IP:8000"; \
+	fi
 	@echo ""
+	@if [ ! -d "$(BOOKWYRM_DIR)" ] || [ ! -f "$(BOOKWYRM_DIR)/.env" ]; then \
+		echo "⚠️  To complete setup, configure and start Bookwyrm (see above)"; \
+		echo ""; \
+	fi
 	@echo "Note: First-time container initialization may take a few minutes."
 	@echo "Check logs with: make logs"
 
