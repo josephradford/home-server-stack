@@ -4,8 +4,11 @@
 # Data directories
 data/
 
-# Cloned repositories (managed by Makefile)
+# Cloned repositories (managed by Makefile or external)
 bookwyrm/
+
+# External projects (users clone these separately)
+external/
 
 # Logs
 *.log

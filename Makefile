@@ -1,16 +1,16 @@
 # Home Server Stack Makefile
 # Simplifies deployment and maintenance operations
 
-.PHONY: help setup update start stop restart logs build build-bookwyrm pull status clean validate env-check clone-bookwyrm init-bookwyrm migrate-bookwyrm
+.PHONY: help setup update start stop restart logs build pull status clean validate env-check
 .PHONY: setup-all start-all stop-all restart-all update-all logs-all status-all clean-all
+.PHONY: bookwyrm-setup bookwyrm-start bookwyrm-stop bookwyrm-restart bookwyrm-status bookwyrm-logs bookwyrm-update bookwyrm-init
 
 # Compose file flags
 COMPOSE_BASE := docker compose
 COMPOSE_ALL := docker compose -f docker-compose.yml -f docker-compose.monitoring.yml
 
-# Bookwyrm repository
-BOOKWYRM_REPO := https://github.com/bookwyrm-social/bookwyrm.git
-BOOKWYRM_BRANCH := production
+# Bookwyrm wrapper project location
+BOOKWYRM_DIR := external/bookwyrm-docker
 
 # Default target - show help
 help:
@@ -20,10 +20,9 @@ help:
 	@echo "  make setup              - First time setup (base services only)"
 	@echo "  make setup-all          - Setup with monitoring stack (Grafana, Prometheus, etc.)"
 	@echo "  make env-check          - Verify .env file exists and is configured"
-	@echo "  make clone-bookwyrm     - Clone Bookwyrm repository (automatic during setup)"
 	@echo ""
 	@echo "Service Management (Base Stack):"
-	@echo "  make start              - Start base services (AdGuard, n8n, Ollama, WireGuard, Bookwyrm)"
+	@echo "  make start              - Start base services (AdGuard, n8n, Ollama, WireGuard, Habitica)"
 	@echo "  make stop               - Stop base services"
 	@echo "  make restart            - Restart base services"
 	@echo "  make status             - Show status of base services"
@@ -35,20 +34,25 @@ help:
 	@echo "  make status-all         - Show status of ALL services (base + monitoring)"
 	@echo ""
 	@echo "Updates & Maintenance:"
-	@echo "  make update             - Update base services (pull latest Bookwyrm, rebuild, update images)"
+	@echo "  make update             - Update base services (pull latest images)"
 	@echo "  make update-all         - Update ALL services (base + monitoring)"
-	@echo "  make pull               - Pull latest images (except Bookwyrm)"
+	@echo "  make pull               - Pull latest images"
 	@echo "  make build              - Build all services that require building"
-	@echo "  make build-bookwyrm     - Rebuild Bookwyrm images from source"
 	@echo ""
-	@echo "Bookwyrm Specific:"
-	@echo "  make init-bookwyrm      - Initialize Bookwyrm (migrations, database, themes, static files)"
-	@echo "  make migrate-bookwyrm   - Run Bookwyrm database migrations only (for updates)"
+	@echo "Bookwyrm (External Wrapper):"
+	@echo "  make bookwyrm-setup     - Setup Bookwyrm (clone wrapper if needed)"
+	@echo "  make bookwyrm-start     - Start Bookwyrm services"
+	@echo "  make bookwyrm-stop      - Stop Bookwyrm services"
+	@echo "  make bookwyrm-restart   - Restart Bookwyrm services"
+	@echo "  make bookwyrm-status    - Show Bookwyrm status"
+	@echo "  make bookwyrm-logs      - Show Bookwyrm logs"
+	@echo "  make bookwyrm-update    - Update Bookwyrm to latest version"
+	@echo "  make bookwyrm-init      - Re-run Bookwyrm initialization"
+	@echo "  See docs/BOOKWYRM.md for detailed integration guide"
 	@echo ""
 	@echo "Logs & Debugging:"
 	@echo "  make logs               - Show logs from base services"
 	@echo "  make logs-all           - Show logs from ALL services (base + monitoring)"
-	@echo "  make logs-bookwyrm      - Show Bookwyrm logs only"
 	@echo "  make logs-n8n           - Show n8n logs only"
 	@echo "  make logs-wireguard     - Show WireGuard logs only"
 	@echo ""
@@ -74,58 +78,11 @@ validate: env-check
 	@$(COMPOSE_BASE) config --quiet
 	@echo "✓ Docker Compose configuration is valid"
 
-# Clone Bookwyrm repository if not already present
-clone-bookwyrm:
-	@if [ ! -d "bookwyrm" ]; then \
-		echo "Cloning Bookwyrm repository ($(BOOKWYRM_BRANCH) branch)..."; \
-		git clone -b $(BOOKWYRM_BRANCH) $(BOOKWYRM_REPO) bookwyrm; \
-		echo "✓ Bookwyrm repository cloned"; \
-	else \
-		echo "✓ Bookwyrm repository already exists"; \
-	fi
-
-# Build services that require building (Bookwyrm)
-build: validate clone-bookwyrm
+# Build services that require building
+build: validate
 	@echo "Building services from source..."
 	@$(COMPOSE_BASE) build
 	@echo "✓ Build complete"
-
-# Build Bookwyrm specifically (takes longer, done from Git)
-build-bookwyrm: validate clone-bookwyrm
-	@echo "Building Bookwyrm from official Git repository..."
-	@echo "This will take several minutes on first run..."
-	@$(COMPOSE_BASE) build --no-cache bookwyrm bookwyrm-celery bookwyrm-celery-beat
-	@echo "✓ Bookwyrm build complete"
-
-# Initialize Bookwyrm database and static files (complete setup)
-init-bookwyrm:
-	@echo "Initializing Bookwyrm (migrations, database, themes, static files)..."
-	@echo "Waiting for Bookwyrm container to be ready..."
-	@sleep 5
-	@echo "Step 1/5: Running database migrations..."
-	@docker exec bookwyrm python manage.py migrate --no-input
-	@echo "Step 2/5: Initializing database with default data..."
-	@if docker exec bookwyrm-db psql -U bookwyrm -d bookwyrm -tAc "SELECT COUNT(*) FROM bookwyrm_connector" | grep -q "^0$$"; then \
-		echo "Database is empty, running initdb..."; \
-		docker exec bookwyrm python manage.py initdb; \
-	else \
-		echo "Database already initialized, skipping initdb..."; \
-	fi
-	@echo "Step 3/5: Compiling theme files..."
-	@docker exec bookwyrm python manage.py compile_themes
-	@echo "Step 4/5: Collecting static files..."
-	@docker exec bookwyrm python manage.py collectstatic --no-input
-	@echo "Step 5/5: Generating admin code..."
-	@docker exec bookwyrm python manage.py admin_code || echo "Note: Admin code generation may fail if admin already exists"
-	@echo "✓ Bookwyrm initialization complete"
-	@echo ""
-	@echo "Use the admin code above to create your first admin account (if shown)"
-
-# Run Bookwyrm database migrations only (for updates)
-migrate-bookwyrm:
-	@echo "Running Bookwyrm database migrations..."
-	@docker exec bookwyrm python manage.py migrate --no-input
-	@echo "✓ Bookwyrm migrations complete"
 
 # Pull latest images for services using pre-built images
 pull: validate
@@ -134,21 +91,14 @@ pull: validate
 	@echo "✓ Base images pulled"
 
 # First time setup (base stack only)
-setup: env-check validate clone-bookwyrm
+setup: env-check validate
 	@echo "Starting first-time setup..."
 	@echo ""
-	@echo "Step 1/4: Building Bookwyrm from source (this takes several minutes)..."
-	@$(COMPOSE_BASE) build bookwyrm bookwyrm-celery bookwyrm-celery-beat
-	@echo ""
-	@echo "Step 2/4: Pulling pre-built images..."
+	@echo "Step 1/2: Pulling pre-built images..."
 	@$(COMPOSE_BASE) pull --ignore-pull-failures
 	@echo ""
-	@echo "Step 3/4: Starting services..."
+	@echo "Step 2/2: Starting services..."
 	@$(COMPOSE_BASE) up -d
-	@echo ""
-	@echo "Step 4/4: Initializing Bookwyrm..."
-	@sleep 10
-	@$(MAKE) init-bookwyrm
 	@echo ""
 	@$(COMPOSE_BASE) ps
 	@echo ""
@@ -157,28 +107,22 @@ setup: env-check validate clone-bookwyrm
 	@echo "Access your services:"
 	@echo "  - AdGuard Home: http://$$SERVER_IP:80"
 	@echo "  - n8n:          https://$$SERVER_IP:5678"
-	@echo "  - Bookwyrm:     http://$$SERVER_IP:8000"
 	@echo "  - Ollama API:   http://$$SERVER_IP:11434"
+	@echo "  - Habitica:     http://$$SERVER_IP:8080"
 	@echo ""
+	@echo "To add Bookwyrm, run: make bookwyrm-setup"
 	@echo "Note: First-time container initialization may take a few minutes."
 	@echo "Check logs with: make logs"
 
 # Setup with ALL services (base + monitoring)
-setup-all: env-check validate clone-bookwyrm
+setup-all: env-check validate
 	@echo "Starting setup with ALL services (base + monitoring)..."
 	@echo ""
-	@echo "Step 1/4: Building Bookwyrm from source..."
-	@$(COMPOSE_BASE) build bookwyrm bookwyrm-celery bookwyrm-celery-beat
-	@echo ""
-	@echo "Step 2/4: Pulling pre-built images..."
+	@echo "Step 1/2: Pulling pre-built images..."
 	@$(COMPOSE_ALL) pull --ignore-pull-failures
 	@echo ""
-	@echo "Step 3/4: Starting all services..."
+	@echo "Step 2/2: Starting all services..."
 	@$(COMPOSE_ALL) up -d
-	@echo ""
-	@echo "Step 4/4: Initializing Bookwyrm..."
-	@sleep 10
-	@$(MAKE) init-bookwyrm
 	@echo ""
 	@$(COMPOSE_ALL) ps
 	@echo ""
@@ -189,46 +133,37 @@ setup-all: env-check validate clone-bookwyrm
 	@echo "  - Prometheus:   http://$$SERVER_IP:9090"
 	@echo "  - Alertmanager: http://$$SERVER_IP:9093"
 	@echo ""
+	@echo "To add Bookwyrm, run: make bookwyrm-setup"
 	@echo "Note: Use 'make start-all', 'make stop-all', etc. to manage all services."
 
 # Update base services
-update: env-check validate clone-bookwyrm
+update: env-check validate
 	@echo "Updating base services..."
 	@echo ""
-	@echo "Step 1/4: Pulling latest Bookwyrm source code..."
-	@cd bookwyrm && git pull origin $(BOOKWYRM_BRANCH)
-	@echo ""
-	@echo "Step 2/4: Rebuilding Bookwyrm from latest production branch..."
-	@$(COMPOSE_BASE) build --no-cache bookwyrm bookwyrm-celery bookwyrm-celery-beat
-	@echo ""
-	@echo "Step 3/4: Pulling latest images for other services..."
+	@echo "Step 1/2: Pulling latest images..."
 	@$(COMPOSE_BASE) pull --ignore-pull-failures
 	@echo ""
-	@echo "Step 4/4: Restarting services with new images..."
+	@echo "Step 2/2: Restarting services with new images..."
 	@$(COMPOSE_BASE) up -d
 	@echo ""
 	@echo "✓ Update complete! Base services restarted with latest versions."
 	@echo ""
+	@echo "To update Bookwyrm, run: make bookwyrm-update"
 	@echo "Check status with: make status"
 
 # Update ALL services (base + monitoring)
-update-all: env-check validate clone-bookwyrm
+update-all: env-check validate
 	@echo "Updating ALL services (base + monitoring)..."
 	@echo ""
-	@echo "Step 1/4: Pulling latest Bookwyrm source code..."
-	@cd bookwyrm && git pull origin $(BOOKWYRM_BRANCH)
-	@echo ""
-	@echo "Step 2/4: Rebuilding Bookwyrm from latest production branch..."
-	@$(COMPOSE_BASE) build --no-cache bookwyrm bookwyrm-celery bookwyrm-celery-beat
-	@echo ""
-	@echo "Step 3/4: Pulling latest images for all services..."
+	@echo "Step 1/2: Pulling latest images for all services..."
 	@$(COMPOSE_ALL) pull --ignore-pull-failures
 	@echo ""
-	@echo "Step 4/4: Restarting all services with new images..."
+	@echo "Step 2/2: Restarting all services with new images..."
 	@$(COMPOSE_ALL) up -d
 	@echo ""
 	@echo "✓ Update complete! All services restarted with latest versions."
 	@echo ""
+	@echo "To update Bookwyrm, run: make bookwyrm-update"
 	@echo "Check status with: make status-all"
 
 # Start base services
@@ -284,9 +219,6 @@ logs-all:
 	@$(COMPOSE_ALL) logs -f
 
 # View logs from specific services
-logs-bookwyrm:
-	@$(COMPOSE_BASE) logs -f bookwyrm bookwyrm-celery bookwyrm-celery-beat
-
 logs-n8n:
 	@$(COMPOSE_BASE) logs -f n8n
 
@@ -313,3 +245,82 @@ clean-all:
 	@echo "Stopping and removing all containers..."
 	@$(COMPOSE_ALL) down -v
 	@echo "✓ Complete cleanup finished"
+
+# Bookwyrm wrapper integration targets
+# These commands delegate to the external bookwyrm-docker wrapper project
+
+bookwyrm-setup:
+	@if [ ! -d "$(BOOKWYRM_DIR)" ]; then \
+		echo "Cloning bookwyrm-docker wrapper..."; \
+		mkdir -p external; \
+		cd external && git clone https://github.com/josephradford/bookwyrm-docker.git; \
+		echo "✓ Bookwyrm wrapper cloned"; \
+		echo ""; \
+		echo "Next steps:"; \
+		echo "1. cd $(BOOKWYRM_DIR)"; \
+		echo "2. cp .env.example .env"; \
+		echo "3. Edit .env with your configuration"; \
+		echo "4. Run: make bookwyrm-setup (again to deploy)"; \
+		exit 0; \
+	fi
+	@echo "Setting up Bookwyrm via wrapper..."
+	@cd $(BOOKWYRM_DIR) && $(MAKE) setup
+	@echo ""
+	@echo "✓ Bookwyrm setup complete!"
+	@echo "See docs/BOOKWYRM.md for integration details"
+
+bookwyrm-start:
+	@if [ ! -d "$(BOOKWYRM_DIR)" ]; then \
+		echo "ERROR: Bookwyrm wrapper not found at $(BOOKWYRM_DIR)"; \
+		echo "Run: make bookwyrm-setup"; \
+		exit 1; \
+	fi
+	@echo "Starting Bookwyrm..."
+	@cd $(BOOKWYRM_DIR) && $(MAKE) start
+
+bookwyrm-stop:
+	@if [ ! -d "$(BOOKWYRM_DIR)" ]; then \
+		echo "ERROR: Bookwyrm wrapper not found at $(BOOKWYRM_DIR)"; \
+		exit 1; \
+	fi
+	@echo "Stopping Bookwyrm..."
+	@cd $(BOOKWYRM_DIR) && $(MAKE) stop
+
+bookwyrm-restart:
+	@if [ ! -d "$(BOOKWYRM_DIR)" ]; then \
+		echo "ERROR: Bookwyrm wrapper not found at $(BOOKWYRM_DIR)"; \
+		exit 1; \
+	fi
+	@echo "Restarting Bookwyrm..."
+	@cd $(BOOKWYRM_DIR) && $(MAKE) restart
+
+bookwyrm-status:
+	@if [ ! -d "$(BOOKWYRM_DIR)" ]; then \
+		echo "ERROR: Bookwyrm wrapper not found at $(BOOKWYRM_DIR)"; \
+		echo "Run: make bookwyrm-setup"; \
+		exit 1; \
+	fi
+	@cd $(BOOKWYRM_DIR) && $(MAKE) status
+
+bookwyrm-logs:
+	@if [ ! -d "$(BOOKWYRM_DIR)" ]; then \
+		echo "ERROR: Bookwyrm wrapper not found at $(BOOKWYRM_DIR)"; \
+		exit 1; \
+	fi
+	@cd $(BOOKWYRM_DIR) && $(MAKE) logs
+
+bookwyrm-update:
+	@if [ ! -d "$(BOOKWYRM_DIR)" ]; then \
+		echo "ERROR: Bookwyrm wrapper not found at $(BOOKWYRM_DIR)"; \
+		exit 1; \
+	fi
+	@echo "Updating Bookwyrm..."
+	@cd $(BOOKWYRM_DIR) && $(MAKE) update
+
+bookwyrm-init:
+	@if [ ! -d "$(BOOKWYRM_DIR)" ]; then \
+		echo "ERROR: Bookwyrm wrapper not found at $(BOOKWYRM_DIR)"; \
+		exit 1; \
+	fi
+	@echo "Re-running Bookwyrm initialization..."
+	@cd $(BOOKWYRM_DIR) && $(MAKE) init
