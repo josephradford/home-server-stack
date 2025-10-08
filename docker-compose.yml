@@ -305,6 +305,7 @@ services:
       - LOCALE_LANGUAGE=en
       - ENABLE_PREVIEW_IMAGES=true
     volumes:
+      - ./bookwyrm:/app
       - ./data/bookwyrm/images:/app/bookwyrm/static/images
       - ./data/bookwyrm/static:/app/bookwyrm/static
     networks:
@@ -355,6 +356,7 @@ services:
       # Other settings
       - TZ=${TIMEZONE}
     volumes:
+      - ./bookwyrm:/app
       - ./data/bookwyrm/images:/app/bookwyrm/static/images
       - ./data/bookwyrm/static:/app/bookwyrm/static
     networks:
@@ -393,6 +395,8 @@ services:
 
       # Other settings
       - TZ=${TIMEZONE}
+    volumes:
+      - ./bookwyrm:/app
     networks:
       - homeserver
     depends_on:
