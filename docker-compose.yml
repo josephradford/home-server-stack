@@ -169,7 +169,7 @@ services:
     container_name: habitica-server
     restart: unless-stopped
     ports:
-      - "${SERVER_IP}:3000:3000"
+      - "${SERVER_IP}:3002:3000"
     environment:
       - NODE_DB_URI=mongodb://habitica-mongo/habitica
       - BASE_URL=${HABITICA_BASE_URL:-http://127.0.0.1:8080}
@@ -268,8 +268,9 @@ services:
     container_name: bookwyrm
     restart: unless-stopped
     working_dir: /app
-    ports:
-      - "${SERVER_IP}:8000:8000"
+    command: gunicorn bookwyrm.wsgi:application --bind 0.0.0.0:8000
+    expose:
+      - 8000
     environment:
       # Domain and Security
       - DOMAIN=${BOOKWYRM_DOMAIN}
@@ -293,20 +294,24 @@ services:
       - REDIS_BROKER_PASSWORD=${BOOKWYRM_REDIS_BROKER_PASSWORD}
       - CELERY_BROKER=redis://:${BOOKWYRM_REDIS_BROKER_PASSWORD}@bookwyrm-redis-broker:6379/0
 
-      # Email (optional)
-      - EMAIL_HOST=${BOOKWYRM_EMAIL_HOST:-}
+      # Email (optional - defaults to localhost which won't send emails)
+      - EMAIL_HOST=${BOOKWYRM_EMAIL_HOST:-localhost}
       - EMAIL_PORT=${BOOKWYRM_EMAIL_PORT:-587}
-      - EMAIL_HOST_USER=${BOOKWYRM_EMAIL_USER:-}
-      - EMAIL_HOST_PASSWORD=${BOOKWYRM_EMAIL_PASSWORD:-}
-      - EMAIL_USE_TLS=${BOOKWYRM_EMAIL_USE_TLS:-true}
+      - EMAIL_HOST_USER=${BOOKWYRM_EMAIL_USER:-bookwyrm@localhost}
+      - EMAIL_HOST_PASSWORD=${BOOKWYRM_EMAIL_PASSWORD:-unused}
+      - EMAIL_USE_TLS=${BOOKWYRM_EMAIL_USE_TLS:-false}
+      - EMAIL_USE_SSL=${BOOKWYRM_EMAIL_USE_SSL:-false}
+      - EMAIL_SENDER_NAME=${BOOKWYRM_EMAIL_SENDER_NAME:-BookWyrm}
+      - EMAIL_SENDER_DOMAIN=${BOOKWYRM_EMAIL_SENDER_DOMAIN:-${BOOKWYRM_DOMAIN}}
 
       # Other settings
       - TZ=${TIMEZONE}
       - LOCALE_LANGUAGE=en
       - ENABLE_PREVIEW_IMAGES=true
     volumes:
+      - ./bookwyrm:/app
       - ./data/bookwyrm/images:/app/bookwyrm/static/images
-      - ./data/bookwyrm/static:/app/bookwyrm/static
+      - bookwyrm_static:/app/static
     networks:
       - homeserver
     depends_on:
@@ -352,11 +357,21 @@ services:
       - REDIS_BROKER_PASSWORD=${BOOKWYRM_REDIS_BROKER_PASSWORD}
       - CELERY_BROKER=redis://:${BOOKWYRM_REDIS_BROKER_PASSWORD}@bookwyrm-redis-broker:6379/0
 
+      # Email (optional - defaults to localhost which won't send emails)
+      - EMAIL_HOST=${BOOKWYRM_EMAIL_HOST:-localhost}
+      - EMAIL_PORT=${BOOKWYRM_EMAIL_PORT:-587}
+      - EMAIL_HOST_USER=${BOOKWYRM_EMAIL_USER:-bookwyrm@localhost}
+      - EMAIL_HOST_PASSWORD=${BOOKWYRM_EMAIL_PASSWORD:-unused}
+      - EMAIL_USE_TLS=${BOOKWYRM_EMAIL_USE_TLS:-false}
+      - EMAIL_USE_SSL=${BOOKWYRM_EMAIL_USE_SSL:-false}
+      - EMAIL_SENDER_NAME=${BOOKWYRM_EMAIL_SENDER_NAME:-BookWyrm}
+      - EMAIL_SENDER_DOMAIN=${BOOKWYRM_EMAIL_SENDER_DOMAIN:-${BOOKWYRM_DOMAIN}}
+
       # Other settings
       - TZ=${TIMEZONE}
     volumes:
+      - ./bookwyrm:/app
       - ./data/bookwyrm/images:/app/bookwyrm/static/images
-      - ./data/bookwyrm/static:/app/bookwyrm/static
     networks:
       - homeserver
     depends_on:
@@ -391,13 +406,49 @@ services:
       - REDIS_BROKER_PASSWORD=${BOOKWYRM_REDIS_BROKER_PASSWORD}
       - CELERY_BROKER=redis://:${BOOKWYRM_REDIS_BROKER_PASSWORD}@bookwyrm-redis-broker:6379/0
 
+      # Email (optional - defaults to localhost which won't send emails)
+      - EMAIL_HOST=${BOOKWYRM_EMAIL_HOST:-localhost}
+      - EMAIL_PORT=${BOOKWYRM_EMAIL_PORT:-587}
+      - EMAIL_HOST_USER=${BOOKWYRM_EMAIL_USER:-bookwyrm@localhost}
+      - EMAIL_HOST_PASSWORD=${BOOKWYRM_EMAIL_PASSWORD:-unused}
+      - EMAIL_USE_TLS=${BOOKWYRM_EMAIL_USE_TLS:-false}
+      - EMAIL_USE_SSL=${BOOKWYRM_EMAIL_USE_SSL:-false}
+      - EMAIL_SENDER_NAME=${BOOKWYRM_EMAIL_SENDER_NAME:-BookWyrm}
+      - EMAIL_SENDER_DOMAIN=${BOOKWYRM_EMAIL_SENDER_DOMAIN:-${BOOKWYRM_DOMAIN}}
+
       # Other settings
       - TZ=${TIMEZONE}
+    volumes:
+      - ./bookwyrm:/app
     networks:
       - homeserver
     depends_on:
       - bookwyrm-celery
 
+  bookwyrm-nginx:
+    image: nginx:alpine
+    container_name: bookwyrm-nginx
+    restart: unless-stopped
+    ports:
+      - "${SERVER_IP}:8000:80"
+    volumes:
+      - ./config/bookwyrm/nginx.conf:/etc/nginx/nginx.conf:ro
+      - bookwyrm_static:/app/static:ro
+      - ./data/bookwyrm/images:/app/bookwyrm/static/images:ro
+    networks:
+      - homeserver
+    depends_on:
+      - bookwyrm
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:80"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
 networks:
   homeserver:
     driver: bridge
+
+volumes:
+  bookwyrm_static:

@@ -1,7 +1,7 @@
 # Home Server Stack Makefile
 # Simplifies deployment and maintenance operations
 
-.PHONY: help setup update start stop restart logs build build-bookwyrm pull status clean validate env-check clone-bookwyrm
+.PHONY: help setup update start stop restart logs build build-bookwyrm pull status clean validate env-check clone-bookwyrm init-bookwyrm migrate-bookwyrm
 .PHONY: setup-all start-all stop-all restart-all update-all logs-all status-all clean-all
 
 # Compose file flags
@@ -40,6 +40,10 @@ help:
 	@echo "  make pull               - Pull latest images (except Bookwyrm)"
 	@echo "  make build              - Build all services that require building"
 	@echo "  make build-bookwyrm     - Rebuild Bookwyrm images from source"
+	@echo ""
+	@echo "Bookwyrm Specific:"
+	@echo "  make init-bookwyrm      - Initialize Bookwyrm (migrations, database, themes, static files)"
+	@echo "  make migrate-bookwyrm   - Run Bookwyrm database migrations only (for updates)"
 	@echo ""
 	@echo "Logs & Debugging:"
 	@echo "  make logs               - Show logs from base services"
@@ -93,6 +97,36 @@ build-bookwyrm: validate clone-bookwyrm
 	@$(COMPOSE_BASE) build --no-cache bookwyrm bookwyrm-celery bookwyrm-celery-beat
 	@echo "✓ Bookwyrm build complete"
 
+# Initialize Bookwyrm database and static files (complete setup)
+init-bookwyrm:
+	@echo "Initializing Bookwyrm (migrations, database, themes, static files)..."
+	@echo "Waiting for Bookwyrm container to be ready..."
+	@sleep 5
+	@echo "Step 1/5: Running database migrations..."
+	@docker exec bookwyrm python manage.py migrate --no-input
+	@echo "Step 2/5: Initializing database with default data..."
+	@if docker exec bookwyrm-db psql -U bookwyrm -d bookwyrm -tAc "SELECT COUNT(*) FROM bookwyrm_connector" | grep -q "^0$$"; then \
+		echo "Database is empty, running initdb..."; \
+		docker exec bookwyrm python manage.py initdb; \
+	else \
+		echo "Database already initialized, skipping initdb..."; \
+	fi
+	@echo "Step 3/5: Compiling theme files..."
+	@docker exec bookwyrm python manage.py compile_themes
+	@echo "Step 4/5: Collecting static files..."
+	@docker exec bookwyrm python manage.py collectstatic --no-input
+	@echo "Step 5/5: Generating admin code..."
+	@docker exec bookwyrm python manage.py admin_code || echo "Note: Admin code generation may fail if admin already exists"
+	@echo "✓ Bookwyrm initialization complete"
+	@echo ""
+	@echo "Use the admin code above to create your first admin account (if shown)"
+
+# Run Bookwyrm database migrations only (for updates)
+migrate-bookwyrm:
+	@echo "Running Bookwyrm database migrations..."
+	@docker exec bookwyrm python manage.py migrate --no-input
+	@echo "✓ Bookwyrm migrations complete"
+
 # Pull latest images for services using pre-built images
 pull: validate
 	@echo "Pulling latest Docker images for base services..."
@@ -112,8 +146,10 @@ setup: env-check validate clone-bookwyrm
 	@echo "Step 3/4: Starting services..."
 	@$(COMPOSE_BASE) up -d
 	@echo ""
-	@echo "Step 4/4: Waiting for services to be ready..."
+	@echo "Step 4/4: Initializing Bookwyrm..."
 	@sleep 10
+	@$(MAKE) init-bookwyrm
+	@echo ""
 	@$(COMPOSE_BASE) ps
 	@echo ""
 	@echo "✓ Setup complete! Base services are running."
@@ -140,8 +176,10 @@ setup-all: env-check validate clone-bookwyrm
 	@echo "Step 3/4: Starting all services..."
 	@$(COMPOSE_ALL) up -d
 	@echo ""
-	@echo "Step 4/4: Waiting for services to be ready..."
+	@echo "Step 4/4: Initializing Bookwyrm..."
 	@sleep 10
+	@$(MAKE) init-bookwyrm
+	@echo ""
 	@$(COMPOSE_ALL) ps
 	@echo ""
 	@echo "✓ Setup complete! All services are running (base + monitoring)."
