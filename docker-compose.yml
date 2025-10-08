@@ -268,6 +268,7 @@ services:
     container_name: bookwyrm
     restart: unless-stopped
     working_dir: /app
+    command: gunicorn bookwyrm.wsgi:application --bind 0.0.0.0:8000
     ports:
       - "${SERVER_IP}:8000:8000"
     environment:
