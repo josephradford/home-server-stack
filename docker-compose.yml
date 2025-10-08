@@ -311,7 +311,6 @@ services:
     volumes:
       - ./bookwyrm:/app
       - ./data/bookwyrm/images:/app/bookwyrm/static/images
-      - ./data/bookwyrm/static:/app/bookwyrm/static
     networks:
       - homeserver
     depends_on:
@@ -372,7 +371,6 @@ services:
     volumes:
       - ./bookwyrm:/app
       - ./data/bookwyrm/images:/app/bookwyrm/static/images
-      - ./data/bookwyrm/static:/app/bookwyrm/static
     networks:
       - homeserver
     depends_on:
