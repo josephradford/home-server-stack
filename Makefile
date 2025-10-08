@@ -105,16 +105,21 @@ init-bookwyrm:
 	@echo "Step 1/5: Running database migrations..."
 	@docker exec bookwyrm python manage.py migrate --no-input
 	@echo "Step 2/5: Initializing database with default data..."
-	@docker exec bookwyrm python manage.py initdb
+	@if docker exec bookwyrm-db psql -U bookwyrm -d bookwyrm -tAc "SELECT COUNT(*) FROM bookwyrm_connector" | grep -q "^0$$"; then \
+		echo "Database is empty, running initdb..."; \
+		docker exec bookwyrm python manage.py initdb; \
+	else \
+		echo "Database already initialized, skipping initdb..."; \
+	fi
 	@echo "Step 3/5: Compiling theme files..."
 	@docker exec bookwyrm python manage.py compile_themes
 	@echo "Step 4/5: Collecting static files..."
 	@docker exec bookwyrm python manage.py collectstatic --no-input
 	@echo "Step 5/5: Generating admin code..."
-	@docker exec bookwyrm python manage.py admin_code
+	@docker exec bookwyrm python manage.py admin_code || echo "Note: Admin code generation may fail if admin already exists"
 	@echo "✓ Bookwyrm initialization complete"
 	@echo ""
-	@echo "Use the admin code above to create your first admin account"
+	@echo "Use the admin code above to create your first admin account (if shown)"
 
 # Run Bookwyrm database migrations only (for updates)
 migrate-bookwyrm:
