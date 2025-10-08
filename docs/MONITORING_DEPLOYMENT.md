@@ -1,34 +1,40 @@
 # Monitoring Stack Deployment Guide
 
 ## Overview
-Foundation monitoring stack implemented with Prometheus, Grafana, AlertManager, Node Exporter, and cAdvisor.
+Foundation monitoring stack implemented with Prometheus, Grafana, AlertManager, Node Exporter, and cAdvisor. The monitoring stack is automatically deployed as part of the standard setup.
 
-## Pre-deployment Setup
+## Deployment
 
-1. **Copy environment variables:**
+The monitoring stack is automatically deployed when you run:
+
+```bash
+make setup
+```
+
+This deploys all services including:
+- Core services (AdGuard, n8n, Ollama, WireGuard, Habitica)
+- Monitoring stack (Grafana, Prometheus, Alertmanager, Node Exporter, cAdvisor)
+- Bookwyrm wrapper (cloned, requires separate configuration)
+
+**Note:** The monitoring stack is always included - there is no "base only" deployment option.
+
+## Verification
+
+1. **Verify all services are running:**
    ```bash
-   cp .env.example .env
+   make status
    ```
 
-2. **Configure environment variables in `.env`:**
-   - Set `SERVER_IP` to your server's IP address
-   - Set `GRAFANA_PASSWORD` to a secure password
-
-## Deployment Commands
-
-1. **Start the monitoring stack:**
-   ```bash
-   docker compose -f docker-compose.yml -f docker-compose.monitoring.yml up -d
-   ```
-
-2. **Verify services are running:**
-   ```bash
-   docker ps | grep -E "(prometheus|grafana|alertmanager|node-exporter|cadvisor)"
-   ```
-
-3. **Check Prometheus targets:**
+2. **Check Prometheus targets:**
    ```bash
    curl http://SERVER_IP:9090/api/v1/targets
+   ```
+
+3. **View monitoring logs:**
+   ```bash
+   docker logs grafana
+   docker logs prometheus
+   docker logs alertmanager
    ```
 
 ## Access URLs
@@ -53,13 +59,13 @@ If Grafana fails to start with the error `Datasource provisioning error: data so
 
 ```bash
 # Stop all services
-docker compose -f docker-compose.yml -f docker-compose.monitoring.yml down
+make stop
 
 # Remove the Grafana volume to reset its database
 docker volume rm home-server-stack_grafana_data
 
 # Start services again - Grafana will re-provision from scratch
-docker compose -f docker-compose.yml -f docker-compose.monitoring.yml up -d
+make start
 
 # Verify Grafana is running
 docker logs grafana
