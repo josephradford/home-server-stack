@@ -1,12 +1,16 @@
 # Home Server Stack Makefile
 # Simplifies deployment and maintenance operations
 
-.PHONY: help setup update start stop restart logs build build-bookwyrm pull status clean validate env-check
+.PHONY: help setup update start stop restart logs build build-bookwyrm pull status clean validate env-check clone-bookwyrm
 .PHONY: setup-all start-all stop-all restart-all update-all logs-all status-all clean-all
 
 # Compose file flags
 COMPOSE_BASE := docker compose
 COMPOSE_ALL := docker compose -f docker-compose.yml -f docker-compose.monitoring.yml
+
+# Bookwyrm repository
+BOOKWYRM_REPO := https://github.com/bookwyrm-social/bookwyrm.git
+BOOKWYRM_BRANCH := production
 
 # Default target - show help
 help:
@@ -16,6 +20,7 @@ help:
 	@echo "  make setup              - First time setup (base services only)"
 	@echo "  make setup-all          - Setup with monitoring stack (Grafana, Prometheus, etc.)"
 	@echo "  make env-check          - Verify .env file exists and is configured"
+	@echo "  make clone-bookwyrm     - Clone Bookwyrm repository (automatic during setup)"
 	@echo ""
 	@echo "Service Management (Base Stack):"
 	@echo "  make start              - Start base services (AdGuard, n8n, Ollama, WireGuard, Bookwyrm)"
@@ -30,7 +35,7 @@ help:
 	@echo "  make status-all         - Show status of ALL services (base + monitoring)"
 	@echo ""
 	@echo "Updates & Maintenance:"
-	@echo "  make update             - Update base services (rebuild Bookwyrm, pull latest images)"
+	@echo "  make update             - Update base services (pull latest Bookwyrm, rebuild, update images)"
 	@echo "  make update-all         - Update ALL services (base + monitoring)"
 	@echo "  make pull               - Pull latest images (except Bookwyrm)"
 	@echo "  make build              - Build all services that require building"
@@ -65,14 +70,24 @@ validate: env-check
 	@$(COMPOSE_BASE) config --quiet
 	@echo "✓ Docker Compose configuration is valid"
 
+# Clone Bookwyrm repository if not already present
+clone-bookwyrm:
+	@if [ ! -d "bookwyrm" ]; then \
+		echo "Cloning Bookwyrm repository ($(BOOKWYRM_BRANCH) branch)..."; \
+		git clone -b $(BOOKWYRM_BRANCH) $(BOOKWYRM_REPO) bookwyrm; \
+		echo "✓ Bookwyrm repository cloned"; \
+	else \
+		echo "✓ Bookwyrm repository already exists"; \
+	fi
+
 # Build services that require building (Bookwyrm)
-build: validate
+build: validate clone-bookwyrm
 	@echo "Building services from source..."
 	@$(COMPOSE_BASE) build
 	@echo "✓ Build complete"
 
 # Build Bookwyrm specifically (takes longer, done from Git)
-build-bookwyrm: validate
+build-bookwyrm: validate clone-bookwyrm
 	@echo "Building Bookwyrm from official Git repository..."
 	@echo "This will take several minutes on first run..."
 	@$(COMPOSE_BASE) build --no-cache bookwyrm bookwyrm-celery bookwyrm-celery-beat
@@ -85,7 +100,7 @@ pull: validate
 	@echo "✓ Base images pulled"
 
 # First time setup (base stack only)
-setup: env-check validate
+setup: env-check validate clone-bookwyrm
 	@echo "Starting first-time setup..."
 	@echo ""
 	@echo "Step 1/4: Building Bookwyrm from source (this takes several minutes)..."
@@ -113,7 +128,7 @@ setup: env-check validate
 	@echo "Check logs with: make logs"
 
 # Setup with ALL services (base + monitoring)
-setup-all: env-check validate
+setup-all: env-check validate clone-bookwyrm
 	@echo "Starting setup with ALL services (base + monitoring)..."
 	@echo ""
 	@echo "Step 1/4: Building Bookwyrm from source..."
@@ -139,16 +154,19 @@ setup-all: env-check validate
 	@echo "Note: Use 'make start-all', 'make stop-all', etc. to manage all services."
 
 # Update base services
-update: env-check validate
+update: env-check validate clone-bookwyrm
 	@echo "Updating base services..."
 	@echo ""
-	@echo "Step 1/3: Rebuilding Bookwyrm from latest production branch..."
+	@echo "Step 1/4: Pulling latest Bookwyrm source code..."
+	@cd bookwyrm && git pull origin $(BOOKWYRM_BRANCH)
+	@echo ""
+	@echo "Step 2/4: Rebuilding Bookwyrm from latest production branch..."
 	@$(COMPOSE_BASE) build --no-cache bookwyrm bookwyrm-celery bookwyrm-celery-beat
 	@echo ""
-	@echo "Step 2/3: Pulling latest images for other services..."
+	@echo "Step 3/4: Pulling latest images for other services..."
 	@$(COMPOSE_BASE) pull --ignore-pull-failures
 	@echo ""
-	@echo "Step 3/3: Restarting services with new images..."
+	@echo "Step 4/4: Restarting services with new images..."
 	@$(COMPOSE_BASE) up -d
 	@echo ""
 	@echo "✓ Update complete! Base services restarted with latest versions."
@@ -156,16 +174,19 @@ update: env-check validate
 	@echo "Check status with: make status"
 
 # Update ALL services (base + monitoring)
-update-all: env-check validate
+update-all: env-check validate clone-bookwyrm
 	@echo "Updating ALL services (base + monitoring)..."
 	@echo ""
-	@echo "Step 1/3: Rebuilding Bookwyrm from latest production branch..."
+	@echo "Step 1/4: Pulling latest Bookwyrm source code..."
+	@cd bookwyrm && git pull origin $(BOOKWYRM_BRANCH)
+	@echo ""
+	@echo "Step 2/4: Rebuilding Bookwyrm from latest production branch..."
 	@$(COMPOSE_BASE) build --no-cache bookwyrm bookwyrm-celery bookwyrm-celery-beat
 	@echo ""
-	@echo "Step 2/3: Pulling latest images for all services..."
+	@echo "Step 3/4: Pulling latest images for all services..."
 	@$(COMPOSE_ALL) pull --ignore-pull-failures
 	@echo ""
-	@echo "Step 3/3: Restarting all services with new images..."
+	@echo "Step 4/4: Restarting all services with new images..."
 	@$(COMPOSE_ALL) up -d
 	@echo ""
 	@echo "✓ Update complete! All services restarted with latest versions."

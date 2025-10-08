@@ -196,10 +196,11 @@ services:
 
   bookwyrm:
     build:
-      context: https://github.com/bookwyrm-social/bookwyrm.git#production
+      context: ./bookwyrm
       dockerfile: Dockerfile
     container_name: bookwyrm
     restart: unless-stopped
+    working_dir: /app
     ports:
       - "${SERVER_IP}:8000:8000"
     environment:
@@ -257,10 +258,11 @@ services:
 
   bookwyrm-celery:
     build:
-      context: https://github.com/bookwyrm-social/bookwyrm.git#production
+      context: ./bookwyrm
       dockerfile: Dockerfile
     container_name: bookwyrm-celery
     restart: unless-stopped
+    working_dir: /app
     command: celery -A celerywyrm worker -l info -Q high_priority,medium_priority,low_priority,imports,broadcast
     environment:
       # Domain and Security
@@ -298,10 +300,11 @@ services:
 
   bookwyrm-celery-beat:
     build:
-      context: https://github.com/bookwyrm-social/bookwyrm.git#production
+      context: ./bookwyrm
       dockerfile: Dockerfile
     container_name: bookwyrm-celery-beat
     restart: unless-stopped
+    working_dir: /app
     command: celery -A celerywyrm beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler
     environment:
       # Domain and Security

@@ -4,6 +4,9 @@
 # Data directories
 data/
 
+# Cloned repositories (managed by Makefile)
+bookwyrm/
+
 # Logs
 *.log
 
