@@ -4,8 +4,8 @@
 .PHONY: help setup update start stop restart logs build pull status clean validate env-check ssl-check regenerate-ssl
 .PHONY: bookwyrm-setup bookwyrm-start bookwyrm-stop bookwyrm-restart bookwyrm-status bookwyrm-logs bookwyrm-update bookwyrm-init
 
-# Compose file flags - always include monitoring
-COMPOSE := docker compose -f docker-compose.yml -f docker-compose.monitoring.yml
+# Compose file flags - always include monitoring and habitica
+COMPOSE := docker compose -f docker-compose.yml -f docker-compose.monitoring.yml -f docker-compose.habitica.yml
 
 # Bookwyrm wrapper project location
 BOOKWYRM_DIR := external/bookwyrm-docker
