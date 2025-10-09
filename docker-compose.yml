@@ -157,7 +157,7 @@ services:
     networks:
       - homeserver
     healthcheck:
-      test: echo "try { rs.status() } catch (err) { rs.initiate() }" | mongosh --port 27017 --quiet
+      test: echo "try { rs.status() } catch (err) { rs.initiate({_id:'rs',members:[{_id:0,host:'habitica-mongo:27017'}]}) }" | mongosh --port 27017 --quiet
       interval: 10s
       timeout: 30s
       start_period: 10s
