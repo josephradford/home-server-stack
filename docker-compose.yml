@@ -180,6 +180,7 @@ services:
       - DB_DATABASE=${HORTUSFOX_DB_NAME:-hortusfox}
       - DB_USERNAME=${HORTUSFOX_DB_USER:-hortusfox}
       - DB_PASSWORD=${HORTUSFOX_DB_PASSWORD}
+      - DB_CHARSET=utf8mb4
     volumes:
       - ./data/hortusfox/images:/var/www/html/public/img
       - ./data/hortusfox/logs:/var/www/html/app/logs
