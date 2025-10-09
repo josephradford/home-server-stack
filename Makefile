@@ -2,6 +2,7 @@
 # Simplifies deployment and maintenance operations
 
 .PHONY: help setup update start stop restart logs build pull status clean validate env-check ssl-check regenerate-ssl
+.PHONY: logs-n8n logs-wireguard logs-ollama logs-habitica logs-hortusfox
 .PHONY: bookwyrm-setup bookwyrm-start bookwyrm-stop bookwyrm-restart bookwyrm-status bookwyrm-logs bookwyrm-update bookwyrm-init
 
 # Compose file flags - always include monitoring and habitica
@@ -44,6 +45,8 @@ help:
 	@echo "  make logs               - Show logs from all services"
 	@echo "  make logs-n8n           - Show n8n logs only"
 	@echo "  make logs-wireguard     - Show WireGuard logs only"
+	@echo "  make logs-habitica      - Show Habitica logs only"
+	@echo "  make logs-hortusfox     - Show HortusFox logs only"
 	@echo ""
 	@echo "SSL Certificates:"
 	@echo "  make regenerate-ssl     - Regenerate SSL certificates (optional)"
@@ -142,6 +145,7 @@ setup: env-check ssl-check validate
 	@echo "  - n8n:          https://$$SERVER_IP:5678"
 	@echo "  - Ollama API:   http://$$SERVER_IP:11434"
 	@echo "  - Habitica:     http://$$SERVER_IP:8080"
+	@echo "  - HortusFox:    http://$$SERVER_IP:8181"
 	@echo "  - Grafana:      http://$$SERVER_IP:3001"
 	@echo "  - Prometheus:   http://$$SERVER_IP:9090"
 	@echo "  - Alertmanager: http://$$SERVER_IP:9093"
@@ -212,6 +216,12 @@ logs-wireguard:
 
 logs-ollama:
 	@$(COMPOSE) logs -f ollama
+
+logs-habitica:
+	@$(COMPOSE) logs -f habitica-client habitica-server habitica-mongo
+
+logs-hortusfox:
+	@$(COMPOSE) logs -f hortusfox hortusfox-db
 
 # Clean up all services (WARNING: destroys data)
 clean:
