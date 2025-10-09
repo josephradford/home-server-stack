@@ -20,6 +20,11 @@ System design and technical architecture of the Home Server Stack.
 │  │  │  (VPN)       │  │  (Tasks)     │  │  (Reading) │ │  │
 │  │  └──────────────┘  └──────────────┘  └────────────┘ │  │
 │  │                                                        │  │
+│  │  ┌──────────────┐                                     │  │
+│  │  │  HortusFox   │                                     │  │
+│  │  │  (Plants)    │                                     │  │
+│  │  └──────────────┘                                     │  │
+│  │                                                        │  │
 │  │  ┌──────────────────────────────────────────────────┐ │  │
 │  │  │     Monitoring Stack (Grafana | Prometheus)      │ │  │
 │  │  └──────────────────────────────────────────────────┘ │  │
@@ -175,6 +180,40 @@ MongoDB (habitica-mongo:27017)
 **Network Configuration:**
 - `habitica-server` has network alias `server` for client DNS resolution
 - MongoDB uses explicit hostname `habitica-mongo:27017` in replica set config
+
+### HortusFox
+**Purpose:** Collaborative plant management system
+
+**Architecture:**
+- PHP/Apache web application
+- MariaDB database
+- File-based storage for images
+
+**Data Flow:**
+```
+Client Request → HortusFox Web UI (port 8181)
+    ↓
+Apache/PHP Application (port 80)
+    ↓
+MariaDB (hortusfox-db:3306)
+```
+
+**Storage:**
+- Database: `./data/hortusfox/db/`
+- Images: `./data/hortusfox/images/`
+- Logs: `./data/hortusfox/logs/`
+- Backups: `./data/hortusfox/backup/`
+- Themes: `./data/hortusfox/themes/`
+- Migrations: `./data/hortusfox/migrate/`
+
+**Database Configuration:**
+- MariaDB with utf8mb4 charset
+- Automatic table creation on first run
+- Admin user created from environment variables
+
+**Health Checks:**
+- MariaDB: `healthcheck.sh --connect --innodb_initialized`
+- Application: HTTP GET `http://localhost:80`
 
 ## Docker Compose Architecture
 

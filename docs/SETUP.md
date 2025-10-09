@@ -115,6 +115,7 @@ Expected output includes:
 - ollama, ollama-setup
 - wireguard
 - habitica-mongo, habitica-server, habitica-client
+- hortusfox-db, hortusfox
 - grafana, prometheus, alertmanager, node-exporter, cadvisor
 - bookwyrm services (if deployed)
 
@@ -127,6 +128,8 @@ Or view specific service logs:
 ```bash
 make logs-n8n
 make logs-wireguard
+make logs-habitica
+make logs-hortusfox
 make bookwyrm-logs
 ```
 
@@ -263,6 +266,29 @@ Habitica is automatically deployed and accessible at `http://SERVER_IP:8080`.
 4. Start tracking your habits and tasks!
 
 See the [Habitica documentation](https://habitica.fandom.com/wiki/Habitica_Wiki) for usage guides.
+
+### HortusFox Setup
+
+HortusFox is automatically deployed and accessible at `http://SERVER_IP:8181`.
+
+1. Navigate to `http://SERVER_IP:8181`
+2. Login with admin credentials from `.env` file:
+   - Email: Value from `HORTUSFOX_ADMIN_EMAIL`
+   - Password: Value from `HORTUSFOX_ADMIN_PASSWORD`
+3. Complete the initial setup:
+   - Set up your first location (e.g., "Living Room", "Garden")
+   - Add plant species to your database
+   - Start tracking your plants!
+4. Configure plant care tasks and reminders
+
+**Key Features:**
+- Plant inventory management
+- Care task scheduling and reminders
+- Photo galleries for plants
+- Location-based organization
+- Collaborative plant management for households
+
+See the [HortusFox documentation](https://github.com/danielbrendel/hortusfox-web) for detailed usage.
 
 ### Bookwyrm Setup
 

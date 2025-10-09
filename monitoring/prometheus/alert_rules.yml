@@ -328,7 +328,7 @@ groups:
         annotations:
           summary: "Bookwyrm container restarting frequently"
           description: "Bookwyrm container {{ $labels.name }} has restarted {{ $value }} times in 15 minutes."
-       
+
   # Habitica Monitoring Alerts
   # Gamified habit and task tracker
   - name: habitica_alerts
@@ -392,4 +392,57 @@ groups:
           service: habitica
         annotations:
           summary: "Habitica container restarting frequently"
+          description: "Container {{ $labels.name }} has restarted {{ $value }} times in 15 minutes. Check logs for errors."
+
+  # HortusFox Monitoring Alerts
+  # Collaborative plant management system
+  - name: hortusfox_alerts
+    interval: 30s
+    rules:
+      # Monitor HortusFox application availability
+      - alert: HortusFoxDown
+        expr: absent(container_last_seen{name="hortusfox"}) or (time() - container_last_seen{name="hortusfox"} > 120)
+        for: 2m
+        labels:
+          severity: critical
+          category: availability
+          service: hortusfox
+        annotations:
+          summary: "HortusFox plant management app is down"
+          description: "HortusFox container has been down for more than 2 minutes. Plant tracking unavailable."
+
+      # Monitor MariaDB database availability
+      - alert: HortusFoxDatabaseDown
+        expr: absent(container_last_seen{name="hortusfox-db"}) or (time() - container_last_seen{name="hortusfox-db"} > 120)
+        for: 2m
+        labels:
+          severity: critical
+          category: availability
+          service: hortusfox
+        annotations:
+          summary: "HortusFox database is down"
+          description: "MariaDB database for HortusFox has been down for more than 2 minutes. All operations will fail."
+
+      # Monitor HortusFox health check status
+      - alert: HortusFoxUnhealthy
+        expr: container_health_status{name=~"hortusfox(-db)?",status!="healthy"} == 1
+        for: 5m
+        labels:
+          severity: warning
+          category: reliability
+          service: hortusfox
+        annotations:
+          summary: "HortusFox container health check failing"
+          description: "Container {{ $labels.name }} health check has been failing for 5+ minutes."
+
+      # Monitor for container restart loops
+      - alert: HortusFoxFrequentRestarts
+        expr: rate(container_start_time_seconds{name=~"hortusfox(-db)?"}[15m]) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+          category: reliability
+          service: hortusfox
+        annotations:
+          summary: "HortusFox container restarting frequently"
           description: "Container {{ $labels.name }} has restarted {{ $value }} times in 15 minutes. Check logs for errors."

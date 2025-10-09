@@ -42,6 +42,14 @@ Detailed hardware and software requirements for running the Home Server Stack.
 | **Ollama** | 500 MB | 6-8 GB | 20-50 GB | 2% | 80-100% |
 | **WireGuard** | 50 MB | 100 MB | 100 MB | 1% | 5% |
 
+### Additional Services (Optional)
+
+| Service | RAM (Idle) | RAM (Active) | Storage | CPU (Idle) | CPU (Active) |
+|---------|------------|--------------|---------|------------|--------------|
+| **Habitica** | 300 MB | 600 MB | 1-2 GB | 2% | 10% |
+| **HortusFox** | 200 MB | 400 MB | 500 MB | 1% | 5% |
+| **Bookwyrm** | 500 MB | 1 GB | 2-5 GB | 3% | 15% |
+
 ### Monitoring Stack (Optional)
 
 | Service | RAM (Idle) | RAM (Active) | Storage | CPU (Idle) | CPU (Active) |
@@ -90,11 +98,14 @@ See [AI_MODELS.md](AI_MODELS.md) for model management.
 
 ```
 /home/user/home-server-stack/
-├── data/                    # ~25-55 GB (varies with AI models)
+├── data/                    # ~30-70 GB (varies with AI models and services)
 │   ├── adguard/            # ~200 MB (logs + config)
 │   ├── n8n/                # ~500 MB (workflows + database)
 │   ├── ollama/             # ~20-50 GB (AI models)
-│   └── wireguard/          # ~100 MB (configs + keys)
+│   ├── wireguard/          # ~100 MB (configs + keys)
+│   ├── habitica/           # ~1-2 GB (MongoDB + data)
+│   ├── hortusfox/          # ~500 MB (MariaDB + images)
+│   └── bookwyrm/           # ~2-5 GB (PostgreSQL + images)
 ├── monitoring/ (optional)  # ~10-20 GB (metrics + logs)
 │   ├── grafana/            # ~1 GB
 │   └── prometheus/         # ~5-15 GB (grows over time)
@@ -135,6 +146,13 @@ Required open ports (internal only, VPN-first model):
 | 5678 | n8n | TCP | Workflow automation |
 | 11434 | Ollama | TCP | AI inference API |
 | 51820 | WireGuard | UDP | VPN access |
+
+**Additional Services Ports (Optional):**
+| Port | Service | Protocol |
+|------|---------|----------|
+| 8080 | Habitica | TCP |
+| 8181 | HortusFox | TCP |
+| 8000 | Bookwyrm | TCP |
 
 **Monitoring Stack Ports:**
 | Port | Service | Protocol |
