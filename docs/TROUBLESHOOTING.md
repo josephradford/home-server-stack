@@ -441,6 +441,140 @@ docker compose ps habitica-mongo
 docker compose exec habitica-client ping -c 3 server
 ```
 
+### HortusFox
+
+#### Issue: "Unknown character set" Database Error
+
+**Symptoms:**
+- Error: `SQLSTATE[HY000] [2019] Unknown character set`
+- Application fails to initialize database
+- Error in `/var/www/html/vendor/danielbrendel/asatru-php-framework/src/database.php`
+
+**Cause:** Missing `DB_CHARSET` environment variable in docker-compose.yml
+
+**Diagnosis:**
+```bash
+# Check HortusFox logs for charset error
+docker compose logs hortusfox | grep -i "charset\|character set"
+
+# Check environment variables
+docker compose exec hortusfox env | grep DB_CHARSET
+```
+
+**Solution:**
+This is fixed in docker-compose.yml with:
+```yaml
+hortusfox:
+  environment:
+    - DB_CHARSET=utf8mb4
+```
+
+If issue persists:
+```bash
+# Recreate containers with updated config
+docker compose up -d --force-recreate hortusfox
+
+# If database is corrupted, reset it
+docker compose stop hortusfox hortusfox-db
+rm -rf ./data/hortusfox/db/*
+docker compose up -d hortusfox-db hortusfox
+```
+
+#### Issue: Cannot Login to HortusFox
+
+**Symptoms:**
+- Login fails with incorrect credentials
+- Admin account not created
+
+**Diagnosis:**
+```bash
+# Check admin credentials in .env
+cat .env | grep HORTUSFOX_ADMIN
+
+# Check HortusFox logs for initialization
+docker compose logs hortusfox | grep -i "admin\|user"
+```
+
+**Solutions:**
+```bash
+# Verify credentials in .env
+nano .env
+# Update HORTUSFOX_ADMIN_EMAIL and HORTUSFOX_ADMIN_PASSWORD
+
+# Recreate container to reset admin account
+docker compose up -d --force-recreate hortusfox
+
+# If database already exists, admin won't be recreated
+# Option: Reset database (⚠️ deletes all data)
+docker compose stop hortusfox hortusfox-db
+rm -rf ./data/hortusfox/db/*
+docker compose up -d hortusfox-db hortusfox
+```
+
+#### Issue: HortusFox Web UI Not Loading
+
+**Symptoms:**
+- `http://SERVER_IP:8181` not loading
+- Browser shows connection error or 502 Bad Gateway
+
+**Diagnosis:**
+```bash
+# Check both containers
+docker compose ps | grep hortusfox
+
+# Check HortusFox logs
+docker compose logs hortusfox
+
+# Check MariaDB health
+docker compose logs hortusfox-db
+```
+
+**Solutions:**
+```bash
+# Restart services in dependency order
+docker compose restart hortusfox-db hortusfox
+
+# Verify MariaDB is healthy
+docker compose exec hortusfox-db healthcheck.sh --connect
+
+# Check network connectivity
+docker compose exec hortusfox ping -c 3 hortusfox-db
+
+# Test database connection
+docker compose exec hortusfox-db mysql -u hortusfox -p${HORTUSFOX_DB_PASSWORD} -e "SHOW DATABASES;"
+```
+
+#### Issue: Images Not Uploading
+
+**Symptoms:**
+- Plant images fail to upload
+- Permission denied errors in logs
+
+**Diagnosis:**
+```bash
+# Check volume permissions
+ls -la ./data/hortusfox/images/
+
+# Check logs for permission errors
+docker compose logs hortusfox | grep -i "permission\|denied"
+
+# Check disk space
+df -h ./data/hortusfox/
+```
+
+**Solutions:**
+```bash
+# Fix permissions
+sudo chown -R 82:82 ./data/hortusfox/images/
+sudo chmod -R 755 ./data/hortusfox/images/
+
+# Ensure sufficient disk space
+du -sh ./data/hortusfox/*
+
+# Restart HortusFox
+docker compose restart hortusfox
+```
+
 ## Docker Issues
 
 ### Issue: "Cannot connect to Docker daemon"

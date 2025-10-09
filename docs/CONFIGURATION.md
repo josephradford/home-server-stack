@@ -157,6 +157,70 @@ docker exec wireguard /app/show-peer 1
 docker exec wireguard cat /config/peer1/peer1.conf
 ```
 
+### Habitica
+
+Configuration via environment variables in `.env`.
+
+**Basic Settings:**
+```bash
+HABITICA_VERSION=latest                # Docker image version
+HABITICA_MONGO_VERSION=5.0             # MongoDB version
+HABITICA_BASE_URL=http://192.168.1.100:8080  # Base URL for the instance
+HABITICA_INVITE_ONLY=false             # Require invites for registration
+```
+
+**Email Configuration (Optional):**
+```bash
+HABITICA_EMAIL_SERVER_URL=smtp.gmail.com        # SMTP server
+HABITICA_EMAIL_SERVER_PORT=587                  # SMTP port
+HABITICA_EMAIL_AUTH_USER=your-email@gmail.com   # SMTP username
+HABITICA_EMAIL_AUTH_PASSWORD=your-app-password  # SMTP password
+HABITICA_ADMIN_EMAIL=admin@example.com          # Admin contact email
+```
+
+**Note:** Email configuration is optional. The app works without it, but email notifications and password reset will not function.
+
+Access at `http://SERVER_IP:8080`
+
+### HortusFox
+
+Configuration via environment variables in `.env`.
+
+**Basic Settings:**
+```bash
+HORTUSFOX_VERSION=latest                        # Docker image version
+HORTUSFOX_MARIADB_VERSION=latest                # MariaDB version
+HORTUSFOX_ADMIN_EMAIL=admin@example.com         # Admin account email
+HORTUSFOX_ADMIN_PASSWORD=your_secure_password   # Admin password
+```
+
+**Database Configuration:**
+```bash
+HORTUSFOX_DB_NAME=hortusfox                     # Database name
+HORTUSFOX_DB_USER=hortusfox                     # Database user
+HORTUSFOX_DB_PASSWORD=your_secure_db_password   # Database password
+HORTUSFOX_DB_ROOT_PASSWORD=your_secure_root_pw  # MariaDB root password
+```
+
+**Storage Locations:**
+- Images: `./data/hortusfox/images/`
+- Logs: `./data/hortusfox/logs/`
+- Backups: `./data/hortusfox/backup/`
+- Themes: `./data/hortusfox/themes/`
+- Migrations: `./data/hortusfox/migrate/`
+- Database: `./data/hortusfox/db/`
+
+**Application Configuration:**
+- Timezone: Inherited from `TIMEZONE` environment variable
+- Database charset: `utf8mb4` (required for emoji and special characters)
+
+**Admin Account:**
+The admin account is automatically created on first run using:
+- Email: `HORTUSFOX_ADMIN_EMAIL`
+- Password: `HORTUSFOX_ADMIN_PASSWORD`
+
+Access at `http://SERVER_IP:8181`
+
 ### Monitoring Stack (Optional)
 
 #### Grafana
@@ -315,6 +379,12 @@ curl http://SERVER_IP:11434/api/version
 
 # Test WireGuard (from connected client)
 ping 192.168.1.100
+
+# Test Habitica
+curl -I http://SERVER_IP:8080
+
+# Test HortusFox
+curl -I http://SERVER_IP:8181
 ```
 
 ## Backup Configuration
