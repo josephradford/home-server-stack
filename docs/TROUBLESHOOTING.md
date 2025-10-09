@@ -341,6 +341,106 @@ docker compose up -d --force-recreate wireguard
 nslookup google.com
 ```
 
+### Habitica
+
+#### Issue: MongoDB "Server selection timed out"
+
+**Symptoms:**
+- habitica-server fails to start or logs timeout errors
+- Error: "MongooseServerSelectionError: Server selection timed out after 30000 ms"
+- MongoDB logs show "REMOVED" state or "NodeNotFound" errors
+
+**Cause:** MongoDB replica set initialized with container ID instead of resolvable hostname
+
+**Diagnosis:**
+```bash
+# Check MongoDB logs for replica set errors
+docker compose logs habitica-mongo | grep -i "replica\|removed\|nodenotfound"
+
+# Check if replica set is properly configured
+docker exec habitica-mongo mongosh --eval "rs.status()"
+```
+
+**Solution:**
+```bash
+# Stop all Habitica services
+docker compose stop habitica-client habitica-server habitica-mongo
+
+# Remove corrupted MongoDB data
+rm -rf ./data/habitica/db/* ./data/habitica/dbconf/*
+
+# Restart services (healthcheck will reinitialize replica set correctly)
+docker compose up -d habitica-mongo habitica-server habitica-client
+
+# Verify MongoDB is in PRIMARY state
+docker exec habitica-mongo mongosh --eval "rs.status()"
+```
+
+**Prevention:** The docker-compose.habitica.yml healthcheck now explicitly specifies `habitica-mongo:27017` as the replica set hostname.
+
+#### Issue: habitica-client "lookup server" DNS errors
+
+**Symptoms:**
+- habitica-client logs show: "dial tcp: lookup server on 127.0.0.11:53: server misbehaving"
+- Web UI returns 502 Bad Gateway
+- Caddy cannot reach habitica-server
+
+**Cause:** habitica-client's Caddyfile expects backend at hostname `server`, but service is named `habitica-server`
+
+**Diagnosis:**
+```bash
+# Check client logs for DNS errors
+docker compose logs habitica-client | grep "lookup server"
+
+# Verify network alias exists
+docker inspect habitica-server | grep -A 5 "Aliases"
+```
+
+**Solution:**
+This is fixed in docker-compose.habitica.yml with a network alias:
+```yaml
+habitica-server:
+  networks:
+    homeserver:
+      aliases:
+        - server  # Allows client to resolve 'server' hostname
+```
+
+If issue persists, restart the services:
+```bash
+docker compose restart habitica-server habitica-client
+```
+
+#### Issue: Habitica Web UI Not Loading
+
+**Symptoms:**
+- `http://SERVER_IP:8080` not loading
+- Browser shows connection error
+
+**Diagnosis:**
+```bash
+# Check all Habitica containers
+docker compose ps | grep habitica
+
+# Check client logs
+docker compose logs habitica-client
+
+# Check server health
+docker compose exec habitica-server wget -q -O- http://localhost:3000/api/v3/status
+```
+
+**Solutions:**
+```bash
+# Restart services in dependency order
+docker compose restart habitica-mongo habitica-server habitica-client
+
+# Check MongoDB is running and healthy
+docker compose ps habitica-mongo
+
+# Verify network connectivity
+docker compose exec habitica-client ping -c 3 server
+```
+
 ## Docker Issues
 
 ### Issue: "Cannot connect to Docker daemon"

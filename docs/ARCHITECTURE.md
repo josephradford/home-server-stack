@@ -15,10 +15,14 @@ System design and technical architecture of the Home Server Stack.
 │  │  │  Home (DNS)  │  │ (Automation) │  │  (AI)      │ │  │
 │  │  └──────────────┘  └──────────────┘  └────────────┘ │  │
 │  │                                                        │  │
-│  │  ┌──────────────┐  ┌──────────────────────────────┐ │  │
-│  │  │  WireGuard   │  │  Monitoring Stack (Optional)  │ │  │
-│  │  │  (VPN)       │  │  Grafana | Prometheus | ...   │ │  │
-│  │  └──────────────┘  └──────────────────────────────┘ │  │
+│  │  ┌──────────────┐  ┌──────────────┐  ┌────────────┐ │  │
+│  │  │  WireGuard   │  │  Habitica    │  │  Bookwyrm  │ │  │
+│  │  │  (VPN)       │  │  (Tasks)     │  │  (Reading) │ │  │
+│  │  └──────────────┘  └──────────────┘  └────────────┘ │  │
+│  │                                                        │  │
+│  │  ┌──────────────────────────────────────────────────┐ │  │
+│  │  │     Monitoring Stack (Grafana | Prometheus)      │ │  │
+│  │  └──────────────────────────────────────────────────┘ │  │
 │  │                                                        │  │
 │  │  ┌──────────────────────────────────────────────────┐ │  │
 │  │  │      Docker Bridge Network (homeserver)          │ │  │
@@ -143,6 +147,65 @@ Encrypt & Route back to peer
 - Peer configs: `./data/wireguard/peer*/`
 - Keys: `./data/wireguard/server/`
 
+### Habitica
+**Purpose:** Gamified habit and task tracker
+
+**Architecture:**
+- MongoDB replica set (single-node)
+- Node.js server application
+- Caddy reverse proxy for client
+- ActivityPub support
+
+**Data Flow:**
+```
+Client Request → Caddy (habitica-client:80)
+    ↓
+Reverse Proxy to habitica-server:3000
+    ↓
+Node.js API Server
+    ↓
+MongoDB (habitica-mongo:27017)
+```
+
+**Storage:**
+- Database: `./data/habitica/db/`
+- Config: `./data/habitica/dbconf/`
+- Database: MongoDB with replica set
+
+**Network Configuration:**
+- `habitica-server` has network alias `server` for client DNS resolution
+- MongoDB uses explicit hostname `habitica-mongo:27017` in replica set config
+
+## Docker Compose Architecture
+
+**Modular Compose Files:**
+
+The stack uses multiple compose files for better organization:
+
+```yaml
+docker-compose.yml              # Core services (AdGuard, n8n, Ollama, WireGuard)
+docker-compose.monitoring.yml   # Monitoring stack (Grafana, Prometheus, etc.)
+docker-compose.habitica.yml     # Habitica services (mongo, server, client)
+```
+
+**Composition:**
+```bash
+# All files are automatically included via Makefile
+COMPOSE := docker compose -f docker-compose.yml \
+                          -f docker-compose.monitoring.yml \
+                          -f docker-compose.habitica.yml
+```
+
+**Benefits:**
+- **Modularity:** Each service group in its own file
+- **Maintainability:** Easier to manage individual service configurations
+- **Flexibility:** Can deploy subsets by excluding compose files
+- **Clarity:** Clear separation of concerns
+
+**Shared Resources:**
+- All services use the `homeserver` bridge network (external reference in modular files)
+- Environment variables defined in `.env` are accessible to all compose files
+
 ## Network Architecture
 
 ### Docker Network
@@ -167,6 +230,9 @@ prometheus → cadvisor:8080 (container metrics)
 - 80/TCP: AdGuard UI
 - 5678/TCP: n8n
 - 11434/TCP: Ollama API
+- 3002/TCP: Habitica API
+- 8080/TCP: Habitica Web UI
+- 8000/TCP: Bookwyrm Web UI
 - 3001/TCP: Grafana
 - 9090/TCP: Prometheus
 - 9093/TCP: Alertmanager
@@ -204,6 +270,10 @@ home-server-stack/
 │   ├── wireguard/
 │   │   ├── wg0.conf              # Server config
 │   │   └── peer*/                # Client configs
+│   ├── habitica/
+│   │   ├── db/                    # MongoDB database
+│   │   └── dbconf/                # MongoDB config
+│   ├── bookwyrm/                  # Bookwyrm data (via wrapper)
 │   ├── grafana/                   # Dashboards and datasources
 │   ├── prometheus/                # Metrics database
 │   └── alertmanager/              # Alert state
@@ -214,7 +284,11 @@ home-server-stack/
 │   ├── prometheus/
 │   ├── grafana/
 │   └── alertmanager/
-├── docker-compose.yml             # Service definitions
+├── external/                       # External wrapper projects
+│   └── bookwyrm-docker/           # Bookwyrm wrapper
+├── docker-compose.yml             # Core services
+├── docker-compose.monitoring.yml  # Monitoring stack
+├── docker-compose.habitica.yml    # Habitica services
 └── .env                           # Environment configuration
 ```
 
