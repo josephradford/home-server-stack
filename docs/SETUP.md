@@ -290,6 +290,92 @@ HortusFox is automatically deployed and accessible at `http://SERVER_IP:8181`.
 
 See the [HortusFox documentation](https://github.com/danielbrendel/hortusfox-web) for detailed usage.
 
+### Glance Dashboard Setup
+
+Glance provides a customizable personal dashboard with real-time monitoring of your Docker containers.
+
+**Initial Setup:**
+
+1. Create the Glance configuration file:
+   ```bash
+   mkdir -p data/glance
+   nano data/glance/glance.yml
+   ```
+
+2. Add your dashboard configuration. Here's a starter template with Docker container monitoring:
+   ```yaml
+   pages:
+     - name: Home Server
+       columns:
+         - size: small
+           widgets:
+             - type: docker-containers
+               sock-path: /var/run/docker.sock
+               running-only: true
+               format-container-names: true
+               hide-by-default: false
+
+         - size: full
+           widgets:
+             - type: calendar
+   ```
+
+3. Add Glance environment variables to your `.env` file:
+   ```bash
+   echo "GLANCE_VERSION=latest" >> .env
+   echo "GLANCE_PORT=8282" >> .env
+   ```
+
+4. Start the Glance service:
+   ```bash
+   docker compose up -d glance
+   ```
+
+5. Access your dashboard at `http://SERVER_IP:8282`
+
+**Customizing Your Dashboard:**
+
+The `data/glance/glance.yml` file supports many widget types:
+- **docker-containers** - Monitor running containers (already configured)
+- **calendar** - Display events and reminders
+- **rss** - RSS feed reader
+- **weather** - Weather information
+- **markets** - Stock/crypto market data
+- **bookmarks** - Quick links to your services
+- **monitor** - System resource monitoring
+
+See the [Glance configuration documentation](https://github.com/glanceapp/glance/blob/main/docs/configuration.md) for all available widgets and options.
+
+**Example: Adding Quick Links to Your Services**
+
+Add this to your `glance.yml` to create bookmarks for your services:
+
+```yaml
+- type: bookmarks
+  groups:
+    - title: Core Services
+      links:
+        - title: AdGuard Home
+          url: http://192.168.1.100:80
+        - title: n8n
+          url: https://192.168.1.100:5678
+        - title: Grafana
+          url: http://192.168.1.100:3001
+    - title: Apps
+      links:
+        - title: Habitica
+          url: http://192.168.1.100:8080
+        - title: Bookwyrm
+          url: http://192.168.1.100:8000
+        - title: HortusFox
+          url: http://192.168.1.100:8181
+```
+
+After modifying `glance.yml`, restart the service:
+```bash
+docker compose restart glance
+```
+
 ### Bookwyrm Setup
 
 After deploying Bookwyrm with `make bookwyrm-setup`:
