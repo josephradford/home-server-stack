@@ -12,6 +12,7 @@ A complete self-hosted infrastructure for home automation, AI, and network servi
 - **[Habitica](https://github.com/HabitRPG/habitica)** - Gamified habit and task tracker
 - **[Bookwyrm](https://github.com/bookwyrm-social/bookwyrm)** - Social reading and book tracking (via [external wrapper](https://github.com/josephradford/bookwyrm-docker))
 - **[HortusFox](https://github.com/danielbrendel/hortusfox-web)** - Collaborative plant management
+- **[Glance](https://github.com/glanceapp/glance)** - Personal dashboard and homepage
 
 **Monitoring Stack:**
 - **[Grafana](https://github.com/grafana/grafana)** - Metrics visualization and dashboards
@@ -69,6 +70,7 @@ make bookwyrm-setup
 - Habitica: `http://SERVER_IP:8080`
 - Bookwyrm: `http://SERVER_IP:8000`
 - HortusFox: `http://SERVER_IP:8181`
+- Glance: `http://SERVER_IP:8282`
 - Grafana: `http://SERVER_IP:3001`
 - Prometheus: `http://SERVER_IP:9090`
 - Alertmanager: `http://SERVER_IP:9093`

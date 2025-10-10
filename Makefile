@@ -2,8 +2,9 @@
 # Simplifies deployment and maintenance operations
 
 .PHONY: help setup update start stop restart logs build pull status clean purge validate env-check ssl-check regenerate-ssl
-.PHONY: logs-n8n logs-wireguard logs-ollama logs-habitica logs-hortusfox
+.PHONY: logs-n8n logs-wireguard logs-ollama logs-habitica logs-hortusfox logs-glance
 .PHONY: bookwyrm-setup bookwyrm-start bookwyrm-stop bookwyrm-restart bookwyrm-status bookwyrm-logs bookwyrm-update bookwyrm-init
+.PHONY: glance-setup
 
 # Compose file flags - always include monitoring and habitica
 COMPOSE := docker compose -f docker-compose.yml -f docker-compose.monitoring.yml -f docker-compose.habitica.yml
@@ -47,6 +48,10 @@ help:
 	@echo "  make logs-wireguard     - Show WireGuard logs only"
 	@echo "  make logs-habitica      - Show Habitica logs only"
 	@echo "  make logs-hortusfox     - Show HortusFox logs only"
+	@echo "  make logs-glance        - Show Glance logs only"
+	@echo ""
+	@echo "Glance Dashboard:"
+	@echo "  make glance-setup       - Create default Glance configuration"
 	@echo ""
 	@echo "SSL Certificates:"
 	@echo "  make regenerate-ssl     - Regenerate SSL certificates (optional)"
@@ -109,13 +114,16 @@ pull: validate
 setup: env-check ssl-check validate
 	@echo "Starting first-time setup..."
 	@echo ""
-	@echo "Step 1/3: Pulling pre-built images..."
+	@echo "Step 1/4: Pulling pre-built images..."
 	@$(COMPOSE) pull --ignore-pull-failures
 	@echo ""
-	@echo "Step 2/3: Starting services..."
+	@echo "Step 2/4: Starting services..."
 	@$(COMPOSE) up -d
 	@echo ""
-	@echo "Step 3/3: Setting up Bookwyrm..."
+	@echo "Step 3/4: Setting up Glance dashboard..."
+	@$(MAKE) glance-setup
+	@echo ""
+	@echo "Step 4/4: Setting up Bookwyrm..."
 	@if [ ! -d "$(BOOKWYRM_DIR)" ]; then \
 		echo "Cloning bookwyrm-docker wrapper..."; \
 		mkdir -p external; \
@@ -147,6 +155,7 @@ setup: env-check ssl-check validate
 	@echo "  - Ollama API:   http://$$SERVER_IP:11434"
 	@echo "  - Habitica:     http://$$SERVER_IP:8080"
 	@echo "  - HortusFox:    http://$$SERVER_IP:8181"
+	@echo "  - Glance:       http://$$SERVER_IP:8282"
 	@echo "  - Grafana:      http://$$SERVER_IP:3001"
 	@echo "  - Prometheus:   http://$$SERVER_IP:9090"
 	@echo "  - Alertmanager: http://$$SERVER_IP:9093"
@@ -223,6 +232,9 @@ logs-habitica:
 
 logs-hortusfox:
 	@$(COMPOSE) logs -f hortusfox hortusfox-db
+
+logs-glance:
+	@$(COMPOSE) logs -f glance
 
 # Clean up all services (preserves ./data/)
 clean:
@@ -353,3 +365,66 @@ bookwyrm-init:
 	fi
 	@echo "Re-running Bookwyrm initialization..."
 	@cd $(BOOKWYRM_DIR) && $(MAKE) init
+
+# Glance dashboard setup
+glance-setup:
+	@echo "Setting up Glance dashboard..."
+	@mkdir -p data/glance
+	@if [ -d "data/glance/glance.yml" ]; then \
+		echo "ERROR: data/glance/glance.yml exists as a directory!"; \
+		echo "Removing directory..."; \
+		rm -rf data/glance/glance.yml; \
+	fi
+	@if [ -f "data/glance/glance.yml" ]; then \
+		echo "⚠️  Warning: data/glance/glance.yml already exists"; \
+		echo "Backup existing config? (y/n)"; \
+		read backup; \
+		if [ "$$backup" = "y" ]; then \
+			cp data/glance/glance.yml data/glance/glance.yml.backup.$$(date +%Y%m%d-%H%M%S); \
+			echo "✓ Backup created"; \
+		fi; \
+	fi
+	@echo "Creating default Glance configuration..."
+	@echo 'pages:' > data/glance/glance.yml
+	@echo '  - name: Home Server' >> data/glance/glance.yml
+	@echo '    columns:' >> data/glance/glance.yml
+	@echo '      - size: small' >> data/glance/glance.yml
+	@echo '        widgets:' >> data/glance/glance.yml
+	@echo '          - type: docker-containers' >> data/glance/glance.yml
+	@echo '            sock-path: /var/run/docker.sock' >> data/glance/glance.yml
+	@echo '            running-only: true' >> data/glance/glance.yml
+	@echo '            format-container-names: true' >> data/glance/glance.yml
+	@echo '            hide-by-default: false' >> data/glance/glance.yml
+	@echo '' >> data/glance/glance.yml
+	@echo '      - size: full' >> data/glance/glance.yml
+	@echo '        widgets:' >> data/glance/glance.yml
+	@echo '          - type: calendar' >> data/glance/glance.yml
+	@echo '' >> data/glance/glance.yml
+	@echo '          - type: bookmarks' >> data/glance/glance.yml
+	@echo '            groups:' >> data/glance/glance.yml
+	@echo '              - title: Core Services' >> data/glance/glance.yml
+	@echo '                links:' >> data/glance/glance.yml
+	@echo '                  - title: AdGuard Home' >> data/glance/glance.yml
+	@echo '                    url: http://$$SERVER_IP:80' >> data/glance/glance.yml
+	@echo '                  - title: n8n' >> data/glance/glance.yml
+	@echo '                    url: https://$$SERVER_IP:5678' >> data/glance/glance.yml
+	@echo '                  - title: Grafana' >> data/glance/glance.yml
+	@echo '                    url: http://$$SERVER_IP:3001' >> data/glance/glance.yml
+	@echo '              - title: Apps' >> data/glance/glance.yml
+	@echo '                links:' >> data/glance/glance.yml
+	@echo '                  - title: Habitica' >> data/glance/glance.yml
+	@echo '                    url: http://$$SERVER_IP:8080' >> data/glance/glance.yml
+	@echo '                  - title: Bookwyrm' >> data/glance/glance.yml
+	@echo '                    url: http://$$SERVER_IP:8000' >> data/glance/glance.yml
+	@echo '                  - title: HortusFox' >> data/glance/glance.yml
+	@echo '                    url: http://$$SERVER_IP:8181' >> data/glance/glance.yml
+	@echo "✓ Created data/glance/glance.yml"
+	@echo ""
+	@echo "Starting Glance service..."
+	@$(COMPOSE) up -d glance
+	@echo ""
+	@echo "✓ Glance setup complete!"
+	@echo "Access at: http://$$SERVER_IP:8282"
+	@echo ""
+	@echo "To customize your dashboard, edit: data/glance/glance.yml"
+	@echo "Then restart: docker compose restart glance"
