@@ -250,8 +250,19 @@ purge:
 	@echo "  - Bookwyrm data"
 	@echo "  - All monitoring data (Grafana, Prometheus)"
 	@echo ""
-	@echo "Press Ctrl+C to cancel, or Enter to PERMANENTLY DELETE ALL DATA..."
+	@echo "💡 RECOMMENDATION: Back up your data before proceeding!"
+	@echo "   tar -czf backup-$$(date +%Y%m%d-%H%M%S).tar.gz ./data/"
+	@echo ""
+	@echo "Press Ctrl+C to cancel, or Enter to continue..."
 	@read confirm
+	@echo ""
+	@echo "⚠️  FINAL WARNING: This action CANNOT be undone!"
+	@echo "Type 'DELETE' (in capitals) to confirm permanent deletion:"
+	@read final_confirm; \
+	if [ "$$final_confirm" != "DELETE" ]; then \
+		echo "Purge cancelled - confirmation did not match"; \
+		exit 1; \
+	fi
 	@echo "Stopping and removing all containers..."
 	@$(COMPOSE) down -v
 	@$(MAKE) bookwyrm-stop || true
