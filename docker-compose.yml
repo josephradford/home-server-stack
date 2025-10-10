@@ -199,6 +199,27 @@ services:
       retries: 3
       start_period: 30s
 
+  # Glance - Personal dashboard and homepage
+  glance:
+    image: glanceapp/glance:${GLANCE_VERSION:-latest}
+    container_name: glance
+    restart: unless-stopped
+    ports:
+      - "${SERVER_IP}:${GLANCE_PORT:-8282}:8080"
+    environment:
+      - TZ=${TIMEZONE}
+    volumes:
+      - ./data/glance/glance.yml:/app/glance.yml:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - homeserver
+    healthcheck:
+      test: ["CMD-SHELL", "wget --quiet --tries=1 --spider http://localhost:8080 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
 networks:
   homeserver:
     driver: bridge
