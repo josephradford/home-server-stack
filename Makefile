@@ -369,6 +369,12 @@ bookwyrm-init:
 # Glance dashboard setup
 glance-setup:
 	@echo "Setting up Glance dashboard..."
+	@mkdir -p data/glance
+	@if [ -d "data/glance/glance.yml" ]; then \
+		echo "ERROR: data/glance/glance.yml exists as a directory!"; \
+		echo "Removing directory..."; \
+		rm -rf data/glance/glance.yml; \
+	fi
 	@if [ -f "data/glance/glance.yml" ]; then \
 		echo "⚠️  Warning: data/glance/glance.yml already exists"; \
 		echo "Backup existing config? (y/n)"; \
@@ -378,7 +384,6 @@ glance-setup:
 			echo "✓ Backup created"; \
 		fi; \
 	fi
-	@mkdir -p data/glance
 	@echo "Creating default Glance configuration..."
 	@echo 'pages:' > data/glance/glance.yml
 	@echo '  - name: Home Server' >> data/glance/glance.yml
