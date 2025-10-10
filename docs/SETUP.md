@@ -294,7 +294,29 @@ See the [HortusFox documentation](https://github.com/danielbrendel/hortusfox-web
 
 Glance provides a customizable personal dashboard with real-time monitoring of your Docker containers.
 
-**Initial Setup:**
+**Quick Setup:**
+
+The easiest way to set up Glance is using the Makefile:
+
+```bash
+# Add environment variables to .env
+echo "GLANCE_VERSION=latest" >> .env
+echo "GLANCE_PORT=8282" >> .env
+
+# Create default configuration and start Glance
+make glance-setup
+```
+
+This will:
+- Create a default `data/glance/glance.yml` configuration
+- Set up Docker container monitoring widget
+- Add bookmarks to all your services
+- Start the Glance service
+- Access at `http://SERVER_IP:8282`
+
+**Manual Setup (Alternative):**
+
+If you prefer to create the configuration manually:
 
 1. Create the Glance configuration file:
    ```bash
@@ -302,23 +324,7 @@ Glance provides a customizable personal dashboard with real-time monitoring of y
    nano data/glance/glance.yml
    ```
 
-2. Add your dashboard configuration. Here's a starter template with Docker container monitoring:
-   ```yaml
-   pages:
-     - name: Home Server
-       columns:
-         - size: small
-           widgets:
-             - type: docker-containers
-               sock-path: /var/run/docker.sock
-               running-only: true
-               format-container-names: true
-               hide-by-default: false
-
-         - size: full
-           widgets:
-             - type: calendar
-   ```
+2. Add your dashboard configuration (see example below)
 
 3. Add Glance environment variables to your `.env` file:
    ```bash
