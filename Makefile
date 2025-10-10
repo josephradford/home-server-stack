@@ -114,13 +114,16 @@ pull: validate
 setup: env-check ssl-check validate
 	@echo "Starting first-time setup..."
 	@echo ""
-	@echo "Step 1/3: Pulling pre-built images..."
+	@echo "Step 1/4: Pulling pre-built images..."
 	@$(COMPOSE) pull --ignore-pull-failures
 	@echo ""
-	@echo "Step 2/3: Starting services..."
+	@echo "Step 2/4: Starting services..."
 	@$(COMPOSE) up -d
 	@echo ""
-	@echo "Step 3/3: Setting up Bookwyrm..."
+	@echo "Step 3/4: Setting up Glance dashboard..."
+	@$(MAKE) glance-setup
+	@echo ""
+	@echo "Step 4/4: Setting up Bookwyrm..."
 	@if [ ! -d "$(BOOKWYRM_DIR)" ]; then \
 		echo "Cloning bookwyrm-docker wrapper..."; \
 		mkdir -p external; \
@@ -152,6 +155,7 @@ setup: env-check ssl-check validate
 	@echo "  - Ollama API:   http://$$SERVER_IP:11434"
 	@echo "  - Habitica:     http://$$SERVER_IP:8080"
 	@echo "  - HortusFox:    http://$$SERVER_IP:8181"
+	@echo "  - Glance:       http://$$SERVER_IP:8282"
 	@echo "  - Grafana:      http://$$SERVER_IP:3001"
 	@echo "  - Prometheus:   http://$$SERVER_IP:9090"
 	@echo "  - Alertmanager: http://$$SERVER_IP:9093"
