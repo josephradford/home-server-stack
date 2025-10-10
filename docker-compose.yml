@@ -209,7 +209,7 @@ services:
     environment:
       - TZ=${TIMEZONE}
     volumes:
-      - ./data/glance/glance.yml:/app/glance.yml:ro
+      - ./data/glance:/app/config
       - /var/run/docker.sock:/var/run/docker.sock:ro
     networks:
       - homeserver
