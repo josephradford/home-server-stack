@@ -1,7 +1,7 @@
 # Home Server Stack Makefile
 # Simplifies deployment and maintenance operations
 
-.PHONY: help setup update start stop restart logs build pull status clean validate env-check ssl-check regenerate-ssl
+.PHONY: help setup update start stop restart logs build pull status clean purge validate env-check ssl-check regenerate-ssl
 .PHONY: logs-n8n logs-wireguard logs-ollama logs-habitica logs-hortusfox
 .PHONY: bookwyrm-setup bookwyrm-start bookwyrm-stop bookwyrm-restart bookwyrm-status bookwyrm-logs bookwyrm-update bookwyrm-init
 
@@ -54,7 +54,8 @@ help:
 	@echo ""
 	@echo "Validation & Cleanup:"
 	@echo "  make validate           - Validate docker-compose configuration"
-	@echo "  make clean              - Remove all containers and volumes (WARNING: destroys data)"
+	@echo "  make clean              - Remove all containers and volumes (preserves ./data/)"
+	@echo "  make purge              - Remove containers, volumes, AND ./data/ (WARNING: destroys ALL data)"
 	@echo ""
 
 # Check that .env file exists
@@ -223,14 +224,57 @@ logs-habitica:
 logs-hortusfox:
 	@$(COMPOSE) logs -f hortusfox hortusfox-db
 
-# Clean up all services (WARNING: destroys data)
+# Clean up all services (preserves ./data/)
 clean:
-	@echo "WARNING: This will remove all containers and volumes, destroying all data!"
+	@echo "WARNING: This will remove all containers and volumes!"
+	@echo "Note: ./data/ directories will be preserved"
 	@echo "Press Ctrl+C to cancel, or Enter to continue..."
 	@read confirm
 	@echo "Stopping and removing all containers..."
 	@$(COMPOSE) down -v
-	@echo "✓ Cleanup complete"
+	@$(MAKE) bookwyrm-stop
+	@echo "✓ Cleanup complete (./data/ preserved)"
+
+# Purge everything including data (WARNING: destroys ALL data)
+purge:
+	@echo "⚠️  WARNING: This will DELETE EVERYTHING including all data in ./data/!"
+	@echo "This includes:"
+	@echo "  - All Docker containers and volumes"
+	@echo "  - All Docker images (requires re-download on next setup)"
+	@echo "  - AdGuard configuration and logs"
+	@echo "  - n8n workflows and database"
+	@echo "  - Ollama AI models"
+	@echo "  - WireGuard VPN configs"
+	@echo "  - Habitica database"
+	@echo "  - HortusFox database and images"
+	@echo "  - Bookwyrm data"
+	@echo "  - All monitoring data (Grafana, Prometheus)"
+	@echo ""
+	@echo "💡 RECOMMENDATION: Back up your data before proceeding!"
+	@echo "   tar -czf backup-$$(date +%Y%m%d-%H%M%S).tar.gz ./data/"
+	@echo ""
+	@echo "Press Ctrl+C to cancel, or Enter to continue..."
+	@read confirm
+	@echo ""
+	@echo "⚠️  FINAL WARNING: This action CANNOT be undone!"
+	@echo "Type 'DELETE' (in capitals) to confirm permanent deletion:"
+	@read final_confirm; \
+	if [ "$$final_confirm" != "DELETE" ]; then \
+		echo "Purge cancelled - confirmation did not match"; \
+		exit 1; \
+	fi
+	@echo "Stopping and removing all containers..."
+	@$(COMPOSE) down -v
+	@$(MAKE) bookwyrm-stop || true
+	@echo "Removing all data directories..."
+	@rm -rf ./data/
+	@echo "Removing Bookwyrm data..."
+	@if [ -d "$(BOOKWYRM_DIR)" ]; then \
+		cd $(BOOKWYRM_DIR) && $(MAKE) clean || true; \
+	fi
+	@echo "Removing all Docker images..."
+	@docker image prune -af
+	@echo "✓ Purge complete - ALL DATA DELETED"
 
 # Bookwyrm wrapper integration targets
 # These commands delegate to the external bookwyrm-docker wrapper project
