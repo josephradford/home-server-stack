@@ -377,10 +377,7 @@ Add this to your `glance.yml` to create bookmarks for your services:
           url: http://192.168.1.100:8181
 ```
 
-After modifying `glance.yml`, restart the service:
-```bash
-docker compose restart glance
-```
+After modifying `glance.yml`, the dashboard will automatically reload with your changes (Glance v0.7.0+ supports automatic config reloading). No restart required!
 
 ### Bookwyrm Setup
 
