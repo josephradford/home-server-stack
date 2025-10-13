@@ -8,7 +8,8 @@ services:
       - "${SERVER_IP}:53:53/tcp"
       - "${SERVER_IP}:53:53/udp"
       - "${SERVER_IP}:3000:3000/tcp"
-      - "${SERVER_IP}:80:80/tcp"
+      # Port 80 temporarily disabled - will be moved to 8888 in ticket 02
+      # - "${SERVER_IP}:80:80/tcp"
     volumes:
       - ./data/adguard/work:/opt/adguardhome/work
       - ./data/adguard/conf:/opt/adguardhome/conf
@@ -215,6 +216,74 @@ services:
       - homeserver
     healthcheck:
       test: ["CMD-SHELL", "wget --quiet --tries=1 --spider http://localhost:8080 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  # Traefik - Reverse proxy for domain-based service access
+  traefik:
+    image: traefik:v3.0
+    container_name: traefik
+    restart: unless-stopped
+    command:
+      # API and Dashboard
+      - "--api.dashboard=true"
+      - "--api.insecure=false"
+
+      # Docker provider
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--providers.docker.network=homeserver"
+
+      # Entrypoints
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+
+      # HTTP to HTTPS redirect
+      - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
+      - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
+
+      # TLS
+      - "--entrypoints.websecure.http.tls=true"
+
+      # Ping endpoint for health checks
+      - "--ping=true"
+
+      # Logging
+      - "--accesslog=true"
+      - "--accesslog.filepath=/var/log/traefik/access.log"
+      - "--log.level=INFO"
+
+    ports:
+      - "${SERVER_IP}:80:80"
+      - "${SERVER_IP}:443:443"
+
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./data/traefik/certs:/certs
+      - ./data/traefik/logs:/var/log/traefik
+      - ./config/traefik:/etc/traefik:ro
+
+    networks:
+      - homeserver
+
+    labels:
+      # Enable Traefik for the dashboard
+      - "traefik.enable=true"
+
+      # Dashboard router
+      - "traefik.http.routers.dashboard.rule=Host(`traefik.home.local`)"
+      - "traefik.http.routers.dashboard.entrypoints=websecure"
+      - "traefik.http.routers.dashboard.tls=true"
+      - "traefik.http.routers.dashboard.service=api@internal"
+
+      # Dashboard middleware (basic auth)
+      - "traefik.http.middlewares.dashboard-auth.basicauth.users=admin:$$1$$3TOX7HzuCTU"
+      - "traefik.http.routers.dashboard.middlewares=dashboard-auth"
+
+    healthcheck:
+      test: ["CMD", "traefik", "healthcheck", "--ping"]
       interval: 30s
       timeout: 10s
       retries: 3
