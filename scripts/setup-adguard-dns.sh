@@ -10,6 +10,7 @@ set -e
 # Configuration
 CONFIG_DIR="data/adguard/conf"
 CONFIG_FILE="$CONFIG_DIR/AdGuardHome.yaml"
+PASSWORD_FILE="$CONFIG_DIR/.adguard_admin_password"
 SERVER_IP="${SERVER_IP:-192.168.1.100}"
 
 # Colors for output
@@ -31,6 +32,36 @@ if [ -z "$SERVER_IP" ]; then
 fi
 
 echo "Using SERVER_IP: $SERVER_IP"
+echo ""
+
+# Generate random password if not already exists
+if [ ! -f "$PASSWORD_FILE" ]; then
+    echo "Generating secure admin password..."
+    ADMIN_PASSWORD=$(openssl rand -base64 16 | tr -d "=+/" | cut -c1-16)
+    # Generate bcrypt hash (using htpasswd if available, otherwise use a placeholder)
+    if command -v htpasswd &> /dev/null; then
+        PASSWORD_HASH=$(htpasswd -nbB admin "$ADMIN_PASSWORD" | cut -d ":" -f 2)
+    else
+        echo -e "${YELLOW}⚠️  Warning: htpasswd not found, using default password${NC}"
+        echo -e "${YELLOW}   Install apache2-utils (Debian/Ubuntu) or httpd-tools (RHEL/CentOS)${NC}"
+        ADMIN_PASSWORD="admin"
+        PASSWORD_HASH='$2a$10$IYkkr0pMzVQQFqzq0K9TyOULwOy1BQQC5qZZbqJXqQKf1VsQxc9n6'
+    fi
+
+    # Save password securely
+    echo "$ADMIN_PASSWORD" > "$PASSWORD_FILE"
+    chmod 600 "$PASSWORD_FILE"
+    echo -e "${GREEN}✓${NC} Admin password generated and saved to $PASSWORD_FILE"
+else
+    echo "Using existing admin password from $PASSWORD_FILE"
+    ADMIN_PASSWORD=$(cat "$PASSWORD_FILE")
+    # Regenerate hash
+    if command -v htpasswd &> /dev/null; then
+        PASSWORD_HASH=$(htpasswd -nbB admin "$ADMIN_PASSWORD" | cut -d ":" -f 2)
+    else
+        PASSWORD_HASH='$2a$10$IYkkr0pMzVQQFqzq0K9TyOULwOy1BQQC5qZZbqJXqQKf1VsQxc9n6'
+    fi
+fi
 echo ""
 
 # Create configuration directory if it doesn't exist
@@ -58,7 +89,7 @@ http:
   session_ttl: 720h
 users:
   - name: admin
-    password: \$2a\$10\$IYkkr0pMzVQQFqzq0K9TyOULwOy1BQQC5qZZbqJXqQKf1VsQxc9n6
+    password: $PASSWORD_HASH
 auth_attempts: 5
 block_auth_min: 15
 http_proxy: ""
@@ -270,7 +301,10 @@ echo "  1. Restart AdGuard: docker compose restart adguard"
 echo "  2. Test DNS resolution: dig @127.0.0.1 glance.home.local +short"
 echo "  3. Configure clients to use $SERVER_IP as DNS server"
 echo ""
-echo "Default admin credentials:"
+echo -e "${GREEN}Admin credentials:${NC}"
 echo "  Username: admin"
-echo "  Password: admin (change immediately after first login)"
+echo "  Password: $ADMIN_PASSWORD"
+echo ""
+echo -e "${YELLOW}⚠️  Password saved to: $PASSWORD_FILE${NC}"
+echo -e "${YELLOW}   Keep this file secure and backed up!${NC}"
 echo ""

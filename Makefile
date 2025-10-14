@@ -115,16 +115,19 @@ pull: validate
 setup: env-check ssl-check validate
 	@echo "Starting first-time setup..."
 	@echo ""
-	@echo "Step 1/4: Pulling pre-built images..."
+	@echo "Step 1/5: Pulling pre-built images..."
 	@$(COMPOSE) pull --ignore-pull-failures
 	@echo ""
-	@echo "Step 2/4: Starting services..."
+	@echo "Step 2/5: Starting services..."
 	@$(COMPOSE) up -d
 	@echo ""
-	@echo "Step 3/4: Setting up Glance dashboard..."
+	@echo "Step 3/5: Configuring AdGuard DNS rewrites..."
+	@$(MAKE) adguard-setup
+	@echo ""
+	@echo "Step 4/5: Setting up Glance dashboard..."
 	@$(MAKE) glance-setup
 	@echo ""
-	@echo "Step 4/4: Setting up Bookwyrm..."
+	@echo "Step 5/5: Setting up Bookwyrm..."
 	@if [ ! -d "$(BOOKWYRM_DIR)" ]; then \
 		echo "Cloning bookwyrm-docker wrapper..."; \
 		mkdir -p external; \
