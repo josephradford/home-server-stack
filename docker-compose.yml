@@ -8,8 +8,7 @@ services:
       - "${SERVER_IP}:53:53/tcp"
       - "${SERVER_IP}:53:53/udp"
       - "${SERVER_IP}:3000:3000/tcp"
-      # Port 80 temporarily disabled - will be moved to 8888 in ticket 02
-      # - "${SERVER_IP}:80:80/tcp"
+      - "${SERVER_IP}:8888:80/tcp"
     volumes:
       - ./data/adguard/work:/opt/adguardhome/work
       - ./data/adguard/conf:/opt/adguardhome/conf
