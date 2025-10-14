@@ -7,11 +7,19 @@
 
 set -e
 
+# Load environment variables from .env file
+if [ -f .env ]; then
+    set -a
+    source .env
+    set +a
+fi
+
 # Configuration
 CONFIG_DIR="data/adguard/conf"
 CONFIG_FILE="$CONFIG_DIR/AdGuardHome.yaml"
-PASSWORD_FILE="$CONFIG_DIR/.adguard_admin_password"
 SERVER_IP="${SERVER_IP:-192.168.1.100}"
+ADMIN_USERNAME="${ADGUARD_USERNAME:-admin}"
+ADMIN_PASSWORD="${ADGUARD_PASSWORD}"
 
 # Colors for output
 GREEN='\033[0;32m'
@@ -26,41 +34,35 @@ echo ""
 # Check if SERVER_IP is set
 if [ -z "$SERVER_IP" ]; then
     echo -e "${RED}ERROR: SERVER_IP environment variable not set${NC}"
-    echo "Please set SERVER_IP in your .env file or export it:"
-    echo "  export SERVER_IP=192.168.1.100"
+    echo "Please set SERVER_IP in your .env file"
+    exit 1
+fi
+
+# Check if ADGUARD_PASSWORD is set
+if [ -z "$ADMIN_PASSWORD" ] || [ "$ADMIN_PASSWORD" = "your_secure_adguard_password" ]; then
+    echo -e "${RED}ERROR: ADGUARD_PASSWORD not set or still using default placeholder${NC}"
+    echo "Please set ADGUARD_PASSWORD in your .env file to a secure password"
+    echo ""
+    echo "Example:"
+    echo "  ADGUARD_PASSWORD=MySecureP@ssw0rd123"
+    echo ""
     exit 1
 fi
 
 echo "Using SERVER_IP: $SERVER_IP"
+echo "Using admin username: $ADMIN_USERNAME"
 echo ""
 
-# Generate random password if not already exists
-if [ ! -f "$PASSWORD_FILE" ]; then
-    echo "Generating secure admin password..."
-    ADMIN_PASSWORD=$(openssl rand -base64 16 | tr -d "=+/" | cut -c1-16)
-    # Generate bcrypt hash (using htpasswd if available, otherwise use a placeholder)
-    if command -v htpasswd &> /dev/null; then
-        PASSWORD_HASH=$(htpasswd -nbB admin "$ADMIN_PASSWORD" | cut -d ":" -f 2)
-    else
-        echo -e "${YELLOW}⚠️  Warning: htpasswd not found, using default password${NC}"
-        echo -e "${YELLOW}   Install apache2-utils (Debian/Ubuntu) or httpd-tools (RHEL/CentOS)${NC}"
-        ADMIN_PASSWORD="admin"
-        PASSWORD_HASH='$2a$10$IYkkr0pMzVQQFqzq0K9TyOULwOy1BQQC5qZZbqJXqQKf1VsQxc9n6'
-    fi
-
-    # Save password securely
-    echo "$ADMIN_PASSWORD" > "$PASSWORD_FILE"
-    chmod 600 "$PASSWORD_FILE"
-    echo -e "${GREEN}✓${NC} Admin password generated and saved to $PASSWORD_FILE"
+# Generate bcrypt hash for password
+if command -v htpasswd &> /dev/null; then
+    echo "Generating bcrypt hash for password..."
+    PASSWORD_HASH=$(htpasswd -nbB "$ADMIN_USERNAME" "$ADMIN_PASSWORD" | cut -d ":" -f 2)
+    echo -e "${GREEN}✓${NC} Password hash generated"
 else
-    echo "Using existing admin password from $PASSWORD_FILE"
-    ADMIN_PASSWORD=$(cat "$PASSWORD_FILE")
-    # Regenerate hash
-    if command -v htpasswd &> /dev/null; then
-        PASSWORD_HASH=$(htpasswd -nbB admin "$ADMIN_PASSWORD" | cut -d ":" -f 2)
-    else
-        PASSWORD_HASH='$2a$10$IYkkr0pMzVQQFqzq0K9TyOULwOy1BQQC5qZZbqJXqQKf1VsQxc9n6'
-    fi
+    echo -e "${YELLOW}⚠️  Warning: htpasswd not found, using default password${NC}"
+    echo -e "${YELLOW}   Install apache2-utils (Debian/Ubuntu) or httpd-tools (RHEL/CentOS)${NC}"
+    echo -e "${YELLOW}   Using default 'admin' password - CHANGE THIS IMMEDIATELY${NC}"
+    PASSWORD_HASH='$2a$10$IYkkr0pMzVQQFqzq0K9TyOULwOy1BQQC5qZZbqJXqQKf1VsQxc9n6'
 fi
 echo ""
 
@@ -88,7 +90,7 @@ http:
   address: 0.0.0.0:3000
   session_ttl: 720h
 users:
-  - name: admin
+  - name: $ADMIN_USERNAME
     password: $PASSWORD_HASH
 auth_attempts: 5
 block_auth_min: 15
@@ -301,10 +303,9 @@ echo "  1. Restart AdGuard: docker compose restart adguard"
 echo "  2. Test DNS resolution: dig @127.0.0.1 glance.home.local +short"
 echo "  3. Configure clients to use $SERVER_IP as DNS server"
 echo ""
-echo -e "${GREEN}Admin credentials:${NC}"
-echo "  Username: admin"
-echo "  Password: $ADMIN_PASSWORD"
+echo -e "${GREEN}✓ AdGuard admin credentials configured from .env file${NC}"
+echo "  Username: $ADMIN_USERNAME"
+echo "  Password: (stored in ADGUARD_PASSWORD in .env)"
 echo ""
-echo -e "${YELLOW}⚠️  Password saved to: $PASSWORD_FILE${NC}"
-echo -e "${YELLOW}   Keep this file secure and backed up!${NC}"
+echo -e "${YELLOW}⚠️  Keep your .env file secure and backed up!${NC}"
 echo ""
