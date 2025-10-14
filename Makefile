@@ -4,7 +4,7 @@
 .PHONY: help setup update start stop restart logs build pull status clean purge validate env-check ssl-check regenerate-ssl
 .PHONY: logs-n8n logs-wireguard logs-ollama logs-habitica logs-hortusfox logs-glance
 .PHONY: bookwyrm-setup bookwyrm-start bookwyrm-stop bookwyrm-restart bookwyrm-status bookwyrm-logs bookwyrm-update bookwyrm-init
-.PHONY: glance-setup
+.PHONY: glance-setup adguard-setup
 
 # Compose file flags - always include monitoring and habitica
 COMPOSE := docker compose -f docker-compose.yml -f docker-compose.monitoring.yml -f docker-compose.habitica.yml
@@ -50,8 +50,9 @@ help:
 	@echo "  make logs-hortusfox     - Show HortusFox logs only"
 	@echo "  make logs-glance        - Show Glance logs only"
 	@echo ""
-	@echo "Glance Dashboard:"
+	@echo "Service Configuration:"
 	@echo "  make glance-setup       - Create default Glance configuration"
+	@echo "  make adguard-setup      - Configure DNS rewrites for domain-based access"
 	@echo ""
 	@echo "SSL Certificates:"
 	@echo "  make regenerate-ssl     - Regenerate SSL certificates (optional)"
@@ -428,3 +429,21 @@ glance-setup:
 	@echo ""
 	@echo "To customize your dashboard, edit: data/glance/glance.yml"
 	@echo "Then restart: docker compose restart glance"
+
+# AdGuard Home DNS rewrites setup
+adguard-setup: env-check
+	@echo "Setting up AdGuard DNS rewrites for domain-based access..."
+	@./scripts/setup-adguard-dns.sh
+	@echo ""
+	@echo "Restarting AdGuard to apply configuration..."
+	@$(COMPOSE) restart adguard
+	@echo ""
+	@echo "✓ AdGuard DNS setup complete!"
+	@echo ""
+	@echo "Testing DNS resolution..."
+	@sleep 3
+	@echo "Testing: glance.home.local"
+	@dig @127.0.0.1 glance.home.local +short || true
+	@echo ""
+	@echo "All *.home.local domains should now resolve to $$SERVER_IP"
+	@echo "Configure network devices to use $$SERVER_IP as DNS server"
