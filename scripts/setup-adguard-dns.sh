@@ -54,16 +54,22 @@ echo "Using admin username: $ADMIN_USERNAME"
 echo ""
 
 # Generate bcrypt hash for password
-if command -v htpasswd &> /dev/null; then
-    echo "Generating bcrypt hash for password..."
-    PASSWORD_HASH=$(htpasswd -nbB "$ADMIN_USERNAME" "$ADMIN_PASSWORD" | cut -d ":" -f 2)
-    echo -e "${GREEN}✓${NC} Password hash generated"
-else
-    echo -e "${YELLOW}⚠️  Warning: htpasswd not found, using default password${NC}"
-    echo -e "${YELLOW}   Install apache2-utils (Debian/Ubuntu) or httpd-tools (RHEL/CentOS)${NC}"
-    echo -e "${YELLOW}   Using default 'admin' password - CHANGE THIS IMMEDIATELY${NC}"
-    PASSWORD_HASH='$2a$10$IYkkr0pMzVQQFqzq0K9TyOULwOy1BQQC5qZZbqJXqQKf1VsQxc9n6'
+if ! command -v htpasswd &> /dev/null; then
+    echo -e "${RED}ERROR: htpasswd command not found${NC}"
+    echo ""
+    echo "htpasswd is required to generate password hashes for AdGuard Home."
+    echo "Please install it:"
+    echo ""
+    echo "  Ubuntu/Debian: sudo apt-get install apache2-utils"
+    echo "  RHEL/CentOS:   sudo yum install httpd-tools"
+    echo "  macOS:         htpasswd is pre-installed"
+    echo ""
+    exit 1
 fi
+
+echo "Generating bcrypt hash for password..."
+PASSWORD_HASH=$(htpasswd -nbB "$ADMIN_USERNAME" "$ADMIN_PASSWORD" | cut -d ":" -f 2)
+echo -e "${GREEN}✓${NC} Password hash generated"
 echo ""
 
 # Create configuration directory if it doesn't exist
