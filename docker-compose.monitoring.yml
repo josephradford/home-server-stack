@@ -32,6 +32,15 @@ services:
       - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards
     networks:
       - homeserver
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.grafana-http.rule=Host(`grafana.home.local`)"
+      - "traefik.http.routers.grafana-http.entrypoints=web"
+      - "traefik.http.routers.grafana-http.middlewares=redirect-to-https"
+      - "traefik.http.routers.grafana.rule=Host(`grafana.home.local`)"
+      - "traefik.http.routers.grafana.entrypoints=websecure"
+      - "traefik.http.routers.grafana.tls=true"
+      - "traefik.http.services.grafana.loadbalancer.server.port=3000"
 
   alertmanager:
     image: prom/alertmanager:latest

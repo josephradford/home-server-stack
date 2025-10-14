@@ -192,6 +192,15 @@ services:
     depends_on:
       hortusfox-db:
         condition: service_healthy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.hortusfox-http.rule=Host(`hortusfox.home.local`)"
+      - "traefik.http.routers.hortusfox-http.entrypoints=web"
+      - "traefik.http.routers.hortusfox-http.middlewares=redirect-to-https"
+      - "traefik.http.routers.hortusfox.rule=Host(`hortusfox.home.local`)"
+      - "traefik.http.routers.hortusfox.entrypoints=websecure"
+      - "traefik.http.routers.hortusfox.tls=true"
+      - "traefik.http.services.hortusfox.loadbalancer.server.port=80"
     healthcheck:
       test: ["CMD-SHELL", "wget --quiet --tries=1 --spider http://localhost:80 || exit 1"]
       interval: 30s
@@ -213,6 +222,16 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock:ro
     networks:
       - homeserver
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.glance-http.rule=Host(`glance.home.local`)"
+      - "traefik.http.routers.glance-http.entrypoints=web"
+      - "traefik.http.routers.glance-http.middlewares=redirect-to-https"
+      - "traefik.http.routers.glance.rule=Host(`glance.home.local`)"
+      - "traefik.http.routers.glance.entrypoints=websecure"
+      - "traefik.http.routers.glance.tls=true"
+      - "traefik.http.services.glance.loadbalancer.server.port=8080"
+      - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
     healthcheck:
       test: ["CMD-SHELL", "wget --quiet --tries=1 --spider http://localhost:8080 || exit 1"]
       interval: 30s
