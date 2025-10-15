@@ -69,12 +69,21 @@ All services use the `.home.local` TLD with descriptive names:
 
 **Phase 3 Goal:** Complete migration for all remaining services and update all documentation.
 
+### Phase 4: Security Hardening (Post-Monitoring)
+
+| # | Ticket | Priority | Time | Status |
+|---|--------|----------|------|--------|
+| 10 | [Remove Direct Port Access](10-remove-direct-port-access.md) | Medium | 1-2h | ⬜ Pending |
+
+**Phase 4 Goal:** Remove legacy IP:port access after monitoring period, forcing all traffic through Traefik.
+
 ## Total Time Estimate
 
 - **Foundation:** 6.5-8 hours
 - **Complex Services:** 3-4 hours
 - **Complete Rollout:** 3.5-5 hours
-- **Total:** 13-17 hours
+- **Security Hardening:** 1-2 hours
+- **Total:** 14.5-19 hours
 
 ## Prerequisites
 

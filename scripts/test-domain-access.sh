@@ -149,7 +149,7 @@ test_domain() {
 echo "Checking service status..."
 echo "----------------------------------------"
 
-services=("traefik" "glance" "hortusfox" "grafana")
+services=("traefik" "glance" "hortusfox" "grafana" "n8n")
 all_running=true
 
 for service in "${services[@]}"; do
@@ -189,6 +189,7 @@ echo ""
 test_domain "glance.home.local" "Glance Dashboard"
 test_domain "hortusfox.home.local" "HortusFox Plant Manager"
 test_domain "grafana.home.local" "Grafana Monitoring"
+test_domain "n8n.home.local" "n8n Workflow Automation"
 test_domain "traefik.home.local" "Traefik Dashboard"
 
 # Summary
@@ -209,6 +210,7 @@ if [ $FAILED_TESTS -eq 0 ]; then
     echo "  • Glance:    https://glance.home.local"
     echo "  • HortusFox: https://hortusfox.home.local"
     echo "  • Grafana:   https://grafana.home.local"
+    echo "  • n8n:       https://n8n.home.local"
     echo "  • Traefik:   https://traefik.home.local"
     echo ""
     echo "Note: You may see certificate warnings due to self-signed certificates."

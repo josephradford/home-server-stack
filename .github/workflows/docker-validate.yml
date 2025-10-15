@@ -29,7 +29,6 @@ jobs:
         sed -i 's/your_secure_redis_broker_password/test-redis-broker/g' .env
         sed -i 's/your_very_long_secret_key_here_at_least_50_characters/test-secret-key-for-bookwyrm-at-least-50-chars-long/g' .env
         sed -i 's/your-public-ip-or-domain.com/localhost/g' .env
-        sed -i 's|https://your-domain:5678|https://localhost:5678|g' .env
 
     - name: Validate Docker Compose syntax
       run: |
@@ -44,7 +43,7 @@ jobs:
       run: |
         # Check that all required environment variables are present
         echo "Checking .env.example contains all required variables..."
-        required_vars=("SERVER_IP" "TIMEZONE" "N8N_PASSWORD" "N8N_EDITOR_BASE_URL" "GRAFANA_PASSWORD")
+        required_vars=("SERVER_IP" "TIMEZONE" "N8N_PASSWORD" "GRAFANA_PASSWORD")
         for var in "${required_vars[@]}"; do
           if ! grep -q "^${var}=" .env.example; then
             echo "ERROR: Required variable $var not found in .env.example"
