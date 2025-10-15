@@ -1,7 +1,7 @@
 # Home Server Stack Makefile
 # Simplifies deployment and maintenance operations
 
-.PHONY: help setup update start stop restart logs build pull status clean purge validate env-check ssl-check regenerate-ssl
+.PHONY: help setup update start stop restart logs build pull status clean purge validate env-check
 .PHONY: logs-n8n logs-wireguard logs-ollama logs-habitica logs-hortusfox logs-glance
 .PHONY: bookwyrm-setup bookwyrm-start bookwyrm-stop bookwyrm-restart bookwyrm-status bookwyrm-logs bookwyrm-update bookwyrm-init
 .PHONY: glance-setup adguard-setup test-domain-access
@@ -57,10 +57,6 @@ help:
 	@echo "Testing & Validation:"
 	@echo "  make test-domain-access - Test domain-based access for all services"
 	@echo ""
-	@echo "SSL Certificates:"
-	@echo "  make regenerate-ssl     - Regenerate SSL certificates (optional)"
-	@echo "  make regenerate-ssl DOMAIN=example.com - Regenerate with custom domain"
-	@echo ""
 	@echo "Validation & Cleanup:"
 	@echo "  make validate           - Validate docker-compose configuration"
 	@echo "  make clean              - Remove all containers and volumes (preserves ./data/)"
@@ -76,25 +72,6 @@ env-check:
 		exit 1; \
 	fi
 	@echo "✓ .env file exists"
-
-# Generate SSL certificates if they don't exist
-ssl-check:
-	@if [ ! -f ssl/server.key ] || [ ! -f ssl/server.crt ]; then \
-		echo "Generating SSL certificates for n8n..."; \
-		cd ssl && ./generate-cert.sh localhost 365; \
-		echo "✓ SSL certificates generated"; \
-	else \
-		echo "✓ SSL certificates exist"; \
-	fi
-
-# Regenerate SSL certificates (optional - use custom domain)
-# Usage: make regenerate-ssl DOMAIN=your-domain.com
-regenerate-ssl:
-	@echo "Regenerating SSL certificates..."
-	@cd ssl && ./generate-cert.sh $(if $(DOMAIN),$(DOMAIN),localhost) 365
-	@echo "✓ SSL certificates regenerated"
-	@echo ""
-	@echo "Note: Restart n8n for changes to take effect: make restart
 
 # Validate docker-compose configuration
 validate: env-check
@@ -115,7 +92,7 @@ pull: validate
 	@echo "✓ Images pulled"
 
 # First time setup
-setup: env-check ssl-check validate
+setup: env-check validate
 	@echo "Starting first-time setup..."
 	@echo ""
 	@echo "Step 1/5: Pulling pre-built images..."
