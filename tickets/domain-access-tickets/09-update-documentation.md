@@ -630,6 +630,8 @@ grep -r "http://.*:.*" docs/ | grep -v "Legacy:" | grep -v "example"
 - [ ] SSL certificate warnings documented
 - [ ] DNS setup instructions clear
 - [ ] Makefile help text updated (if applicable)
+- [ ] **Makefile DNS test output fixed** - Update `make adguard-setup` to use `${SERVER_IP}` instead of `127.0.0.1` for DNS testing (currently shows connection refused but DNS works correctly)
+- [ ] **Makefile output cleaned up** - Ensure all make targets produce clean, professional output without misleading errors
 
 ## Success Metrics
 - All documentation accurate and up-to-date
