@@ -60,6 +60,8 @@ services:
 
 # Declare external homeserver network
 # This network is created by the main home-server-stack docker-compose.yml
+# Docker Compose prefixes network names with the project name
 networks:
   homeserver:
+    name: home-server-stack_homeserver
     external: true
