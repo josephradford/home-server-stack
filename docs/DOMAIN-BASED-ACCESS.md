@@ -27,32 +27,7 @@ Before testing domain-based access, ensure:
 
 1. **AdGuard DNS is configured**: Run `make adguard-setup` to configure DNS rewrites
 2. **All services are running**: Run `make status` to verify
-3. **Client DNS configuration**: Your device must use the server IP as its DNS server
-
-### Configuring DNS on Client Devices
-
-#### macOS/iOS
-1. Go to **System Settings > Network**
-2. Select your active connection (WiFi or Ethernet)
-3. Click **Details** > **DNS**
-4. Add your server IP (e.g., `192.168.1.100`)
-5. Remove or move down other DNS servers
-
-#### Windows
-1. Go to **Settings > Network & Internet**
-2. Select your active connection
-3. Click **Properties** > **DNS server assignment**
-4. Select **Manual**, enable **IPv4**
-5. Set **Preferred DNS** to your server IP
-
-#### Linux
-Edit `/etc/resolv.conf` or use Network Manager:
-```bash
-nameserver 192.168.1.100
-```
-
-#### Router-Wide Configuration
-Configure your router's DHCP settings to provide your server IP as the primary DNS server. This automatically configures all devices on your network.
+3. **Router DNS configuration**: Configure your router's DHCP settings to provide your server IP (e.g., `192.168.1.100`) as the primary DNS server. This automatically configures all devices on your network.
 
 ## Running Tests
 
@@ -180,13 +155,14 @@ When accessing `https://glance.home.local` in a browser:
 **Symptom**: Browser says "Server not found" or similar
 
 **Solutions**:
-1. Verify client DNS settings point to server IP
-2. Test DNS from client: `dig glance.home.local` (should return server IP)
-3. Flush DNS cache:
+1. Verify router DHCP is configured to use server IP as DNS
+2. Restart client device to get fresh DHCP lease with new DNS settings
+3. Test DNS from client: `dig glance.home.local` (should return server IP)
+4. Flush DNS cache:
    - macOS: `sudo dscacheutil -flushcache; sudo killall -HUP mDNSResponder`
    - Windows: `ipconfig /flushdns`
    - Linux: `sudo systemd-resolve --flush-caches`
-4. Try switching WiFi networks (disconnect/reconnect)
+5. Try disconnecting and reconnecting to WiFi network
 
 ## How It Works
 
@@ -315,7 +291,7 @@ Before marking domain-based access as working:
 - [ ] DNS rewrites configured in AdGuard
 - [ ] All services have Traefik labels in docker-compose
 - [ ] Traefik is running and accessible
-- [ ] Client devices configured to use AdGuard DNS
+- [ ] Router DHCP configured to use server IP as DNS
 - [ ] DNS resolution works: `dig @SERVER_IP glance.home.local`
 - [ ] HTTP redirects to HTTPS
 - [ ] HTTPS endpoints accessible
