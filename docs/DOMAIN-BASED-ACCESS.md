@@ -20,6 +20,11 @@ The following services are configured for domain-based access:
 | HortusFox | `https://hortusfox.home.local` | `http://192.168.1.100:8181` |
 | Grafana | `https://grafana.home.local` | `http://192.168.1.100:3001` |
 | n8n Workflow Automation | `https://n8n.home.local` | `http://192.168.1.100:5678` |
+| AdGuard Home | `https://adguard.home.local` | `http://192.168.1.100:8888` |
+| Ollama AI API | `https://ollama.home.local` | `http://192.168.1.100:11434` |
+| Habitica Habit Tracker | `https://habitica.home.local` | `http://192.168.1.100:8080` |
+| Prometheus Monitoring | `https://prometheus.home.local` | `http://192.168.1.100:9090` |
+| Alertmanager | `https://alerts.home.local` | `http://192.168.1.100:9093` |
 | Traefik Dashboard | `https://traefik.home.local` | N/A (domain-only) |
 
 ## Prerequisites

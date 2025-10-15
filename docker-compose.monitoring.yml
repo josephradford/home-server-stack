@@ -17,6 +17,15 @@ services:
       - '--web.enable-lifecycle'
     networks:
       - homeserver
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.prometheus-http.rule=Host(`prometheus.home.local`)"
+      - "traefik.http.routers.prometheus-http.entrypoints=web"
+      - "traefik.http.routers.prometheus-http.middlewares=redirect-to-https"
+      - "traefik.http.routers.prometheus.rule=Host(`prometheus.home.local`)"
+      - "traefik.http.routers.prometheus.entrypoints=websecure"
+      - "traefik.http.routers.prometheus.tls=true"
+      - "traefik.http.services.prometheus.loadbalancer.server.port=9090"
 
   grafana:
     image: grafana/grafana:latest
@@ -52,6 +61,15 @@ services:
       - ./monitoring/alertmanager:/etc/alertmanager
     networks:
       - homeserver
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.alertmanager-http.rule=Host(`alerts.home.local`)"
+      - "traefik.http.routers.alertmanager-http.entrypoints=web"
+      - "traefik.http.routers.alertmanager-http.middlewares=redirect-to-https"
+      - "traefik.http.routers.alertmanager.rule=Host(`alerts.home.local`)"
+      - "traefik.http.routers.alertmanager.entrypoints=websecure"
+      - "traefik.http.routers.alertmanager.tls=true"
+      - "traefik.http.services.alertmanager.loadbalancer.server.port=9093"
 
   node-exporter:
     image: prom/node-exporter:latest
