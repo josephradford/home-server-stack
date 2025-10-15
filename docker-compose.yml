@@ -276,7 +276,6 @@ services:
       # Docker provider
       - "--providers.docker=true"
       - "--providers.docker.exposedbydefault=false"
-      - "--providers.docker.network=homeserver"
 
       # Entrypoints
       - "--entrypoints.web.address=:80"
