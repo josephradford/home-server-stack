@@ -15,7 +15,7 @@ services:
       - "traefik.enable=true"
 
       # Specify which network Traefik should use to connect
-      - "traefik.docker.network=homeserver"
+      - "traefik.docker.network=home-server-stack_homeserver"
 
       # HTTP Router (redirect to HTTPS)
       - "traefik.http.routers.bookwyrm-http.rule=Host(`bookwyrm.home.local`)"
