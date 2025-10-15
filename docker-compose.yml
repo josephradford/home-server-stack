@@ -39,26 +39,32 @@ services:
       - N8N_BASIC_AUTH_ACTIVE=true
       - N8N_BASIC_AUTH_USER=${N8N_USER}
       - N8N_BASIC_AUTH_PASSWORD=${N8N_PASSWORD}
-      - N8N_HOST=${SERVER_IP}
+      - N8N_HOST=n8n.home.local
       - N8N_PORT=5678
-      - N8N_PROTOCOL=${N8N_PROTOCOL}
-      - N8N_SSL_KEY=${N8N_SSL_KEY}
-      - N8N_SSL_CERT=${N8N_SSL_CERT}
-      - WEBHOOK_URL=https://${SERVER_IP}:5678/
-      - N8N_EDITOR_BASE_URL=${N8N_EDITOR_BASE_URL}
+      - N8N_PROTOCOL=https
+      - WEBHOOK_URL=https://n8n.home.local/
+      - N8N_EDITOR_BASE_URL=https://n8n.home.local
       - GENERIC_TIMEZONE=${TIMEZONE}
-      - N8N_SECURE_COOKIE=${N8N_SECURE_COOKIE}
+      - N8N_SECURE_COOKIE=true
       - N8N_RUNNERS_TASK_TIMEOUT=${N8N_RUNNERS_TASK_TIMEOUT}
       - EXECUTIONS_TIMEOUT=${EXECUTIONS_TIMEOUT}
       - EXECUTIONS_TIMEOUT_MAX=${EXECUTIONS_TIMEOUT_MAX}
     volumes:
       - ./data/n8n:/home/node/.n8n
-      - ./ssl:/ssl:ro
     networks:
       - homeserver
     depends_on:
       - ollama
       - n8n-init
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.n8n-http.rule=Host(`n8n.home.local`)"
+      - "traefik.http.routers.n8n-http.entrypoints=web"
+      - "traefik.http.routers.n8n-http.middlewares=redirect-to-https"
+      - "traefik.http.routers.n8n.rule=Host(`n8n.home.local`)"
+      - "traefik.http.routers.n8n.entrypoints=websecure"
+      - "traefik.http.routers.n8n.tls=true"
+      - "traefik.http.services.n8n.loadbalancer.server.port=5678"
 
   ollama:
     image: ollama/ollama:latest

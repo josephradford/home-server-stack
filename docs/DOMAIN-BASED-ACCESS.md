@@ -19,6 +19,7 @@ The following services are configured for domain-based access:
 | Glance Dashboard | `https://glance.home.local` | `http://192.168.1.100:8282` |
 | HortusFox | `https://hortusfox.home.local` | `http://192.168.1.100:8181` |
 | Grafana | `https://grafana.home.local` | `http://192.168.1.100:3001` |
+| n8n Workflow Automation | `https://n8n.home.local` | `http://192.168.1.100:5678` |
 | Traefik Dashboard | `https://traefik.home.local` | N/A (domain-only) |
 
 ## Prerequisites
