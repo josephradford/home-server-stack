@@ -4,7 +4,7 @@
 .PHONY: help setup update start stop restart logs build pull status clean purge validate env-check ssl-check regenerate-ssl
 .PHONY: logs-n8n logs-wireguard logs-ollama logs-habitica logs-hortusfox logs-glance
 .PHONY: bookwyrm-setup bookwyrm-start bookwyrm-stop bookwyrm-restart bookwyrm-status bookwyrm-logs bookwyrm-update bookwyrm-init
-.PHONY: glance-setup adguard-setup
+.PHONY: glance-setup adguard-setup test-domain-access
 
 # Compose file flags - always include monitoring and habitica
 COMPOSE := docker compose -f docker-compose.yml -f docker-compose.monitoring.yml -f docker-compose.habitica.yml
@@ -53,6 +53,9 @@ help:
 	@echo "Service Configuration:"
 	@echo "  make glance-setup       - Create default Glance configuration"
 	@echo "  make adguard-setup      - Configure DNS rewrites for domain-based access"
+	@echo ""
+	@echo "Testing & Validation:"
+	@echo "  make test-domain-access - Test domain-based access for all services"
 	@echo ""
 	@echo "SSL Certificates:"
 	@echo "  make regenerate-ssl     - Regenerate SSL certificates (optional)"
@@ -450,3 +453,8 @@ adguard-setup: env-check
 	@echo ""
 	@echo "All *.home.local domains should now resolve to $$SERVER_IP"
 	@echo "Configure network devices to use $$SERVER_IP as DNS server"
+
+# Test domain-based access for all services
+test-domain-access: env-check
+	@echo "Testing domain-based access..."
+	@./scripts/test-domain-access.sh
