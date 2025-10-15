@@ -3,7 +3,8 @@
 # It configures Bookwyrm to work with Traefik reverse proxy
 
 services:
-  web:
+  # nginx is the entry point - it serves static files and proxies to bookwyrm app
+  nginx:
     # Add homeserver network for Traefik discovery
     networks:
       - homeserver
@@ -26,30 +27,34 @@ services:
       - "traefik.http.routers.bookwyrm.entrypoints=websecure"
       - "traefik.http.routers.bookwyrm.tls=true"
 
-      # Service configuration - Bookwyrm runs on port 8000
-      - "traefik.http.services.bookwyrm.loadbalancer.server.port=8000"
+      # Service configuration - nginx listens on port 80
+      - "traefik.http.services.bookwyrm.loadbalancer.server.port=80"
 
       # Middleware for HTTPS redirect
       - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
 
   # Explicitly disable Traefik for internal services
-  postgres:
+  bookwyrm-db:
     labels:
       - "traefik.enable=false"
 
-  redis_activity:
+  bookwyrm-redis-activity:
     labels:
       - "traefik.enable=false"
 
-  redis_broker:
+  bookwyrm-redis-broker:
     labels:
       - "traefik.enable=false"
 
-  celery_worker:
+  bookwyrm:
     labels:
       - "traefik.enable=false"
 
-  flower:
+  bookwyrm-celery:
+    labels:
+      - "traefik.enable=false"
+
+  bookwyrm-celery-beat:
     labels:
       - "traefik.enable=false"
 
