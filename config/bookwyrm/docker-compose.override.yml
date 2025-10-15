@@ -1,0 +1,60 @@
+# Bookwyrm Traefik Integration Override
+# This file is automatically copied to external/bookwyrm-docker/ during setup
+# It configures Bookwyrm to work with Traefik reverse proxy
+
+services:
+  web:
+    # Add homeserver network for Traefik discovery
+    networks:
+      - homeserver
+
+    # Traefik labels for domain-based access
+    labels:
+      # Enable Traefik for this service
+      - "traefik.enable=true"
+
+      # Specify which network Traefik should use to connect
+      - "traefik.docker.network=homeserver"
+
+      # HTTP Router (redirect to HTTPS)
+      - "traefik.http.routers.bookwyrm-http.rule=Host(`bookwyrm.home.local`)"
+      - "traefik.http.routers.bookwyrm-http.entrypoints=web"
+      - "traefik.http.routers.bookwyrm-http.middlewares=redirect-to-https"
+
+      # HTTPS Router
+      - "traefik.http.routers.bookwyrm.rule=Host(`bookwyrm.home.local`)"
+      - "traefik.http.routers.bookwyrm.entrypoints=websecure"
+      - "traefik.http.routers.bookwyrm.tls=true"
+
+      # Service configuration - Bookwyrm runs on port 8000
+      - "traefik.http.services.bookwyrm.loadbalancer.server.port=8000"
+
+      # Middleware for HTTPS redirect
+      - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
+
+  # Explicitly disable Traefik for internal services
+  postgres:
+    labels:
+      - "traefik.enable=false"
+
+  redis_activity:
+    labels:
+      - "traefik.enable=false"
+
+  redis_broker:
+    labels:
+      - "traefik.enable=false"
+
+  celery_worker:
+    labels:
+      - "traefik.enable=false"
+
+  flower:
+    labels:
+      - "traefik.enable=false"
+
+# Declare external homeserver network
+# This network is created by the main home-server-stack docker-compose.yml
+networks:
+  homeserver:
+    external: true
