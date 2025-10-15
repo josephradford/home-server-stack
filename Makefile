@@ -283,17 +283,23 @@ bookwyrm-setup:
 		cd external && git clone https://github.com/josephradford/bookwyrm-docker.git; \
 		echo "✓ Bookwyrm wrapper cloned"; \
 		echo ""; \
-		echo "Next steps:"; \
-		echo "1. cd $(BOOKWYRM_DIR)"; \
-		echo "2. cp .env.example .env"; \
-		echo "3. Edit .env with your configuration"; \
-		echo "4. Run: make bookwyrm-setup (again to deploy)"; \
-		exit 0; \
 	fi
+	@if [ ! -f "$(BOOKWYRM_DIR)/.env" ]; then \
+		echo "Configuring Bookwyrm environment..."; \
+		./scripts/setup-bookwyrm-env.sh; \
+		echo ""; \
+	fi
+	@echo "Applying Traefik integration configuration..."
+	@cp config/bookwyrm/docker-compose.override.yml $(BOOKWYRM_DIR)/docker-compose.override.yml
+	@echo "✓ Traefik configuration applied"
+	@echo ""
 	@echo "Setting up Bookwyrm via wrapper..."
 	@cd $(BOOKWYRM_DIR) && $(MAKE) setup
 	@echo ""
 	@echo "✓ Bookwyrm setup complete!"
+	@echo "  - Accessible at: https://bookwyrm.home.local"
+	@echo "  - Also available at: http://$$SERVER_IP:8000 (backward compatibility)"
+	@echo ""
 	@echo "See docs/BOOKWYRM.md for integration details"
 
 bookwyrm-start:
