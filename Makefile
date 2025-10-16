@@ -6,8 +6,10 @@
 .PHONY: bookwyrm-setup bookwyrm-start bookwyrm-stop bookwyrm-restart bookwyrm-status bookwyrm-logs bookwyrm-update bookwyrm-init
 .PHONY: glance-setup adguard-setup traefik-setup test-domain-access
 
-# Compose file flags - always include monitoring and habitica
-COMPOSE := docker compose -f docker-compose.yml -f docker-compose.monitoring.yml -f docker-compose.habitica.yml
+# Compose file flags - always include monitoring
+# Note: Habitica temporarily disabled on this branch due to startup issues
+COMPOSE := docker compose -f docker-compose.yml -f docker-compose.monitoring.yml
+# COMPOSE := docker compose -f docker-compose.yml -f docker-compose.monitoring.yml -f docker-compose.habitica.yml
 
 # Bookwyrm wrapper project location
 BOOKWYRM_DIR := external/bookwyrm-docker
@@ -144,10 +146,11 @@ setup: env-check validate
 	@echo "  - Glance:            https://glance.$${DOMAIN}"
 	@echo "  - HortusFox:         https://hortusfox.$${DOMAIN}"
 	@echo "  - Grafana:           https://grafana.$${DOMAIN}"
-	@echo "  - Habitica:          https://habitica.$${DOMAIN}"
 	@echo "  - Ollama API:        https://ollama.$${DOMAIN}"
 	@echo "  - Prometheus:        https://prometheus.$${DOMAIN}"
 	@echo "  - Alertmanager:      https://alerts.$${DOMAIN}"
+	@echo ""
+	@echo "Note: Habitica temporarily disabled on this branch"
 	@if [ -d "$(BOOKWYRM_DIR)" ] && [ -f "$(BOOKWYRM_DIR)/.env" ]; then \
 		echo "  - Bookwyrm:     http://$$SERVER_IP:8000"; \
 	fi
