@@ -14,18 +14,18 @@ Domain-based access allows you to access services using memorable domain names (
 
 The following services are configured for domain-based access:
 
-| Service | Domain | Direct Access (IP:Port) |
-|---------|--------|------------------------|
-| Glance Dashboard | `https://glance.home.local` | `http://192.168.1.100:8282` |
-| HortusFox | `https://hortusfox.home.local` | `http://192.168.1.100:8181` |
-| Grafana | `https://grafana.home.local` | `http://192.168.1.100:3001` |
-| n8n Workflow Automation | `https://n8n.home.local` | `http://192.168.1.100:5678` |
-| AdGuard Home | `https://adguard.home.local` | `http://192.168.1.100:8888` |
-| Ollama AI API | `https://ollama.home.local` | `http://192.168.1.100:11434` |
-| Habitica Habit Tracker | `https://habitica.home.local` | `http://192.168.1.100:8080` |
-| Prometheus Monitoring | `https://prometheus.home.local` | `http://192.168.1.100:9090` |
-| Alertmanager | `https://alerts.home.local` | `http://192.168.1.100:9093` |
-| Traefik Dashboard | `https://traefik.home.local` | N/A (domain-only) |
+| Service | Domain | Direct Access (IP:Port) | Notes |
+|---------|--------|------------------------|-------|
+| Glance Dashboard | `https://glance.home.local` | N/A (Traefik only) | - |
+| HortusFox | `https://hortusfox.home.local` | N/A (Traefik only) | - |
+| Grafana | `https://grafana.home.local` | N/A (Traefik only) | - |
+| n8n Workflow Automation | `https://n8n.home.local` | N/A (Traefik only) | - |
+| AdGuard Home | `https://adguard.home.local` | `http://192.168.1.100:8888` | Emergency access |
+| Ollama AI API | `https://ollama.home.local` | `http://192.168.1.100:11434` | Direct API access |
+| Habitica Habit Tracker | `https://habitica.home.local` | `http://192.168.1.100:8080` | Legacy access |
+| Prometheus Monitoring | `https://prometheus.home.local` | `http://192.168.1.100:9090` | Metrics scraping |
+| Alertmanager | `https://alerts.home.local` | `http://192.168.1.100:9093` | Alert management |
+| Traefik Dashboard | `https://traefik.home.local` | N/A (domain-only) | - |
 
 ## Prerequisites
 

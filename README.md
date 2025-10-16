@@ -83,10 +83,12 @@ All services are accessible via domain names on your local network:
 
 **Note:** Services are accessible via domain names thanks to Traefik reverse proxy and AdGuard Home DNS. Your devices must use AdGuard Home as their DNS server (configured automatically if DHCP points to the server).
 
-**Legacy Access:** Services are still accessible via IP:port for backward compatibility:
-- AdGuard Home: `http://SERVER_IP:8888`
-- n8n: `https://SERVER_IP:5678`
-- And so on... (See [SERVICES.md](SERVICES.md) for complete list)
+**Direct IP Access:** Some services remain accessible via IP:port for specific operational needs:
+- AdGuard Home: `http://SERVER_IP:8888` (emergency access if Traefik fails)
+- Ollama API: `http://SERVER_IP:11434` (direct API access for AI workloads)
+- Prometheus: `http://SERVER_IP:9090` (metrics scraping)
+- Alertmanager: `http://SERVER_IP:9093` (alert management)
+- See [SERVICES.md](SERVICES.md) for complete list
 
 See **[docs/SETUP.md](docs/SETUP.md)** for detailed installation instructions.
 

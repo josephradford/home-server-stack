@@ -42,8 +42,8 @@ services:
     container_name: n8n
     restart: unless-stopped
     user: "1000:1000"
-    ports:
-      - "${SERVER_IP}:5678:5678"
+    expose:
+      - 5678
     environment:
       - N8N_BASIC_AUTH_ACTIVE=true
       - N8N_BASIC_AUTH_USER=${N8N_USER}
@@ -193,8 +193,8 @@ services:
     image: ghcr.io/danielbrendel/hortusfox-web:${HORTUSFOX_VERSION:-latest}
     container_name: hortusfox
     restart: unless-stopped
-    ports:
-      - "${SERVER_IP}:8181:80"
+    expose:
+      - 80
     environment:
       - APP_ADMIN_EMAIL=${HORTUSFOX_ADMIN_EMAIL}
       - APP_ADMIN_PASSWORD=${HORTUSFOX_ADMIN_PASSWORD}
@@ -237,8 +237,8 @@ services:
     image: glanceapp/glance:${GLANCE_VERSION:-latest}
     container_name: glance
     restart: unless-stopped
-    ports:
-      - "${SERVER_IP}:${GLANCE_PORT:-8282}:8080"
+    expose:
+      - 8080
     environment:
       - TZ=${TIMEZONE}
     volumes:
