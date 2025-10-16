@@ -221,6 +221,105 @@ The admin account is automatically created on first run using:
 
 Access at `http://SERVER_IP:8181`
 
+## Traefik Reverse Proxy Configuration
+
+### Overview
+
+Traefik provides domain-based routing for all services using Docker labels for automatic service discovery.
+
+### Configuration Files
+
+- **docker-compose.yml** - Contains Traefik service definition and labels for core services
+- **docker-compose.monitoring.yml** - Contains labels for monitoring services
+- **docker-compose.habitica.yml** - Contains labels for Habitica
+- **external/bookwyrm-docker/docker-compose.yml** - Contains labels for Bookwyrm
+
+### Adding New Services
+
+To add a new service with domain access:
+
+1. Add service to docker-compose.yml
+2. Connect to `homeserver` network
+3. Add Traefik labels:
+
+```yaml
+services:
+  myservice:
+    image: myservice:latest
+    container_name: myservice
+    networks:
+      - homeserver
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.myservice.rule=Host(`myservice.home.local`)"
+      - "traefik.http.routers.myservice.entrypoints=websecure"
+      - "traefik.http.routers.myservice.tls=true"
+      - "traefik.http.services.myservice.loadbalancer.server.port=8080"  # Internal port
+```
+
+4. Add DNS rewrite to AdGuard (already covered by wildcard `*.home.local`)
+5. Deploy: `docker compose up -d myservice`
+
+### Traefik Dashboard
+
+Access Traefik's dashboard at `https://traefik.home.local`
+
+**Login credentials:**
+- Username: admin
+- Password: (set during Traefik deployment)
+
+The dashboard shows:
+- Active routers and their rules
+- Connected services and health
+- Middleware configuration
+- TLS certificate status
+- Access logs
+
+### SSL/TLS Configuration
+
+Traefik automatically generates self-signed certificates for all services.
+
+**Certificate storage:**
+`data/traefik/certs/`
+
+**To use Let's Encrypt (optional, for public access):**
+Edit Traefik command in docker-compose.yml:
+```yaml
+command:
+  # ... existing commands ...
+  - "--certificatesresolvers.letsencrypt.acme.dnschallenge=true"
+  - "--certificatesresolvers.letsencrypt.acme.dnschallenge.provider=your-dns-provider"
+  - "--certificatesresolvers.letsencrypt.acme.email=your-email@example.com"
+  - "--certificatesresolvers.letsencrypt.acme.storage=/certs/acme.json"
+```
+
+Then add to service labels:
+```yaml
+- "traefik.http.routers.myservice.tls.certresolver=letsencrypt"
+```
+
+### Middleware Configuration
+
+Traefik supports middleware for common needs:
+
+**Basic Auth:**
+```yaml
+- "traefik.http.middlewares.myauth.basicauth.users=admin:$$apr1$$..."
+- "traefik.http.routers.myservice.middlewares=myauth"
+```
+
+**Rate Limiting:**
+```yaml
+- "traefik.http.middlewares.ratelimit.ratelimit.average=10"
+- "traefik.http.routers.myservice.middlewares=ratelimit"
+```
+
+**IP Whitelist:**
+```yaml
+- "traefik.http.middlewares.whitelist.ipwhitelist.sourcerange=192.168.1.0/24"
+- "traefik.http.routers.myservice.middlewares=whitelist"
+```
+
 ### Monitoring Stack (Optional)
 
 #### Grafana

@@ -5,43 +5,96 @@ System design and technical architecture of the Home Server Stack.
 ## System Overview
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                      Home Network (LAN)                      │
-│  ┌──────────────────────────────────────────────────────┐  │
-│  │                  Home Server (Docker Host)            │  │
-│  │                                                        │  │
-│  │  ┌──────────────┐  ┌──────────────┐  ┌────────────┐ │  │
-│  │  │  AdGuard     │  │     n8n      │  │  Ollama    │ │  │
-│  │  │  Home (DNS)  │  │ (Automation) │  │  (AI)      │ │  │
-│  │  └──────────────┘  └──────────────┘  └────────────┘ │  │
-│  │                                                        │  │
-│  │  ┌──────────────┐  ┌──────────────┐  ┌────────────┐ │  │
-│  │  │  WireGuard   │  │  Habitica    │  │  Bookwyrm  │ │  │
-│  │  │  (VPN)       │  │  (Tasks)     │  │  (Reading) │ │  │
-│  │  └──────────────┘  └──────────────┘  └────────────┘ │  │
-│  │                                                        │  │
-│  │  ┌──────────────┐                                     │  │
-│  │  │  HortusFox   │                                     │  │
-│  │  │  (Plants)    │                                     │  │
-│  │  └──────────────┘                                     │  │
-│  │                                                        │  │
-│  │  ┌──────────────────────────────────────────────────┐ │  │
-│  │  │     Monitoring Stack (Grafana | Prometheus)      │ │  │
-│  │  └──────────────────────────────────────────────────┘ │  │
-│  │                                                        │  │
-│  │  ┌──────────────────────────────────────────────────┐ │  │
-│  │  │      Docker Bridge Network (homeserver)          │ │  │
-│  │  └──────────────────────────────────────────────────┘ │  │
-│  └──────────────────────────────────────────────────────┘  │
-└─────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────┐
+│                    Local Network                        │
+│                                                         │
+│  ┌──────────┐         ┌──────────────────┐            │
+│  │  Client  │────────>│  AdGuard Home    │            │
+│  │  Device  │  DNS    │  (Port 53)       │            │
+│  └──────────┘  Query  └──────────────────┘            │
+│       │                        │                       │
+│       │                   DNS Response                 │
+│       │                   (SERVER_IP)                  │
+│       │                        │                       │
+│       v                        v                       │
+│  ┌──────────────────────────────────────┐             │
+│  │         Traefik Reverse Proxy        │             │
+│  │         (Ports 80, 443)              │             │
+│  │  ┌────────────────────────────────┐  │             │
+│  │  │  Domain-based Router           │  │             │
+│  │  │  - *.home.local → Services     │  │             │
+│  │  │  - TLS Termination             │  │             │
+│  │  │  - Automatic Service Discovery │  │             │
+│  │  └────────────────────────────────┘  │             │
+│  └──────────────────────────────────────┘             │
+│                     │                                  │
+│      ┌──────────────┼──────────────┬─────────────┐   │
+│      │              │              │             │   │
+│      v              v              v             v   │
+│  ┌────────┐    ┌────────┐    ┌─────────┐   ┌──────┐│
+│  │  n8n   │    │ Glance │    │Habitica │...│ More ││
+│  │  5678  │    │  8080  │    │  8080   │   │      ││
+│  └────────┘    └────────┘    └─────────┘   └──────┘│
+│                                                      │
+│  ┌────────────────────────────────────────────────┐ │
+│  │         Docker Network: homeserver             │ │
+│  └────────────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────────┘
          │                                        ▲
          │ Port 51820/UDP (WireGuard)            │
          │ Optional: 5678/TCP (n8n webhooks)     │
          ▼                                        │
     Internet ◄──────────────────────────────────►
+
+**Request Flow:**
+
+1. Client requests `https://n8n.home.local`
+2. AdGuard Home resolves to `SERVER_IP`
+3. Request reaches Traefik on port 443
+4. Traefik routes based on `Host` header to n8n container
+5. n8n processes request and returns response
+6. Traefik returns response to client over HTTPS
+
+**Benefits:**
+- Clean URLs (no ports to remember)
+- Centralized SSL/TLS
+- Easy to add new services
+- Automatic service discovery
 ```
 
 ## Core Components
+
+### Traefik
+**Purpose:** Reverse proxy and ingress controller
+
+**Architecture:**
+- HTTP/HTTPS reverse proxy
+- Automatic service discovery via Docker labels
+- Self-signed TLS certificate generation
+- Domain-based routing
+
+**Data Flow:**
+```
+Client Request (https://service.home.local)
+    ↓
+Traefik (port 443) - Check Host header
+    ↓
+Route to matching service (via Docker labels)
+    ↓
+Service processes request
+    ↓
+Traefik returns response with TLS
+```
+
+**Integration Points:**
+- All services via Docker labels
+- AdGuard Home for DNS resolution
+- Self-signed certificates for HTTPS
+
+**Storage:**
+- Config: Docker labels in compose files
+- Certificates: `./data/traefik/certs/`
+- Logs: `./data/traefik/logs/`
 
 ### AdGuard Home
 **Purpose:** Network-wide ad blocking and DNS server
@@ -266,15 +319,15 @@ prometheus → cadvisor:8080 (container metrics)
 
 **Bound to SERVER_IP (internal only):**
 - 53/TCP+UDP: AdGuard DNS
-- 80/TCP: AdGuard UI
-- 5678/TCP: n8n
-- 11434/TCP: Ollama API
-- 3002/TCP: Habitica API
-- 8080/TCP: Habitica Web UI
-- 8000/TCP: Bookwyrm Web UI
-- 3001/TCP: Grafana
-- 9090/TCP: Prometheus
-- 9093/TCP: Alertmanager
+- 80/TCP: Traefik HTTP (redirects to HTTPS)
+- 443/TCP: Traefik HTTPS (all service access)
+- 8080/TCP: Traefik Dashboard
+- 8888/TCP: AdGuard UI (legacy direct access)
+- 5678/TCP: n8n (legacy direct access)
+- 11434/TCP: Ollama API (legacy direct access)
+- 3001/TCP: Grafana (legacy direct access)
+- 9090/TCP: Prometheus (legacy direct access)
+- 9093/TCP: Alertmanager (legacy direct access)
 
 **Bound to 0.0.0.0 (external via router):**
 - 51820/UDP: WireGuard VPN
@@ -481,6 +534,7 @@ Server 1 (Control Plane)            Server 2 (Worker)
 | **OS** | Ubuntu Server 24.04 | Host operating system |
 | **Networking** | Bridge Network | Container networking |
 | **Storage** | Bind Mounts | Data persistence |
+| **Reverse Proxy** | Traefik | Domain-based routing + TLS |
 | **DNS** | AdGuard Home | Network DNS + ad blocking |
 | **VPN** | WireGuard | Secure remote access |
 | **Automation** | n8n | Workflow automation |
