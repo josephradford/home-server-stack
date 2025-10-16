@@ -31,8 +31,8 @@ services:
     image: grafana/grafana:latest
     container_name: grafana
     restart: unless-stopped
-    ports:
-      - "${SERVER_IP}:3001:3000"  # Using 3001 to avoid conflict with AdGuard
+    expose:
+      - 3000
     environment:
       - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD}
     volumes:

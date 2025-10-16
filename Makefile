@@ -133,16 +133,17 @@ setup: env-check validate
 	@echo ""
 	@echo "✓ Setup complete! Services are running."
 	@echo ""
-	@echo "Access your services:"
-	@echo "  - AdGuard Home: http://$$SERVER_IP:80"
-	@echo "  - n8n:          https://$$SERVER_IP:5678"
-	@echo "  - Ollama API:   http://$$SERVER_IP:11434"
-	@echo "  - Habitica:     http://$$SERVER_IP:8080"
-	@echo "  - HortusFox:    http://$$SERVER_IP:8181"
-	@echo "  - Glance:       http://$$SERVER_IP:8282"
-	@echo "  - Grafana:      http://$$SERVER_IP:3001"
-	@echo "  - Prometheus:   http://$$SERVER_IP:9090"
-	@echo "  - Alertmanager: http://$$SERVER_IP:9093"
+	@echo "Access your services via domain names:"
+	@echo "  - Traefik Dashboard: https://traefik.home.local"
+	@echo "  - AdGuard Home:      https://adguard.home.local"
+	@echo "  - n8n:               https://n8n.home.local"
+	@echo "  - Glance:            https://glance.home.local"
+	@echo "  - HortusFox:         https://hortusfox.home.local"
+	@echo "  - Grafana:           https://grafana.home.local"
+	@echo "  - Habitica:          https://habitica.home.local"
+	@echo "  - Ollama API:        https://ollama.home.local"
+	@echo "  - Prometheus:        https://prometheus.home.local"
+	@echo "  - Alertmanager:      https://alerts.home.local"
 	@if [ -d "$(BOOKWYRM_DIR)" ] && [ -f "$(BOOKWYRM_DIR)/.env" ]; then \
 		echo "  - Bookwyrm:     http://$$SERVER_IP:8000"; \
 	fi
@@ -396,26 +397,26 @@ glance-setup:
 	@echo '              - title: Core Services' >> data/glance/glance.yml
 	@echo '                links:' >> data/glance/glance.yml
 	@echo '                  - title: AdGuard Home' >> data/glance/glance.yml
-	@echo '                    url: http://$$SERVER_IP:80' >> data/glance/glance.yml
+	@echo '                    url: https://adguard.home.local' >> data/glance/glance.yml
 	@echo '                  - title: n8n' >> data/glance/glance.yml
-	@echo '                    url: https://$$SERVER_IP:5678' >> data/glance/glance.yml
+	@echo '                    url: https://n8n.home.local' >> data/glance/glance.yml
 	@echo '                  - title: Grafana' >> data/glance/glance.yml
-	@echo '                    url: http://$$SERVER_IP:3001' >> data/glance/glance.yml
+	@echo '                    url: https://grafana.home.local' >> data/glance/glance.yml
 	@echo '              - title: Apps' >> data/glance/glance.yml
 	@echo '                links:' >> data/glance/glance.yml
 	@echo '                  - title: Habitica' >> data/glance/glance.yml
-	@echo '                    url: http://$$SERVER_IP:8080' >> data/glance/glance.yml
+	@echo '                    url: https://habitica.home.local' >> data/glance/glance.yml
 	@echo '                  - title: Bookwyrm' >> data/glance/glance.yml
-	@echo '                    url: http://$$SERVER_IP:8000' >> data/glance/glance.yml
+	@echo '                    url: https://bookwyrm.home.local' >> data/glance/glance.yml
 	@echo '                  - title: HortusFox' >> data/glance/glance.yml
-	@echo '                    url: http://$$SERVER_IP:8181' >> data/glance/glance.yml
+	@echo '                    url: https://hortusfox.home.local' >> data/glance/glance.yml
 	@echo "✓ Created data/glance/glance.yml"
 	@echo ""
 	@echo "Starting Glance service..."
 	@$(COMPOSE) up -d glance
 	@echo ""
 	@echo "✓ Glance setup complete!"
-	@echo "Access at: http://$$SERVER_IP:8282"
+	@echo "Access at: https://glance.home.local"
 	@echo ""
 	@echo "To customize your dashboard, edit: data/glance/glance.yml"
 	@echo "Then restart: docker compose restart glance"
