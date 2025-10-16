@@ -3,8 +3,10 @@
 **Priority:** High
 **Estimated Time:** 2 hours
 **Category:** Security & Infrastructure
-**Status:** ⬜ Pending
+**Status:** ✅ Complete
 **Dependencies:** Tickets 01-08 complete, working domain-based access
+**Completed:** 2025-10-17
+**Implemented Approach:** Simplified - Single ${DOMAIN} variable with Let's Encrypt
 
 ## Overview
 
@@ -375,3 +377,43 @@ curl -H "Authorization: Apikey YOUR_KEY" \
 
 **Created:** 2025-01-15
 **Estimated Cost:** ~$15-20/year (domain registration only)
+
+## Implementation Summary (2025-10-17)
+
+The ticket was implemented with a simplified approach based on user feedback:
+
+**Changes from Original Ticket:**
+- Removed HOME_DOMAIN/PUBLIC_DOMAIN split - using single `DOMAIN` variable instead
+- Services accessible at `servicename.${DOMAIN}` (e.g., `n8n.radsrv.com`) not `servicename.home.${DOMAIN}`
+- All .home.local references removed - full migration to real domain
+- No backward compatibility maintained (this is a home project, not production)
+
+**Files Modified:**
+1. **.env.example** - Added `DOMAIN`, `ACME_EMAIL`, `GANDIV5_API_KEY` variables
+2. **docker-compose.yml** - Updated Traefik config for Let's Encrypt with Gandi DNS-01 challenge
+3. **docker-compose.yml** - Updated all service labels to use `${DOMAIN}` with cert resolver
+4. **docker-compose.monitoring.yml** - Updated Prometheus, Grafana, Alertmanager labels
+5. **docker-compose.habitica.yml** - Updated Habitica labels
+6. **README.md** - Updated service URLs to show generic domain pattern
+7. **Makefile** - Updated output messages to use `${DOMAIN}` variable
+8. **docs/DOMAIN-BASED-ACCESS.md** - Added note about Let's Encrypt and updated key sections
+
+**Key Configuration:**
+```yaml
+# Traefik now includes Let's Encrypt with Gandi DNS challenge
+- "--certificatesresolvers.letsencrypt.acme.dnschallenge=true"
+- "--certificatesresolvers.letsencrypt.acme.dnschallenge.provider=gandiv5"
+- "--certificatesresolvers.letsencrypt.acme.email=${ACME_EMAIL}"
+- "--certificatesresolvers.letsencrypt.acme.storage=/certs/acme.json"
+
+# All services updated to use cert resolver
+- "traefik.http.routers.SERVICE.rule=Host(`SERVICE.${DOMAIN}`)"
+- "traefik.http.routers.SERVICE.tls.certresolver=letsencrypt"
+```
+
+**Next Steps for User:**
+1. Set `DOMAIN`, `ACME_EMAIL`, and `GANDIV5_API_KEY` in .env
+2. Create acme.json: `mkdir -p data/traefik/certs && touch data/traefik/certs/acme.json && chmod 600 data/traefik/certs/acme.json`
+3. Configure DNS at Gandi to point domain/wildcard to server
+4. Deploy with `docker compose up -d`
+5. Monitor certificate generation in Traefik logs

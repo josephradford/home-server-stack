@@ -73,12 +73,10 @@ services:
         condition: service_healthy
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.habitica-http.rule=Host(`habitica.home.local`)"
-      - "traefik.http.routers.habitica-http.entrypoints=web"
-      - "traefik.http.routers.habitica-http.middlewares=redirect-to-https"
-      - "traefik.http.routers.habitica.rule=Host(`habitica.home.local`)"
+      - "traefik.http.routers.habitica.rule=Host(`habitica.${DOMAIN}`)"
       - "traefik.http.routers.habitica.entrypoints=websecure"
       - "traefik.http.routers.habitica.tls=true"
+      - "traefik.http.routers.habitica.tls.certresolver=letsencrypt"
       - "traefik.http.services.habitica.loadbalancer.server.port=80"
     healthcheck:
       test: ["CMD-SHELL", "wget --quiet --tries=1 --spider http://localhost:80 || exit 1"]

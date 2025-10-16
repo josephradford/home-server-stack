@@ -67,21 +67,21 @@ make bookwyrm-setup
 
 **Access Services:**
 
-All services are accessible via domain names on your local network:
+All services are accessible via domain names (set `DOMAIN` in `.env`):
 
-- **Traefik Dashboard:** `https://traefik.home.local`
-- **AdGuard Home:** `https://adguard.home.local` (DNS admin)
-- **n8n:** `https://n8n.home.local` (Workflow automation)
-- **Glance:** `https://glance.home.local` (Dashboard)
-- **HortusFox:** `https://hortusfox.home.local` (Plant management)
-- **Habitica:** `https://habitica.home.local` (Habit tracker)
-- **Bookwyrm:** `https://bookwyrm.home.local` (Book tracking)
-- **Ollama API:** `https://ollama.home.local` (AI models)
-- **Grafana:** `https://grafana.home.local` (Monitoring)
-- **Prometheus:** `https://prometheus.home.local` (Metrics)
-- **Alertmanager:** `https://alerts.home.local` (Alerts)
+- **Traefik Dashboard:** `https://traefik.DOMAIN` (e.g., `traefik.example.com`)
+- **AdGuard Home:** `https://adguard.DOMAIN` (DNS admin)
+- **n8n:** `https://n8n.DOMAIN` (Workflow automation)
+- **Glance:** `https://glance.DOMAIN` (Dashboard)
+- **HortusFox:** `https://hortusfox.DOMAIN` (Plant management)
+- **Habitica:** `https://habitica.DOMAIN` (Habit tracker)
+- **Bookwyrm:** `https://bookwyrm.DOMAIN` (Book tracking)
+- **Ollama API:** `https://ollama.DOMAIN` (AI models)
+- **Grafana:** `https://grafana.DOMAIN` (Monitoring)
+- **Prometheus:** `https://prometheus.DOMAIN` (Metrics)
+- **Alertmanager:** `https://alerts.DOMAIN` (Alerts)
 
-**Note:** Services are accessible via domain names thanks to Traefik reverse proxy and AdGuard Home DNS. Your devices must use AdGuard Home as their DNS server (configured automatically if DHCP points to the server).
+**Note:** Services use Traefik reverse proxy with Let's Encrypt SSL certificates via Gandi DNS challenge. Configure `DOMAIN`, `ACME_EMAIL`, and `GANDIV5_API_KEY` in `.env` for automatic certificate management.
 
 **Direct IP Access:** Some services remain accessible via IP:port for specific operational needs:
 - AdGuard Home: `http://SERVER_IP:8888` (emergency access if Traefik fails)

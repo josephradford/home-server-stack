@@ -2,30 +2,32 @@
 
 This document describes how to test and verify domain-based access for services in the home server stack.
 
+**Note:** This project now uses real domains with Let's Encrypt SSL certificates. Configure your domain in `.env` by setting `DOMAIN`, `ACME_EMAIL`, and `GANDIV5_API_KEY`. Throughout this document, replace references to `.home.local` with your actual domain (e.g., `example.com`).
+
 ## Overview
 
-Domain-based access allows you to access services using memorable domain names (e.g., `glance.home.local`) instead of IP addresses and ports (e.g., `192.168.1.100:8282`). This is accomplished through:
+Domain-based access allows you to access services using memorable domain names (e.g., `glance.example.com`) instead of IP addresses and ports (e.g., `192.168.1.100:8282`). This is accomplished through:
 
-1. **AdGuard Home**: Provides DNS rewrites for `*.home.local` domains
-2. **Traefik**: Reverse proxy that routes requests based on domain names
-3. **Self-signed SSL certificates**: Enable HTTPS access (with browser warnings)
+1. **Traefik**: Reverse proxy that routes requests based on domain names with Let's Encrypt SSL
+2. **Let's Encrypt**: Automatic SSL certificate generation using Gandi DNS-01 challenge
+3. **Gandi DNS**: DNS provider for domain management and ACME challenge
 
 ## Configured Services
 
-The following services are configured for domain-based access:
+The following services are configured for domain-based access (replace `DOMAIN` with your configured domain):
 
 | Service | Domain | Direct Access (IP:Port) | Notes |
 |---------|--------|------------------------|-------|
-| Glance Dashboard | `https://glance.home.local` | N/A (Traefik only) | - |
-| HortusFox | `https://hortusfox.home.local` | N/A (Traefik only) | - |
-| Grafana | `https://grafana.home.local` | N/A (Traefik only) | - |
-| n8n Workflow Automation | `https://n8n.home.local` | N/A (Traefik only) | - |
-| AdGuard Home | `https://adguard.home.local` | `http://192.168.1.100:8888` | Emergency access |
-| Ollama AI API | `https://ollama.home.local` | `http://192.168.1.100:11434` | Direct API access |
-| Habitica Habit Tracker | `https://habitica.home.local` | `http://192.168.1.100:8080` | Legacy access |
-| Prometheus Monitoring | `https://prometheus.home.local` | `http://192.168.1.100:9090` | Metrics scraping |
-| Alertmanager | `https://alerts.home.local` | `http://192.168.1.100:9093` | Alert management |
-| Traefik Dashboard | `https://traefik.home.local` | N/A (domain-only) | - |
+| Glance Dashboard | `https://glance.DOMAIN` | N/A (Traefik only) | - |
+| HortusFox | `https://hortusfox.DOMAIN` | N/A (Traefik only) | - |
+| Grafana | `https://grafana.DOMAIN` | N/A (Traefik only) | - |
+| n8n Workflow Automation | `https://n8n.DOMAIN` | N/A (Traefik only) | - |
+| AdGuard Home | `https://adguard.DOMAIN` | `http://SERVER_IP:8888` | Emergency access |
+| Ollama AI API | `https://ollama.DOMAIN` | `http://SERVER_IP:11434` | Direct API access |
+| Habitica Habit Tracker | `https://habitica.DOMAIN` | `http://SERVER_IP:8080` | Legacy access |
+| Prometheus Monitoring | `https://prometheus.DOMAIN` | `http://SERVER_IP:9090` | Metrics scraping |
+| Alertmanager | `https://alerts.DOMAIN` | `http://SERVER_IP:9093` | Alert management |
+| Traefik Dashboard | `https://traefik.DOMAIN` | N/A (domain-only) | - |
 
 ## Prerequisites
 
@@ -262,13 +264,13 @@ See Traefik's [Let's Encrypt documentation](https://doc.traefik.io/traefik/https
 
 ## Security Considerations
 
-### Internal Network Only
+### SSL Certificates
 
-The current configuration is designed for internal network use only:
+The project uses Let's Encrypt for valid SSL certificates:
 
-- Self-signed certificates (untrusted by browsers)
-- `.home.local` domains (not routable on internet)
-- Services bound to `SERVER_IP` (not publicly accessible)
+- Automatic certificate renewal via Traefik
+- DNS-01 challenge using Gandi API (supports wildcard certs)
+- No browser warnings for trusted certificates
 
 ### VPN Access
 
@@ -276,8 +278,7 @@ For remote access, use WireGuard VPN:
 
 1. Connect to VPN
 2. VPN automatically routes home network traffic
-3. DNS queries go through AdGuard
-4. Access services via `*.home.local` domains
+3. Access services via your configured domain
 
 See `docs/WIREGUARD.md` for VPN setup.
 
