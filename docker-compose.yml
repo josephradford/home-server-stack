@@ -301,7 +301,7 @@ services:
 
     environment:
       # Gandi API credentials for Let's Encrypt DNS challenge
-      - GANDIV5_API_KEY=${GANDIV5_API_KEY}
+      - GANDIV5_PERSONAL_ACCESS_TOKEN=${GANDIV5_PERSONAL_ACCESS_TOKEN}
 
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
