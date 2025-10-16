@@ -139,16 +139,21 @@ setup: env-check validate
 	@echo ""
 	@echo "✓ Setup complete! Services are running."
 	@echo ""
-	@echo "Access your services via domain names (configure DOMAIN in .env):"
-	@echo "  - Traefik Dashboard: https://traefik.$${DOMAIN}"
-	@echo "  - AdGuard Home:      https://adguard.$${DOMAIN}"
-	@echo "  - n8n:               https://n8n.$${DOMAIN}"
-	@echo "  - Glance:            https://glance.$${DOMAIN}"
-	@echo "  - HortusFox:         https://hortusfox.$${DOMAIN}"
-	@echo "  - Grafana:           https://grafana.$${DOMAIN}"
-	@echo "  - Ollama API:        https://ollama.$${DOMAIN}"
-	@echo "  - Prometheus:        https://prometheus.$${DOMAIN}"
-	@echo "  - Alertmanager:      https://alerts.$${DOMAIN}"
+	@echo "Access your services via domain names:"
+	@if [ -n "$$DOMAIN" ]; then \
+		echo "  - Traefik Dashboard: https://traefik.$$DOMAIN"; \
+		echo "  - AdGuard Home:      https://adguard.$$DOMAIN"; \
+		echo "  - n8n:               https://n8n.$$DOMAIN"; \
+		echo "  - Glance:            https://glance.$$DOMAIN"; \
+		echo "  - HortusFox:         https://hortusfox.$$DOMAIN"; \
+		echo "  - Grafana:           https://grafana.$$DOMAIN"; \
+		echo "  - Ollama API:        https://ollama.$$DOMAIN"; \
+		echo "  - Prometheus:        https://prometheus.$$DOMAIN"; \
+		echo "  - Alertmanager:      https://alerts.$$DOMAIN"; \
+	else \
+		echo "  ERROR: DOMAIN not set in .env file"; \
+		echo "  Please set DOMAIN=your-domain.com in .env"; \
+	fi
 	@echo ""
 	@echo "Note: Habitica temporarily disabled on this branch"
 	@if [ -d "$(BOOKWYRM_DIR)" ] && [ -f "$(BOOKWYRM_DIR)/.env" ]; then \
@@ -306,7 +311,11 @@ bookwyrm-setup:
 	@cd $(BOOKWYRM_DIR) && $(MAKE) setup
 	@echo ""
 	@echo "✓ Bookwyrm setup complete!"
-	@echo "  - Accessible at: https://bookwyrm.$${DOMAIN}"
+	@if [ -n "$$DOMAIN" ]; then \
+		echo "  - Accessible at: https://bookwyrm.$$DOMAIN"; \
+	else \
+		echo "  - Accessible at: https://bookwyrm.YOUR-DOMAIN (set DOMAIN in .env)"; \
+	fi
 	@echo "  - Also available at: http://$$SERVER_IP:8000 (direct access)"
 	@echo ""
 	@echo "See docs/BOOKWYRM.md for integration details"
@@ -425,7 +434,11 @@ glance-setup:
 	@$(COMPOSE) up -d glance
 	@echo ""
 	@echo "✓ Glance setup complete!"
-	@echo "Access at: https://glance.$${DOMAIN}"
+	@if [ -n "$$DOMAIN" ]; then \
+		echo "Access at: https://glance.$$DOMAIN"; \
+	else \
+		echo "Access at: https://glance.YOUR-DOMAIN (set DOMAIN in .env)"; \
+	fi
 	@echo ""
 	@echo "To customize your dashboard, edit: data/glance/glance.yml"
 	@echo "Then restart: docker compose restart glance"
@@ -442,10 +455,14 @@ adguard-setup: env-check
 	@echo ""
 	@echo "Testing DNS resolution..."
 	@sleep 3
-	@echo "Testing: glance.$${DOMAIN}"
-	@dig @$$SERVER_IP glance.$${DOMAIN} +short || true
-	@echo ""
-	@echo "All *.$${DOMAIN} domains should now resolve to $$SERVER_IP"
+	@if [ -n "$$DOMAIN" ]; then \
+		echo "Testing: glance.$$DOMAIN"; \
+		dig @$$SERVER_IP glance.$$DOMAIN +short || true; \
+		echo ""; \
+		echo "All *.$$DOMAIN domains should now resolve to $$SERVER_IP"; \
+	else \
+		echo "ERROR: DOMAIN not set in .env"; \
+	fi
 	@echo "Configure network devices to use $$SERVER_IP as DNS server"
 	@echo "Note: AdGuard DNS is configured for local resolution only"
 
