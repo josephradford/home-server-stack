@@ -294,7 +294,7 @@ services:
       # Logging
       - "--accesslog=true"
       - "--accesslog.filepath=/var/log/traefik/access.log"
-      - "--log.level=INFO"
+      - "--log.level=DEBUG"
 
     ports:
       - "${SERVER_IP}:80:80"
