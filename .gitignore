@@ -5,7 +5,7 @@
 data/
 
 # Cloned repositories (managed by Makefile or external)
-bookwyrm/
+/bookwyrm/
 
 # External projects (users clone these separately)
 external/
