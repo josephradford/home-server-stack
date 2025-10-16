@@ -284,11 +284,12 @@ bookwyrm-setup:
 		echo "✓ Bookwyrm wrapper cloned"; \
 		echo ""; \
 	fi
-	@if [ ! -f "$(BOOKWYRM_DIR)/.env" ]; then \
-		echo "Configuring Bookwyrm environment..."; \
-		./scripts/setup-bookwyrm-env.sh; \
-		echo ""; \
+	@echo "Configuring Bookwyrm environment..."
+	@if [ -f "$(BOOKWYRM_DIR)/.env" ]; then \
+		echo "⚠️  Existing .env found - backing up and regenerating with Traefik settings"; \
 	fi
+	@./scripts/setup-bookwyrm-env.sh
+	@echo ""
 	@echo "Applying Traefik integration configuration..."
 	@cp config/bookwyrm/docker-compose.override.yml $(BOOKWYRM_DIR)/docker-compose.override.yml
 	@echo "✓ Traefik configuration applied"
