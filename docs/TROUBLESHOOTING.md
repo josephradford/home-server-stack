@@ -818,6 +818,159 @@ docker system prune -a
 sudo dmesg | grep -i error
 ```
 
+## Domain Access Issues
+
+### DNS Not Resolving
+
+**Symptom:** `nslookup servicename.home.local` fails or returns wrong IP
+
+**Solutions:**
+```bash
+# 1. Verify AdGuard DNS rewrites
+cat data/adguard/conf/AdGuardHome.yaml | grep -A 5 rewrites
+
+# 2. Verify client DNS settings
+# Check your device is using SERVER_IP as DNS
+
+# 3. Flush DNS cache on client
+# Windows: ipconfig /flushdns
+# macOS: sudo dscacheutil -flushcache
+# Linux: sudo systemd-resolve --flush-caches
+
+# 4. Test DNS directly
+dig @SERVER_IP servicename.home.local +short
+# Should return: SERVER_IP
+```
+
+### SSL Certificate Issues
+
+**Symptom:** Browser blocks access, can't proceed past certificate warning
+
+**Solutions:**
+
+**Chrome "NET::ERR_CERT_INVALID" (can't proceed):**
+- Type: `thisisunsafe` (no spaces) while on the error page
+- Or use Firefox/Safari which allow easier bypassing
+
+**Add certificate exception:**
+1. Click certificate error details
+2. Export certificate
+3. Add to system trust store (advanced users only)
+
+**Use mkcert for trusted local certificates (recommended for heavy use):**
+```bash
+# Install mkcert
+# macOS: brew install mkcert
+# Linux: apt install mkcert / yum install mkcert
+
+# Create local CA
+mkcert -install
+
+# Generate certificates
+mkcert -cert-file ssl/server.crt -key-file ssl/server.key "*.home.local" localhost 127.0.0.1
+
+# Configure Traefik to use these certificates (see CONFIGURATION.md)
+```
+
+### Service Not Accessible via Domain
+
+**Symptom:** `https://servicename.home.local` returns 404 or 502
+
+**Solutions:**
+```bash
+# 1. Check service is running
+docker ps | grep servicename
+
+# 2. Check Traefik discovered the service
+docker logs traefik | grep servicename
+
+# 3. Verify Traefik labels
+docker inspect servicename | grep -A 20 Labels
+
+# 4. Check service port matches label
+docker port servicename
+
+# 5. Test direct container access
+docker exec traefik wget -qO- http://servicename:PORT
+
+# 6. Check Traefik routers
+curl http://localhost:8080/api/http/routers | jq
+```
+
+## Traefik Issues
+
+### 502 Bad Gateway
+
+**Symptom:** Service returns 502 Bad Gateway error
+
+**Causes & Solutions:**
+
+1. **Service not running:**
+   ```bash
+   docker ps | grep servicename
+   docker compose up -d servicename
+   ```
+
+2. **Wrong port in Traefik label:**
+   ```bash
+   # Check service's internal port
+   docker port servicename
+
+   # Verify label matches
+   docker inspect servicename | grep "loadbalancer.server.port"
+   ```
+
+3. **Service not on same network:**
+   ```bash
+   # Check service is on homeserver network
+   docker inspect servicename | grep -A 10 Networks
+   ```
+
+4. **Service not ready:**
+   ```bash
+   # Check health check
+   docker inspect servicename | grep -A 10 Health
+
+   # Give service more time to start
+   docker logs servicename
+   ```
+
+### Traefik Not Discovering Service
+
+**Symptom:** Service doesn't appear in Traefik dashboard
+
+**Solutions:**
+```bash
+# 1. Verify traefik.enable=true label
+docker inspect servicename | grep "traefik.enable"
+
+# 2. Verify service on homeserver network
+docker inspect servicename | grep -A 10 Networks
+
+# 3. Restart service to trigger discovery
+docker compose up -d servicename
+
+# 4. Check Traefik logs for errors
+docker logs traefik | grep -i error
+
+# 5. Verify Docker socket mounted
+docker inspect traefik | grep docker.sock
+```
+
+### Redirect Loop
+
+**Symptom:** Browser shows "Too many redirects" error
+
+**Solutions:**
+```bash
+# Check for conflicting redirect configurations
+# Remove duplicate redirect middleware
+# Ensure service doesn't force its own HTTPS redirect
+
+# Check Traefik labels for duplicate redirects
+docker inspect servicename | grep redirect
+```
+
 ## Common Error Messages
 
 ### "bind: address already in use"

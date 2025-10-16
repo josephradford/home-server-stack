@@ -372,6 +372,64 @@ docker compose logs [service_name]
 4. Update `.env` with actual values
 5. Deploy: `docker compose up -d`
 
+## Managing Traefik Reverse Proxy
+
+### Viewing Traefik Status
+
+```bash
+# Check Traefik container
+docker ps | grep traefik
+
+# View Traefik logs
+docker logs traefik
+
+# View access logs
+tail -f data/traefik/logs/access.log
+
+# Check Traefik health
+docker inspect traefik | grep -A 10 Health
+```
+
+### Reloading Traefik Configuration
+
+Traefik automatically detects Docker label changes. Just restart the service:
+
+```bash
+# Add/update labels in docker-compose.yml
+nano docker-compose.yml
+
+# Restart service with new labels
+docker compose up -d servicename
+
+# Traefik discovers changes automatically (no Traefik restart needed)
+```
+
+### Traefik Troubleshooting
+
+**Check active routers:**
+```bash
+docker exec traefik traefik healthcheck
+curl http://localhost:8080/api/http/routers | jq
+```
+
+**View service discovery:**
+```bash
+docker exec traefik cat /etc/traefik/traefik.yml
+```
+
+**Test routing manually:**
+```bash
+# Test HTTP redirect
+curl -I http://servicename.home.local
+
+# Test HTTPS access
+curl -Ik https://servicename.home.local
+```
+
+### Common Traefik Issues
+
+See [TROUBLESHOOTING.md](TROUBLESHOOTING.md#traefik-issues) for detailed solutions.
+
 ## Performance Optimization
 
 ### Limit Resource Usage

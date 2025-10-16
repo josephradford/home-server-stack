@@ -48,8 +48,10 @@ make bookwyrm-setup
 ```
 
 **Note:**
-- SSL certificates for n8n are automatically generated during `make setup`
-- To regenerate with a custom domain: `make regenerate-ssl DOMAIN=your-domain.com`
+- SSL certificates are self-signed for local network use
+- You'll need to accept security warnings in your browser on first visit
+- This is normal and expected for local-only services
+- For browsers that don't allow proceeding, see [TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md#ssl-certificate-issues)
 - The first `make setup` will deploy all core services and monitoring, and clone the Bookwyrm wrapper
 - Configure and deploy Bookwyrm separately using `make bookwyrm-setup`
 
@@ -64,16 +66,27 @@ make bookwyrm-setup
 - See `make help` for complete list of commands
 
 **Access Services:**
-- AdGuard Home: `http://SERVER_IP:80`
+
+All services are accessible via domain names on your local network:
+
+- **Traefik Dashboard:** `https://traefik.home.local`
+- **AdGuard Home:** `https://adguard.home.local` (DNS admin)
+- **n8n:** `https://n8n.home.local` (Workflow automation)
+- **Glance:** `https://glance.home.local` (Dashboard)
+- **HortusFox:** `https://hortusfox.home.local` (Plant management)
+- **Habitica:** `https://habitica.home.local` (Habit tracker)
+- **Bookwyrm:** `https://bookwyrm.home.local` (Book tracking)
+- **Ollama API:** `https://ollama.home.local` (AI models)
+- **Grafana:** `https://grafana.home.local` (Monitoring)
+- **Prometheus:** `https://prometheus.home.local` (Metrics)
+- **Alertmanager:** `https://alerts.home.local` (Alerts)
+
+**Note:** Services are accessible via domain names thanks to Traefik reverse proxy and AdGuard Home DNS. Your devices must use AdGuard Home as their DNS server (configured automatically if DHCP points to the server).
+
+**Legacy Access:** Services are still accessible via IP:port for backward compatibility:
+- AdGuard Home: `http://SERVER_IP:8888`
 - n8n: `https://SERVER_IP:5678`
-- Ollama API: `http://SERVER_IP:11434`
-- Habitica: `http://SERVER_IP:8080`
-- Bookwyrm: `http://SERVER_IP:8000`
-- HortusFox: `http://SERVER_IP:8181`
-- Glance: `http://SERVER_IP:8282`
-- Grafana: `http://SERVER_IP:3001`
-- Prometheus: `http://SERVER_IP:9090`
-- Alertmanager: `http://SERVER_IP:9093`
+- And so on... (See [SERVICES.md](SERVICES.md) for complete list)
 
 See **[docs/SETUP.md](docs/SETUP.md)** for detailed installation instructions.
 
@@ -154,4 +167,4 @@ This project is open source. Individual services maintain their own licenses:
 ---
 
 **Project Status:** Active Development
-**Latest Update:** 2025-01-07
+**Latest Update:** 2025-10-16

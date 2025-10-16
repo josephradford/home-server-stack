@@ -433,7 +433,7 @@ adguard-setup: env-check
 	@echo "Testing DNS resolution..."
 	@sleep 3
 	@echo "Testing: glance.home.local"
-	@dig @127.0.0.1 glance.home.local +short || true
+	@dig @$$SERVER_IP glance.home.local +short || true
 	@echo ""
 	@echo "All *.home.local domains should now resolve to $$SERVER_IP"
 	@echo "Configure network devices to use $$SERVER_IP as DNS server"
