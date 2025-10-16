@@ -4,7 +4,7 @@
 .PHONY: help setup update start stop restart logs build pull status clean purge validate env-check
 .PHONY: logs-n8n logs-wireguard logs-ollama logs-habitica logs-hortusfox logs-glance
 .PHONY: bookwyrm-setup bookwyrm-start bookwyrm-stop bookwyrm-restart bookwyrm-status bookwyrm-logs bookwyrm-update bookwyrm-init
-.PHONY: glance-setup adguard-setup test-domain-access
+.PHONY: glance-setup adguard-setup traefik-setup test-domain-access
 
 # Compose file flags - always include monitoring and habitica
 COMPOSE := docker compose -f docker-compose.yml -f docker-compose.monitoring.yml -f docker-compose.habitica.yml
@@ -53,6 +53,7 @@ help:
 	@echo "Service Configuration:"
 	@echo "  make glance-setup       - Create default Glance configuration"
 	@echo "  make adguard-setup      - Configure DNS rewrites for domain-based access"
+	@echo "  make traefik-setup      - Create acme.json for Let's Encrypt certificates"
 	@echo ""
 	@echo "Testing & Validation:"
 	@echo "  make test-domain-access - Test domain-based access for all services"
@@ -95,19 +96,22 @@ pull: validate
 setup: env-check validate
 	@echo "Starting first-time setup..."
 	@echo ""
-	@echo "Step 1/5: Pulling pre-built images..."
+	@echo "Step 1/6: Setting up Traefik certificates..."
+	@$(MAKE) traefik-setup
+	@echo ""
+	@echo "Step 2/6: Pulling pre-built images..."
 	@$(COMPOSE) pull --ignore-pull-failures
 	@echo ""
-	@echo "Step 2/5: Starting services..."
+	@echo "Step 3/6: Starting services..."
 	@$(COMPOSE) up -d
 	@echo ""
-	@echo "Step 3/5: Configuring AdGuard DNS rewrites..."
+	@echo "Step 4/6: Configuring AdGuard DNS rewrites..."
 	@$(MAKE) adguard-setup
 	@echo ""
-	@echo "Step 4/5: Setting up Glance dashboard..."
+	@echo "Step 5/6: Setting up Glance dashboard..."
 	@$(MAKE) glance-setup
 	@echo ""
-	@echo "Step 5/5: Setting up Bookwyrm..."
+	@echo "Step 6/6: Setting up Bookwyrm..."
 	@if [ ! -d "$(BOOKWYRM_DIR)" ]; then \
 		echo "Cloning bookwyrm-docker wrapper..."; \
 		mkdir -p external; \
@@ -441,6 +445,31 @@ adguard-setup: env-check
 	@echo "All *.$${DOMAIN} domains should now resolve to $$SERVER_IP"
 	@echo "Configure network devices to use $$SERVER_IP as DNS server"
 	@echo "Note: AdGuard DNS is configured for local resolution only"
+
+# Traefik setup - Create acme.json for Let's Encrypt certificates
+traefik-setup:
+	@echo "Setting up Traefik for Let's Encrypt certificates..."
+	@mkdir -p data/traefik/certs
+	@mkdir -p data/traefik/logs
+	@if [ -f "data/traefik/certs/acme.json" ]; then \
+		echo "⚠️  Warning: data/traefik/certs/acme.json already exists"; \
+		echo "This file contains your Let's Encrypt certificates."; \
+		echo "Backup existing file? (y/n)"; \
+		read backup; \
+		if [ "$$backup" = "y" ]; then \
+			cp data/traefik/certs/acme.json data/traefik/certs/acme.json.backup.$$(date +%Y%m%d-%H%M%S); \
+			echo "✓ Backup created"; \
+		fi; \
+	fi
+	@touch data/traefik/certs/acme.json
+	@chmod 600 data/traefik/certs/acme.json
+	@echo "✓ Created data/traefik/certs/acme.json with correct permissions (600)"
+	@echo ""
+	@echo "Next steps:"
+	@echo "  1. Ensure DOMAIN, ACME_EMAIL, and GANDIV5_API_KEY are set in .env"
+	@echo "  2. Configure DNS at Gandi to point your domain to this server"
+	@echo "  3. Deploy Traefik: docker compose up -d traefik"
+	@echo "  4. Monitor certificate generation: docker logs traefik -f | grep -i acme"
 
 # Test domain-based access for all services
 test-domain-access: env-check
