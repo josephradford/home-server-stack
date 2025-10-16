@@ -53,10 +53,10 @@ services:
       test:
         - CMD-SHELL
         - wget --quiet --tries=1 --spider http://localhost:3000/api/v3/status || exit 1
-      interval: 30s
+      interval: 10s
       timeout: 10s
-      retries: 3
-      start_period: 40s
+      retries: 10
+      start_period: 60s
 
   habitica-client:
     image: awinterstein/habitica-client:${HABITICA_VERSION:-latest}
