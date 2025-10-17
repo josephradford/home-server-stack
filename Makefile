@@ -93,12 +93,17 @@ setup: env-check validate
 	@echo "✓ Setup complete! Services are running."
 	@echo ""
 	@echo "Access your services via domain names:"
-	@echo "  - Traefik Dashboard: https://traefik.home.local"
-	@echo "  - AdGuard Home:      https://adguard.home.local"
-	@echo "  - n8n:               https://n8n.home.local"
-	@echo "  - Grafana:           https://grafana.home.local"
-	@echo "  - Prometheus:        https://prometheus.home.local"
-	@echo "  - Alertmanager:      https://alerts.home.local"
+	@if [ -n "$$DOMAIN" ]; then \
+		echo "  - Traefik Dashboard: https://traefik.$$DOMAIN"; \
+		echo "  - AdGuard Home:      https://adguard.$$DOMAIN"; \
+		echo "  - n8n:               https://n8n.$$DOMAIN"; \
+		echo "  - Grafana:           https://grafana.$$DOMAIN"; \
+		echo "  - Prometheus:        https://prometheus.$$DOMAIN"; \
+		echo "  - Alertmanager:      https://alerts.$$DOMAIN"; \
+	else \
+		echo "  ERROR: DOMAIN not set in .env file"; \
+		echo "  Please set DOMAIN=your-domain.com in .env"; \
+	fi
 	@echo ""
 	@echo "Note: First-time container initialization may take a few minutes."
 	@echo "Check logs with: make logs"
@@ -204,10 +209,14 @@ adguard-setup: env-check
 	@echo ""
 	@echo "Testing DNS resolution..."
 	@sleep 3
-	@echo "Testing: glance.home.local"
-	@dig @$$SERVER_IP glance.home.local +short || true
-	@echo ""
-	@echo "All *.home.local domains should now resolve to $$SERVER_IP"
+	@if [ -n "$$DOMAIN" ]; then \
+		echo "Testing: n8n.$$DOMAIN"; \
+		dig @$$SERVER_IP n8n.$$DOMAIN +short || true; \
+		echo ""; \
+		echo "All *.$$DOMAIN domains should now resolve to $$SERVER_IP"; \
+	else \
+		echo "ERROR: DOMAIN not set in .env"; \
+	fi
 	@echo "Configure network devices to use $$SERVER_IP as DNS server"
 
 # Setup SSL certificate storage
