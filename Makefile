@@ -215,9 +215,11 @@ purge:
 	@echo "  - n8n workflows and database"
 	@echo "  - WireGuard VPN configs"
 	@echo "  - All monitoring data (Grafana, Prometheus)"
+	@echo "  - Let's Encrypt SSL certificates and renewal hooks"
+	@echo "  - Traefik configuration files"
 	@echo ""
 	@echo "💡 RECOMMENDATION: Back up your data before proceeding!"
-	@echo "   tar -czf backup-$$(date +%Y%m%d-%H%M%S).tar.gz ./data/"
+	@echo "   tar -czf backup-$$(date +%Y%m%d-%H%M%S).tar.gz ./data/ ./config/"
 	@echo ""
 	@echo "Press Ctrl+C to cancel, or Enter to continue..."
 	@read confirm
@@ -233,6 +235,12 @@ purge:
 	@$(COMPOSE) down -v
 	@echo "Removing all data directories..."
 	@rm -rf ./data/
+	@echo "Removing Traefik configuration..."
+	@rm -rf ./config/
+	@echo "Removing Let's Encrypt certificates and configuration..."
+	@sudo rm -rf /etc/letsencrypt/
+	@echo "Removing SSL renewal hook..."
+	@sudo rm -f /var/log/certbot-traefik-reload.log
 	@echo "Removing all Docker images..."
 	@docker image prune -af
 	@echo "✓ Purge complete - ALL DATA DELETED"
