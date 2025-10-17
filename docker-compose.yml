@@ -19,7 +19,7 @@ services:
       - "traefik.http.routers.adguard.rule=Host(`adguard.${DOMAIN}`)"
       - "traefik.http.routers.adguard.entrypoints=websecure"
       - "traefik.http.routers.adguard.tls=true"
-      - "traefik.http.routers.adguard.tls.certresolver=letsencrypt"
+      # Using file provider certificate (wildcard from certbot)
       - "traefik.http.services.adguard.loadbalancer.server.port=80"
 
   n8n-init:
@@ -67,7 +67,7 @@ services:
       - "traefik.http.routers.n8n.rule=Host(`n8n.${DOMAIN}`)"
       - "traefik.http.routers.n8n.entrypoints=websecure"
       - "traefik.http.routers.n8n.tls=true"
-      - "traefik.http.routers.n8n.tls.certresolver=letsencrypt"
+      # Using file provider certificate (wildcard from certbot)
       - "traefik.http.services.n8n.loadbalancer.server.port=5678"
 
   wireguard:
@@ -191,12 +191,8 @@ services:
       - "traefik.http.routers.dashboard.rule=Host(`traefik.${DOMAIN}`)"
       - "traefik.http.routers.dashboard.entrypoints=websecure"
       - "traefik.http.routers.dashboard.tls=true"
-      - "traefik.http.routers.dashboard.tls.certresolver=letsencrypt"
+      # Using file provider certificate (wildcard from certbot)
       - "traefik.http.routers.dashboard.service=api@internal"
-
-      # Request wildcard certificate for *.DOMAIN
-      - "traefik.http.routers.dashboard.tls.domains[0].main=${DOMAIN}"
-      - "traefik.http.routers.dashboard.tls.domains[0].sans=*.${DOMAIN}"
 
       # Dashboard middleware (basic auth)
       # Uses TRAEFIK_DASHBOARD_USERS from .env (htpasswd format: admin:$apr1$...)
