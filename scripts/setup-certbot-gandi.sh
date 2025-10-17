@@ -70,7 +70,8 @@ if ! python3 -c "import certbot_dns_gandi" 2>/dev/null; then
 
     echo "Installing certbot-dns-gandi plugin via pip..."
     # Use --break-system-packages for Ubuntu 24.04+ which uses externally-managed Python
-    sudo pip3 install --break-system-packages certbot-dns-gandi
+    # Use --ignore-installed to avoid conflicts with Debian-managed packages
+    sudo pip3 install --break-system-packages --ignore-installed certbot-dns-gandi
     echo -e "${GREEN}✓${NC} Gandi DNS plugin installed"
 else
     echo -e "${GREEN}✓${NC} Gandi DNS plugin already installed"
