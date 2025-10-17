@@ -18,6 +18,7 @@ fi
 CONFIG_DIR="data/adguard/conf"
 CONFIG_FILE="$CONFIG_DIR/AdGuardHome.yaml"
 SERVER_IP="${SERVER_IP:-192.168.1.100}"
+DOMAIN="${DOMAIN:-home.local}"
 ADMIN_USERNAME="${ADGUARD_USERNAME:-admin}"
 ADMIN_PASSWORD="${ADGUARD_PASSWORD}"
 
@@ -50,6 +51,7 @@ if [ -z "$ADMIN_PASSWORD" ] || [ "$ADMIN_PASSWORD" = "your_secure_adguard_passwo
 fi
 
 echo "Using SERVER_IP: $SERVER_IP"
+echo "Using DOMAIN: $DOMAIN"
 echo "Using admin username: $ADMIN_USERNAME"
 echo ""
 
@@ -240,7 +242,7 @@ filtering:
   parental_block_host: family-block.dns.adguard.com
   safebrowsing_block_host: standard-block.dns.adguard.com
   rewrites:
-    - domain: '*.home.local'
+    - domain: '*.$DOMAIN'
       answer: $SERVER_IP
   safe_fs_patterns:
     - /opt/adguardhome/work/data/userfilters/*
@@ -282,8 +284,8 @@ echo -e "${GREEN}✓${NC} Configuration file created: $CONFIG_FILE"
 echo ""
 
 # Verify DNS rewrite was added
-if grep -q "'\*.home.local'" "$CONFIG_FILE"; then
-    echo -e "${GREEN}✓${NC} DNS rewrite configured: *.home.local → $SERVER_IP"
+if grep -q "'\*.$DOMAIN'" "$CONFIG_FILE"; then
+    echo -e "${GREEN}✓${NC} DNS rewrite configured: *.$DOMAIN → $SERVER_IP"
 else
     echo -e "${RED}ERROR: DNS rewrite not found in configuration${NC}"
     exit 1
@@ -293,20 +295,16 @@ echo ""
 echo "Configuration complete!"
 echo ""
 echo "DNS rewrites configured for domain-based access:"
-echo "  - glance.home.local      → $SERVER_IP"
-echo "  - grafana.home.local     → $SERVER_IP"
-echo "  - hortusfox.home.local   → $SERVER_IP"
-echo "  - traefik.home.local     → $SERVER_IP"
-echo "  - n8n.home.local         → $SERVER_IP"
-echo "  - bookwyrm.home.local    → $SERVER_IP"
-echo "  - ollama.home.local      → $SERVER_IP"
-echo "  - prometheus.home.local  → $SERVER_IP"
-echo "  - alerts.home.local      → $SERVER_IP"
-echo "  - adguard.home.local     → $SERVER_IP"
+echo "  - traefik.$DOMAIN     → $SERVER_IP"
+echo "  - adguard.$DOMAIN     → $SERVER_IP"
+echo "  - n8n.$DOMAIN         → $SERVER_IP"
+echo "  - grafana.$DOMAIN     → $SERVER_IP"
+echo "  - prometheus.$DOMAIN  → $SERVER_IP"
+echo "  - alerts.$DOMAIN      → $SERVER_IP"
 echo ""
 echo "Next steps:"
 echo "  1. Restart AdGuard: docker compose restart adguard"
-echo "  2. Test DNS resolution: dig @127.0.0.1 glance.home.local +short"
+echo "  2. Test DNS resolution: dig @$SERVER_IP n8n.$DOMAIN +short"
 echo "  3. Configure clients to use $SERVER_IP as DNS server"
 echo ""
 echo -e "${GREEN}✓ AdGuard admin credentials configured from .env file${NC}"

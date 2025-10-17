@@ -93,7 +93,8 @@ setup: env-check validate
 	@echo "✓ Setup complete! Services are running."
 	@echo ""
 	@echo "Access your services via domain names:"
-	@if [ -n "$$DOMAIN" ]; then \
+	@set -a; . ./.env; set +a; \
+	if [ -n "$$DOMAIN" ]; then \
 		echo "  - Traefik Dashboard: https://traefik.$$DOMAIN"; \
 		echo "  - AdGuard Home:      https://adguard.$$DOMAIN"; \
 		echo "  - n8n:               https://n8n.$$DOMAIN"; \
@@ -209,7 +210,8 @@ adguard-setup: env-check
 	@echo ""
 	@echo "Testing DNS resolution..."
 	@sleep 3
-	@if [ -n "$$DOMAIN" ]; then \
+	@set -a; . ./.env; set +a; \
+	if [ -n "$$DOMAIN" ]; then \
 		echo "Testing: n8n.$$DOMAIN"; \
 		dig @$$SERVER_IP n8n.$$DOMAIN +short || true; \
 		echo ""; \
@@ -217,7 +219,8 @@ adguard-setup: env-check
 	else \
 		echo "ERROR: DOMAIN not set in .env"; \
 	fi
-	@echo "Configure network devices to use $$SERVER_IP as DNS server"
+	@set -a; . ./.env; set +a; \
+	echo "Configure network devices to use $$SERVER_IP as DNS server"
 
 # Setup SSL certificate storage
 setup-certs:
