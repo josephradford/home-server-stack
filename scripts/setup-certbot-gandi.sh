@@ -63,12 +63,13 @@ echo ""
 
 # Step 2: Install Gandi DNS plugin
 echo -e "${YELLOW}Step 2/5: Installing certbot-dns-gandi plugin...${NC}"
-if ! snap list certbot-dns-gandi &> /dev/null; then
-    echo "Configuring snap to trust certbot plugins..."
-    sudo snap set certbot trust-plugin-with-root=ok
+if ! python3 -c "import certbot_dns_gandi" 2>/dev/null; then
+    echo "Installing python3-pip if needed..."
+    sudo apt-get update -qq
+    sudo apt-get install -y python3-pip python3-venv
 
-    echo "Installing certbot-dns-gandi plugin..."
-    sudo snap install certbot-dns-gandi
+    echo "Installing certbot-dns-gandi plugin via pip..."
+    sudo pip3 install certbot-dns-gandi
     echo -e "${GREEN}✓${NC} Gandi DNS plugin installed"
 else
     echo -e "${GREEN}✓${NC} Gandi DNS plugin already installed"
