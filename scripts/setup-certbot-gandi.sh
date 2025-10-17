@@ -127,7 +127,7 @@ if sudo certbot certificates 2>/dev/null | grep -q "Domains:.*$DOMAIN"; then
 fi
 
 sudo certbot certonly \
-  --dns-gandi \
+  --authenticator dns-gandi \
   --dns-gandi-credentials "$GANDI_CREDS_FILE" \
   --dns-gandi-propagation-seconds 60 \
   -d "$DOMAIN" \
