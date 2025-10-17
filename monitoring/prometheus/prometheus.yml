@@ -28,14 +28,3 @@ scrape_configs:
     static_configs:
       - targets: ['adguard:3000']
     metrics_path: '/control/stats'
-
-  - job_name: 'n8n'
-    static_configs:
-      - targets: ['n8n:5678']
-    scheme: https
-    tls_config:
-      insecure_skip_verify: true
-
-  - job_name: 'ollama'
-    static_configs:
-      - targets: ['ollama:11434']

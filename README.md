@@ -6,13 +6,9 @@ A complete self-hosted infrastructure for home automation, AI, and network servi
 
 **Core Services:**
 - **[AdGuard Home](https://github.com/AdguardTeam/AdGuardHome)** - Network-wide ad blocking and DNS server
-- **[n8n](https://github.com/n8n-io/n8n)** - Workflow automation platform with AI capabilities
-- **[Ollama](https://github.com/ollama/ollama)** - Local AI models (deepseek-coder:6.7b, llama3.2:3b)
+- **[n8n](https://github.com/n8n-io/n8n)** - Workflow automation platform
 - **[WireGuard](https://github.com/wireguard)** - VPN for secure remote access
-- **[Habitica](https://github.com/HabitRPG/habitica)** - Gamified habit and task tracker
-- **[Bookwyrm](https://github.com/bookwyrm-social/bookwyrm)** - Social reading and book tracking (via [external wrapper](https://github.com/josephradford/bookwyrm-docker))
-- **[HortusFox](https://github.com/danielbrendel/hortusfox-web)** - Collaborative plant management
-- **[Glance](https://github.com/glanceapp/glance)** - Personal dashboard and homepage
+- **[Traefik](https://github.com/traefik/traefik)** - Reverse proxy for domain-based service access
 
 **Monitoring Stack:**
 - **[Grafana](https://github.com/grafana/grafana)** - Metrics visualization and dashboards
@@ -37,14 +33,6 @@ nano .env  # Update SERVER_IP, TIMEZONE, passwords
 # 3. Run first-time setup (includes all services + monitoring)
 # SSL certificates are automatically generated
 make setup
-
-# 4. Configure Bookwyrm (one-time)
-cd external/bookwyrm-docker
-cp .env.example .env
-nano .env  # Configure Bookwyrm settings
-
-# 5. Deploy Bookwyrm
-make bookwyrm-setup
 ```
 
 **Note:**
@@ -52,13 +40,10 @@ make bookwyrm-setup
 - You'll need to accept security warnings in your browser on first visit
 - This is normal and expected for local-only services
 - For browsers that don't allow proceeding, see [TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md#ssl-certificate-issues)
-- The first `make setup` will deploy all core services and monitoring, and clone the Bookwyrm wrapper
-- Configure and deploy Bookwyrm separately using `make bookwyrm-setup`
 
 **Using the Makefile:**
 - `make help` - Show all available commands
 - `make setup` - First time setup (all services + monitoring)
-- `make bookwyrm-setup` - Deploy Bookwyrm (after configuring .env)
 - `make update` - Update all services to latest versions
 - `make start` - Start all services
 - `make stop` - Stop all services
@@ -72,11 +57,6 @@ All services are accessible via domain names on your local network:
 - **Traefik Dashboard:** `https://traefik.home.local`
 - **AdGuard Home:** `https://adguard.home.local` (DNS admin)
 - **n8n:** `https://n8n.home.local` (Workflow automation)
-- **Glance:** `https://glance.home.local` (Dashboard)
-- **HortusFox:** `https://hortusfox.home.local` (Plant management)
-- **Habitica:** `https://habitica.home.local` (Habit tracker)
-- **Bookwyrm:** `https://bookwyrm.home.local` (Book tracking)
-- **Ollama API:** `https://ollama.home.local` (AI models)
 - **Grafana:** `https://grafana.home.local` (Monitoring)
 - **Prometheus:** `https://prometheus.home.local` (Metrics)
 - **Alertmanager:** `https://alerts.home.local` (Alerts)
@@ -85,7 +65,6 @@ All services are accessible via domain names on your local network:
 
 **Direct IP Access:** Some services remain accessible via IP:port for specific operational needs:
 - AdGuard Home: `http://SERVER_IP:8888` (emergency access if Traefik fails)
-- Ollama API: `http://SERVER_IP:11434` (direct API access for AI workloads)
 - Prometheus: `http://SERVER_IP:9090` (metrics scraping)
 - Alertmanager: `http://SERVER_IP:9093` (alert management)
 - See [SERVICES.md](SERVICES.md) for complete list
@@ -111,7 +90,6 @@ See **[docs/SETUP.md](docs/SETUP.md)** for detailed installation instructions.
 
 ### Advanced
 - **[Remote Access Setup](docs/REMOTE_ACCESS.md)** - Port forwarding and VPN configuration
-- **[AI Models Guide](docs/AI_MODELS.md)** - Ollama model management
 - **[Architecture Overview](docs/ARCHITECTURE.md)** - System design and data persistence
 
 ### Implementation Tickets
@@ -153,7 +131,7 @@ See **[docs/REQUIREMENTS.md](docs/REQUIREMENTS.md)** for detailed requirements.
 This project is open source. Individual services maintain their own licenses:
 - AdGuard Home: GPL-3.0
 - n8n: Fair-code (Sustainable Use License)
-- Ollama: MIT
+- Traefik: MIT
 - Grafana: AGPL-3.0
 - Prometheus: Apache-2.0
 
@@ -164,7 +142,7 @@ This project is open source. Individual services maintain their own licenses:
 - **Service-specific docs**:
   - [AdGuard Home](https://adguard.com/kb/)
   - [n8n](https://docs.n8n.io/)
-  - [Ollama](https://ollama.ai/)
+  - [Traefik](https://doc.traefik.io/traefik/)
 
 ---
 

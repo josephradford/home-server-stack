@@ -2,26 +2,22 @@
 # Simplifies deployment and maintenance operations
 
 .PHONY: help setup update start stop restart logs build pull status clean purge validate env-check
-.PHONY: logs-n8n logs-wireguard logs-ollama logs-habitica logs-hortusfox logs-glance
-.PHONY: bookwyrm-setup bookwyrm-start bookwyrm-stop bookwyrm-restart bookwyrm-status bookwyrm-logs bookwyrm-update bookwyrm-init
-.PHONY: glance-setup adguard-setup test-domain-access
+.PHONY: logs-n8n logs-wireguard
+.PHONY: adguard-setup test-domain-access
 
-# Compose file flags - always include monitoring and habitica
-COMPOSE := docker compose -f docker-compose.yml -f docker-compose.monitoring.yml -f docker-compose.habitica.yml
-
-# Bookwyrm wrapper project location
-BOOKWYRM_DIR := external/bookwyrm-docker
+# Compose file flags - always include monitoring
+COMPOSE := docker compose -f docker-compose.yml -f docker-compose.monitoring.yml
 
 # Default target - show help
 help:
 	@echo "Home Server Stack - Available Commands"
 	@echo ""
 	@echo "Setup & Deployment:"
-	@echo "  make setup              - First time setup (all services + monitoring + Bookwyrm)"
+	@echo "  make setup              - First time setup (all services + monitoring)"
 	@echo "  make env-check          - Verify .env file exists and is configured"
 	@echo ""
 	@echo "Service Management:"
-	@echo "  make start              - Start all services (base + monitoring + Bookwyrm)"
+	@echo "  make start              - Start all services (base + monitoring)"
 	@echo "  make stop               - Stop all services"
 	@echo "  make restart            - Restart all services"
 	@echo "  make status             - Show status of all services"
@@ -31,27 +27,12 @@ help:
 	@echo "  make pull               - Pull latest images"
 	@echo "  make build              - Build all services that require building"
 	@echo ""
-	@echo "Bookwyrm Management:"
-	@echo "  make bookwyrm-setup     - Setup Bookwyrm wrapper (auto-run during setup)"
-	@echo "  make bookwyrm-start     - Start Bookwyrm services (auto-run during start)"
-	@echo "  make bookwyrm-stop      - Stop Bookwyrm services (auto-run during stop)"
-	@echo "  make bookwyrm-restart   - Restart Bookwyrm services"
-	@echo "  make bookwyrm-status    - Show Bookwyrm status"
-	@echo "  make bookwyrm-logs      - Show Bookwyrm logs"
-	@echo "  make bookwyrm-update    - Update Bookwyrm (auto-run during update)"
-	@echo "  make bookwyrm-init      - Re-run Bookwyrm initialization"
-	@echo "  See docs/BOOKWYRM.md for integration details"
-	@echo ""
 	@echo "Logs & Debugging:"
 	@echo "  make logs               - Show logs from all services"
 	@echo "  make logs-n8n           - Show n8n logs only"
 	@echo "  make logs-wireguard     - Show WireGuard logs only"
-	@echo "  make logs-habitica      - Show Habitica logs only"
-	@echo "  make logs-hortusfox     - Show HortusFox logs only"
-	@echo "  make logs-glance        - Show Glance logs only"
 	@echo ""
 	@echo "Service Configuration:"
-	@echo "  make glance-setup       - Create default Glance configuration"
 	@echo "  make adguard-setup      - Configure DNS rewrites for domain-based access"
 	@echo ""
 	@echo "Testing & Validation:"
@@ -95,39 +76,14 @@ pull: validate
 setup: env-check validate
 	@echo "Starting first-time setup..."
 	@echo ""
-	@echo "Step 1/5: Pulling pre-built images..."
+	@echo "Step 1/3: Pulling pre-built images..."
 	@$(COMPOSE) pull --ignore-pull-failures
 	@echo ""
-	@echo "Step 2/5: Starting services..."
+	@echo "Step 2/3: Starting services..."
 	@$(COMPOSE) up -d
 	@echo ""
-	@echo "Step 3/5: Configuring AdGuard DNS rewrites..."
+	@echo "Step 3/3: Configuring AdGuard DNS rewrites..."
 	@$(MAKE) adguard-setup
-	@echo ""
-	@echo "Step 4/5: Setting up Glance dashboard..."
-	@$(MAKE) glance-setup
-	@echo ""
-	@echo "Step 5/5: Setting up Bookwyrm..."
-	@if [ ! -d "$(BOOKWYRM_DIR)" ]; then \
-		echo "Cloning bookwyrm-docker wrapper..."; \
-		mkdir -p external; \
-		cd external && git clone https://github.com/josephradford/bookwyrm-docker.git; \
-		echo "✓ Bookwyrm wrapper cloned"; \
-		echo ""; \
-		echo "⚠️  Bookwyrm requires configuration:"; \
-		echo "1. cd $(BOOKWYRM_DIR)"; \
-		echo "2. cp .env.example .env"; \
-		echo "3. Edit .env with your configuration"; \
-		echo "4. Run: make bookwyrm-setup"; \
-	elif [ ! -f "$(BOOKWYRM_DIR)/.env" ]; then \
-		echo "⚠️  Bookwyrm not configured yet:"; \
-		echo "1. cd $(BOOKWYRM_DIR)"; \
-		echo "2. cp .env.example .env"; \
-		echo "3. Edit .env with your configuration"; \
-		echo "4. Run: make bookwyrm-setup"; \
-	else \
-		$(MAKE) bookwyrm-setup; \
-	fi
 	@echo ""
 	@$(COMPOSE) ps
 	@echo ""
@@ -137,21 +93,10 @@ setup: env-check validate
 	@echo "  - Traefik Dashboard: https://traefik.home.local"
 	@echo "  - AdGuard Home:      https://adguard.home.local"
 	@echo "  - n8n:               https://n8n.home.local"
-	@echo "  - Glance:            https://glance.home.local"
-	@echo "  - HortusFox:         https://hortusfox.home.local"
 	@echo "  - Grafana:           https://grafana.home.local"
-	@echo "  - Habitica:          https://habitica.home.local"
-	@echo "  - Ollama API:        https://ollama.home.local"
 	@echo "  - Prometheus:        https://prometheus.home.local"
 	@echo "  - Alertmanager:      https://alerts.home.local"
-	@if [ -d "$(BOOKWYRM_DIR)" ] && [ -f "$(BOOKWYRM_DIR)/.env" ]; then \
-		echo "  - Bookwyrm:     http://$$SERVER_IP:8000"; \
-	fi
 	@echo ""
-	@if [ ! -d "$(BOOKWYRM_DIR)" ] || [ ! -f "$(BOOKWYRM_DIR)/.env" ]; then \
-		echo "⚠️  To complete setup, configure and start Bookwyrm (see above)"; \
-		echo ""; \
-	fi
 	@echo "Note: First-time container initialization may take a few minutes."
 	@echo "Check logs with: make logs"
 
@@ -165,8 +110,6 @@ update: env-check validate
 	@echo "Step 2/2: Restarting services with new images..."
 	@$(COMPOSE) up -d
 	@echo ""
-	@$(MAKE) bookwyrm-update
-	@echo ""
 	@echo "✓ Update complete! All services restarted with latest versions."
 	@echo ""
 	@echo "Check status with: make status"
@@ -175,13 +118,11 @@ update: env-check validate
 start: env-check
 	@echo "Starting all services..."
 	@$(COMPOSE) up -d
-	@$(MAKE) bookwyrm-start
 	@echo "✓ All services started"
 
 # Stop all services
 stop:
 	@echo "Stopping all services..."
-	@$(MAKE) bookwyrm-stop
 	@$(COMPOSE) down
 	@echo "✓ All services stopped"
 
@@ -189,14 +130,11 @@ stop:
 restart: env-check
 	@echo "Restarting all services..."
 	@$(COMPOSE) restart
-	@$(MAKE) bookwyrm-restart
 	@echo "✓ All services restarted"
 
 # Show service status
 status:
 	@$(COMPOSE) ps
-	@echo ""
-	@$(MAKE) bookwyrm-status
 
 # View logs from all services
 logs:
@@ -209,18 +147,6 @@ logs-n8n:
 logs-wireguard:
 	@$(COMPOSE) logs -f wireguard
 
-logs-ollama:
-	@$(COMPOSE) logs -f ollama
-
-logs-habitica:
-	@$(COMPOSE) logs -f habitica-client habitica-server habitica-mongo
-
-logs-hortusfox:
-	@$(COMPOSE) logs -f hortusfox hortusfox-db
-
-logs-glance:
-	@$(COMPOSE) logs -f glance
-
 # Clean up all services (preserves ./data/)
 clean:
 	@echo "WARNING: This will remove all containers and volumes!"
@@ -229,7 +155,6 @@ clean:
 	@read confirm
 	@echo "Stopping and removing all containers..."
 	@$(COMPOSE) down -v
-	@$(MAKE) bookwyrm-stop
 	@echo "✓ Cleanup complete (./data/ preserved)"
 
 # Purge everything including data (WARNING: destroys ALL data)
@@ -240,11 +165,7 @@ purge:
 	@echo "  - All Docker images (requires re-download on next setup)"
 	@echo "  - AdGuard configuration and logs"
 	@echo "  - n8n workflows and database"
-	@echo "  - Ollama AI models"
 	@echo "  - WireGuard VPN configs"
-	@echo "  - Habitica database"
-	@echo "  - HortusFox database and images"
-	@echo "  - Bookwyrm data"
 	@echo "  - All monitoring data (Grafana, Prometheus)"
 	@echo ""
 	@echo "💡 RECOMMENDATION: Back up your data before proceeding!"
@@ -262,164 +183,11 @@ purge:
 	fi
 	@echo "Stopping and removing all containers..."
 	@$(COMPOSE) down -v
-	@$(MAKE) bookwyrm-stop || true
 	@echo "Removing all data directories..."
 	@rm -rf ./data/
-	@echo "Removing Bookwyrm data..."
-	@if [ -d "$(BOOKWYRM_DIR)" ]; then \
-		cd $(BOOKWYRM_DIR) && $(MAKE) clean || true; \
-	fi
 	@echo "Removing all Docker images..."
 	@docker image prune -af
 	@echo "✓ Purge complete - ALL DATA DELETED"
-
-# Bookwyrm wrapper integration targets
-# These commands delegate to the external bookwyrm-docker wrapper project
-# Bookwyrm is a mandatory part of the stack
-
-bookwyrm-setup:
-	@if [ ! -d "$(BOOKWYRM_DIR)" ]; then \
-		echo "Cloning bookwyrm-docker wrapper..."; \
-		mkdir -p external; \
-		cd external && git clone https://github.com/josephradford/bookwyrm-docker.git; \
-		echo "✓ Bookwyrm wrapper cloned"; \
-		echo ""; \
-	fi
-	@echo "Configuring Bookwyrm environment..."
-	@if [ -f "$(BOOKWYRM_DIR)/.env" ]; then \
-		echo "⚠️  Existing .env found - backing up and regenerating with Traefik settings"; \
-	fi
-	@./scripts/setup-bookwyrm-env.sh
-	@echo ""
-	@echo "Applying Traefik integration configuration..."
-	@cp config/bookwyrm/docker-compose.override.yml $(BOOKWYRM_DIR)/docker-compose.override.yml
-	@echo "✓ Traefik configuration applied"
-	@echo ""
-	@echo "Setting up Bookwyrm via wrapper..."
-	@cd $(BOOKWYRM_DIR) && $(MAKE) setup
-	@echo ""
-	@echo "✓ Bookwyrm setup complete!"
-	@echo "  - Accessible at: https://bookwyrm.home.local"
-	@echo "  - Also available at: http://$$SERVER_IP:8000 (backward compatibility)"
-	@echo ""
-	@echo "See docs/BOOKWYRM.md for integration details"
-
-bookwyrm-start:
-	@if [ ! -d "$(BOOKWYRM_DIR)" ]; then \
-		echo "ERROR: Bookwyrm wrapper not found. Run: make setup"; \
-		exit 1; \
-	fi
-	@echo "Starting Bookwyrm..."
-	@cd $(BOOKWYRM_DIR) && $(MAKE) start
-
-bookwyrm-stop:
-	@if [ ! -d "$(BOOKWYRM_DIR)" ]; then \
-		echo "ERROR: Bookwyrm wrapper not found. Run: make setup"; \
-		exit 1; \
-	fi
-	@echo "Stopping Bookwyrm..."
-	@cd $(BOOKWYRM_DIR) && $(MAKE) stop
-
-bookwyrm-restart:
-	@if [ ! -d "$(BOOKWYRM_DIR)" ]; then \
-		echo "ERROR: Bookwyrm wrapper not found. Run: make setup"; \
-		exit 1; \
-	fi
-	@echo "Restarting Bookwyrm..."
-	@cd $(BOOKWYRM_DIR) && $(MAKE) restart
-
-bookwyrm-status:
-	@if [ ! -d "$(BOOKWYRM_DIR)" ]; then \
-		echo "Bookwyrm: Not installed (run: make setup)"; \
-	else \
-		cd $(BOOKWYRM_DIR) && $(MAKE) status; \
-	fi
-
-bookwyrm-logs:
-	@if [ ! -d "$(BOOKWYRM_DIR)" ]; then \
-		echo "ERROR: Bookwyrm wrapper not found. Run: make setup"; \
-		exit 1; \
-	fi
-	@cd $(BOOKWYRM_DIR) && $(MAKE) logs
-
-bookwyrm-update:
-	@if [ ! -d "$(BOOKWYRM_DIR)" ]; then \
-		echo "ERROR: Bookwyrm wrapper not found. Run: make setup"; \
-		exit 1; \
-	fi
-	@echo "Updating Bookwyrm..."
-	@cd $(BOOKWYRM_DIR) && $(MAKE) update
-
-bookwyrm-init:
-	@if [ ! -d "$(BOOKWYRM_DIR)" ]; then \
-		echo "ERROR: Bookwyrm wrapper not found. Run: make setup"; \
-		exit 1; \
-	fi
-	@echo "Re-running Bookwyrm initialization..."
-	@cd $(BOOKWYRM_DIR) && $(MAKE) init
-
-# Glance dashboard setup
-glance-setup:
-	@echo "Setting up Glance dashboard..."
-	@mkdir -p data/glance
-	@if [ -d "data/glance/glance.yml" ]; then \
-		echo "ERROR: data/glance/glance.yml exists as a directory!"; \
-		echo "Removing directory..."; \
-		rm -rf data/glance/glance.yml; \
-	fi
-	@if [ -f "data/glance/glance.yml" ]; then \
-		echo "⚠️  Warning: data/glance/glance.yml already exists"; \
-		echo "Backup existing config? (y/n)"; \
-		read backup; \
-		if [ "$$backup" = "y" ]; then \
-			cp data/glance/glance.yml data/glance/glance.yml.backup.$$(date +%Y%m%d-%H%M%S); \
-			echo "✓ Backup created"; \
-		fi; \
-	fi
-	@echo "Creating default Glance configuration..."
-	@echo 'pages:' > data/glance/glance.yml
-	@echo '  - name: Home Server' >> data/glance/glance.yml
-	@echo '    columns:' >> data/glance/glance.yml
-	@echo '      - size: small' >> data/glance/glance.yml
-	@echo '        widgets:' >> data/glance/glance.yml
-	@echo '          - type: docker-containers' >> data/glance/glance.yml
-	@echo '            sock-path: /var/run/docker.sock' >> data/glance/glance.yml
-	@echo '            running-only: true' >> data/glance/glance.yml
-	@echo '            format-container-names: true' >> data/glance/glance.yml
-	@echo '            hide-by-default: false' >> data/glance/glance.yml
-	@echo '' >> data/glance/glance.yml
-	@echo '      - size: full' >> data/glance/glance.yml
-	@echo '        widgets:' >> data/glance/glance.yml
-	@echo '          - type: calendar' >> data/glance/glance.yml
-	@echo '' >> data/glance/glance.yml
-	@echo '          - type: bookmarks' >> data/glance/glance.yml
-	@echo '            groups:' >> data/glance/glance.yml
-	@echo '              - title: Core Services' >> data/glance/glance.yml
-	@echo '                links:' >> data/glance/glance.yml
-	@echo '                  - title: AdGuard Home' >> data/glance/glance.yml
-	@echo '                    url: https://adguard.home.local' >> data/glance/glance.yml
-	@echo '                  - title: n8n' >> data/glance/glance.yml
-	@echo '                    url: https://n8n.home.local' >> data/glance/glance.yml
-	@echo '                  - title: Grafana' >> data/glance/glance.yml
-	@echo '                    url: https://grafana.home.local' >> data/glance/glance.yml
-	@echo '              - title: Apps' >> data/glance/glance.yml
-	@echo '                links:' >> data/glance/glance.yml
-	@echo '                  - title: Habitica' >> data/glance/glance.yml
-	@echo '                    url: https://habitica.home.local' >> data/glance/glance.yml
-	@echo '                  - title: Bookwyrm' >> data/glance/glance.yml
-	@echo '                    url: https://bookwyrm.home.local' >> data/glance/glance.yml
-	@echo '                  - title: HortusFox' >> data/glance/glance.yml
-	@echo '                    url: https://hortusfox.home.local' >> data/glance/glance.yml
-	@echo "✓ Created data/glance/glance.yml"
-	@echo ""
-	@echo "Starting Glance service..."
-	@$(COMPOSE) up -d glance
-	@echo ""
-	@echo "✓ Glance setup complete!"
-	@echo "Access at: https://glance.home.local"
-	@echo ""
-	@echo "To customize your dashboard, edit: data/glance/glance.yml"
-	@echo "Then restart: docker compose restart glance"
 
 # AdGuard Home DNS rewrites setup
 adguard-setup: env-check

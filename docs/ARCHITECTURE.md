@@ -31,10 +31,10 @@ System design and technical architecture of the Home Server Stack.
 │      ┌──────────────┼──────────────┬─────────────┐   │
 │      │              │              │             │   │
 │      v              v              v             v   │
-│  ┌────────┐    ┌────────┐    ┌─────────┐   ┌──────┐│
-│  │  n8n   │    │ Glance │    │Habitica │...│ More ││
-│  │  5678  │    │  8080  │    │  8080   │   │      ││
-│  └────────┘    └────────┘    └─────────┘   └──────┘│
+│  ┌────────┐
+│  │  n8n   │
+│  │  5678  │
+│  └────────┘
 │                                                      │
 │  ┌────────────────────────────────────────────────┐ │
 │  │         Docker Network: homeserver             │ │
@@ -141,7 +141,6 @@ Output Actions (Email, Slack, Database, etc.)
 ```
 
 **Integration Points:**
-- Ollama API: `http://ollama:11434`
 - External APIs via HTTP nodes
 - Webhooks: `https://SERVER_IP:5678/webhook/*`
 
@@ -149,36 +148,6 @@ Output Actions (Email, Slack, Database, etc.)
 - Workflows: `./data/n8n/database.sqlite`
 - Files: `./data/n8n/files/`
 - Logs: Container stdout
-
-### Ollama
-**Purpose:** Local AI model inference
-
-**Architecture:**
-- Go-based model server
-- REST API (OpenAI-compatible)
-- Model storage and management
-- GPU support (if available)
-
-**Data Flow:**
-```
-HTTP Request (prompt) → Ollama API (port 11434)
-    ↓
-Load Model into RAM (if not loaded)
-    ↓
-Inference Engine (CPU/GPU)
-    ↓
-Stream or Return Response
-```
-
-**Storage:**
-- Models: `./data/ollama/models/`
-- Manifests: `./data/ollama/manifests/`
-
-**Resource Management:**
-- Models loaded on-demand
-- Unloaded after timeout
-- Configurable parallel requests
-- Max loaded models limit
 
 ### WireGuard
 **Purpose:** Secure VPN access to home network
@@ -205,69 +174,6 @@ Encrypt & Route back to peer
 - Peer configs: `./data/wireguard/peer*/`
 - Keys: `./data/wireguard/server/`
 
-### Habitica
-**Purpose:** Gamified habit and task tracker
-
-**Architecture:**
-- MongoDB replica set (single-node)
-- Node.js server application
-- Caddy reverse proxy for client
-- ActivityPub support
-
-**Data Flow:**
-```
-Client Request → Caddy (habitica-client:80)
-    ↓
-Reverse Proxy to habitica-server:3000
-    ↓
-Node.js API Server
-    ↓
-MongoDB (habitica-mongo:27017)
-```
-
-**Storage:**
-- Database: `./data/habitica/db/`
-- Config: `./data/habitica/dbconf/`
-- Database: MongoDB with replica set
-
-**Network Configuration:**
-- `habitica-server` has network alias `server` for client DNS resolution
-- MongoDB uses explicit hostname `habitica-mongo:27017` in replica set config
-
-### HortusFox
-**Purpose:** Collaborative plant management system
-
-**Architecture:**
-- PHP/Apache web application
-- MariaDB database
-- File-based storage for images
-
-**Data Flow:**
-```
-Client Request → HortusFox Web UI (port 8181)
-    ↓
-Apache/PHP Application (port 80)
-    ↓
-MariaDB (hortusfox-db:3306)
-```
-
-**Storage:**
-- Database: `./data/hortusfox/db/`
-- Images: `./data/hortusfox/images/`
-- Logs: `./data/hortusfox/logs/`
-- Backups: `./data/hortusfox/backup/`
-- Themes: `./data/hortusfox/themes/`
-- Migrations: `./data/hortusfox/migrate/`
-
-**Database Configuration:**
-- MariaDB with utf8mb4 charset
-- Automatic table creation on first run
-- Admin user created from environment variables
-
-**Health Checks:**
-- MariaDB: `healthcheck.sh --connect --innodb_initialized`
-- Application: HTTP GET `http://localhost:80`
-
 ## Docker Compose Architecture
 
 **Modular Compose Files:**
@@ -275,17 +181,15 @@ MariaDB (hortusfox-db:3306)
 The stack uses multiple compose files for better organization:
 
 ```yaml
-docker-compose.yml              # Core services (AdGuard, n8n, Ollama, WireGuard)
+docker-compose.yml              # Core services (AdGuard, n8n, WireGuard, Traefik)
 docker-compose.monitoring.yml   # Monitoring stack (Grafana, Prometheus, etc.)
-docker-compose.habitica.yml     # Habitica services (mongo, server, client)
 ```
 
 **Composition:**
 ```bash
 # All files are automatically included via Makefile
 COMPOSE := docker compose -f docker-compose.yml \
-                          -f docker-compose.monitoring.yml \
-                          -f docker-compose.habitica.yml
+                          -f docker-compose.monitoring.yml
 ```
 
 **Benefits:**
@@ -309,7 +213,6 @@ COMPOSE := docker compose -f docker-compose.yml \
 
 **Service Communication:**
 ```yaml
-n8n → ollama:11434 (AI inference)
 grafana → prometheus:9090 (metrics)
 prometheus → node-exporter:9100 (system metrics)
 prometheus → cadvisor:8080 (container metrics)
@@ -324,10 +227,6 @@ prometheus → cadvisor:8080 (container metrics)
 - 8080/TCP: Traefik Dashboard
 - 8888/TCP: AdGuard UI (legacy direct access)
 - 5678/TCP: n8n (legacy direct access)
-- 11434/TCP: Ollama API (legacy direct access)
-- 3001/TCP: Grafana (legacy direct access)
-- 9090/TCP: Prometheus (legacy direct access)
-- 9093/TCP: Alertmanager (legacy direct access)
 
 **Bound to 0.0.0.0 (external via router):**
 - 51820/UDP: WireGuard VPN
@@ -376,11 +275,8 @@ home-server-stack/
 │   ├── prometheus/
 │   ├── grafana/
 │   └── alertmanager/
-├── external/                       # External wrapper projects
-│   └── bookwyrm-docker/           # Bookwyrm wrapper
 ├── docker-compose.yml             # Core services
 ├── docker-compose.monitoring.yml  # Monitoring stack
-├── docker-compose.habitica.yml    # Habitica services
 └── .env                           # Environment configuration
 ```
 
@@ -461,8 +357,6 @@ Internet → Port 5678 → Reverse Proxy
 ├─────────────────────────────────────────────────────┤
 │ Node Exporter → System metrics (CPU, RAM, Disk)    │
 │ cAdvisor → Container metrics (Docker)               │
-│ Ollama → Custom metrics (inference time, etc.)      │
-│ n8n → Custom metrics (workflow executions)          │
 └───────────────┬─────────────────────────────────────┘
                 │
                 ▼ Scrape (every 15s)
@@ -501,7 +395,7 @@ Physical Server
     │   │   ├── homeserver network
     │   │   │   ├── adguard container
     │   │   │   ├── n8n container
-    │   │   │   ├── ollama container
+    │   │   │   ├── traefik container
     │   │   │   └── wireguard container
     │   │   └── monitoring network (optional)
     │   │       ├── grafana
@@ -520,9 +414,9 @@ See [K3S_MIGRATION_PLAN.md](K3S_MIGRATION_PLAN.md) for detailed architecture.
 Server 1 (Control Plane)            Server 2 (Worker)
     │                                   │
     ├── k3s control-plane               ├── k3s agent
-    ├── adguard (DaemonSet)            ├── ollama (high RAM)
-    ├── wireguard (DaemonSet)          ├── n8n
-    └── monitoring stack                └── monitoring agents
+    ├── adguard (DaemonSet)            ├── n8n
+    ├── wireguard (DaemonSet)          └── monitoring agents
+    └── monitoring stack
 ```
 
 ## Technology Stack
@@ -538,7 +432,6 @@ Server 1 (Control Plane)            Server 2 (Worker)
 | **DNS** | AdGuard Home | Network DNS + ad blocking |
 | **VPN** | WireGuard | Secure remote access |
 | **Automation** | n8n | Workflow automation |
-| **AI** | Ollama | Local LLM inference |
 | **Monitoring** | Prometheus | Metrics collection |
 | **Visualization** | Grafana | Dashboards |
 | **Alerting** | Alertmanager | Alert management |
@@ -553,24 +446,22 @@ Service          CPU (Idle)  CPU (Active)  RAM (Idle)  RAM (Active)
 ────────────────────────────────────────────────────────────────────
 AdGuard Home     1%          5%            100 MB      200 MB
 n8n              1%          10%           200 MB      500 MB
-Ollama           2%          80-100%       500 MB      6-8 GB
 WireGuard        1%          5%            50 MB       100 MB
+Traefik          1%          3%            50 MB       100 MB
 Monitoring       5%          15%           800 MB      1.5 GB
 ────────────────────────────────────────────────────────────────────
-Total           10%         115%           1.6 GB      10-12 GB
+Total            9%          38%           1.2 GB      2.4 GB
 ```
 
 **Bottlenecks:**
-- **CPU:** Ollama inference (use smaller models if needed)
-- **RAM:** Ollama models (limit loaded models)
-- **Disk I/O:** Model loading, Prometheus writes
+- **Disk I/O:** Prometheus writes
 - **Network:** VPN throughput (usually not an issue on LAN)
 
 ### Scaling Strategies
 
 **Vertical Scaling (current):**
-- Add more RAM for larger models
-- Faster CPU for quicker inference
+- Add more RAM for workflow processing
+- Faster CPU for better performance
 - SSD for better I/O
 
 **Horizontal Scaling (future):**
@@ -589,8 +480,8 @@ Total           10%         115%           1.6 GB      10-12 GB
 - Check logs: `docker compose logs [service]`
 
 **Out of memory:**
-- Ollama most likely culprit
-- Reduce model size or parallelism
+- Check n8n workflow memory usage
+- Reduce concurrent workflows
 - Add swap space
 
 **Disk full:**
