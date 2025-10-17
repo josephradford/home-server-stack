@@ -17,8 +17,8 @@ fi
 # Configuration
 CONFIG_DIR="data/adguard/conf"
 CONFIG_FILE="$CONFIG_DIR/AdGuardHome.yaml"
-SERVER_IP="${SERVER_IP:-192.168.1.100}"
-DOMAIN="${DOMAIN:-home.local}"
+SERVER_IP="${SERVER_IP}"
+DOMAIN="${DOMAIN}"
 ADMIN_USERNAME="${ADGUARD_USERNAME:-admin}"
 ADMIN_PASSWORD="${ADGUARD_PASSWORD}"
 
@@ -36,6 +36,17 @@ echo ""
 if [ -z "$SERVER_IP" ]; then
     echo -e "${RED}ERROR: SERVER_IP environment variable not set${NC}"
     echo "Please set SERVER_IP in your .env file"
+    exit 1
+fi
+
+# Check if DOMAIN is set
+if [ -z "$DOMAIN" ]; then
+    echo -e "${RED}ERROR: DOMAIN environment variable not set${NC}"
+    echo "Please set DOMAIN in your .env file"
+    echo ""
+    echo "Example:"
+    echo "  DOMAIN=example.com"
+    echo ""
     exit 1
 fi
 
