@@ -116,6 +116,37 @@ setup: env-check validate
 	@echo ""
 	@echo "Note: First-time container initialization may take a few minutes."
 	@echo "Check logs with: make logs"
+	@echo ""
+	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+	@echo ""
+	@set -a; . ./.env; set +a; \
+	if [ -n "$$GANDIV5_PERSONAL_ACCESS_TOKEN" ] && [ -n "$$ACME_EMAIL" ] && [ -n "$$DOMAIN" ]; then \
+		echo "🔒 SSL Certificate Setup Available"; \
+		echo ""; \
+		echo "Your .env file is configured for Let's Encrypt SSL certificates."; \
+		echo "Would you like to set up trusted SSL certificates now? (y/N)"; \
+		read -r response; \
+		if [ "$$response" = "y" ] || [ "$$response" = "Y" ]; then \
+			$(MAKE) ssl-setup; \
+		else \
+			echo ""; \
+			echo "Skipping SSL setup. Your services will use self-signed certificates."; \
+			echo "You can set up Let's Encrypt SSL later with: make ssl-setup"; \
+			echo "See docs/CONFIGURATION.md#ssl-certificate-setup for details."; \
+		fi; \
+	else \
+		echo "ℹ️  Using self-signed SSL certificates (browser warnings expected)"; \
+		echo ""; \
+		echo "For trusted Let's Encrypt certificates, add to .env:"; \
+		echo "  - DOMAIN=your-domain.com"; \
+		echo "  - ACME_EMAIL=your-email@example.com"; \
+		echo "  - GANDIV5_PERSONAL_ACCESS_TOKEN=your-gandi-token"; \
+		echo ""; \
+		echo "Then run: make ssl-setup"; \
+		echo "See docs/CONFIGURATION.md#ssl-certificate-setup for details."; \
+	fi
+	@echo ""
+	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
 # Update all services
 update: env-check validate
