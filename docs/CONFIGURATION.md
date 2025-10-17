@@ -158,11 +158,27 @@ services:
 
 ### Traefik Dashboard
 
-Access Traefik's dashboard at `https://traefik.home.local`
+Access Traefik's dashboard at `https://traefik.${DOMAIN}`
 
 **Login credentials:**
-- Username: admin
-- Password: (set during Traefik deployment)
+- Username: `admin` (fixed)
+- Password: Set via `TRAEFIK_PASSWORD` in `.env`
+
+**Setup:**
+1. Add `TRAEFIK_PASSWORD=your_secure_password` to `.env`
+2. Run `make traefik-password` to generate the hashed password
+3. Traefik will automatically restart with the new credentials
+
+**Changing password:**
+```bash
+# Edit .env and change TRAEFIK_PASSWORD
+nano .env
+
+# Regenerate hashed password and restart Traefik
+make traefik-password
+```
+
+**Note:** The password is hashed using htpasswd (bcrypt) and stored as `TRAEFIK_DASHBOARD_USERS` in `.env`. Don't edit this variable manually - always use `make traefik-password` to regenerate it.
 
 The dashboard shows:
 - Active routers and their rules

@@ -170,6 +170,10 @@ services:
       # Note: Variable name in container must be GANDIV5_API_KEY for Traefik compatibility
       - GANDIV5_API_KEY=${GANDIV5_PERSONAL_ACCESS_TOKEN}
 
+      # Traefik dashboard password (hashed with htpasswd)
+      # Generated during setup from TRAEFIK_PASSWORD in .env
+      - TRAEFIK_DASHBOARD_USERS=${TRAEFIK_DASHBOARD_USERS}
+
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - ./data/traefik/certs:/certs
@@ -195,7 +199,8 @@ services:
       - "traefik.http.routers.dashboard.tls.domains[0].sans=*.${DOMAIN}"
 
       # Dashboard middleware (basic auth)
-      - "traefik.http.middlewares.dashboard-auth.basicauth.users=admin:$$1$$3TOX7HzuCTU"
+      # Uses TRAEFIK_DASHBOARD_USERS from .env (htpasswd format: admin:$apr1$...)
+      - "traefik.http.middlewares.dashboard-auth.basicauth.users=${TRAEFIK_DASHBOARD_USERS}"
       - "traefik.http.routers.dashboard.middlewares=dashboard-auth"
 
     healthcheck:

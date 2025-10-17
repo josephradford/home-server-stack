@@ -3,7 +3,7 @@
 
 .PHONY: help setup update start stop restart logs build pull status clean purge validate env-check
 .PHONY: logs-n8n logs-wireguard
-.PHONY: adguard-setup setup-certs test-domain-access
+.PHONY: adguard-setup setup-certs test-domain-access traefik-password
 .PHONY: ssl-setup ssl-copy-certs ssl-configure-traefik ssl-setup-renewal ssl-renew-test
 
 # Compose file flags - always include monitoring
@@ -35,6 +35,7 @@ help:
 	@echo ""
 	@echo "Service Configuration:"
 	@echo "  make adguard-setup      - Configure DNS rewrites for domain-based access"
+	@echo "  make traefik-password   - Generate Traefik dashboard password from .env"
 	@echo ""
 	@echo "SSL/TLS Certificate Management:"
 	@echo "  make ssl-setup          - Complete Let's Encrypt SSL setup (certbot + renewal)"
@@ -84,16 +85,19 @@ pull: validate
 setup: env-check validate
 	@echo "Starting first-time setup..."
 	@echo ""
-	@echo "Step 1/4: Setting up SSL certificate storage..."
+	@echo "Step 1/5: Setting up Traefik dashboard password..."
+	@./scripts/setup-traefik-password.sh
+	@echo ""
+	@echo "Step 2/5: Setting up SSL certificate storage..."
 	@$(MAKE) setup-certs
 	@echo ""
-	@echo "Step 2/4: Pulling pre-built images..."
+	@echo "Step 3/5: Pulling pre-built images..."
 	@$(COMPOSE) pull --ignore-pull-failures
 	@echo ""
-	@echo "Step 3/4: Starting services..."
+	@echo "Step 4/5: Starting services..."
 	@$(COMPOSE) up -d
 	@echo ""
-	@echo "Step 4/4: Configuring AdGuard DNS rewrites..."
+	@echo "Step 5/5: Configuring AdGuard DNS rewrites..."
 	@$(MAKE) adguard-setup
 	@echo ""
 	@$(COMPOSE) ps
@@ -281,6 +285,17 @@ setup-certs:
 test-domain-access: env-check
 	@echo "Testing domain-based access..."
 	@./scripts/test-domain-access.sh
+
+# Setup Traefik dashboard password
+traefik-password: env-check
+	@echo "Setting up Traefik dashboard password..."
+	@./scripts/setup-traefik-password.sh
+	@echo ""
+	@echo "Restarting Traefik to apply new password..."
+	@$(COMPOSE) stop traefik
+	@$(COMPOSE) rm -f traefik
+	@$(COMPOSE) up -d traefik
+	@echo "✓ Traefik password updated and service restarted"
 
 # Let's Encrypt SSL Certificate Setup with certbot
 # Note: Uses certbot instead of Traefik's built-in ACME due to compatibility issues
