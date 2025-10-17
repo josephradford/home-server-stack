@@ -19,9 +19,6 @@ services:
       - homeserver
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.prometheus-http.rule=Host(`prometheus.home.local`)"
-      - "traefik.http.routers.prometheus-http.entrypoints=web"
-      - "traefik.http.routers.prometheus-http.middlewares=redirect-to-https"
       - "traefik.http.routers.prometheus.rule=Host(`prometheus.home.local`)"
       - "traefik.http.routers.prometheus.entrypoints=websecure"
       - "traefik.http.routers.prometheus.tls=true"
@@ -43,9 +40,6 @@ services:
       - homeserver
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.grafana-http.rule=Host(`grafana.home.local`)"
-      - "traefik.http.routers.grafana-http.entrypoints=web"
-      - "traefik.http.routers.grafana-http.middlewares=redirect-to-https"
       - "traefik.http.routers.grafana.rule=Host(`grafana.home.local`)"
       - "traefik.http.routers.grafana.entrypoints=websecure"
       - "traefik.http.routers.grafana.tls=true"
@@ -63,9 +57,6 @@ services:
       - homeserver
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.alertmanager-http.rule=Host(`alerts.home.local`)"
-      - "traefik.http.routers.alertmanager-http.entrypoints=web"
-      - "traefik.http.routers.alertmanager-http.middlewares=redirect-to-https"
       - "traefik.http.routers.alertmanager.rule=Host(`alerts.home.local`)"
       - "traefik.http.routers.alertmanager.entrypoints=websecure"
       - "traefik.http.routers.alertmanager.tls=true"
