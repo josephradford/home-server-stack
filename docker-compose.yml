@@ -114,7 +114,7 @@ services:
 
   # Traefik - Reverse proxy for domain-based service access
   traefik:
-    image: traefik:v3.0
+    image: traefik:v3.2
     container_name: traefik
     restart: unless-stopped
     command:
