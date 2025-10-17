@@ -16,7 +16,7 @@ services:
       - homeserver
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.adguard.rule=Host(`adguard.${HOME_DOMAIN}`)"
+      - "traefik.http.routers.adguard.rule=Host(`adguard.${DOMAIN}`)"
       - "traefik.http.routers.adguard.entrypoints=websecure"
       - "traefik.http.routers.adguard.tls=true"
       - "traefik.http.routers.adguard.tls.certresolver=letsencrypt"
@@ -46,11 +46,11 @@ services:
       - N8N_BASIC_AUTH_ACTIVE=true
       - N8N_BASIC_AUTH_USER=${N8N_USER}
       - N8N_BASIC_AUTH_PASSWORD=${N8N_PASSWORD}
-      - N8N_HOST=n8n.${HOME_DOMAIN}
+      - N8N_HOST=n8n.${DOMAIN}
       - N8N_PORT=5678
       - N8N_PROTOCOL=https
-      - WEBHOOK_URL=https://n8n.${HOME_DOMAIN}/
-      - N8N_EDITOR_BASE_URL=https://n8n.${HOME_DOMAIN}
+      - WEBHOOK_URL=https://n8n.${DOMAIN}/
+      - N8N_EDITOR_BASE_URL=https://n8n.${DOMAIN}
       - GENERIC_TIMEZONE=${TIMEZONE}
       - N8N_SECURE_COOKIE=true
       - N8N_RUNNERS_TASK_TIMEOUT=${N8N_RUNNERS_TASK_TIMEOUT}
@@ -64,7 +64,7 @@ services:
       - n8n-init
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.n8n.rule=Host(`n8n.${HOME_DOMAIN}`)"
+      - "traefik.http.routers.n8n.rule=Host(`n8n.${DOMAIN}`)"
       - "traefik.http.routers.n8n.entrypoints=websecure"
       - "traefik.http.routers.n8n.tls=true"
       - "traefik.http.routers.n8n.tls.certresolver=letsencrypt"
@@ -162,8 +162,9 @@ services:
       - "${SERVER_IP}:443:443"
 
     environment:
-      # Gandi API credentials
-      - GANDIV5_API_KEY=${GANDIV5_API_KEY}
+      # Gandi API credentials for Let's Encrypt DNS challenge
+      # Note: Variable name in container must be GANDIV5_API_KEY for Traefik compatibility
+      - GANDIV5_API_KEY=${GANDIV5_PERSONAL_ACCESS_TOKEN}
 
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
@@ -179,17 +180,15 @@ services:
       - "traefik.enable=true"
 
       # Dashboard router
-      - "traefik.http.routers.dashboard.rule=Host(`traefik.${HOME_DOMAIN}`)"
+      - "traefik.http.routers.dashboard.rule=Host(`traefik.${DOMAIN}`)"
       - "traefik.http.routers.dashboard.entrypoints=websecure"
       - "traefik.http.routers.dashboard.tls=true"
       - "traefik.http.routers.dashboard.tls.certresolver=letsencrypt"
       - "traefik.http.routers.dashboard.service=api@internal"
 
-      # Request wildcard certificate for all services
-      - "traefik.http.routers.dashboard.tls.domains[0].main=${HOME_DOMAIN}"
-      - "traefik.http.routers.dashboard.tls.domains[0].sans=*.${HOME_DOMAIN}"
-      - "traefik.http.routers.dashboard.tls.domains[1].main=${PUBLIC_DOMAIN}"
-      - "traefik.http.routers.dashboard.tls.domains[1].sans=*.${PUBLIC_DOMAIN}"
+      # Request wildcard certificate for *.DOMAIN
+      - "traefik.http.routers.dashboard.tls.domains[0].main=${DOMAIN}"
+      - "traefik.http.routers.dashboard.tls.domains[0].sans=*.${DOMAIN}"
 
       # Dashboard middleware (basic auth)
       - "traefik.http.middlewares.dashboard-auth.basicauth.users=admin:$$1$$3TOX7HzuCTU"
