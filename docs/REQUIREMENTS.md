@@ -8,9 +8,9 @@ Detailed hardware and software requirements for running the Home Server Stack.
 
 | Component | Minimum | Recommended | Notes |
 |-----------|---------|-------------|-------|
-| **CPU** | 2 cores | 4+ cores | Higher core count improves AI inference |
-| **RAM** | 8 GB | 16 GB | AI models are memory-intensive |
-| **Storage** | 500 GB | 1 TB | AI models require 20-50 GB |
+| **CPU** | 2 cores | 4+ cores | Higher core count improves performance |
+| **RAM** | 4 GB | 8 GB | Comfortable for all services |
+| **Storage** | 100 GB | 500 GB | Sufficient for logs and data |
 | **Network** | 100 Mbps | 1 Gbps | For reliable service access |
 
 ### Software
@@ -39,16 +39,8 @@ Detailed hardware and software requirements for running the Home Server Stack.
 |---------|------------|--------------|---------|------------|--------------|
 | **AdGuard Home** | 100 MB | 200 MB | 200 MB | 1% | 5% |
 | **n8n** | 200 MB | 500 MB | 500 MB | 1% | 10% |
-| **Ollama** | 500 MB | 6-8 GB | 20-50 GB | 2% | 80-100% |
 | **WireGuard** | 50 MB | 100 MB | 100 MB | 1% | 5% |
-
-### Additional Services (Optional)
-
-| Service | RAM (Idle) | RAM (Active) | Storage | CPU (Idle) | CPU (Active) |
-|---------|------------|--------------|---------|------------|--------------|
-| **Habitica** | 300 MB | 600 MB | 1-2 GB | 2% | 10% |
-| **HortusFox** | 200 MB | 400 MB | 500 MB | 1% | 5% |
-| **Bookwyrm** | 500 MB | 1 GB | 2-5 GB | 3% | 15% |
+| **Traefik** | 50 MB | 100 MB | 100 MB | 1% | 3% |
 
 ### Monitoring Stack (Optional)
 
@@ -62,35 +54,15 @@ Detailed hardware and software requirements for running the Home Server Stack.
 
 ### Total Estimates
 
-**Basic Stack (AdGuard + n8n + Ollama + WireGuard):**
-- **Idle:** ~1 GB RAM, 5% CPU
-- **Active:** ~7-9 GB RAM, 50-100% CPU (during AI inference)
-- **Storage:** ~25-55 GB
+**Basic Stack (AdGuard + n8n + WireGuard + Traefik):**
+- **Idle:** ~0.5 GB RAM, 4% CPU
+- **Active:** ~1.3 GB RAM, 23% CPU
+- **Storage:** ~2-5 GB
 
 **With Monitoring Stack:**
-- **Idle:** ~2 GB RAM, 10% CPU
-- **Active:** ~10-12 GB RAM, 50-100% CPU
-- **Storage:** ~35-70 GB
-
-## AI Model Requirements
-
-Ollama models vary significantly in size and resource needs:
-
-| Model | Size | RAM Required | CPU Usage | Use Case |
-|-------|------|--------------|-----------|----------|
-| **llama3.2:3b** | 2.0 GB | 3-4 GB | Medium | General chat, lightweight tasks |
-| **deepseek-coder:6.7b** | 4.8 GB | 6-8 GB | High | Code generation, technical tasks |
-| **llama3:8b** | 4.7 GB | 8 GB | High | Advanced general purpose |
-| **codellama:13b** | 7.4 GB | 12 GB | Very High | Professional code tasks |
-| **llama3:70b** | 40 GB | 64 GB+ | Extreme | Not recommended for home servers |
-
-**Recommendations:**
-- **8 GB RAM server:** Stick with 3B models only
-- **16 GB RAM server:** Can run 6.7B-8B models comfortably
-- **32 GB RAM server:** Can run 13B models or multiple smaller models
-- **Multiple models:** Only loaded models consume RAM; others stay on disk
-
-See [AI_MODELS.md](AI_MODELS.md) for model management.
+- **Idle:** ~1.3 GB RAM, 9% CPU
+- **Active:** ~2.8 GB RAM, 38% CPU
+- **Storage:** ~10-20 GB
 
 ## Storage Breakdown
 
@@ -98,18 +70,15 @@ See [AI_MODELS.md](AI_MODELS.md) for model management.
 
 ```
 /home/user/home-server-stack/
-├── data/                    # ~30-70 GB (varies with AI models and services)
+├── data/                    # ~5-15 GB (varies with usage)
 │   ├── adguard/            # ~200 MB (logs + config)
 │   ├── n8n/                # ~500 MB (workflows + database)
-│   ├── ollama/             # ~20-50 GB (AI models)
 │   ├── wireguard/          # ~100 MB (configs + keys)
-│   ├── habitica/           # ~1-2 GB (MongoDB + data)
-│   ├── hortusfox/          # ~500 MB (MariaDB + images)
-│   └── bookwyrm/           # ~2-5 GB (PostgreSQL + images)
+│   └── traefik/            # ~100 MB (certs + logs)
 ├── monitoring/ (optional)  # ~10-20 GB (metrics + logs)
 │   ├── grafana/            # ~1 GB
 │   └── prometheus/         # ~5-15 GB (grows over time)
-└── docker images           # ~5-10 GB
+└── docker images           # ~3-5 GB
 ```
 
 ### Growth Over Time
@@ -132,7 +101,6 @@ See [AI_MODELS.md](AI_MODELS.md) for model management.
 |----------|-----------|-------|
 | **DNS queries** | <1 Mbps | Minimal overhead |
 | **n8n workflows** | Varies | Depends on workflow (webhooks, API calls) |
-| **Ollama inference** | <10 Mbps | Local processing, minimal network |
 | **Remote access (VPN)** | 5-50 Mbps | Depends on usage (streaming, file access) |
 
 ### Ports
@@ -142,17 +110,11 @@ Required open ports (internal only, VPN-first model):
 | Port | Service | Protocol | Required For |
 |------|---------|----------|--------------|
 | 53 | AdGuard DNS | TCP/UDP | DNS resolution |
-| 80 | AdGuard UI | TCP | Web interface |
-| 5678 | n8n | TCP | Workflow automation |
-| 11434 | Ollama | TCP | AI inference API |
+| 80 | Traefik HTTP | TCP | HTTP redirect to HTTPS |
+| 443 | Traefik HTTPS | TCP | All service access |
+| 5678 | n8n | TCP | Direct n8n access (legacy) |
+| 8888 | AdGuard UI | TCP | Direct AdGuard access (legacy) |
 | 51820 | WireGuard | UDP | VPN access |
-
-**Additional Services Ports (Optional):**
-| Port | Service | Protocol |
-|------|---------|----------|
-| 8080 | Habitica | TCP |
-| 8181 | HortusFox | TCP |
-| 8000 | Bookwyrm | TCP |
 
 **Monitoring Stack Ports:**
 | Port | Service | Protocol |
@@ -175,8 +137,8 @@ Required open ports (internal only, VPN-first model):
 - **AdGuard/WireGuard:** Low CPU usage, 2 cores sufficient
 
 **CPU Features:**
-- **AVX/AVX2:** Improves Ollama performance (check with `lscpu`)
 - **Virtualization:** Not required (bare metal or VM both work)
+- **Multi-core:** Improves workflow performance
 
 ### RAM
 
@@ -237,20 +199,19 @@ echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
 
 ### Raspberry Pi Considerations
 
-**Raspberry Pi 4 (8GB RAM):**
+**Raspberry Pi 4 (4GB+ RAM):**
 - ✅ AdGuard Home: Excellent
 - ✅ n8n: Good
-- ⚠️ Ollama: Limited to tiny models (1-3B only)
 - ✅ WireGuard: Excellent
-- ⚠️ Monitoring: Skip or use lightweight alternatives
+- ✅ Traefik: Good
+- ⚠️ Monitoring: Use lightweight configuration
 
 **Limitations:**
 - ARM architecture requires ARM-compatible Docker images
-- Limited RAM for AI models
-- Slower CPU for inference
 - SD card I/O limitations (use USB SSD strongly recommended)
+- Limited RAM for heavy workflows
 
-**Recommendation:** Use x86_64 server for full stack; Pi for lightweight services only.
+**Recommendation:** Raspberry Pi 4 with 4GB+ RAM works well for the basic stack.
 
 ## Virtualization
 
@@ -292,7 +253,7 @@ Before installing, verify:
 ```bash
 # Install helpful utilities
 sudo apt update
-sudo apt install -y htop iotop nethogs ncdu curl wget git
+sudo apt install -y htop iotop nethogs ncdu curl wget git make
 ```
 
 ## Next Steps

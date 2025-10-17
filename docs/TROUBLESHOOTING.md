@@ -2,6 +2,144 @@
 
 Common issues and solutions for the Home Server Stack.
 
+## Alert Reference
+
+Quick lookup for Prometheus/Alertmanager alerts. When an alert fires, find it below for immediate resolution steps.
+
+| Alert Name | Severity | Quick Fix | Details |
+|------------|----------|-----------|---------|
+| **ServiceDown** | Critical | `docker compose restart <service>` | [↓](#servicedown-alert) |
+| **AdGuardDown** | Critical | `docker compose restart adguard` | [↓](#adguarddown-alert) |
+| **N8nDown** | Critical | `docker compose restart n8n` | [↓](#n8ndown-alert) |
+| **WireGuardDown** | Critical | `docker compose restart wireguard` | [↓](#wireguarddown-alert) |
+| **HighCPUUsage** | Critical | Identify process with `docker stats` | [↓](#highcpuusage-alert) |
+| **HighMemoryUsage** | Critical | Restart heavy containers | [↓](#highmemoryusage-alert) |
+| **DiskSpaceLow** | Critical | `docker system prune -a` | [↓](#diskspacelow-alert) |
+| **ContainerDown** | Critical | `docker compose restart <service>` | See service-specific sections |
+| **ContainerHighCPU** | Warning | Check container logs | [↓](#performance-issues) |
+| **ContainerHighMemory** | Warning | Review memory limits | [↓](#performance-issues) |
+| **HighDiskIOWait** | Warning | Check with `iostat -x 5 3` | [↓](#slow-disk-io) |
+| **SystemLoadHigh** | Warning | Identify bottleneck (CPU/Memory/I/O) | [↓](#performance-issues) |
+
+### Critical Alert Procedures
+
+#### ServiceDown Alert
+**Trigger:** Service endpoint not responding for 30+ seconds
+
+```bash
+# 1. Identify which service
+docker compose ps
+
+# 2. Restart the service
+docker compose restart <service_name>
+
+# 3. Check logs if restart fails
+docker logs <container_name> --tail 100
+```
+
+#### AdGuardDown Alert
+**Trigger:** AdGuard DNS not responding for 1+ minute
+**Impact:** Network DNS resolution fails for all clients
+
+```bash
+# Quick fix
+docker compose restart adguard
+
+# Test DNS after restart
+dig @localhost google.com
+
+# If failing: Check port 53 conflict
+sudo lsof -i :53
+```
+
+See [AdGuard Home](#adguard-home) section for detailed troubleshooting.
+
+#### N8nDown Alert
+**Trigger:** n8n not responding for 2+ minutes
+**Impact:** All automated workflows stop
+
+```bash
+# Quick fix
+docker compose restart n8n
+
+# Wait for startup, then test
+sleep 30
+curl -k https://localhost:5678/healthz
+
+# If failing: Check SSL certificates and database
+ls -la ssl/server.* data/n8n/database.sqlite
+```
+
+See [n8n](#n8n) section for detailed troubleshooting.
+
+#### WireGuardDown Alert
+**Trigger:** WireGuard VPN not responding for 2+ minutes
+**Impact:** Remote VPN access unavailable
+
+```bash
+# Quick fix
+docker compose restart wireguard
+
+# Check logs
+docker logs wireguard --tail 50
+
+# Verify container is healthy
+docker ps | grep wireguard
+```
+
+See [WireGuard](#wireguard) section for detailed troubleshooting.
+
+#### HighCPUUsage Alert
+**Trigger:** System CPU >85% for 5+ minutes
+
+```bash
+# Identify top consumers
+docker stats --no-stream --format "table {{.Name}}\t{{.CPUPerc}}" | sort -k2 -hr
+
+# Check for runaway processes
+top -b -n 1 | head -20
+
+# Restart heavy container if needed
+docker compose restart <service>
+```
+
+#### HighMemoryUsage Alert
+**Trigger:** System memory >90% for 3+ minutes
+**Warning:** Risk of OOM killer
+
+```bash
+# Check memory state
+free -h
+
+# Identify memory hogs
+docker stats --no-stream --format "table {{.Name}}\t{{.MemUsage}}" | sort -k2 -hr
+
+# Quick mitigation (drops caches)
+sudo sync && sudo sysctl -w vm.drop_caches=3
+
+# Restart heavy containers
+docker compose restart <service>
+```
+
+#### DiskSpaceLow Alert
+**Trigger:** Root filesystem >90% for 5+ minutes
+
+```bash
+# Quick cleanup
+docker system prune -a --volumes -f
+
+# Check space freed
+df -h /
+
+# If still low, identify large directories
+sudo du -h / --max-depth=1 | sort -hr | head -10
+
+# Clean Docker logs if needed
+sudo truncate -s 0 /var/lib/docker/containers/*/*-json.log
+```
+
+---
+
 ## General Diagnostics
 
 ### Quick Health Check
@@ -171,106 +309,6 @@ docker compose restart n8n
 docker exec n8n cat /home/node/.n8n/n8n.log
 ```
 
-### Ollama
-
-#### Issue: Models Not Downloading
-
-**Symptoms:**
-- `ollama-setup` container exits with error
-- Models not appearing in `ollama list`
-
-**Diagnosis:**
-```bash
-# Check ollama-setup logs
-docker compose logs ollama-setup
-
-# Check Ollama service
-docker compose logs ollama
-
-# Check disk space
-df -h
-```
-
-**Solutions:**
-```bash
-# Ensure sufficient disk space (20-50 GB needed)
-df -h ./data/ollama
-
-# Restart download
-docker compose restart ollama-setup
-
-# Manual download
-docker exec ollama ollama pull deepseek-coder:6.7b
-docker exec ollama ollama pull llama3.2:3b
-
-# Check download progress
-docker exec ollama ollama ps
-```
-
-#### Issue: Ollama Out of Memory
-
-**Symptoms:**
-- Ollama crashes during inference
-- Error: "failed to allocate memory"
-
-**Diagnosis:**
-```bash
-# Check memory usage
-free -h
-
-# Check Ollama memory settings
-cat .env | grep OLLAMA
-```
-
-**Solutions:**
-```bash
-# Use smaller models
-docker exec ollama ollama pull llama3.2:1b
-
-# Reduce parallel requests
-# In .env: OLLAMA_NUM_PARALLEL=1
-# In .env: OLLAMA_MAX_LOADED_MODELS=1
-
-# Add swap space
-sudo fallocate -l 8G /swapfile
-sudo chmod 600 /swapfile
-sudo mkswap /swapfile
-sudo swapon /swapfile
-
-# Restart Ollama
-docker compose up -d --force-recreate ollama
-```
-
-#### Issue: Ollama Slow Inference
-
-**Symptoms:**
-- Responses take minutes instead of seconds
-- High CPU usage
-
-**Diagnosis:**
-```bash
-# Check CPU usage
-top
-
-# Check model size
-docker exec ollama ollama list
-```
-
-**Solutions:**
-```bash
-# Use quantized models (smaller, faster)
-docker exec ollama ollama pull deepseek-coder:6.7b  # Already quantized
-
-# Reduce concurrent requests
-# In .env: OLLAMA_NUM_PARALLEL=1
-
-# Increase timeout
-# In .env: OLLAMA_LOAD_TIMEOUT=1200
-
-# Check CPU features (AVX support helps)
-lscpu | grep -i avx
-```
-
 ### WireGuard
 
 #### Issue: Cannot Connect to VPN
@@ -339,240 +377,6 @@ docker compose up -d --force-recreate wireguard
 
 # Test DNS from VPN client
 nslookup google.com
-```
-
-### Habitica
-
-#### Issue: MongoDB "Server selection timed out"
-
-**Symptoms:**
-- habitica-server fails to start or logs timeout errors
-- Error: "MongooseServerSelectionError: Server selection timed out after 30000 ms"
-- MongoDB logs show "REMOVED" state or "NodeNotFound" errors
-
-**Cause:** MongoDB replica set initialized with container ID instead of resolvable hostname
-
-**Diagnosis:**
-```bash
-# Check MongoDB logs for replica set errors
-docker compose logs habitica-mongo | grep -i "replica\|removed\|nodenotfound"
-
-# Check if replica set is properly configured
-docker exec habitica-mongo mongosh --eval "rs.status()"
-```
-
-**Solution:**
-```bash
-# Stop all Habitica services
-docker compose stop habitica-client habitica-server habitica-mongo
-
-# Remove corrupted MongoDB data
-rm -rf ./data/habitica/db/* ./data/habitica/dbconf/*
-
-# Restart services (healthcheck will reinitialize replica set correctly)
-docker compose up -d habitica-mongo habitica-server habitica-client
-
-# Verify MongoDB is in PRIMARY state
-docker exec habitica-mongo mongosh --eval "rs.status()"
-```
-
-**Prevention:** The docker-compose.habitica.yml healthcheck now explicitly specifies `habitica-mongo:27017` as the replica set hostname.
-
-#### Issue: habitica-client "lookup server" DNS errors
-
-**Symptoms:**
-- habitica-client logs show: "dial tcp: lookup server on 127.0.0.11:53: server misbehaving"
-- Web UI returns 502 Bad Gateway
-- Caddy cannot reach habitica-server
-
-**Cause:** habitica-client's Caddyfile expects backend at hostname `server`, but service is named `habitica-server`
-
-**Diagnosis:**
-```bash
-# Check client logs for DNS errors
-docker compose logs habitica-client | grep "lookup server"
-
-# Verify network alias exists
-docker inspect habitica-server | grep -A 5 "Aliases"
-```
-
-**Solution:**
-This is fixed in docker-compose.habitica.yml with a network alias:
-```yaml
-habitica-server:
-  networks:
-    homeserver:
-      aliases:
-        - server  # Allows client to resolve 'server' hostname
-```
-
-If issue persists, restart the services:
-```bash
-docker compose restart habitica-server habitica-client
-```
-
-#### Issue: Habitica Web UI Not Loading
-
-**Symptoms:**
-- `http://SERVER_IP:8080` not loading
-- Browser shows connection error
-
-**Diagnosis:**
-```bash
-# Check all Habitica containers
-docker compose ps | grep habitica
-
-# Check client logs
-docker compose logs habitica-client
-
-# Check server health
-docker compose exec habitica-server wget -q -O- http://localhost:3000/api/v3/status
-```
-
-**Solutions:**
-```bash
-# Restart services in dependency order
-docker compose restart habitica-mongo habitica-server habitica-client
-
-# Check MongoDB is running and healthy
-docker compose ps habitica-mongo
-
-# Verify network connectivity
-docker compose exec habitica-client ping -c 3 server
-```
-
-### HortusFox
-
-#### Issue: "Unknown character set" Database Error
-
-**Symptoms:**
-- Error: `SQLSTATE[HY000] [2019] Unknown character set`
-- Application fails to initialize database
-- Error in `/var/www/html/vendor/danielbrendel/asatru-php-framework/src/database.php`
-
-**Cause:** Missing `DB_CHARSET` environment variable in docker-compose.yml
-
-**Diagnosis:**
-```bash
-# Check HortusFox logs for charset error
-docker compose logs hortusfox | grep -i "charset\|character set"
-
-# Check environment variables
-docker compose exec hortusfox env | grep DB_CHARSET
-```
-
-**Solution:**
-This is fixed in docker-compose.yml with:
-```yaml
-hortusfox:
-  environment:
-    - DB_CHARSET=utf8mb4
-```
-
-If issue persists:
-```bash
-# Recreate containers with updated config
-docker compose up -d --force-recreate hortusfox
-
-# If database is corrupted, reset it
-docker compose stop hortusfox hortusfox-db
-rm -rf ./data/hortusfox/db/*
-docker compose up -d hortusfox-db hortusfox
-```
-
-#### Issue: Cannot Login to HortusFox
-
-**Symptoms:**
-- Login fails with incorrect credentials
-- Admin account not created
-
-**Diagnosis:**
-```bash
-# Check admin credentials in .env
-cat .env | grep HORTUSFOX_ADMIN
-
-# Check HortusFox logs for initialization
-docker compose logs hortusfox | grep -i "admin\|user"
-```
-
-**Solutions:**
-```bash
-# Verify credentials in .env
-nano .env
-# Update HORTUSFOX_ADMIN_EMAIL and HORTUSFOX_ADMIN_PASSWORD
-
-# Recreate container to reset admin account
-docker compose up -d --force-recreate hortusfox
-
-# If database already exists, admin won't be recreated
-# Option: Reset database (⚠️ deletes all data)
-docker compose stop hortusfox hortusfox-db
-rm -rf ./data/hortusfox/db/*
-docker compose up -d hortusfox-db hortusfox
-```
-
-#### Issue: HortusFox Web UI Not Loading
-
-**Symptoms:**
-- `http://SERVER_IP:8181` not loading
-- Browser shows connection error or 502 Bad Gateway
-
-**Diagnosis:**
-```bash
-# Check both containers
-docker compose ps | grep hortusfox
-
-# Check HortusFox logs
-docker compose logs hortusfox
-
-# Check MariaDB health
-docker compose logs hortusfox-db
-```
-
-**Solutions:**
-```bash
-# Restart services in dependency order
-docker compose restart hortusfox-db hortusfox
-
-# Verify MariaDB is healthy
-docker compose exec hortusfox-db healthcheck.sh --connect
-
-# Check network connectivity
-docker compose exec hortusfox ping -c 3 hortusfox-db
-
-# Test database connection
-docker compose exec hortusfox-db mysql -u hortusfox -p${HORTUSFOX_DB_PASSWORD} -e "SHOW DATABASES;"
-```
-
-#### Issue: Images Not Uploading
-
-**Symptoms:**
-- Plant images fail to upload
-- Permission denied errors in logs
-
-**Diagnosis:**
-```bash
-# Check volume permissions
-ls -la ./data/hortusfox/images/
-
-# Check logs for permission errors
-docker compose logs hortusfox | grep -i "permission\|denied"
-
-# Check disk space
-df -h ./data/hortusfox/
-```
-
-**Solutions:**
-```bash
-# Fix permissions
-sudo chown -R 82:82 ./data/hortusfox/images/
-sudo chmod -R 755 ./data/hortusfox/images/
-
-# Ensure sufficient disk space
-du -sh ./data/hortusfox/*
-
-# Restart HortusFox
-docker compose restart hortusfox
 ```
 
 ## Docker Issues
@@ -691,7 +495,6 @@ curl http://localhost:<port>
 # Open firewall ports
 sudo ufw allow 80/tcp
 sudo ufw allow 5678/tcp
-sudo ufw allow 11434/tcp
 sudo ufw allow 51820/udp
 
 # Check SERVER_IP is correct in .env
@@ -750,9 +553,6 @@ top
 
 **Solutions:**
 ```bash
-# Limit Ollama parallel requests
-# In .env: OLLAMA_NUM_PARALLEL=1
-
 # Add CPU limits in docker-compose.yml
 # See OPERATIONS.md
 
@@ -776,12 +576,6 @@ docker stats --no-stream --format "table {{.Name}}\t{{.MemUsage}}" | sort -k 2 -
 
 **Solutions:**
 ```bash
-# Use smaller AI models
-docker exec ollama ollama pull llama3.2:1b
-
-# Limit loaded models
-# In .env: OLLAMA_MAX_LOADED_MODELS=1
-
 # Add memory limits
 # See OPERATIONS.md
 
@@ -1053,4 +847,3 @@ docker stats --no-stream
 - [Setup Guide](SETUP.md) - Installation help
 - [Requirements](REQUIREMENTS.md) - System requirements
 - [Known Issues](KNOWN_ISSUES.md) - Known bugs
-- [RUNBOOK.md](RUNBOOK.md) - Alert troubleshooting

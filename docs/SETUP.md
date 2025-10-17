@@ -42,8 +42,6 @@ nano .env
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `GRAFANA_PASSWORD` | Grafana admin password | `your_secure_grafana_password` |
-| `OLLAMA_NUM_PARALLEL` | Concurrent Ollama requests | `2` |
-| `OLLAMA_MAX_LOADED_MODELS` | Max models in memory | `2` |
 | `N8N_RUNNERS_TASK_TIMEOUT` | n8n task timeout (seconds) | `1800` |
 
 See [CONFIGURATION.md](CONFIGURATION.md) for detailed configuration options.
@@ -53,7 +51,6 @@ See [CONFIGURATION.md](CONFIGURATION.md) for detailed configuration options.
 Run the automated setup which will:
 - Generate SSL certificates automatically (for n8n HTTPS)
 - Pull and start all services (core + monitoring)
-- Clone the Bookwyrm wrapper
 
 ```bash
 make setup
@@ -64,8 +61,7 @@ make setup
 - ✅ SSL certificate generation (if not present)
 - ✅ Docker Compose validation
 - ✅ Image pulling
-- ✅ Services deployment (AdGuard, n8n, Ollama, WireGuard, Habitica, Grafana, Prometheus, etc.)
-- ✅ Bookwyrm wrapper cloning
+- ✅ Services deployment (AdGuard, n8n, WireGuard, Traefik, Grafana, Prometheus, etc.)
 
 **Note:** SSL certificates are automatically generated for localhost. To regenerate with a custom domain:
 ```bash
@@ -99,7 +95,7 @@ Set DNS manually on each device to `SERVER_IP`
 
 **Verify DNS Setup:**
 ```bash
-nslookup glance.home.local
+nslookup n8n.home.local
 # Should return: SERVER_IP
 ```
 
@@ -125,7 +121,7 @@ This is normal for self-hosted services and safe on your local network.
 
 Once DNS is configured:
 1. Open browser
-2. Navigate to `https://glance.home.local` (or any service)
+2. Navigate to `https://n8n.home.local` or `https://grafana.home.local`
 3. Accept SSL warning on first visit
 4. Bookmark for easy access!
 
@@ -133,33 +129,7 @@ Once DNS is configured:
 
 See [TROUBLESHOOTING.md](TROUBLESHOOTING.md#domain-access-issues) for common DNS and certificate issues.
 
-### 4. Configure and Deploy Bookwyrm
-
-After `make setup` completes, configure Bookwyrm:
-
-```bash
-cd external/bookwyrm-docker
-cp .env.example .env
-nano .env  # Configure Bookwyrm settings
-```
-
-**Required Bookwyrm configuration:**
-- `BOOKWYRM_DOMAIN` - Domain or IP for Bookwyrm
-- `BOOKWYRM_SECRET_KEY` - Generate with `openssl rand -base64 45`
-- `BOOKWYRM_DB_PASSWORD` - Generate with `openssl rand -base64 32`
-- `BOOKWYRM_REDIS_ACTIVITY_PASSWORD` - Generate with `openssl rand -base64 32`
-- `BOOKWYRM_REDIS_BROKER_PASSWORD` - Generate with `openssl rand -base64 32`
-
-See [BOOKWYRM.md](BOOKWYRM.md) for detailed Bookwyrm configuration.
-
-Then deploy Bookwyrm:
-
-```bash
-cd ../..  # Return to home-server-stack root
-make bookwyrm-setup
-```
-
-### 5. Verify Deployment
+### 4. Verify Deployment
 
 Check that all services are running:
 
@@ -170,12 +140,9 @@ make status
 Expected output includes:
 - adguard-home
 - n8n
-- ollama, ollama-setup
+- traefik
 - wireguard
-- habitica-mongo, habitica-server, habitica-client
-- hortusfox-db, hortusfox
 - grafana, prometheus, alertmanager, node-exporter, cadvisor
-- bookwyrm services (if deployed)
 
 View logs to check for errors:
 ```bash
@@ -186,9 +153,8 @@ Or view specific service logs:
 ```bash
 make logs-n8n
 make logs-wireguard
-make logs-habitica
-make logs-hortusfox
-make bookwyrm-logs
+docker logs traefik
+docker logs grafana
 ```
 
 ## Initial Configuration
@@ -232,46 +198,7 @@ make bookwyrm-logs
 **First Steps in n8n:**
 - Click "New workflow" to start from scratch
 - Or browse "Templates" for pre-built workflows
-- Test Ollama integration: Add an "Ollama" node and connect to `http://ollama:11434`
-
-### Ollama Model Verification
-
-The initial setup automatically downloads two models:
-- `deepseek-coder:6.7b` (coding assistant)
-- `llama3.2:3b` (general chat)
-
-Verify models are downloaded:
-
-```bash
-docker exec ollama ollama list
-```
-
-Expected output:
-```
-NAME                    ID              SIZE    MODIFIED
-deepseek-coder:6.7b     xxxxx           4.8 GB  X minutes ago
-llama3.2:3b             xxxxx           2.0 GB  X minutes ago
-```
-
-Test the models:
-
-```bash
-# Test general chat model
-curl http://SERVER_IP:11434/api/generate -d '{
-  "model": "llama3.2:3b",
-  "prompt": "Hello, how are you?",
-  "stream": false
-}'
-
-# Test coding assistant
-curl http://SERVER_IP:11434/api/generate -d '{
-  "model": "deepseek-coder:6.7b",
-  "prompt": "Write a Python function to calculate fibonacci numbers",
-  "stream": false
-}'
-```
-
-See [AI_MODELS.md](AI_MODELS.md) for model management.
+- Set up integrations with external services
 
 ### WireGuard VPN Setup
 
@@ -310,148 +237,6 @@ curl https://192.168.1.100:5678  # n8n
 ```
 
 See [REMOTE_ACCESS.md](REMOTE_ACCESS.md) for advanced VPN configuration.
-
-### Habitica Setup
-
-Habitica is automatically deployed and accessible at `http://SERVER_IP:8080`.
-
-1. Navigate to `http://SERVER_IP:8080`
-2. Create your account:
-   - Email address
-   - Username
-   - Password
-3. Complete the character creation wizard
-4. Start tracking your habits and tasks!
-
-See the [Habitica documentation](https://habitica.fandom.com/wiki/Habitica_Wiki) for usage guides.
-
-### HortusFox Setup
-
-HortusFox is automatically deployed and accessible at `http://SERVER_IP:8181`.
-
-1. Navigate to `http://SERVER_IP:8181`
-2. Login with admin credentials from `.env` file:
-   - Email: Value from `HORTUSFOX_ADMIN_EMAIL`
-   - Password: Value from `HORTUSFOX_ADMIN_PASSWORD`
-3. Complete the initial setup:
-   - Set up your first location (e.g., "Living Room", "Garden")
-   - Add plant species to your database
-   - Start tracking your plants!
-4. Configure plant care tasks and reminders
-
-**Key Features:**
-- Plant inventory management
-- Care task scheduling and reminders
-- Photo galleries for plants
-- Location-based organization
-- Collaborative plant management for households
-
-See the [HortusFox documentation](https://github.com/danielbrendel/hortusfox-web) for detailed usage.
-
-### Glance Dashboard Setup
-
-Glance provides a customizable personal dashboard with real-time monitoring of your Docker containers.
-
-**Quick Setup:**
-
-The easiest way to set up Glance is using the Makefile:
-
-```bash
-# Add environment variables to .env
-echo "GLANCE_VERSION=latest" >> .env
-echo "GLANCE_PORT=8282" >> .env
-
-# Create default configuration and start Glance
-make glance-setup
-```
-
-This will:
-- Create a default `data/glance/glance.yml` configuration
-- Set up Docker container monitoring widget
-- Add bookmarks to all your services
-- Start the Glance service
-- Access at `http://SERVER_IP:8282`
-
-**Manual Setup (Alternative):**
-
-If you prefer to create the configuration manually:
-
-1. Create the Glance configuration file:
-   ```bash
-   mkdir -p data/glance
-   nano data/glance/glance.yml
-   ```
-
-2. Add your dashboard configuration (see example below)
-
-3. Add Glance environment variables to your `.env` file:
-   ```bash
-   echo "GLANCE_VERSION=latest" >> .env
-   echo "GLANCE_PORT=8282" >> .env
-   ```
-
-4. Start the Glance service:
-   ```bash
-   docker compose up -d glance
-   ```
-
-5. Access your dashboard at `http://SERVER_IP:8282`
-
-**Customizing Your Dashboard:**
-
-The `data/glance/glance.yml` file supports many widget types:
-- **docker-containers** - Monitor running containers (already configured)
-- **calendar** - Display events and reminders
-- **rss** - RSS feed reader
-- **weather** - Weather information
-- **markets** - Stock/crypto market data
-- **bookmarks** - Quick links to your services
-- **monitor** - System resource monitoring
-
-See the [Glance configuration documentation](https://github.com/glanceapp/glance/blob/main/docs/configuration.md) for all available widgets and options.
-
-**Example: Adding Quick Links to Your Services**
-
-Add this to your `glance.yml` to create bookmarks for your services:
-
-```yaml
-- type: bookmarks
-  groups:
-    - title: Core Services
-      links:
-        - title: AdGuard Home
-          url: http://192.168.1.100:80
-        - title: n8n
-          url: https://192.168.1.100:5678
-        - title: Grafana
-          url: http://192.168.1.100:3001
-    - title: Apps
-      links:
-        - title: Habitica
-          url: http://192.168.1.100:8080
-        - title: Bookwyrm
-          url: http://192.168.1.100:8000
-        - title: HortusFox
-          url: http://192.168.1.100:8181
-```
-
-After modifying `glance.yml`, the dashboard will automatically reload with your changes (Glance v0.7.0+ supports automatic config reloading). No restart required!
-
-### Bookwyrm Setup
-
-After deploying Bookwyrm with `make bookwyrm-setup`:
-
-1. Navigate to `http://SERVER_IP:8000`
-2. Create admin account using the admin code from setup logs:
-   ```bash
-   make bookwyrm-logs | grep "admin code"
-   ```
-3. Configure your Bookwyrm instance:
-   - Site name and description
-   - Registration settings (open/invite-only)
-   - Federated network preferences
-
-See [BOOKWYRM.md](BOOKWYRM.md) for detailed configuration and usage.
 
 ## Monitoring Stack
 
@@ -540,22 +325,18 @@ Consider automating backups with cron (see [security-tickets/10-automated-backup
 
 2. **Create n8n Workflows:**
    - Explore n8n templates
-   - Connect to Ollama for AI-powered automations
    - Set up integrations with external services
+   - Configure webhooks for automation
 
-3. **Download Additional AI Models:**
-   - See [AI_MODELS.md](AI_MODELS.md) for recommended models
-   - Browse available models at https://ollama.ai/library
-
-4. **Harden Security:**
+3. **Harden Security:**
    - Follow [security-tickets/README.md](../security-tickets/README.md)
    - Start with Phase 1 (Critical) tickets
    - Implement VPN-first access strategy
 
-5. **Set Up Monitoring (if not already):**
-   - Deploy monitoring stack
-   - Configure alerts
-   - Set up dashboards
+4. **Review Monitoring:**
+   - Check Grafana dashboards
+   - Configure additional alerts if needed
+   - Review Prometheus metrics
 
 ## Troubleshooting
 
@@ -577,11 +358,11 @@ docker compose restart [service_name]
 sudo systemctl status docker
 
 # Check port availability
-sudo netstat -tlnp | grep -E ':(53|80|5678|11434|51820)'
+sudo netstat -tlnp | grep -E ':(53|80|443|5678|51820)'
 ```
 
 ## Support
 
 - **Documentation:** [docs/](.) directory
 - **Issues:** [GitHub Issues](https://github.com/josephradford/home-server-stack/issues)
-- **Service Docs:** [AdGuard](https://adguard.com/kb/), [n8n](https://docs.n8n.io/), [Ollama](https://ollama.ai/)
+- **Service Docs:** [AdGuard](https://adguard.com/kb/), [n8n](https://docs.n8n.io/), [Traefik](https://doc.traefik.io/traefik/)

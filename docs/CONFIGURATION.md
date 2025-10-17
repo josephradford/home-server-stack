@@ -22,10 +22,6 @@ N8N_SSL_KEY=/ssl/server.key            # SSL key path
 N8N_SSL_CERT=/ssl/server.crt           # SSL cert path
 N8N_SECURE_COOKIE=true                 # Secure cookie flag
 
-# Ollama Configuration
-OLLAMA_NUM_PARALLEL=2          # Concurrent requests (reduce if low RAM)
-OLLAMA_MAX_LOADED_MODELS=2     # Max models in memory
-OLLAMA_LOAD_TIMEOUT=600        # Model load timeout (seconds)
 
 # WireGuard VPN Configuration
 WIREGUARD_SERVERURL=your-public-ip-or-domain.com
@@ -90,40 +86,6 @@ EXECUTIONS_TIMEOUT_MAX=3600           # 1 hour max
 - Webhook URL: `${N8N_EDITOR_BASE_URL}/webhook/`
 - Test webhooks: `${N8N_EDITOR_BASE_URL}/webhook-test/`
 
-### Ollama
-
-Configuration via environment variables.
-
-**Model Management:**
-```bash
-# List models
-docker exec ollama ollama list
-
-# Pull models
-docker exec ollama ollama pull llama3.2:3b
-
-# Remove models
-docker exec ollama ollama rm model-name
-
-# Show model info
-docker exec ollama ollama show llama3.2:3b
-```
-
-**Performance Tuning:**
-```bash
-# Low RAM (8 GB): Single model, low parallelism
-OLLAMA_NUM_PARALLEL=1
-OLLAMA_MAX_LOADED_MODELS=1
-
-# Medium RAM (16 GB): Moderate parallelism
-OLLAMA_NUM_PARALLEL=2
-OLLAMA_MAX_LOADED_MODELS=2
-
-# High RAM (32+ GB): High parallelism
-OLLAMA_NUM_PARALLEL=4
-OLLAMA_MAX_LOADED_MODELS=3
-```
-
 ### WireGuard
 
 Configuration via environment variables and auto-generated configs.
@@ -157,70 +119,6 @@ docker exec wireguard /app/show-peer 1
 docker exec wireguard cat /config/peer1/peer1.conf
 ```
 
-### Habitica
-
-Configuration via environment variables in `.env`.
-
-**Basic Settings:**
-```bash
-HABITICA_VERSION=latest                # Docker image version
-HABITICA_MONGO_VERSION=5.0             # MongoDB version
-HABITICA_BASE_URL=http://192.168.1.100:8080  # Base URL for the instance
-HABITICA_INVITE_ONLY=false             # Require invites for registration
-```
-
-**Email Configuration (Optional):**
-```bash
-HABITICA_EMAIL_SERVER_URL=smtp.gmail.com        # SMTP server
-HABITICA_EMAIL_SERVER_PORT=587                  # SMTP port
-HABITICA_EMAIL_AUTH_USER=your-email@gmail.com   # SMTP username
-HABITICA_EMAIL_AUTH_PASSWORD=your-app-password  # SMTP password
-HABITICA_ADMIN_EMAIL=admin@example.com          # Admin contact email
-```
-
-**Note:** Email configuration is optional. The app works without it, but email notifications and password reset will not function.
-
-Access at `http://SERVER_IP:8080`
-
-### HortusFox
-
-Configuration via environment variables in `.env`.
-
-**Basic Settings:**
-```bash
-HORTUSFOX_VERSION=latest                        # Docker image version
-HORTUSFOX_MARIADB_VERSION=latest                # MariaDB version
-HORTUSFOX_ADMIN_EMAIL=admin@example.com         # Admin account email
-HORTUSFOX_ADMIN_PASSWORD=your_secure_password   # Admin password
-```
-
-**Database Configuration:**
-```bash
-HORTUSFOX_DB_NAME=hortusfox                     # Database name
-HORTUSFOX_DB_USER=hortusfox                     # Database user
-HORTUSFOX_DB_PASSWORD=your_secure_db_password   # Database password
-HORTUSFOX_DB_ROOT_PASSWORD=your_secure_root_pw  # MariaDB root password
-```
-
-**Storage Locations:**
-- Images: `./data/hortusfox/images/`
-- Logs: `./data/hortusfox/logs/`
-- Backups: `./data/hortusfox/backup/`
-- Themes: `./data/hortusfox/themes/`
-- Migrations: `./data/hortusfox/migrate/`
-- Database: `./data/hortusfox/db/`
-
-**Application Configuration:**
-- Timezone: Inherited from `TIMEZONE` environment variable
-- Database charset: `utf8mb4` (required for emoji and special characters)
-
-**Admin Account:**
-The admin account is automatically created on first run using:
-- Email: `HORTUSFOX_ADMIN_EMAIL`
-- Password: `HORTUSFOX_ADMIN_PASSWORD`
-
-Access at `http://SERVER_IP:8181`
-
 ## Traefik Reverse Proxy Configuration
 
 ### Overview
@@ -231,8 +129,6 @@ Traefik provides domain-based routing for all services using Docker labels for a
 
 - **docker-compose.yml** - Contains Traefik service definition and labels for core services
 - **docker-compose.monitoring.yml** - Contains labels for monitoring services
-- **docker-compose.habitica.yml** - Contains labels for Habitica
-- **external/bookwyrm-docker/docker-compose.yml** - Contains labels for Bookwyrm
 
 ### Adding New Services
 
@@ -473,17 +369,8 @@ nslookup google.com SERVER_IP
 # Test n8n access
 curl -k -I https://SERVER_IP:5678
 
-# Test Ollama
-curl http://SERVER_IP:11434/api/version
-
 # Test WireGuard (from connected client)
 ping 192.168.1.100
-
-# Test Habitica
-curl -I http://SERVER_IP:8080
-
-# Test HortusFox
-curl -I http://SERVER_IP:8181
 ```
 
 ## Backup Configuration
@@ -504,5 +391,5 @@ tar -czf config-backup-$(date +%Y%m%d).tar.gz .env docker-compose.yml ssl/ monit
 - Service-specific docs:
   - [AdGuard Home](https://adguard.com/kb/)
   - [n8n](https://docs.n8n.io/)
-  - [Ollama](https://ollama.ai/library)
   - [WireGuard](https://www.wireguard.com/)
+  - [Traefik](https://doc.traefik.io/traefik/)

@@ -1,5 +1,7 @@
 groups:
-  - name: critical-alerts
+  # System and Container Health Monitoring
+  # Consolidated alerts for system resources and container availability
+  - name: system-alerts
     rules:
       # General service health monitoring using Prometheus 'up' metric
       # Triggers when any monitored endpoint fails to respond to health checks
@@ -9,6 +11,7 @@ groups:
         for: 30s
         labels:
           severity: critical
+          category: availability
         annotations:
           summary: "Service {{ $labels.job }} is down"
           description: "Service {{ $labels.job }} on {{ $labels.instance }} has been down for more than 30 seconds"
@@ -16,12 +19,13 @@ groups:
       # System-wide CPU usage monitoring
       # Calculates average CPU usage across all cores by measuring non-idle time
       # 85% threshold: Leaves 15% headroom for burst activity, prevents performance degradation
-      # 5m duration: Filters out brief spikes from legitimate workloads (Ollama inference, n8n workflows)
+      # 5m duration: Filters out brief spikes from legitimate workloads (n8n workflows)
       - alert: HighCPUUsage
         expr: 100 - (avg(rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 85
         for: 5m
         labels:
           severity: critical
+          category: resources
         annotations:
           summary: "High CPU usage detected"
           description: "CPU usage is above 85% for more than 5 minutes (current value: {{ printf \"%.2f\" $value }}%)"
@@ -35,6 +39,7 @@ groups:
         for: 3m
         labels:
           severity: critical
+          category: resources
         annotations:
           summary: "High memory usage detected"
           description: "Memory usage is above 90% for more than 3 minutes (current value: {{ printf \"%.2f\" $value }}%)"
@@ -42,130 +47,27 @@ groups:
       # Root filesystem capacity monitoring
       # Monitors only root mountpoint (/) to avoid false alerts from tmpfs, devtmpfs, etc.
       # 90% threshold: Critical level - services may fail when disk is full
-      # 5m duration: Allows time for transient large file operations (model downloads) to complete
+      # 5m duration: Allows time for transient large file operations to complete
       - alert: DiskSpaceLow
         expr: 100 - ((node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"}) * 100) > 90
         for: 5m
         labels:
           severity: critical
+          category: resources
         annotations:
           summary: "Disk space critically low"
           description: "Disk space usage on {{ $labels.instance }} is above 90% for more than 5 minutes (current value: {{ printf \"%.2f\" $value }}%)"
 
-      # Critical container availability monitoring via cAdvisor
-      # Checks when cAdvisor last saw critical containers (adguard, n8n, ollama)
-      # 60s threshold: Container not seen by cAdvisor for over a minute indicates it's stopped
-      # for: 0m - Immediate alert as these are core services requiring high availability
-      - alert: ContainerDown
-        expr: time() - container_last_seen{name=~"adguard|n8n|ollama"} > 60
-        for: 0m
-        labels:
-          severity: critical
-        annotations:
-          summary: "Container {{ $labels.name }} is down"
-          description: "Container {{ $labels.name }} has not been seen for more than 1 minute"
-
-      # Per-container CPU usage monitoring
-      # Monitors individual container CPU consumption using cAdvisor metrics
-      # 80% threshold: Warning level for single container (lower than system-wide 85%)
-      # 10m duration: Long window to tolerate Ollama inference and n8n batch jobs
-      - alert: ContainerHighCPU
-        expr: rate(container_cpu_usage_seconds_total{name=~".+"}[5m]) * 100 > 80
-        for: 10m
-        labels:
-          severity: warning
-        annotations:
-          summary: "Container {{ $labels.name }} high CPU usage"
-          description: "Container {{ $labels.name }} CPU usage is above 80% for more than 10 minutes (current value: {{ printf \"%.2f\" $value }}%)"
-
-      # Per-container memory usage against configured limits
-      # Only fires for containers with explicit memory limits set
-      # 85% threshold: Warning before hitting limit and potential OOM kill
-      # 10m duration: Allows for temporary memory spikes during model loading
-      - alert: ContainerHighMemory
-        expr: (container_memory_usage_bytes{name=~".+"} / container_spec_memory_limit_bytes{name=~".+"}) * 100 > 85
-        for: 10m
-        labels:
-          severity: warning
-        annotations:
-          summary: "Container {{ $labels.name }} high memory usage"
-          description: "Container {{ $labels.name }} memory usage is above 85% for more than 10 minutes (current value: {{ printf \"%.2f\" $value }}%)"
-
-      # Container crash/restart loop detection
-      # Tracks container start events - multiple starts indicate restart loop
-      # >3 restarts in 1h threshold: Indicates persistent failure (crash loop)
-      # for: 0m - Immediate alert as restart loops indicate critical configuration/bug issues
-      - alert: ContainerRestartLoop
-        expr: increase(container_start_time_seconds{name=~".+"}[1h]) > 3
-        for: 0m
-        labels:
-          severity: warning
-        annotations:
-          summary: "Container {{ $labels.name }} restarting frequently"
-          description: "Container {{ $labels.name }} has restarted {{ printf \"%.0f\" $value }} times in the last hour"
-
-  - name: service-specific-alerts
-    rules:
-      # Monitoring infrastructure health - critical for observability
-      # Alerts when core monitoring components fail (Prometheus, node-exporter, cAdvisor)
-      # 1m threshold: Quick detection as these failures blind us to system state
-      # More urgent than general ServiceDown as it affects all monitoring
-      - alert: PrometheusTargetDown
-        expr: up{job=~"prometheus|node-exporter|cadvisor"} == 0
-        for: 1m
-        labels:
-          severity: critical
-        annotations:
-          summary: "Monitoring target {{ $labels.job }} is down"
-          description: "{{ $labels.job }} monitoring target on {{ $labels.instance }} has been down for more than 1 minute"
-
-      # AdGuard Home DNS and ad-blocking service availability
-      # Critical as network clients depend on this for DNS resolution
-      # 1m threshold: DNS failures impact all network operations immediately
-      - alert: AdGuardDown
-        expr: up{job="adguard"} == 0
-        for: 1m
-        labels:
-          severity: critical
-        annotations:
-          summary: "AdGuard DNS service is down"
-          description: "AdGuard service is not responding for more than 1 minute"
-
-      # n8n workflow automation platform availability
-      # Critical as automated workflows and integrations depend on this service
-      # 2m threshold: Slightly longer than DNS as brief restarts for config changes are acceptable
-      - alert: N8nDown
-        expr: up{job="n8n"} == 0
-        for: 2m
-        labels:
-          severity: critical
-        annotations:
-          summary: "n8n automation service is down"
-          description: "n8n service is not responding for more than 2 minutes"
-
-      # Ollama local LLM inference API availability
-      # Critical for AI-powered workflows and applications
-      # 2m threshold: Tolerates brief delays during model loading operations
-      - alert: OllamaDown
-        expr: up{job="ollama"} == 0
-        for: 2m
-        labels:
-          severity: critical
-        annotations:
-          summary: "Ollama AI service is down"
-          description: "Ollama API is not responding for more than 2 minutes"
-
-  - name: resource-alerts
-    rules:
       # Disk I/O saturation monitoring
       # High I/O wait indicates disk bottleneck or potential hardware issues
       # >0.5 threshold: More than 50% of time spent in I/O operations indicates saturation
-      # 10m duration: Tolerates brief I/O spikes from backups, large file ops, model downloads
+      # 10m duration: Tolerates brief I/O spikes from backups and large file ops
       - alert: HighDiskIOWait
         expr: rate(node_disk_io_time_seconds_total[5m]) > 0.5
         for: 10m
         labels:
           severity: warning
+          category: resources
         annotations:
           summary: "High disk I/O wait time"
           description: "Disk I/O wait time is high on {{ $labels.instance }} for more than 10 minutes"
@@ -173,12 +75,13 @@ groups:
       # Network traffic anomaly detection
       # Monitors receive bandwidth on physical interfaces (excludes loopback and docker virtual interfaces)
       # >100MB/s threshold: Unusually high for typical home server traffic, may indicate abuse or attack
-      # 10m duration: Allows for legitimate large transfers (Ollama models, backups)
+      # 10m duration: Allows for legitimate large transfers (backups)
       - alert: HighNetworkTraffic
         expr: rate(node_network_receive_bytes_total{device!~"lo|docker.*"}[5m]) > 100000000
         for: 10m
         labels:
           severity: warning
+          category: resources
         annotations:
           summary: "High network traffic detected"
           description: "Network interface {{ $labels.device }} on {{ $labels.instance }} is receiving high traffic for more than 10 minutes"
@@ -192,11 +95,113 @@ groups:
         for: 10m
         labels:
           severity: warning
+          category: resources
         annotations:
           summary: "System load is high"
           description: "15-minute load average on {{ $labels.instance }} is above 2x CPU count for more than 10 minutes"
 
-  # VPN Monitoring Alerts
+      # Critical container availability monitoring via cAdvisor
+      # Checks when cAdvisor last saw critical containers (adguard, n8n)
+      # 60s threshold: Container not seen by cAdvisor for over a minute indicates it's stopped
+      # for: 0m - Immediate alert as these are core services requiring high availability
+      - alert: ContainerDown
+        expr: time() - container_last_seen{name=~"adguard|n8n"} > 60
+        for: 0m
+        labels:
+          severity: critical
+          category: availability
+        annotations:
+          summary: "Container {{ $labels.name }} is down"
+          description: "Container {{ $labels.name }} has not been seen for more than 1 minute"
+
+      # Per-container CPU usage monitoring
+      # Monitors individual container CPU consumption using cAdvisor metrics
+      # 80% threshold: Warning level for single container (lower than system-wide 85%)
+      # 10m duration: Long window to tolerate n8n batch jobs
+      - alert: ContainerHighCPU
+        expr: rate(container_cpu_usage_seconds_total{name=~".+"}[5m]) * 100 > 80
+        for: 10m
+        labels:
+          severity: warning
+          category: resources
+        annotations:
+          summary: "Container {{ $labels.name }} high CPU usage"
+          description: "Container {{ $labels.name }} CPU usage is above 80% for more than 10 minutes (current value: {{ printf \"%.2f\" $value }}%)"
+
+      # Per-container memory usage against configured limits
+      # Only fires for containers with explicit memory limits set
+      # 85% threshold: Warning before hitting limit and potential OOM kill
+      # 10m duration: Allows for temporary memory spikes
+      - alert: ContainerHighMemory
+        expr: (container_memory_usage_bytes{name=~".+"} / container_spec_memory_limit_bytes{name=~".+"}) * 100 > 85
+        for: 10m
+        labels:
+          severity: warning
+          category: resources
+        annotations:
+          summary: "Container {{ $labels.name }} high memory usage"
+          description: "Container {{ $labels.name }} memory usage is above 85% for more than 10 minutes (current value: {{ printf \"%.2f\" $value }}%)"
+
+      # Container crash/restart loop detection
+      # Tracks container start events - multiple starts indicate restart loop
+      # >3 restarts in 1h threshold: Indicates persistent failure (crash loop)
+      # for: 0m - Immediate alert as restart loops indicate critical configuration/bug issues
+      - alert: ContainerRestartLoop
+        expr: increase(container_start_time_seconds{name=~".+"}[1h]) > 3
+        for: 0m
+        labels:
+          severity: warning
+          category: reliability
+        annotations:
+          summary: "Container {{ $labels.name }} restarting frequently"
+          description: "Container {{ $labels.name }} has restarted {{ printf \"%.0f\" $value }} times in the last hour"
+
+  # Service-Specific Health Monitoring
+  # Monitors critical application services
+  - name: service-specific-alerts
+    rules:
+      # Monitoring infrastructure health - critical for observability
+      # Alerts when core monitoring components fail (Prometheus, node-exporter, cAdvisor)
+      # 1m threshold: Quick detection as these failures blind us to system state
+      # More urgent than general ServiceDown as it affects all monitoring
+      - alert: PrometheusTargetDown
+        expr: up{job=~"prometheus|node-exporter|cadvisor"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          category: availability
+        annotations:
+          summary: "Monitoring target {{ $labels.job }} is down"
+          description: "{{ $labels.job }} monitoring target on {{ $labels.instance }} has been down for more than 1 minute"
+
+      # AdGuard Home DNS and ad-blocking service availability
+      # Critical as network clients depend on this for DNS resolution
+      # 1m threshold: DNS failures impact all network operations immediately
+      - alert: AdGuardDown
+        expr: up{job="adguard"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          category: availability
+        annotations:
+          summary: "AdGuard DNS service is down"
+          description: "AdGuard service is not responding for more than 1 minute"
+
+      # n8n workflow automation platform availability
+      # Critical as automated workflows and integrations depend on this service
+      # Monitors container health via cAdvisor
+      # 2m threshold: Slightly longer than DNS as brief restarts for config changes are acceptable
+      - alert: N8nDown
+        expr: absent(container_last_seen{name="n8n"}) or (time() - container_last_seen{name="n8n"} > 120)
+        for: 2m
+        labels:
+          severity: critical
+          category: availability
+        annotations:
+          summary: "n8n automation service is down"
+          description: "n8n container has been down for more than 2 minutes"
+
+  # VPN Security Monitoring
   # Monitors WireGuard VPN as the primary security boundary
   # Critical for maintaining secure remote access
   - name: vpn_alerts
@@ -252,197 +257,3 @@ groups:
           summary: "WireGuard container health check failing"
           description: "WireGuard health check has been failing for 5+ minutes."
 
-  # Bookwyrm Monitoring Alerts
-  # Monitors Bookwyrm social reading platform availability and health
-  - name: bookwyrm_alerts
-    interval: 30s
-    rules:
-      # Monitor Bookwyrm web service availability
-      - alert: BookwyrmDown
-        expr: up{job="bookwyrm"} == 0
-        for: 2m
-        labels:
-          severity: critical
-          category: availability
-          service: bookwyrm
-        annotations:
-          summary: "Bookwyrm service is down"
-          description: "Bookwyrm web service is not responding for more than 2 minutes."
-
-      # Monitor Bookwyrm container health
-      - alert: BookwyrmUnhealthy
-        expr: absent(container_last_seen{name="bookwyrm"}) or (time() - container_last_seen{name="bookwyrm"} > 120)
-        for: 2m
-        labels:
-          severity: critical
-          category: availability
-          service: bookwyrm
-        annotations:
-          summary: "Bookwyrm container is down"
-          description: "Bookwyrm container has been down for more than 2 minutes."
-
-      # Monitor Bookwyrm database health
-      - alert: BookwyrmDatabaseDown
-        expr: absent(container_last_seen{name="bookwyrm-db"}) or (time() - container_last_seen{name="bookwyrm-db"} > 120)
-        for: 2m
-        labels:
-          severity: critical
-          category: availability
-          service: bookwyrm
-        annotations:
-          summary: "Bookwyrm database is down"
-          description: "Bookwyrm PostgreSQL database has been down for more than 2 minutes."
-
-      # Monitor Bookwyrm Celery worker
-      - alert: BookwyrmCeleryWorkerDown
-        expr: absent(container_last_seen{name="bookwyrm-celery"}) or (time() - container_last_seen{name="bookwyrm-celery"} > 120)
-        for: 3m
-        labels:
-          severity: warning
-          category: reliability
-          service: bookwyrm
-        annotations:
-          summary: "Bookwyrm Celery worker is down"
-          description: "Bookwyrm background task worker has been down for more than 3 minutes. Background tasks will queue up."
-
-      # Monitor Redis instances
-      - alert: BookwyrmRedisDown
-        expr: absent(container_last_seen{name=~"bookwyrm-redis.*"}) or (time() - container_last_seen{name=~"bookwyrm-redis.*"} > 120)
-        for: 2m
-        labels:
-          severity: critical
-          category: availability
-          service: bookwyrm
-        annotations:
-          summary: "Bookwyrm Redis instance down"
-          description: "One or more Bookwyrm Redis instances have been down for more than 2 minutes."
-
-      # Monitor for frequent container restarts
-      - alert: BookwyrmFrequentRestarts
-        expr: rate(container_start_time_seconds{name=~"bookwyrm.*"}[15m]) > 0.1
-        for: 5m
-        labels:
-          severity: warning
-          category: reliability
-          service: bookwyrm
-        annotations:
-          summary: "Bookwyrm container restarting frequently"
-          description: "Bookwyrm container {{ $labels.name }} has restarted {{ $value }} times in 15 minutes."
-
-  # Habitica Monitoring Alerts
-  # Gamified habit and task tracker
-  - name: habitica_alerts
-    interval: 30s
-    rules:
-      # Monitor Habitica client (frontend) availability
-      - alert: HabiticaDown
-        expr: absent(container_last_seen{name="habitica-client"}) or (time() - container_last_seen{name="habitica-client"} > 120)
-        for: 2m
-        labels:
-          severity: critical
-          category: availability
-          service: habitica
-        annotations:
-          summary: "Habitica habit tracker is down"
-          description: "Habitica client container has been down for more than 2 minutes. Habit tracking unavailable."
-
-      # Monitor Habitica server (backend) availability
-      - alert: HabiticaServerDown
-        expr: absent(container_last_seen{name="habitica-server"}) or (time() - container_last_seen{name="habitica-server"} > 120)
-        for: 2m
-        labels:
-          severity: critical
-          category: availability
-          service: habitica
-        annotations:
-          summary: "Habitica API server is down"
-          description: "Habitica server container has been down for more than 2 minutes. All operations will fail."
-
-      # Monitor MongoDB database availability
-      - alert: HabiticaDatabaseDown
-        expr: absent(container_last_seen{name="habitica-mongo"}) or (time() - container_last_seen{name="habitica-mongo"} > 120)
-        for: 2m
-        labels:
-          severity: critical
-          category: availability
-          service: habitica
-        annotations:
-          summary: "Habitica database is down"
-          description: "MongoDB database for Habitica has been down for more than 2 minutes. Data persistence unavailable."
-
-      # Monitor Habitica health check status
-      - alert: HabiticaUnhealthy
-        expr: container_health_status{name=~"habitica-(client|server)",status!="healthy"} == 1
-        for: 5m
-        labels:
-          severity: warning
-          category: reliability
-          service: habitica
-        annotations:
-          summary: "Habitica container health check failing"
-          description: "Container {{ $labels.name }} health check has been failing for 5+ minutes."
-
-      # Monitor for container restart loops
-      - alert: HabiticaFrequentRestarts
-        expr: rate(container_start_time_seconds{name=~"habitica-.*"}[15m]) > 0.1
-        for: 5m
-        labels:
-          severity: warning
-          category: reliability
-          service: habitica
-        annotations:
-          summary: "Habitica container restarting frequently"
-          description: "Container {{ $labels.name }} has restarted {{ $value }} times in 15 minutes. Check logs for errors."
-
-  # HortusFox Monitoring Alerts
-  # Collaborative plant management system
-  - name: hortusfox_alerts
-    interval: 30s
-    rules:
-      # Monitor HortusFox application availability
-      - alert: HortusFoxDown
-        expr: absent(container_last_seen{name="hortusfox"}) or (time() - container_last_seen{name="hortusfox"} > 120)
-        for: 2m
-        labels:
-          severity: critical
-          category: availability
-          service: hortusfox
-        annotations:
-          summary: "HortusFox plant management app is down"
-          description: "HortusFox container has been down for more than 2 minutes. Plant tracking unavailable."
-
-      # Monitor MariaDB database availability
-      - alert: HortusFoxDatabaseDown
-        expr: absent(container_last_seen{name="hortusfox-db"}) or (time() - container_last_seen{name="hortusfox-db"} > 120)
-        for: 2m
-        labels:
-          severity: critical
-          category: availability
-          service: hortusfox
-        annotations:
-          summary: "HortusFox database is down"
-          description: "MariaDB database for HortusFox has been down for more than 2 minutes. All operations will fail."
-
-      # Monitor HortusFox health check status
-      - alert: HortusFoxUnhealthy
-        expr: container_health_status{name=~"hortusfox(-db)?",status!="healthy"} == 1
-        for: 5m
-        labels:
-          severity: warning
-          category: reliability
-          service: hortusfox
-        annotations:
-          summary: "HortusFox container health check failing"
-          description: "Container {{ $labels.name }} health check has been failing for 5+ minutes."
-
-      # Monitor for container restart loops
-      - alert: HortusFoxFrequentRestarts
-        expr: rate(container_start_time_seconds{name=~"hortusfox(-db)?"}[15m]) > 0.1
-        for: 5m
-        labels:
-          severity: warning
-          category: reliability
-          service: hortusfox
-        annotations:
-          summary: "HortusFox container restarting frequently"
-          description: "Container {{ $labels.name }} has restarted {{ $value }} times in 15 minutes. Check logs for errors."
