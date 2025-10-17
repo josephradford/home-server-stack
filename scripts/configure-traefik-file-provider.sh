@@ -58,16 +58,20 @@ cat > "$DYNAMIC_CONFIG" <<EOF
 tls:
   certificates:
     # Wildcard certificate for *.$DOMAIN and $DOMAIN
+    # The certificate will be used for any SNI matching these domains
     - certFile: $CERT_PATH.crt
       keyFile: $CERT_PATH.key
-      stores:
-        - default
 
   stores:
     default:
       defaultCertificate:
         certFile: $CERT_PATH.crt
         keyFile: $CERT_PATH.key
+
+  options:
+    default:
+      minVersion: VersionTLS12
+      sniStrict: true
 EOF
 
 echo -e "${GREEN}✓${NC} Configuration file created: $DYNAMIC_CONFIG"
