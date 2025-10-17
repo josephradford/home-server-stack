@@ -126,6 +126,10 @@ services:
       - "--providers.docker=true"
       - "--providers.docker.exposedbydefault=false"
 
+      # File provider for TLS certificates
+      - "--providers.file.directory=/etc/traefik"
+      - "--providers.file.watch=true"
+
       # Entrypoints
       - "--entrypoints.web.address=:80"
       - "--entrypoints.websecure.address=:443"
@@ -143,7 +147,7 @@ services:
       - "--certificatesresolvers.letsencrypt.acme.dnschallenge.resolvers=1.1.1.1:53,8.8.8.8:53"
       - "--certificatesresolvers.letsencrypt.acme.email=${ACME_EMAIL}"
       - "--certificatesresolvers.letsencrypt.acme.storage=/certs/acme.json"
-      # FOR TESTING ONLY - Uncomment to use staging:
+      # Disabled - using certbot with file provider instead of ACME
       # - "--certificatesresolvers.letsencrypt.acme.caserver=https://acme-staging-v02.api.letsencrypt.org/directory"
 
       # Wildcard Certificate Configuration
