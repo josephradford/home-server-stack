@@ -3,7 +3,7 @@
 
 .PHONY: help setup update start stop restart logs build pull status clean purge validate env-check
 .PHONY: logs-n8n logs-wireguard
-.PHONY: adguard-setup test-domain-access
+.PHONY: adguard-setup setup-certs test-domain-access
 
 # Compose file flags - always include monitoring
 COMPOSE := docker compose -f docker-compose.yml -f docker-compose.monitoring.yml
@@ -76,13 +76,16 @@ pull: validate
 setup: env-check validate
 	@echo "Starting first-time setup..."
 	@echo ""
-	@echo "Step 1/3: Pulling pre-built images..."
+	@echo "Step 1/4: Setting up SSL certificate storage..."
+	@$(MAKE) setup-certs
+	@echo ""
+	@echo "Step 2/4: Pulling pre-built images..."
 	@$(COMPOSE) pull --ignore-pull-failures
 	@echo ""
-	@echo "Step 2/3: Starting services..."
+	@echo "Step 3/4: Starting services..."
 	@$(COMPOSE) up -d
 	@echo ""
-	@echo "Step 3/3: Configuring AdGuard DNS rewrites..."
+	@echo "Step 4/4: Configuring AdGuard DNS rewrites..."
 	@$(MAKE) adguard-setup
 	@echo ""
 	@$(COMPOSE) ps
@@ -206,6 +209,14 @@ adguard-setup: env-check
 	@echo ""
 	@echo "All *.home.local domains should now resolve to $$SERVER_IP"
 	@echo "Configure network devices to use $$SERVER_IP as DNS server"
+
+# Setup SSL certificate storage
+setup-certs:
+	@echo "Setting up SSL certificate storage..."
+	@mkdir -p data/traefik/certs
+	@touch data/traefik/certs/acme.json
+	@chmod 600 data/traefik/certs/acme.json
+	@echo "✓ Certificate storage configured"
 
 # Test domain-based access for all services
 test-domain-access: env-check
