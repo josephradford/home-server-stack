@@ -36,7 +36,7 @@ CERT_SOURCE="/etc/letsencrypt/live/$DOMAIN"
 CERT_DEST="./data/traefik/certs"
 
 # Check if source certificates exist
-if [ ! -d "$CERT_SOURCE" ]; then
+if ! sudo test -d "$CERT_SOURCE"; then
     echo -e "${RED}ERROR: Certificates not found at $CERT_SOURCE${NC}"
     echo "Please run ./scripts/setup-certbot-gandi.sh first"
     exit 1
