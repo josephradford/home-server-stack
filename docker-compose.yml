@@ -16,9 +16,6 @@ services:
       - homeserver
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.adguard-http.rule=Host(`adguard.home.local`)"
-      - "traefik.http.routers.adguard-http.entrypoints=web"
-      - "traefik.http.routers.adguard-http.middlewares=redirect-to-https"
       - "traefik.http.routers.adguard.rule=Host(`adguard.home.local`)"
       - "traefik.http.routers.adguard.entrypoints=websecure"
       - "traefik.http.routers.adguard.tls=true"
@@ -66,9 +63,6 @@ services:
       - n8n-init
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.n8n-http.rule=Host(`n8n.home.local`)"
-      - "traefik.http.routers.n8n-http.entrypoints=web"
-      - "traefik.http.routers.n8n-http.middlewares=redirect-to-https"
       - "traefik.http.routers.n8n.rule=Host(`n8n.home.local`)"
       - "traefik.http.routers.n8n.entrypoints=websecure"
       - "traefik.http.routers.n8n.tls=true"
