@@ -183,12 +183,58 @@ services:
       - "traefik.http.middlewares.dashboard-auth.basicauth.users=${TRAEFIK_DASHBOARD_USERS}"
       - "traefik.http.routers.dashboard.middlewares=dashboard-auth"
 
+      # Security Headers Middleware
+      - "traefik.http.middlewares.security-headers.headers.frameDeny=true"
+      - "traefik.http.middlewares.security-headers.headers.browserXssFilter=true"
+      - "traefik.http.middlewares.security-headers.headers.contentTypeNosniff=true"
+      - "traefik.http.middlewares.security-headers.headers.stsSeconds=31536000"
+      - "traefik.http.middlewares.security-headers.headers.stsIncludeSubdomains=true"
+      - "traefik.http.middlewares.security-headers.headers.stsPreload=true"
+
+      # Rate Limiting for Webhooks (generous for legitimate use)
+      - "traefik.http.middlewares.webhook-ratelimit.ratelimit.average=100"
+      - "traefik.http.middlewares.webhook-ratelimit.ratelimit.period=1m"
+      - "traefik.http.middlewares.webhook-ratelimit.ratelimit.burst=50"
+
+      # Strict Rate Limiting for Admin Access
+      - "traefik.http.middlewares.admin-ratelimit.ratelimit.average=10"
+      - "traefik.http.middlewares.admin-ratelimit.ratelimit.period=1m"
+      - "traefik.http.middlewares.admin-ratelimit.ratelimit.burst=5"
+
+      # IP Whitelist for Internal Services (RFC1918 + VPN)
+      - "traefik.http.middlewares.internal-only.ipwhitelist.sourcerange=192.168.0.0/16,172.16.0.0/12,10.0.0.0/8"
+
+      # Webhook Security Chain
+      - "traefik.http.middlewares.webhook-secure.chain.middlewares=security-headers,webhook-ratelimit"
+
+      # Admin Security Chain
+      - "traefik.http.middlewares.admin-secure.chain.middlewares=internal-only,security-headers,admin-ratelimit"
+
     healthcheck:
       test: ["CMD", "traefik", "healthcheck", "--ping"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 10s
+
+  # Fail2ban - Protection against brute force and scanning attempts
+  fail2ban:
+    image: crazymax/fail2ban:latest
+    container_name: fail2ban
+    restart: unless-stopped
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    environment:
+      - TZ=${TIMEZONE}
+      - F2B_DB_PURGE_AGE=30d
+      - F2B_LOG_LEVEL=INFO
+    volumes:
+      - ./data/fail2ban:/data
+      - ./data/traefik/logs:/var/log/traefik:ro
+      - ./config/fail2ban/jail.local:/etc/fail2ban/jail.local:ro
+      - ./config/fail2ban/filter.d:/etc/fail2ban/filter.d:ro
+    network_mode: host
 
 networks:
   homeserver:
