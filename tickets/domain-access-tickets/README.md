@@ -73,9 +73,19 @@ All services use the `.home.local` TLD with descriptive names:
 
 | # | Ticket | Priority | Time | Status |
 |---|--------|----------|------|--------|
-| 10 | [Remove Direct Port Access](10-remove-direct-port-access.md) | Medium | 1-2h | ⬜ Pending |
+| 10 | [Remove Direct Port Access](archived/10-remove-direct-port-access.md) | Medium | 1-2h | ✅ Complete |
+| 11 | [Let's Encrypt SSL with Gandi](archived/ticket-11-letsencrypt-radsrv.md) | High | 2h | ✅ Complete |
+| 12 | [Security Hardening for Public Exposure](archived/ticket-12-security-hardening.md) | High | 2h | ✅ Complete |
+| 13 | [Webhook Architecture](ticket-13-webhook-architecture.md) | Medium | 2-3h | ⬜ Pending |
 
 **Phase 4 Goal:** Remove legacy IP:port access after monitoring period, forcing all traffic through Traefik.
+
+### Archived Tickets
+
+Completed tickets have been moved to the [archived/](archived/) subdirectory:
+- ✅ Ticket 10: Remove Direct Port Access (Completed: 2025-10-17)
+- ✅ Ticket 11: Let's Encrypt SSL with Gandi (Completed: 2025-10-17)
+- ✅ Ticket 12: Security Hardening for Public Exposure (Completed: 2025-10-17)
 
 ## Total Time Estimate
 
