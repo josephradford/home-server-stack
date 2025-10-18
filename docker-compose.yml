@@ -16,9 +16,10 @@ services:
       - homeserver
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.adguard.rule=Host(`adguard.home.local`)"
+      - "traefik.http.routers.adguard.rule=Host(`adguard.${DOMAIN}`)"
       - "traefik.http.routers.adguard.entrypoints=websecure"
       - "traefik.http.routers.adguard.tls=true"
+      # Using file provider certificate (wildcard from certbot)
       - "traefik.http.services.adguard.loadbalancer.server.port=80"
 
   n8n-init:
@@ -45,11 +46,11 @@ services:
       - N8N_BASIC_AUTH_ACTIVE=true
       - N8N_BASIC_AUTH_USER=${N8N_USER}
       - N8N_BASIC_AUTH_PASSWORD=${N8N_PASSWORD}
-      - N8N_HOST=n8n.home.local
+      - N8N_HOST=n8n.${DOMAIN}
       - N8N_PORT=5678
       - N8N_PROTOCOL=https
-      - WEBHOOK_URL=https://n8n.home.local/
-      - N8N_EDITOR_BASE_URL=https://n8n.home.local
+      - WEBHOOK_URL=https://n8n.${DOMAIN}/
+      - N8N_EDITOR_BASE_URL=https://n8n.${DOMAIN}
       - GENERIC_TIMEZONE=${TIMEZONE}
       - N8N_SECURE_COOKIE=true
       - N8N_RUNNERS_TASK_TIMEOUT=${N8N_RUNNERS_TASK_TIMEOUT}
@@ -63,9 +64,10 @@ services:
       - n8n-init
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.n8n.rule=Host(`n8n.home.local`)"
+      - "traefik.http.routers.n8n.rule=Host(`n8n.${DOMAIN}`)"
       - "traefik.http.routers.n8n.entrypoints=websecure"
       - "traefik.http.routers.n8n.tls=true"
+      # Using file provider certificate (wildcard from certbot)
       - "traefik.http.services.n8n.loadbalancer.server.port=5678"
 
   wireguard:
@@ -112,7 +114,7 @@ services:
 
   # Traefik - Reverse proxy for domain-based service access
   traefik:
-    image: traefik:v3.0
+    image: traefik:v3.2
     container_name: traefik
     restart: unless-stopped
     command:
@@ -123,6 +125,10 @@ services:
       # Docker provider
       - "--providers.docker=true"
       - "--providers.docker.exposedbydefault=false"
+
+      # File provider for TLS certificates
+      - "--providers.file.directory=/etc/traefik"
+      - "--providers.file.watch=true"
 
       # Entrypoints
       - "--entrypoints.web.address=:80"
@@ -147,6 +153,11 @@ services:
       - "${SERVER_IP}:80:80"
       - "${SERVER_IP}:443:443"
 
+    environment:
+      # Traefik dashboard password (hashed with htpasswd)
+      # Generated during setup from TRAEFIK_PASSWORD in .env
+      - TRAEFIK_DASHBOARD_USERS=${TRAEFIK_DASHBOARD_USERS}
+
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - ./data/traefik/certs:/certs
@@ -161,13 +172,15 @@ services:
       - "traefik.enable=true"
 
       # Dashboard router
-      - "traefik.http.routers.dashboard.rule=Host(`traefik.home.local`)"
+      - "traefik.http.routers.dashboard.rule=Host(`traefik.${DOMAIN}`)"
       - "traefik.http.routers.dashboard.entrypoints=websecure"
       - "traefik.http.routers.dashboard.tls=true"
+      # Using file provider certificate (wildcard from certbot)
       - "traefik.http.routers.dashboard.service=api@internal"
 
       # Dashboard middleware (basic auth)
-      - "traefik.http.middlewares.dashboard-auth.basicauth.users=admin:$$1$$3TOX7HzuCTU"
+      # Uses TRAEFIK_DASHBOARD_USERS from .env (htpasswd format: admin:$apr1$...)
+      - "traefik.http.middlewares.dashboard-auth.basicauth.users=${TRAEFIK_DASHBOARD_USERS}"
       - "traefik.http.routers.dashboard.middlewares=dashboard-auth"
 
     healthcheck:

@@ -31,15 +31,10 @@ cp .env.example .env
 nano .env  # Update SERVER_IP, TIMEZONE, passwords
 
 # 3. Run first-time setup (includes all services + monitoring)
-# SSL certificates are automatically generated
 make setup
 ```
 
-**Note:**
-- SSL certificates are self-signed for local network use
-- You'll need to accept security warnings in your browser on first visit
-- This is normal and expected for local-only services
-- For browsers that don't allow proceeding, see [TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md#ssl-certificate-issues)
+**Note:** `make setup` will optionally prompt you to configure Let's Encrypt SSL certificates if your `.env` includes `DOMAIN`, `ACME_EMAIL`, and `GANDIV5_PERSONAL_ACCESS_TOKEN`. Otherwise, services use self-signed certificates (browser warnings expected).
 
 **Using the Makefile:**
 - `make help` - Show all available commands
@@ -70,6 +65,10 @@ All services are accessible via domain names on your local network:
 - See [SERVICES.md](SERVICES.md) for complete list
 
 See **[docs/SETUP.md](docs/SETUP.md)** for detailed installation instructions.
+
+## 🔒 SSL Certificates
+
+By default, services use **self-signed certificates** (browser warnings expected). For **trusted Let's Encrypt certificates**, see **[docs/CONFIGURATION.md#ssl-certificate-setup](docs/CONFIGURATION.md#ssl-certificate-setup)** for complete setup instructions using `make ssl-setup`.
 
 ## 📚 Documentation
 

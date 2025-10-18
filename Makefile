@@ -3,7 +3,8 @@
 
 .PHONY: help setup update start stop restart logs build pull status clean purge validate env-check
 .PHONY: logs-n8n logs-wireguard
-.PHONY: adguard-setup test-domain-access
+.PHONY: adguard-setup setup-certs test-domain-access traefik-password
+.PHONY: ssl-setup ssl-copy-certs ssl-configure-traefik ssl-setup-renewal ssl-renew-test
 
 # Compose file flags - always include monitoring
 COMPOSE := docker compose -f docker-compose.yml -f docker-compose.monitoring.yml
@@ -34,6 +35,14 @@ help:
 	@echo ""
 	@echo "Service Configuration:"
 	@echo "  make adguard-setup      - Configure DNS rewrites for domain-based access"
+	@echo "  make traefik-password   - Generate Traefik dashboard password from .env"
+	@echo ""
+	@echo "SSL/TLS Certificate Management:"
+	@echo "  make ssl-setup          - Complete Let's Encrypt SSL setup (certbot + renewal)"
+	@echo "  make ssl-copy-certs     - Copy Let's Encrypt certs to Traefik"
+	@echo "  make ssl-configure-traefik - Configure Traefik file provider for certs"
+	@echo "  make ssl-setup-renewal  - Setup automatic certificate renewal"
+	@echo "  make ssl-renew-test     - Test certificate renewal (dry run)"
 	@echo ""
 	@echo "Testing & Validation:"
 	@echo "  make test-domain-access - Test domain-based access for all services"
@@ -76,13 +85,19 @@ pull: validate
 setup: env-check validate
 	@echo "Starting first-time setup..."
 	@echo ""
-	@echo "Step 1/3: Pulling pre-built images..."
+	@echo "Step 1/5: Setting up Traefik dashboard password..."
+	@./scripts/setup-traefik-password.sh
+	@echo ""
+	@echo "Step 2/5: Setting up SSL certificate storage..."
+	@$(MAKE) setup-certs
+	@echo ""
+	@echo "Step 3/5: Pulling pre-built images..."
 	@$(COMPOSE) pull --ignore-pull-failures
 	@echo ""
-	@echo "Step 2/3: Starting services..."
+	@echo "Step 4/5: Starting services..."
 	@$(COMPOSE) up -d
 	@echo ""
-	@echo "Step 3/3: Configuring AdGuard DNS rewrites..."
+	@echo "Step 5/5: Configuring AdGuard DNS rewrites..."
 	@$(MAKE) adguard-setup
 	@echo ""
 	@$(COMPOSE) ps
@@ -90,15 +105,52 @@ setup: env-check validate
 	@echo "✓ Setup complete! Services are running."
 	@echo ""
 	@echo "Access your services via domain names:"
-	@echo "  - Traefik Dashboard: https://traefik.home.local"
-	@echo "  - AdGuard Home:      https://adguard.home.local"
-	@echo "  - n8n:               https://n8n.home.local"
-	@echo "  - Grafana:           https://grafana.home.local"
-	@echo "  - Prometheus:        https://prometheus.home.local"
-	@echo "  - Alertmanager:      https://alerts.home.local"
+	@set -a; . ./.env; set +a; \
+	if [ -n "$$DOMAIN" ]; then \
+		echo "  - Traefik Dashboard: https://traefik.$$DOMAIN"; \
+		echo "  - AdGuard Home:      https://adguard.$$DOMAIN"; \
+		echo "  - n8n:               https://n8n.$$DOMAIN"; \
+		echo "  - Grafana:           https://grafana.$$DOMAIN"; \
+		echo "  - Prometheus:        https://prometheus.$$DOMAIN"; \
+		echo "  - Alertmanager:      https://alerts.$$DOMAIN"; \
+	else \
+		echo "  ERROR: DOMAIN not set in .env file"; \
+		echo "  Please set DOMAIN=your-domain.com in .env"; \
+	fi
 	@echo ""
 	@echo "Note: First-time container initialization may take a few minutes."
 	@echo "Check logs with: make logs"
+	@echo ""
+	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+	@echo ""
+	@set -a; . ./.env; set +a; \
+	if [ -n "$$GANDIV5_PERSONAL_ACCESS_TOKEN" ] && [ -n "$$ACME_EMAIL" ] && [ -n "$$DOMAIN" ]; then \
+		echo "🔒 SSL Certificate Setup Available"; \
+		echo ""; \
+		echo "Your .env file is configured for Let's Encrypt SSL certificates."; \
+		echo "Would you like to set up trusted SSL certificates now? (y/N)"; \
+		read -r response; \
+		if [ "$$response" = "y" ] || [ "$$response" = "Y" ]; then \
+			$(MAKE) ssl-setup; \
+		else \
+			echo ""; \
+			echo "Skipping SSL setup. Your services will use self-signed certificates."; \
+			echo "You can set up Let's Encrypt SSL later with: make ssl-setup"; \
+			echo "See docs/CONFIGURATION.md#ssl-certificate-setup for details."; \
+		fi; \
+	else \
+		echo "ℹ️  Using self-signed SSL certificates (browser warnings expected)"; \
+		echo ""; \
+		echo "For trusted Let's Encrypt certificates, add to .env:"; \
+		echo "  - DOMAIN=your-domain.com"; \
+		echo "  - ACME_EMAIL=your-email@example.com"; \
+		echo "  - GANDIV5_PERSONAL_ACCESS_TOKEN=your-gandi-token"; \
+		echo ""; \
+		echo "Then run: make ssl-setup"; \
+		echo "See docs/CONFIGURATION.md#ssl-certificate-setup for details."; \
+	fi
+	@echo ""
+	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
 # Update all services
 update: env-check validate
@@ -167,9 +219,11 @@ purge:
 	@echo "  - n8n workflows and database"
 	@echo "  - WireGuard VPN configs"
 	@echo "  - All monitoring data (Grafana, Prometheus)"
+	@echo "  - Let's Encrypt SSL certificates and renewal hooks"
+	@echo "  - Traefik configuration files"
 	@echo ""
 	@echo "💡 RECOMMENDATION: Back up your data before proceeding!"
-	@echo "   tar -czf backup-$$(date +%Y%m%d-%H%M%S).tar.gz ./data/"
+	@echo "   tar -czf backup-$$(date +%Y%m%d-%H%M%S).tar.gz ./data/ ./config/"
 	@echo ""
 	@echo "Press Ctrl+C to cancel, or Enter to continue..."
 	@read confirm
@@ -185,6 +239,12 @@ purge:
 	@$(COMPOSE) down -v
 	@echo "Removing all data directories..."
 	@rm -rf ./data/
+	@echo "Removing Traefik configuration..."
+	@rm -rf ./config/
+	@echo "Removing Let's Encrypt certificates and configuration..."
+	@sudo rm -rf /etc/letsencrypt/
+	@echo "Removing SSL renewal hook..."
+	@sudo rm -f /var/log/certbot-traefik-reload.log
 	@echo "Removing all Docker images..."
 	@docker image prune -af
 	@echo "✓ Purge complete - ALL DATA DELETED"
@@ -201,13 +261,125 @@ adguard-setup: env-check
 	@echo ""
 	@echo "Testing DNS resolution..."
 	@sleep 3
-	@echo "Testing: glance.home.local"
-	@dig @$$SERVER_IP glance.home.local +short || true
-	@echo ""
-	@echo "All *.home.local domains should now resolve to $$SERVER_IP"
-	@echo "Configure network devices to use $$SERVER_IP as DNS server"
+	@set -a; . ./.env; set +a; \
+	if [ -n "$$DOMAIN" ]; then \
+		echo "Testing: n8n.$$DOMAIN"; \
+		dig @$$SERVER_IP n8n.$$DOMAIN +short || true; \
+		echo ""; \
+		echo "All *.$$DOMAIN domains should now resolve to $$SERVER_IP"; \
+	else \
+		echo "ERROR: DOMAIN not set in .env"; \
+	fi
+	@set -a; . ./.env; set +a; \
+	echo "Configure network devices to use $$SERVER_IP as DNS server"
+
+# Setup SSL certificate storage (for certbot-generated certs)
+setup-certs:
+	@echo "Setting up SSL certificate storage..."
+	@mkdir -p data/traefik/certs
+	@mkdir -p config/traefik
+	@echo "✓ Certificate storage configured"
 
 # Test domain-based access for all services
 test-domain-access: env-check
 	@echo "Testing domain-based access..."
 	@./scripts/test-domain-access.sh
+
+# Setup Traefik dashboard password
+traefik-password: env-check
+	@echo "Setting up Traefik dashboard password..."
+	@./scripts/setup-traefik-password.sh
+	@echo ""
+	@echo "Restarting Traefik to apply new password..."
+	@$(COMPOSE) stop traefik
+	@$(COMPOSE) rm -f traefik
+	@$(COMPOSE) up -d traefik
+	@echo "✓ Traefik password updated and service restarted"
+
+# Let's Encrypt SSL Certificate Setup with certbot
+# Note: Uses certbot instead of Traefik's built-in ACME due to compatibility issues
+# with Gandi API v5 in Traefik's Lego library (v4.21.0)
+ssl-setup: env-check
+	@echo "==================================================="
+	@echo "Let's Encrypt SSL Setup with certbot + Gandi DNS"
+	@echo "==================================================="
+	@echo ""
+	@echo "This will:"
+	@echo "  1. Install certbot and Gandi DNS plugin"
+	@echo "  2. Generate wildcard certificate for *.DOMAIN and DOMAIN"
+	@echo "  3. Copy certificates to Traefik directory"
+	@echo "  4. Configure Traefik to use file provider"
+	@echo "  5. Setup automatic certificate renewal"
+	@echo ""
+	@echo "Prerequisites:"
+	@echo "  - DOMAIN must be set in .env"
+	@echo "  - ACME_EMAIL must be set in .env"
+	@echo "  - GANDIV5_PERSONAL_ACCESS_TOKEN must be set in .env"
+	@echo "  - Domain must be hosted on Gandi"
+	@echo ""
+	@echo "Press Ctrl+C to cancel, or Enter to continue..."
+	@read confirm
+	@echo ""
+	@echo "Step 1/5: Installing certbot and generating certificate..."
+	@./scripts/setup-certbot-gandi.sh
+	@echo ""
+	@echo "Step 2/5: Copying certificates to Traefik..."
+	@./scripts/copy-certs-to-traefik.sh
+	@echo ""
+	@echo "Step 3/5: Configuring Traefik file provider..."
+	@./scripts/configure-traefik-file-provider.sh
+	@echo ""
+	@echo "Step 4/5: Recreating Traefik container with new configuration..."
+	@$(COMPOSE) stop traefik
+	@$(COMPOSE) rm -f traefik
+	@$(COMPOSE) up -d traefik
+	@sleep 5
+	@echo ""
+	@echo "Step 5/5: Setting up automatic renewal..."
+	@./scripts/setup-cert-renewal.sh
+	@echo ""
+	@echo "==================================================="
+	@echo "✓ SSL Setup Complete!"
+	@echo "==================================================="
+	@echo ""
+	@echo "Your services are now secured with Let's Encrypt SSL certificates!"
+	@echo ""
+	@set -a; . ./.env; set +a; \
+	if [ -n "$$DOMAIN" ]; then \
+		echo "Test your certificates:"; \
+		echo "  https://n8n.$$DOMAIN"; \
+		echo "  https://grafana.$$DOMAIN"; \
+		echo "  https://traefik.$$DOMAIN"; \
+	fi
+	@echo ""
+	@echo "Certificates will auto-renew every 90 days."
+	@echo "Check renewal logs: sudo tail -f /var/log/certbot-traefik-reload.log"
+
+# Copy Let's Encrypt certificates to Traefik directory
+ssl-copy-certs: env-check
+	@echo "Copying Let's Encrypt certificates to Traefik..."
+	@./scripts/copy-certs-to-traefik.sh
+
+# Configure Traefik to use file provider for certificates
+ssl-configure-traefik: env-check
+	@echo "Configuring Traefik file provider..."
+	@./scripts/configure-traefik-file-provider.sh
+	@echo ""
+	@echo "Restarting Traefik to apply configuration..."
+	@$(COMPOSE) stop traefik
+	@$(COMPOSE) rm -f traefik
+	@$(COMPOSE) up -d traefik
+	@sleep 3
+	@echo "✓ Traefik configured and restarted"
+
+# Setup automatic certificate renewal
+ssl-setup-renewal: env-check
+	@echo "Setting up automatic certificate renewal..."
+	@./scripts/setup-cert-renewal.sh
+
+# Test certificate renewal (dry run)
+ssl-renew-test:
+	@echo "Testing certificate renewal (dry run)..."
+	@echo "This will simulate renewal without actually renewing certificates."
+	@echo ""
+	@sudo certbot renew --dry-run

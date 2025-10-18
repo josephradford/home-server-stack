@@ -19,9 +19,10 @@ services:
       - homeserver
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.prometheus.rule=Host(`prometheus.home.local`)"
+      - "traefik.http.routers.prometheus.rule=Host(`prometheus.${DOMAIN}`)"
       - "traefik.http.routers.prometheus.entrypoints=websecure"
       - "traefik.http.routers.prometheus.tls=true"
+      # Using file provider certificate (wildcard from certbot)
       - "traefik.http.services.prometheus.loadbalancer.server.port=9090"
 
   grafana:
@@ -40,9 +41,10 @@ services:
       - homeserver
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.grafana.rule=Host(`grafana.home.local`)"
+      - "traefik.http.routers.grafana.rule=Host(`grafana.${DOMAIN}`)"
       - "traefik.http.routers.grafana.entrypoints=websecure"
       - "traefik.http.routers.grafana.tls=true"
+      # Using file provider certificate (wildcard from certbot)
       - "traefik.http.services.grafana.loadbalancer.server.port=3000"
 
   alertmanager:
@@ -57,9 +59,10 @@ services:
       - homeserver
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.alertmanager.rule=Host(`alerts.home.local`)"
+      - "traefik.http.routers.alertmanager.rule=Host(`alerts.${DOMAIN}`)"
       - "traefik.http.routers.alertmanager.entrypoints=websecure"
       - "traefik.http.routers.alertmanager.tls=true"
+      # Using file provider certificate (wildcard from certbot)
       - "traefik.http.services.alertmanager.loadbalancer.server.port=9093"
 
   node-exporter:
