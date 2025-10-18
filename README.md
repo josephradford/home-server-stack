@@ -94,6 +94,7 @@ By default, services use **self-signed certificates** (browser warnings expected
 ### Implementation Tickets
 - **[Monitoring Tickets](monitoring-tickets/README.md)** - Monitoring implementation roadmap
 - **[Security Tickets](security-tickets/README.md)** - Security hardening roadmap (VPN-first strategy)
+- **[Dashboard Tickets](tickets/dashboard-tickets/tickets_index.md)** - Homepage dashboard with integrations
 
 ## 🔐 Security
 
@@ -128,6 +129,31 @@ This project implements **multi-layered defense-in-depth security** with four pr
 - **VPN Primary Boundary**: WireGuard for all remote admin access
 
 See **[SECURITY.md](SECURITY.md)** for security policy and **[security-tickets/README.md](security-tickets/README.md)** for the complete security roadmap.
+
+## 📊 Dashboard & Automation
+
+This stack includes a comprehensive dashboard with location tracking and integrations:
+
+- **Homepage**: Unified dashboard for all services
+- **Home Assistant**: Automation hub and location tracking
+- **Backend API**: Custom integrations for BOM weather, Transport NSW, traffic
+
+### Deploy Dashboard Services
+
+```bash
+docker compose -f docker-compose.dashboard.yml up -d
+```
+
+See **[docs/DASHBOARD_SETUP.md](docs/DASHBOARD_SETUP.md)** for detailed instructions.
+
+### Dashboard Features
+
+- 🌤️ Australian BOM weather for North Parramatta
+- 📅 Google Calendar integration
+- 🚊 Real-time Transport NSW departures
+- 🚗 Traffic conditions for configurable routes
+- 📍 Family location tracking via iOS/Android
+- 🐳 Docker container monitoring
 
 ## 🤝 Contributing
 
