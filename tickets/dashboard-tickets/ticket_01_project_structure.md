@@ -13,9 +13,6 @@ home-server-stack/
 │   ├── Dockerfile
 │   ├── requirements.txt
 │   └── app.py
-├── habitica/
-│   ├── config/
-│   └── docker-compose.habitica.yml
 ├── data/
 │   ├── homepage/
 │   │   └── config/
@@ -25,12 +22,8 @@ home-server-stack/
 │   │       ├── docker.yaml
 │   │       └── bookmarks.yaml (optional)
 │   ├── homeassistant/
-│   ├── habitica/
-│   │   ├── mongo/
-│   │   └── redis/
 │   └── homepage-api/
 └── ssl/
-    ├── habitica/
     └── (existing certs)
 ```
 
@@ -99,28 +92,7 @@ TRAFFIC_ROUTE_2_SCHEDULE="Mon-Fri 17:00-19:00"
 # =============================================================================
 HOMEASSISTANT_URL=http://homeassistant:8123
 # Token will be generated after HA first setup
-
-# =============================================================================
-# HABITICA (SELF-HOSTED)
-# =============================================================================
-# Admin Configuration
-HABITICA_ADMIN_EMAIL=your@email.com
-HABITICA_ADMIN_PASSWORD=secure_password_here
-
-# Database
-HABITICA_MONGO_USER=habitica
-HABITICA_MONGO_PASSWORD=secure_mongo_password
-HABITICA_DB_NAME=habitica
-
-# Session Secret (generate with: openssl rand -base64 32)
-HABITICA_SESSION_SECRET=your_session_secret_here
-
-# Base URL for HTTPS access
-HABITICA_BASE_URL=https://habitica.yourdomain.local
-
-# API Credentials (generated after setup)
-HABITICA_USER_ID=
-HABITICA_API_TOKEN=
+HOMEASSISTANT_TOKEN=
 
 # =============================================================================
 # EXISTING SERVICES (from your current setup)
@@ -141,7 +113,7 @@ Create `docs/DASHBOARD_SETUP.md`:
 ```markdown
 # Dashboard Setup Guide
 
-This guide covers setting up the Homepage dashboard with Home Assistant, Habitica, and various integrations.
+This guide covers setting up the Homepage dashboard with Home Assistant and various integrations.
 
 ## Quick Start
 
@@ -164,14 +136,12 @@ This guide covers setting up the Homepage dashboard with Home Assistant, Habitic
 4. Access services:
    - Homepage: http://SERVER_IP:3100
    - Home Assistant: http://SERVER_IP:8123
-   - Habitica: https://SERVER_IP:3000
 
 ## Configuration
 
 See individual tickets for detailed setup:
 - Ticket 02: Homepage Dashboard
 - Ticket 03: Home Assistant
-- Ticket 04: Self-hosted Habitica
 - Ticket 05: Backend API
 - etc.
 
@@ -197,11 +167,10 @@ Add a new section to the main `README.md`:
 ```markdown
 ## Dashboard & Automation
 
-This stack includes a comprehensive dashboard with location tracking, habit tracking, and integrations:
+This stack includes a comprehensive dashboard with location tracking and integrations:
 
 - **Homepage**: Unified dashboard for all services
 - **Home Assistant**: Automation hub and location tracking
-- **Habitica**: Self-hosted gamified task manager
 - **Backend API**: Custom integrations for BOM weather, Transport NSW, traffic
 
 ### Deploy Dashboard Services
@@ -219,7 +188,6 @@ See [Dashboard Setup Guide](docs/DASHBOARD_SETUP.md) for detailed instructions.
 - 🚊 Real-time Transport NSW departures
 - 🚗 Traffic conditions for configurable routes
 - 📍 Family location tracking via iOS/Android
-- 🎮 Habitica fitness automation (Apple Watch workouts)
 - 🐳 Docker container monitoring
 ```
 
@@ -235,5 +203,5 @@ None - this is the first ticket
 
 ## Notes
 - Ensure all directories have correct ownership (PUID:PGID)
-- SSL certificates directory for Habitica HTTPS
 - Keep structure consistent with existing repo style
+- Habitica configuration moved to future tickets (11 & 12) - out of scope for initial implementation
