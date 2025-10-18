@@ -21,6 +21,8 @@ services:
       - "traefik.http.routers.adguard.tls=true"
       # Using file provider certificate (wildcard from certbot)
       - "traefik.http.services.adguard.loadbalancer.server.port=80"
+      # Security: VPN/Local access only - DNS admin interface should never be public
+      - "traefik.http.routers.adguard.middlewares=admin-secure"
 
   n8n-init:
     image: alpine:latest
@@ -69,6 +71,15 @@ services:
       - "traefik.http.routers.n8n.tls=true"
       # Using file provider certificate (wildcard from certbot)
       - "traefik.http.services.n8n.loadbalancer.server.port=5678"
+
+      # Security: VPN/Local access only (admin-secure = internal-only + security-headers + rate-limit)
+      # TODO: This blocks ALL external access including webhooks!
+      # When exposing webhooks publicly, you'll need to:
+      #   1. Create a separate router for webhooks: n8n-webhook.rule=Host(`n8n.${DOMAIN}`) && PathPrefix(`/webhook`)
+      #   2. Apply webhook-secure middleware to n8n-webhook router (allows public with rate limiting)
+      #   3. Keep n8n router with admin-secure for editor/UI access (VPN/local only)
+      # See ticket-13 for webhook architecture implementation
+      - "traefik.http.routers.n8n.middlewares=admin-secure"
 
   wireguard:
     image: lscr.io/linuxserver/wireguard:latest
@@ -181,7 +192,11 @@ services:
       # Dashboard middleware (basic auth)
       # Uses TRAEFIK_DASHBOARD_USERS from .env (htpasswd format: admin:$apr1$...)
       - "traefik.http.middlewares.dashboard-auth.basicauth.users=${TRAEFIK_DASHBOARD_USERS}"
-      - "traefik.http.routers.dashboard.middlewares=dashboard-auth"
+
+      # Security: Combine basic auth + admin-secure (VPN/local only + rate limit + headers)
+      # Chain order: internal-only (IP check) → security-headers → admin-ratelimit → dashboard-auth (password)
+      - "traefik.http.middlewares.dashboard-secure.chain.middlewares=internal-only,security-headers,admin-ratelimit,dashboard-auth"
+      - "traefik.http.routers.dashboard.middlewares=dashboard-secure"
 
       # Security Headers Middleware
       - "traefik.http.middlewares.security-headers.headers.frameDeny=true"

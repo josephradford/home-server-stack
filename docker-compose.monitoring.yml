@@ -24,6 +24,8 @@ services:
       - "traefik.http.routers.prometheus.tls=true"
       # Using file provider certificate (wildcard from certbot)
       - "traefik.http.services.prometheus.loadbalancer.server.port=9090"
+      # Security: VPN/Local access only - metrics database should never be public
+      - "traefik.http.routers.prometheus.middlewares=admin-secure"
 
   grafana:
     image: grafana/grafana:latest
@@ -46,6 +48,8 @@ services:
       - "traefik.http.routers.grafana.tls=true"
       # Using file provider certificate (wildcard from certbot)
       - "traefik.http.services.grafana.loadbalancer.server.port=3000"
+      # Security: VPN/Local access only - monitoring dashboards should never be public
+      - "traefik.http.routers.grafana.middlewares=admin-secure"
 
   alertmanager:
     image: prom/alertmanager:latest
@@ -64,6 +68,8 @@ services:
       - "traefik.http.routers.alertmanager.tls=true"
       # Using file provider certificate (wildcard from certbot)
       - "traefik.http.services.alertmanager.loadbalancer.server.port=9093"
+      # Security: VPN/Local access only - alert management should never be public
+      - "traefik.http.routers.alertmanager.middlewares=admin-secure"
 
   node-exporter:
     image: prom/node-exporter:latest
