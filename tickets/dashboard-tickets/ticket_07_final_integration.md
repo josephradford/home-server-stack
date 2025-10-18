@@ -31,9 +31,7 @@ source .env
 REQUIRED_VARS=(
     "SERVER_IP"
     "TRANSPORTNSW_API_KEY"
-    "HABITICA_SESSION_SECRET"
-    "HABITICA_ADMIN_EMAIL"
-    "HABITICA_ADMIN_PASSWORD"
+    "HOMEASSISTANT_URL"
 )
 
 for var in "${REQUIRED_VARS[@]}"; do
@@ -54,19 +52,10 @@ fi
 
 # Create all data directories
 echo "📁 Creating data directories..."
-mkdir -p data/{homepage/config,homeassistant,habitica/{mongo,redis,uploads},homepage-api}
-mkdir -p ssl/habitica
+mkdir -p data/{homepage/config,homeassistant,homepage-api}
 
 echo "✅ Directories created"
 echo ""
-
-# Generate Habitica SSL certificate
-if [ ! -f ssl/habitica/habitica.crt ]; then
-    echo "🔒 Generating Habitica SSL certificate..."
-    cd ssl
-    ./generate-habitica-cert.sh ${HABITICA_BASE_URL:-habitica.local}
-    cd ..
-fi
 
 # Build custom images
 echo "🔨 Building custom images..."
@@ -77,28 +66,18 @@ echo ""
 echo "🚀 Deploying services..."
 echo ""
 
-# Start databases first
-echo "1️⃣  Starting databases..."
-docker compose -f docker-compose.dashboard.yml up -d habitica-mongo habitica-redis
-sleep 10
-
-# Start Habitica
-echo "2️⃣  Starting Habitica..."
-docker compose -f docker-compose.dashboard.yml up -d habitica habitica-nginx
-sleep 20
-
 # Start Home Assistant
-echo "3️⃣  Starting Home Assistant..."
+echo "1️⃣  Starting Home Assistant..."
 docker compose -f docker-compose.dashboard.yml up -d homeassistant
 sleep 30
 
 # Start Backend API
-echo "4️⃣  Starting Backend API..."
+echo "2️⃣  Starting Backend API..."
 docker compose -f docker-compose.dashboard.yml up -d homepage-api
 sleep 10
 
 # Start Homepage
-echo "5️⃣  Starting Homepage..."
+echo "3️⃣  Starting Homepage..."
 docker compose -f docker-compose.dashboard.yml up -d homepage
 
 echo ""
@@ -113,7 +92,6 @@ echo "🌐 Access Information:"
 echo "───────────────────────────────────────────"
 echo "Homepage Dashboard:    http://${SERVER_IP}:3100"
 echo "Home Assistant:        http://${SERVER_IP}:8123"
-echo "Habitica:              https://${SERVER_IP} (or http://${SERVER_IP}:3000)"
 echo "Backend API:           http://${SERVER_IP}:5000/api/health"
 echo ""
 
@@ -121,11 +99,9 @@ echo "📋 Next Steps:"
 echo "───────────────────────────────────────────"
 echo "1. Complete Home Assistant setup at http://${SERVER_IP}:8123"
 echo "2. Generate HA API token and add to .env"
-echo "3. Create Habitica account at https://${SERVER_IP}"
-echo "4. Get Habitica API credentials and add to .env"
-echo "5. Install Home Assistant iOS app"
-echo "6. Configure transport stop IDs in .env"
-echo "7. Configure traffic routes in .env"
+echo "3. Install Home Assistant iOS app (optional)"
+echo "4. Configure transport stop IDs in .env"
+echo "5. Configure traffic routes in .env"
 echo ""
 echo "See docs/DASHBOARD_SETUP.md for detailed instructions"
 echo ""
@@ -181,7 +157,6 @@ echo ""
 echo "🔍 Service Health Checks:"
 check_service "Homepage" "http://localhost:3100" "DOCTYPE"
 check_service "Home Assistant" "http://localhost:8123" ""
-check_service "Habitica (HTTP)" "http://localhost:3000" ""
 check_service "Backend API" "http://localhost:5000/api/health" "healthy"
 echo ""
 
@@ -262,7 +237,6 @@ docker network create home-server
 Expected output: All services start without errors
 
 ### 2. Wait for Initialization
-- Habitica: 2-3 minutes
 - Home Assistant: 1-2 minutes
 - Other services: 10-30 seconds
 
@@ -296,19 +270,6 @@ curl http://localhost:8123
 # Add token to .env
 ```
 
-### Habitica
-```bash
-# Check HTTP
-curl http://localhost:3000
-
-# Check HTTPS (will have cert warning)
-curl -k https://localhost:443
-
-# Open in browser: https://SERVER_IP
-# Accept certificate warning
-# Create account
-# Get API credentials from Settings > API
-```
 
 ### Backend API
 ```bash
@@ -353,12 +314,7 @@ curl "http://localhost:5000/api/traffic/route?origin=North+Parramatta&destinatio
 - Check "Family & Location" section
 - Should show HA version
 
-### 3. Homepage → Habitica
-- After Habitica API configured
-- Check "Habitica RPG" section
-- Should show character stats
-
-### 4. Docker Integration
+### 3. Docker Integration
 - Homepage should show all running containers
 - Container status indicators should be accurate
 - Click container names should show details
@@ -368,7 +324,6 @@ curl "http://localhost:5000/api/traffic/route?origin=North+Parramatta&destinatio
 - [ ] All containers running (`docker ps`)
 - [ ] Homepage accessible
 - [ ] Home Assistant accessible and configured
-- [ ] Habitica accessible and account created
 - [ ] API health check passes
 - [ ] Weather data displaying
 - [ ] Transport times showing (if configured)
@@ -386,7 +341,6 @@ docker compose -f docker-compose.dashboard.yml logs
 # Check specific service
 docker logs homepage
 docker logs homeassistant
-docker logs habitica
 docker logs homepage-api
 
 # Follow logs in real-time
@@ -403,11 +357,8 @@ docker stats
 # Expected usage:
 # - Homepage: ~50MB RAM
 # - Home Assistant: ~400MB RAM
-# - Habitica: ~200MB RAM
-# - MongoDB: ~100MB RAM
-# - Redis: ~10MB RAM
 # - Backend API: ~100MB RAM
-# Total: ~1GB RAM
+# Total: ~600MB RAM
 ```
 
 ### Response Times
@@ -443,12 +394,6 @@ time curl "http://localhost:5000/api/traffic/route?origin=test&destination=test"
 3. Check services.yaml syntax
 4. Restart Homepage: `docker compose -f docker-compose.dashboard.yml restart homepage`
 
-### Database connection errors
-1. Check if MongoDB is running: `docker ps | grep mongo`
-2. Check MongoDB logs: `docker logs habitica-mongo`
-3. Verify credentials in .env match docker-compose
-4. Try recreating containers
-
 ## Acceptance Criteria
 
 All of the following must pass:
@@ -456,7 +401,6 @@ All of the following must pass:
 - [ ] `./scripts/health-check.sh` reports all services healthy
 - [ ] Homepage accessible and displays all sections
 - [ ] Home Assistant accessible and responding
-- [ ] Habitica accessible via HTTPS
 - [ ] Backend API health check returns "healthy"
 - [ ] BOM weather API returns current weather data
 - [ ] All containers show "Up" status
@@ -500,15 +444,6 @@ echo "📋 Backing up configurations..."
 cp -r data/homepage/config "$BACKUP_DIR/homepage-config"
 cp -r data/homeassistant "$BACKUP_DIR/homeassistant"
 cp .env "$BACKUP_DIR/env.backup"
-
-# Backup Habitica database
-echo "🎮 Backing up Habitica database..."
-docker exec habitica-mongo mongodump \
-  --username=$HABITICA_MONGO_USER \
-  --password=$HABITICA_MONGO_PASSWORD \
-  --out=/data/backup
-
-docker cp habitica-mongo:/data/backup "$BACKUP_DIR/habitica-db"
 
 # Create backup archive
 echo "📦 Creating archive..."

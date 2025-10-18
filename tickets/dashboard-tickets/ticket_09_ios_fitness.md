@@ -3,11 +3,13 @@
 **Priority: LOW** - Complete after all other tickets
 
 ## Objective
-Configure Home Assistant iOS Companion App for location tracking, device tracking, and Apple Health fitness data export for Habitica automation.
+Configure Home Assistant iOS Companion App for location tracking, device tracking, and Apple Health fitness data export.
+
+## Note
+This ticket currently only covers location/device tracking and fitness data collection. Fitness automation (auto-completing tasks) will be added in future Habitica tickets (11 & 12).
 
 ## Prerequisites
 - Home Assistant fully configured (Ticket 03)
-- Habitica integration working (Ticket 08)
 - iPhone/iPad with iOS 16+ or iPadOS 16+
 - Apple Watch (optional, for fitness tracking)
 
@@ -174,9 +176,11 @@ else:
         })
 ```
 
-### 8. Create Habitica Fitness Automations
+### 8. (FUTURE) Create Habitica Fitness Automations
 
-Create `data/homeassistant/automations/habitica_fitness.yaml`:
+**NOTE:** This section is for future implementation when Habitica is added (Tickets 11 & 12).
+
+Create `data/homeassistant/automations/habitica_fitness.yaml` (when implementing Habitica):
 
 ```yaml
 # ============================================================================
@@ -441,7 +445,7 @@ See sections 1-9 in this ticket for complete instructions.
 - [ ] Health Auto Export app configured
 - [ ] Webhook handler created in HA
 - [ ] Python script for health processing created
-- [ ] Fitness automations created
+- [ ] Fitness data collection working (automations deferred to Habitica tickets)
 - [ ] Person widgets added to Homepage
 - [ ] Testing procedures documented
 - [ ] Troubleshooting guide provided
@@ -483,11 +487,9 @@ docker logs homeassistant | grep -i workout
 
 ## Dependencies
 - Ticket 03: Home Assistant setup and configured
-- Ticket 08: Habitica integration working
 - iOS devices (iPhone/iPad)
 - Apple Watch (optional, for fitness)
 - Home Assistant API token obtained
-- Habitica task IDs obtained
 
 ## Notes
 - **LOW PRIORITY**: Complete this ticket last, after core functionality works
@@ -503,7 +505,7 @@ docker logs homeassistant | grep -i workout
 - Family members can opt in/out individually
 - Each person needs their own HA user account (or share one)
 - Entity names include device name (e.g., device_tracker.johns_iphone)
-- Automations need task IDs from Habitica (use helper script from Ticket 08)
 - Health data sync can take up to 30 minutes (not instant)
 - Widget on home screen is REQUIRED for background sync
 - Consider adding to Lock Screen widgets for quick access
+- Fitness automation (auto-completing tasks) will be added in Habitica tickets (11 & 12)

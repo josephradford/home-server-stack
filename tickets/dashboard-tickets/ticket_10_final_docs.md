@@ -52,7 +52,6 @@ Add to crontab:
 ### What Gets Backed Up
 - Homepage configuration files
 - Home Assistant configuration and database
-- Habitica MongoDB database
 - Environment variables (.env)
 
 ### What's NOT Backed Up
@@ -123,28 +122,6 @@ truncate -s 0 $(docker inspect --format='{{.LogPath}}' homepage)
 ```
 
 ## Database Maintenance
-
-### Habitica MongoDB
-
-**Check Database Size:**
-```bash
-docker exec habitica-mongo mongosh -u $HABITICA_MONGO_USER -p $HABITICA_MONGO_PASSWORD --eval "db.stats()"
-```
-
-**Compact Database:**
-```bash
-docker exec habitica-mongo mongosh -u $HABITICA_MONGO_USER -p $HABITICA_MONGO_PASSWORD habitica --eval "db.runCommand({compact: 'users'})"
-```
-
-**Export Database:**
-```bash
-docker exec habitica-mongo mongodump \
-  --username=$HABITICA_MONGO_USER \
-  --password=$HABITICA_MONGO_PASSWORD \
-  --out=/data/backup
-  
-docker cp habitica-mongo:/data/backup ./backups/habitica-mongo-$(date +%Y%m%d)
-```
 
 ### Home Assistant Database
 
@@ -266,11 +243,6 @@ docker system prune -a --volumes
 
 ### Optimize Databases
 
-**MongoDB:**
-```bash
-docker exec habitica-mongo mongosh -u $HABITICA_MONGO_USER -p $HABITICA_MONGO_PASSWORD habitica --eval "db.runCommand({reIndex: 'users'})"
-```
-
 **Home Assistant:**
 ```bash
 # Use MariaDB/PostgreSQL instead of SQLite for better performance
@@ -297,18 +269,7 @@ docker exec habitica-mongo mongosh -u $HABITICA_MONGO_USER -p $HABITICA_MONGO_PA
    cp -r backups/dashboard-TIMESTAMP/homeassistant/* data/homeassistant/
    ```
 
-4. **Restore Habitica database:**
-   ```bash
-   docker compose -f docker-compose.dashboard.yml up -d habitica-mongo
-   sleep 10
-   
-   docker exec habitica-mongo mongorestore \
-     --username=$HABITICA_MONGO_USER \
-     --password=$HABITICA_MONGO_PASSWORD \
-     backups/dashboard-TIMESTAMP/habitica-db
-   ```
-
-5. **Start services:**
+4. **Start services:**
    ```bash
    docker compose -f docker-compose.dashboard.yml up -d
    ```
@@ -349,11 +310,6 @@ rm -rf /tmp/recovery-test
 4. Consider resource limits in docker-compose
 
 ### Database Corruption
-
-**Habitica MongoDB:**
-```bash
-docker exec habitica-mongo mongosh -u $HABITICA_MONGO_USER -p $HABITICA_MONGO_PASSWORD habitica --eval "db.repairDatabase()"
-```
 
 **Home Assistant SQLite:**
 ```bash
@@ -527,36 +483,6 @@ Run this first:
    docker restart homeassistant
    ```
 
-### Habitica not accessible
-
-**Symptoms:** HTTPS or HTTP not working
-
-**Solutions:**
-1. Check all Habitica containers:
-   ```bash
-   docker ps | grep habitica
-   ```
-
-2. Check MongoDB:
-   ```bash
-   docker logs habitica-mongo
-   ```
-
-3. Check Nginx logs:
-   ```bash
-   docker logs habitica-nginx
-   ```
-
-4. Test direct HTTP access:
-   ```bash
-   curl http://localhost:3000
-   ```
-
-5. Restart all:
-   ```bash
-   docker compose -f docker-compose.dashboard.yml restart habitica habitica-mongo habitica-redis habitica-nginx
-   ```
-
 ### Backend API errors
 
 **Symptoms:** Widgets showing errors, API returning 500
@@ -617,26 +543,6 @@ Run this first:
 
 4. Check route schedule (route may be outside scheduled time)
 
-### Habitica stats not showing in Homepage
-
-**Symptoms:** Habitica widgets empty in Homepage
-
-**Solutions:**
-1. Verify HA token in .env
-
-2. Check Habitica integration in HA:
-   - Settings → Devices & Services → Habitica
-
-3. Check entity names:
-   - Developer Tools → States → search "habitica"
-
-4. Update services.yaml with correct entity names
-
-5. Restart Homepage:
-   ```bash
-   docker restart homepage
-   ```
-
 ### Location tracking not working
 
 **Symptoms:** Person entities show "unknown" or don't update
@@ -659,7 +565,7 @@ Run this first:
 
 ### Fitness automation not working
 
-**Symptoms:** Workouts not completing Habitica tasks
+**Symptoms:** Workouts not being recorded in Home Assistant
 
 **Solutions:**
 1. Check Health Auto Export:
@@ -674,8 +580,6 @@ Run this first:
    ```bash
    docker logs homeassistant | grep workout
    ```
-
-5. Verify task IDs in automations are correct
 
 ### High CPU/Memory usage
 

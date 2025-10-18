@@ -30,9 +30,6 @@ services:
       HOMEPAGE_VAR_GCAL_ICAL_URL: ${GOOGLE_CALENDAR_ICAL_URL}
       HOMEPAGE_VAR_HOMEASSISTANT_URL: ${HOMEASSISTANT_URL}
       HOMEPAGE_VAR_HOMEASSISTANT_TOKEN: ${HOMEASSISTANT_TOKEN}
-      HOMEPAGE_VAR_HABITICA_URL: ${HABITICA_BASE_URL}
-      HOMEPAGE_VAR_HABITICA_USER_ID: ${HABITICA_USER_ID}
-      HOMEPAGE_VAR_HABITICA_API_TOKEN: ${HABITICA_API_TOKEN}
     ports:
       - "3100:3000"
     volumes:
@@ -85,9 +82,6 @@ layout:
   Calendar & Tasks:
     style: row
     columns: 2
-  Habitica RPG:
-    style: row
-    columns: 3
 
 # UI preferences
 statusStyle: "dot"
@@ -234,9 +228,6 @@ Create `data/homepage/config/services.yaml`:
 
 - Calendar & Tasks:
     # Will be added in Ticket 06
-
-- Habitica RPG:
-    # Will be added in Ticket 04
 ```
 
 ### 7. Create Setup Script

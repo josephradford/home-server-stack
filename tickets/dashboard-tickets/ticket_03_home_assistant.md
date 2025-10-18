@@ -1,7 +1,7 @@
 # Ticket 03: Home Assistant Setup
 
 ## Objective
-Deploy Home Assistant for location tracking, iCloud device monitoring, and Habitica integration.
+Deploy Home Assistant for location tracking and device monitoring.
 
 ## Tasks
 
@@ -58,8 +58,6 @@ recorder:
 # Logger
 logger:
   default: info
-  logs:
-    homeassistant.components.habitica: debug
 
 # Zones
 zone:
@@ -178,14 +176,7 @@ See **Ticket 09** for detailed iOS app configuration including:
 - Location tracking
 - Device tracking (AirPods, iPads, etc.)
 - Sensor configuration
-
-## Habitica Integration
-
-See **Ticket 08** for Habitica integration setup.
-
-## Apple Health Integration
-
-See **Ticket 09** for Apple Health fitness data export.
+- Apple Health fitness data export
 
 ## Troubleshooting
 
@@ -215,7 +206,6 @@ Add to `docs/DASHBOARD_SETUP.md`:
 Home Assistant provides:
 - Family location tracking via iOS/Android Companion App
 - iCloud device tracking (AirPods, iPads, etc.)
-- Habitica integration and automation
 - Apple Health fitness data processing
 
 ### Quick Start
@@ -276,5 +266,5 @@ curl -H "Authorization: Bearer YOUR_TOKEN" \
 - Use `network_mode: host` for best device discovery
 - Token must be added to .env after generation
 - Person tracking configured separately in Ticket 09
-- Habitica integration configured in Ticket 08
 - Keep purge_keep_days reasonable to control database size
+- Habitica integration is future work (Tickets 11 & 12)
