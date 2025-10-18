@@ -197,9 +197,43 @@ By default, Traefik generates self-signed certificates for all services (browser
 **For trusted Let's Encrypt certificates:**
 See the [SSL Certificate Setup](#ssl-certificate-setup) section below for complete instructions using `make ssl-setup`.
 
-### Middleware Configuration
+### Security Middleware
 
-Traefik supports middleware for common needs:
+The stack includes pre-configured security middleware for protecting services.
+
+#### Built-in Middleware Chains
+
+**admin-secure** - For admin interfaces (applied to all admin services):
+```yaml
+# Combines: IP whitelist + security headers + rate limiting
+- "traefik.http.routers.myservice.middlewares=admin-secure"
+```
+
+**Components:**
+- IP Whitelist: Only 192.168.0.0/16, 172.16.0.0/12, 10.0.0.0/8 (local + VPN)
+- Security Headers: HSTS, XSS protection, frame deny, content-type nosniff
+- Rate Limiting: 10 requests/min (burst 5)
+
+**Services using admin-secure:**
+- n8n (editor/UI)
+- AdGuard Home
+- Grafana
+- Prometheus
+- Alertmanager
+- Traefik Dashboard (with basic auth)
+
+**webhook-secure** - For public webhook endpoints (ready for future use):
+```yaml
+# Combines: Security headers + generous rate limiting
+- "traefik.http.routers.webhook.middlewares=webhook-secure"
+```
+
+**Components:**
+- Security Headers: Same as admin-secure
+- Rate Limiting: 100 requests/min (burst 50)
+- No IP restrictions (public access allowed)
+
+#### Custom Middleware Examples
 
 **Basic Auth:**
 ```yaml
@@ -207,17 +241,28 @@ Traefik supports middleware for common needs:
 - "traefik.http.routers.myservice.middlewares=myauth"
 ```
 
-**Rate Limiting:**
+**Custom Rate Limiting:**
 ```yaml
-- "traefik.http.middlewares.ratelimit.ratelimit.average=10"
-- "traefik.http.routers.myservice.middlewares=ratelimit"
+- "traefik.http.middlewares.custom-limit.ratelimit.average=50"
+- "traefik.http.middlewares.custom-limit.ratelimit.period=1m"
+- "traefik.http.middlewares.custom-limit.ratelimit.burst=10"
+- "traefik.http.routers.myservice.middlewares=custom-limit"
 ```
 
-**IP Whitelist:**
+**Custom IP Whitelist:**
 ```yaml
-- "traefik.http.middlewares.whitelist.ipwhitelist.sourcerange=192.168.1.0/24"
-- "traefik.http.routers.myservice.middlewares=whitelist"
+- "traefik.http.middlewares.custom-whitelist.ipwhitelist.sourcerange=192.168.1.0/24,10.0.0.0/8"
+- "traefik.http.routers.myservice.middlewares=custom-whitelist"
 ```
+
+**Combining Multiple Middleware:**
+```yaml
+# Create a chain
+- "traefik.http.middlewares.my-chain.chain.middlewares=myauth,custom-limit,security-headers"
+- "traefik.http.routers.myservice.middlewares=my-chain"
+```
+
+**Note:** All middleware definitions are in `docker-compose.yml` under the Traefik service labels.
 
 ### Monitoring Stack (Optional)
 

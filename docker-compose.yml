@@ -21,6 +21,8 @@ services:
       - "traefik.http.routers.adguard.tls=true"
       # Using file provider certificate (wildcard from certbot)
       - "traefik.http.services.adguard.loadbalancer.server.port=80"
+      # Security: VPN/Local access only - DNS admin interface should never be public
+      - "traefik.http.routers.adguard.middlewares=admin-secure"
 
   n8n-init:
     image: alpine:latest
@@ -69,6 +71,15 @@ services:
       - "traefik.http.routers.n8n.tls=true"
       # Using file provider certificate (wildcard from certbot)
       - "traefik.http.services.n8n.loadbalancer.server.port=5678"
+
+      # Security: VPN/Local access only (admin-secure = internal-only + security-headers + rate-limit)
+      # TODO: This blocks ALL external access including webhooks!
+      # When exposing webhooks publicly, you'll need to:
+      #   1. Create a separate router for webhooks: n8n-webhook.rule=Host(`n8n.${DOMAIN}`) && PathPrefix(`/webhook`)
+      #   2. Apply webhook-secure middleware to n8n-webhook router (allows public with rate limiting)
+      #   3. Keep n8n router with admin-secure for editor/UI access (VPN/local only)
+      # See ticket-13 for webhook architecture implementation
+      - "traefik.http.routers.n8n.middlewares=admin-secure"
 
   wireguard:
     image: lscr.io/linuxserver/wireguard:latest
@@ -181,7 +192,38 @@ services:
       # Dashboard middleware (basic auth)
       # Uses TRAEFIK_DASHBOARD_USERS from .env (htpasswd format: admin:$apr1$...)
       - "traefik.http.middlewares.dashboard-auth.basicauth.users=${TRAEFIK_DASHBOARD_USERS}"
-      - "traefik.http.routers.dashboard.middlewares=dashboard-auth"
+
+      # Security: Combine basic auth + admin-secure (VPN/local only + rate limit + headers)
+      # Chain order: internal-only (IP check) → security-headers → admin-ratelimit → dashboard-auth (password)
+      - "traefik.http.middlewares.dashboard-secure.chain.middlewares=internal-only,security-headers,admin-ratelimit,dashboard-auth"
+      - "traefik.http.routers.dashboard.middlewares=dashboard-secure"
+
+      # Security Headers Middleware
+      - "traefik.http.middlewares.security-headers.headers.frameDeny=true"
+      - "traefik.http.middlewares.security-headers.headers.browserXssFilter=true"
+      - "traefik.http.middlewares.security-headers.headers.contentTypeNosniff=true"
+      - "traefik.http.middlewares.security-headers.headers.stsSeconds=31536000"
+      - "traefik.http.middlewares.security-headers.headers.stsIncludeSubdomains=true"
+      - "traefik.http.middlewares.security-headers.headers.stsPreload=true"
+
+      # Rate Limiting for Webhooks (generous for legitimate use)
+      - "traefik.http.middlewares.webhook-ratelimit.ratelimit.average=100"
+      - "traefik.http.middlewares.webhook-ratelimit.ratelimit.period=1m"
+      - "traefik.http.middlewares.webhook-ratelimit.ratelimit.burst=50"
+
+      # Strict Rate Limiting for Admin Access
+      - "traefik.http.middlewares.admin-ratelimit.ratelimit.average=10"
+      - "traefik.http.middlewares.admin-ratelimit.ratelimit.period=1m"
+      - "traefik.http.middlewares.admin-ratelimit.ratelimit.burst=5"
+
+      # IP Whitelist for Internal Services (RFC1918 + VPN)
+      - "traefik.http.middlewares.internal-only.ipwhitelist.sourcerange=192.168.0.0/16,172.16.0.0/12,10.0.0.0/8"
+
+      # Webhook Security Chain
+      - "traefik.http.middlewares.webhook-secure.chain.middlewares=security-headers,webhook-ratelimit"
+
+      # Admin Security Chain
+      - "traefik.http.middlewares.admin-secure.chain.middlewares=internal-only,security-headers,admin-ratelimit"
 
     healthcheck:
       test: ["CMD", "traefik", "healthcheck", "--ping"]
@@ -189,6 +231,25 @@ services:
       timeout: 10s
       retries: 3
       start_period: 10s
+
+  # Fail2ban - Protection against brute force and scanning attempts
+  fail2ban:
+    image: crazymax/fail2ban:latest
+    container_name: fail2ban
+    restart: unless-stopped
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    environment:
+      - TZ=${TIMEZONE}
+      - F2B_DB_PURGE_AGE=30d
+      - F2B_LOG_LEVEL=INFO
+    volumes:
+      - ./data/fail2ban:/data
+      - ./data/traefik/logs:/var/log/traefik:ro
+      - ./config/fail2ban/jail.local:/etc/fail2ban/jail.local:ro
+      - ./config/fail2ban/filter.d:/etc/fail2ban/filter.d:ro
+    network_mode: host
 
 networks:
   homeserver:

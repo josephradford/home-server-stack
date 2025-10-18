@@ -257,3 +257,92 @@ groups:
           summary: "WireGuard container health check failing"
           description: "WireGuard health check has been failing for 5+ minutes."
 
+  # Security Monitoring
+  # Monitors for suspicious activity and potential attacks
+  - name: security-alerts
+    interval: 30s
+    rules:
+      # Monitor for high rate of webhook requests (potential DDoS or abuse)
+      # Webhooks should have legitimate, predictable traffic patterns
+      - alert: HighWebhookRate
+        expr: rate(traefik_service_requests_total{service=~".*webhook.*"}[5m]) > 1
+        for: 2m
+        labels:
+          severity: warning
+          category: security
+        annotations:
+          summary: "High webhook request rate detected"
+          description: "Webhook endpoint receiving {{ printf \"%.2f\" $value }} requests per second - possible abuse or DDoS"
+
+      # Monitor for authentication failures (potential brute force)
+      # Multiple 401 errors indicate password guessing attempts
+      - alert: TooMany401Errors
+        expr: rate(traefik_service_requests_total{code="401"}[5m]) > 0.1
+        for: 5m
+        labels:
+          severity: critical
+          category: security
+        annotations:
+          summary: "Authentication failures detected"
+          description: "Multiple 401 errors ({{ printf \"%.2f\" $value }}/sec) - possible brute force attack"
+
+      # Monitor for scanning activity (404 errors for non-existent paths)
+      # High 404 rate indicates automated scanning for vulnerabilities
+      - alert: TooMany404Errors
+        expr: rate(traefik_service_requests_total{code="404"}[5m]) > 0.5
+        for: 2m
+        labels:
+          severity: warning
+          category: security
+        annotations:
+          summary: "Scanning activity detected"
+          description: "High rate of 404 errors ({{ printf \"%.2f\" $value }}/sec) - possible vulnerability scanning"
+
+      # Monitor for rate limit hits (429 Too Many Requests)
+      # Indicates a client is exceeding configured limits
+      - alert: RateLimitHit
+        expr: rate(traefik_service_requests_total{code="429"}[5m]) > 0.1
+        for: 1m
+        labels:
+          severity: info
+          category: security
+        annotations:
+          summary: "Rate limit being enforced"
+          description: "Client hitting rate limits ({{ printf \"%.2f\" $value }}/sec) - legitimate spike or abuse?"
+
+      # Monitor for server errors that might indicate attacks
+      # 500-level errors could indicate exploitation attempts
+      - alert: HighServerErrors
+        expr: rate(traefik_service_requests_total{code=~"5.."}[5m]) > 0.2
+        for: 3m
+        labels:
+          severity: warning
+          category: security
+        annotations:
+          summary: "High rate of server errors"
+          description: "Server returning {{ printf \"%.2f\" $value }} errors/sec - check for attacks or misconfigurations"
+
+      # Monitor Traefik service availability
+      # Traefik is critical - its failure exposes or blocks all services
+      - alert: TraefikDown
+        expr: up{job="traefik"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          category: availability
+        annotations:
+          summary: "Traefik reverse proxy is down"
+          description: "Traefik has been down for 1 minute - all web services are inaccessible"
+
+      # Monitor fail2ban container availability
+      # Fail2ban is our automated defense against attacks
+      - alert: Fail2banDown
+        expr: absent(container_last_seen{name="fail2ban"}) or (time() - container_last_seen{name="fail2ban"} > 120)
+        for: 2m
+        labels:
+          severity: warning
+          category: security
+        annotations:
+          summary: "Fail2ban protection is down"
+          description: "Fail2ban container has been down for 2+ minutes - no automated attack blocking"
+

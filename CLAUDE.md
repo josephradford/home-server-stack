@@ -196,11 +196,53 @@ make ssl-renew-test           # Test renewal (dry run)
 - Renewal hook: `/etc/letsencrypt/renewal-hooks/deploy/traefik-reload.sh`
 - Gandi credentials: `/etc/letsencrypt/gandi/gandi.ini` (chmod 600)
 
-### VPN-First Security Model
-The security architecture prioritizes **VPN access as the primary boundary**:
-- Only WireGuard port (51820/UDP) exposed to internet by default
-- All services accessible only via VPN or LAN
-- Optional: Selective public exposure (e.g., n8n webhooks only via reverse proxy with path filtering)
+### Security Architecture
+
+The stack implements **multi-layered defense-in-depth** security:
+
+#### Layer 1: Network Firewall (UFW)
+- Default deny incoming, allow outgoing
+- SSH rate-limited (prevents brute force)
+- WireGuard VPN (UDP 51820) - primary remote access
+- HTTP/HTTPS (80/443) for Traefik reverse proxy
+- Full access for local network (192.168.1.0/24) and VPN clients (10.13.13.0/24)
+- Setup: `./scripts/setup-firewall.sh`
+
+#### Layer 2: Traefik Middleware Security
+**admin-secure middleware chain** (applied to all admin interfaces):
+- IP whitelisting: Only RFC1918 (192.168.x.x, 10.x.x.x, 172.16.x.x) allowed
+- Security headers: HSTS, XSS protection, frame deny, content-type nosniff
+- Rate limiting: 10 requests/min (burst 5)
+- Services: n8n, AdGuard, Grafana, Prometheus, Alertmanager, Traefik dashboard
+
+**webhook-secure middleware chain** (ready for future public webhooks):
+- Security headers (same as above)
+- Generous rate limiting: 100 requests/min (burst 50)
+- No IP restrictions (public access)
+
+Middleware definitions in `docker-compose.yml` Traefik service labels.
+
+#### Layer 3: Fail2ban Automated Defense
+- Monitors Traefik access logs for malicious patterns
+- **traefik-auth jail**: 3 x 401 errors → 1 hour ban
+- **traefik-webhook jail**: 20 x rate limit hits → 10 minute ban
+- **traefik-scanner jail**: 10 x 404 errors → 24 hour ban
+- Ignores local/VPN networks from bans
+- Config: `config/fail2ban/`
+
+#### Layer 4: Prometheus Security Monitoring
+- High webhook rate detection (>1 req/sec)
+- Authentication failure monitoring (401 errors)
+- Scanning activity detection (404 errors)
+- Rate limit enforcement tracking (429 errors)
+- Server error monitoring (5xx errors)
+- Traefik and fail2ban availability monitoring
+- Alerts: `monitoring/prometheus/alert_rules.yml` security-alerts group
+
+#### VPN-First Access Model
+- Primary remote access: WireGuard VPN only
+- Admin interfaces: VPN or local network only (enforced by middleware)
+- Future public webhooks: Separate router with webhook-secure middleware
 - See `security-tickets/README.md` for complete security roadmap
 
 ### Data Persistence
