@@ -97,16 +97,37 @@ By default, services use **self-signed certificates** (browser warnings expected
 
 ## 🔐 Security
 
-This project follows a **VPN-first security model**. See [security-tickets/README.md](security-tickets/README.md) for the complete security roadmap.
+This project implements **multi-layered defense-in-depth security** with four protection layers:
 
-**Key Security Features:**
-- VPN-first access (WireGuard primary boundary)
-- Selective public exposure (n8n webhooks only)
-- Pre-commit secret scanning
-- Pinned Docker image versions
-- Regular security audits
+### Security Layers
 
-See **[SECURITY.md](SECURITY.md)** for security policy and reporting vulnerabilities.
+**🔥 Layer 1: Network Firewall (UFW)**
+- Default deny incoming, SSH rate-limited
+- Only WireGuard VPN (51820/UDP) and HTTP/HTTPS (80/443) exposed
+- Local network and VPN clients have full access
+
+**🛡️ Layer 2: Traefik Middleware**
+- **IP Whitelisting**: Admin interfaces only accessible from local network/VPN
+- **Security Headers**: HSTS, XSS protection, frame deny
+- **Rate Limiting**: 10 req/min for admin, 100 req/min for webhooks
+
+**🚫 Layer 3: Fail2ban**
+- Auto-bans IPs after repeated auth failures (3 → 1h ban)
+- Detects scanning activity (10 x 404 → 24h ban)
+- Monitors webhook abuse (20 x rate limit → 10m ban)
+
+**📊 Layer 4: Prometheus Security Monitoring**
+- Real-time alerts for auth failures, scanning, DDoS attempts
+- Tracks rate limit enforcement and server errors
+- Monitors fail2ban and Traefik availability
+
+### Access Model
+
+- **Admin Interfaces** (n8n, Grafana, etc.): VPN or local network only
+- **Future Webhooks**: Public access with rate limiting (not yet configured)
+- **VPN Primary Boundary**: WireGuard for all remote admin access
+
+See **[SECURITY.md](SECURITY.md)** for security policy and **[security-tickets/README.md](security-tickets/README.md)** for the complete security roadmap.
 
 ## 🤝 Contributing
 
