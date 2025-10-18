@@ -273,12 +273,11 @@ adguard-setup: env-check
 	@set -a; . ./.env; set +a; \
 	echo "Configure network devices to use $$SERVER_IP as DNS server"
 
-# Setup SSL certificate storage
+# Setup SSL certificate storage (for certbot-generated certs)
 setup-certs:
 	@echo "Setting up SSL certificate storage..."
 	@mkdir -p data/traefik/certs
-	@touch data/traefik/certs/acme.json
-	@chmod 600 data/traefik/certs/acme.json
+	@mkdir -p config/traefik
 	@echo "✓ Certificate storage configured"
 
 # Test domain-based access for all services

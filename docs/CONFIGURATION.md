@@ -189,26 +189,13 @@ The dashboard shows:
 
 ### SSL/TLS Configuration
 
-Traefik automatically generates self-signed certificates for all services.
+By default, Traefik generates self-signed certificates for all services (browser warnings expected).
 
 **Certificate storage:**
 `data/traefik/certs/`
 
-**To use Let's Encrypt (optional, for public access):**
-Edit Traefik command in docker-compose.yml:
-```yaml
-command:
-  # ... existing commands ...
-  - "--certificatesresolvers.letsencrypt.acme.dnschallenge=true"
-  - "--certificatesresolvers.letsencrypt.acme.dnschallenge.provider=your-dns-provider"
-  - "--certificatesresolvers.letsencrypt.acme.email=your-email@example.com"
-  - "--certificatesresolvers.letsencrypt.acme.storage=/certs/acme.json"
-```
-
-Then add to service labels:
-```yaml
-- "traefik.http.routers.myservice.tls.certresolver=letsencrypt"
-```
+**For trusted Let's Encrypt certificates:**
+See the [SSL Certificate Setup](#ssl-certificate-setup) section below for complete instructions using `make ssl-setup`.
 
 ### Middleware Configuration
 

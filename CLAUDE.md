@@ -149,9 +149,9 @@ Services are accessed via **subdomain.DOMAIN** instead of IP:port combinations:
 Example flow: `https://n8n.example.com` → DNS resolves to SERVER_IP → Traefik routes to n8n container → HTTPS response
 
 ### SSL Certificates with Let's Encrypt (via certbot)
-**Implementation**: Uses **certbot with Gandi DNS plugin** instead of Traefik's built-in ACME due to compatibility issues.
+**Implementation**: Uses **certbot with Gandi DNS plugin** for Let's Encrypt wildcard certificates.
 
-**Why certbot instead of Traefik ACME?**
+**Why certbot instead of Traefik's built-in ACME?**
 - Traefik v3.2's Lego library (v4.21.0) has compatibility issues with Gandi API v5
 - Manual API tests with Gandi succeed, but Lego consistently returns 403 Forbidden during DNS-01 challenge
 - Root cause: Bug or incompatibility between Lego's Gandi provider and Gandi API v5
@@ -344,9 +344,6 @@ For wildcard certificate (only on dashboard router):
   - File provider watches `/etc/traefik/` directory (mapped to `./config/traefik/`)
   - Dynamic config: `./config/traefik/dynamic-certs.yml`
   - Certificates loaded from `/certs/` (mapped to `./data/traefik/certs/`)
-- **Legacy ACME config**: Still present in docker-compose.yml but not used
-  - DNS challenge provider: `gandiv5` (Gandi DNS) - doesn't work due to Lego/Gandi incompatibility
-  - Certificate resolver: `letsencrypt` - kept for backwards compatibility, not active
 
 ### WireGuard
 - LinuxServer.io container with s6-overlay init system
@@ -403,7 +400,7 @@ Implementation roadmaps:
 ## Common Issues
 
 ### SSL Certificate Issues
-**Current Implementation (certbot + file provider)**:
+**Implementation (certbot + file provider)**:
 - Certificates: `./data/traefik/certs/DOMAIN.crt` (644) and `DOMAIN.key` (600)
 - Dynamic config: `./config/traefik/dynamic-certs.yml` must exist
 - Check if file provider loaded: `docker compose logs traefik | grep "file.Provider"`
@@ -419,11 +416,6 @@ Implementation roadmaps:
 - Renewal logs: `sudo tail -f /var/log/certbot-traefik-reload.log`
 - Verify DNS propagation: `dig @1.1.1.1 ${DOMAIN} +short`
 
-**Legacy ACME Issues (no longer used)**:
-- Old implementation used `acme.json` which had Lego/Gandi compatibility issues
-- Kept for reference: `./data/traefik/certs/acme.json` (chmod 600)
-- Not active - file provider used instead
-
 ### DNS Resolution
 - Ensure AdGuard is running: `docker compose ps adguard`
 - Test DNS directly: `dig @${SERVER_IP} n8n.${DOMAIN} +short`
@@ -435,12 +427,6 @@ Implementation roadmaps:
 2. Check Traefik routing: `docker compose logs traefik | grep <service-name>`
 3. Verify DNS resolves to SERVER_IP: `dig @${SERVER_IP} <service>.${DOMAIN}`
 4. Test direct port access (if exposed): `curl http://${SERVER_IP}:<port>`
-
-### Gandi DNS Challenge Failing
-- Verify `GANDIV5_PERSONAL_ACCESS_TOKEN` is set correctly in `.env`
-- Check token has "Manage domain name technical configurations" permission
-- Token is passed as `GANDIV5_API_KEY` to Traefik container (variable name mapping)
-- Check Traefik logs for ACME challenge errors
 
 ## Security Considerations
 
