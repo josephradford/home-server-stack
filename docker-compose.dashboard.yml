@@ -23,9 +23,8 @@ services:
       - /:/host:ro
     restart: unless-stopped
     networks:
-      - home-server
+      - homeserver
 
 networks:
-  home-server:
-    name: home-server
-    external: true
+  homeserver:
+    driver: bridge
