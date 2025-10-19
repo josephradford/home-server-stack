@@ -133,21 +133,16 @@ setup: env-check validate
 	@set -a; . ./.env; set +a; \
 	if [ -n "$$DOMAIN" ]; then \
 		echo "  Via domain names:"; \
-		echo "    - Traefik Dashboard: https://traefik.$$DOMAIN"; \
-		echo "    - AdGuard Home:      https://adguard.$$DOMAIN"; \
-		echo "    - n8n:               https://n8n.$$DOMAIN"; \
-		echo "    - Grafana:           https://grafana.$$DOMAIN"; \
-		echo "    - Prometheus:        https://prometheus.$$DOMAIN"; \
-		echo "    - Alertmanager:      https://alerts.$$DOMAIN"; \
-		echo ""; \
-		echo "  Via IP address:"; \
-		echo "    - Homepage Dashboard: http://$$SERVER_IP:3100"; \
+		echo "    - Homepage Dashboard: https://homepage.$$DOMAIN"; \
+		echo "    - Traefik Dashboard:  https://traefik.$$DOMAIN"; \
+		echo "    - AdGuard Home:       https://adguard.$$DOMAIN"; \
+		echo "    - n8n:                https://n8n.$$DOMAIN"; \
+		echo "    - Grafana:            https://grafana.$$DOMAIN"; \
+		echo "    - Prometheus:         https://prometheus.$$DOMAIN"; \
+		echo "    - Alertmanager:       https://alerts.$$DOMAIN"; \
 	else \
 		echo "  ERROR: DOMAIN not set in .env file"; \
 		echo "  Please set DOMAIN=your-domain.com in .env"; \
-		echo ""; \
-		echo "  Via IP address:"; \
-		echo "    - Homepage Dashboard: http://$$SERVER_IP:3100"; \
 	fi
 	@echo ""
 	@echo "Note: First-time container initialization may take a few minutes."
@@ -451,7 +446,7 @@ dashboard-setup: env-check
 	@echo "✓ Homepage Dashboard setup complete!"
 	@echo ""
 	@set -a; . ./.env; set +a; \
-	echo "Access your dashboard at: http://$$SERVER_IP:3100"
+	echo "Access your dashboard at: https://homepage.$$DOMAIN"
 	@echo ""
 	@echo "Check logs with: make dashboard-logs"
 
@@ -461,7 +456,7 @@ dashboard-start: env-check
 	@$(COMPOSE_DASHBOARD) up -d
 	@echo "✓ Homepage dashboard started"
 	@set -a; . ./.env; set +a; \
-	echo "Access at: http://$$SERVER_IP:3100"
+	echo "Access at: https://homepage.$$DOMAIN"
 
 # Stop Homepage dashboard
 dashboard-stop:
