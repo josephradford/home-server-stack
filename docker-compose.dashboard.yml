@@ -27,6 +27,15 @@ services:
     restart: unless-stopped
     networks:
       - homeserver
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.homepage.rule=Host(`homepage.${DOMAIN}`)"
+      - "traefik.http.routers.homepage.entrypoints=websecure"
+      - "traefik.http.routers.homepage.tls=true"
+      # Using file provider certificate (wildcard from certbot)
+      - "traefik.http.services.homepage.loadbalancer.server.port=3000"
+      # Security: Apply admin-secure middleware (IP whitelist + rate limiting)
+      - "traefik.http.routers.homepage.middlewares=admin-secure"
 
 networks:
   homeserver:
