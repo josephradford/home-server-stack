@@ -2,23 +2,29 @@
 # Simplifies deployment and maintenance operations
 
 .PHONY: help setup update start stop restart logs build pull status clean purge validate env-check
-.PHONY: logs-n8n logs-wireguard
+.PHONY: logs-n8n logs-wireguard logs-homepage
 .PHONY: adguard-setup setup-certs test-domain-access traefik-password
 .PHONY: ssl-setup ssl-copy-certs ssl-configure-traefik ssl-setup-renewal ssl-renew-test
+.PHONY: dashboard-setup dashboard-start dashboard-stop dashboard-restart dashboard-logs dashboard-status
 
-# Compose file flags - always include monitoring
-COMPOSE := docker compose -f docker-compose.yml -f docker-compose.monitoring.yml
+# Compose file flags
+# COMPOSE_CORE: Base services + monitoring only
+# COMPOSE: All services including dashboard (default for most operations)
+# COMPOSE_DASHBOARD: Dashboard only (for dashboard-specific operations)
+COMPOSE_CORE := docker compose -f docker-compose.yml -f docker-compose.monitoring.yml
+COMPOSE_DASHBOARD := docker compose -f docker-compose.dashboard.yml
+COMPOSE := docker compose -f docker-compose.yml -f docker-compose.monitoring.yml -f docker-compose.dashboard.yml
 
 # Default target - show help
 help:
 	@echo "Home Server Stack - Available Commands"
 	@echo ""
 	@echo "Setup & Deployment:"
-	@echo "  make setup              - First time setup (all services + monitoring)"
+	@echo "  make setup              - First time setup (core + monitoring + dashboard)"
 	@echo "  make env-check          - Verify .env file exists and is configured"
 	@echo ""
 	@echo "Service Management:"
-	@echo "  make start              - Start all services (base + monitoring)"
+	@echo "  make start              - Start all services (core + monitoring + dashboard)"
 	@echo "  make stop               - Stop all services"
 	@echo "  make restart            - Restart all services"
 	@echo "  make status             - Show status of all services"
@@ -32,6 +38,15 @@ help:
 	@echo "  make logs               - Show logs from all services"
 	@echo "  make logs-n8n           - Show n8n logs only"
 	@echo "  make logs-wireguard     - Show WireGuard logs only"
+	@echo "  make logs-homepage      - Show Homepage logs only"
+	@echo ""
+	@echo "Dashboard Management:"
+	@echo "  make dashboard-setup    - Setup and start Homepage dashboard"
+	@echo "  make dashboard-start    - Start Homepage dashboard"
+	@echo "  make dashboard-stop     - Stop Homepage dashboard"
+	@echo "  make dashboard-restart  - Restart Homepage dashboard"
+	@echo "  make dashboard-logs     - Show Homepage dashboard logs"
+	@echo "  make dashboard-status   - Show Homepage dashboard status"
 	@echo ""
 	@echo "Service Configuration:"
 	@echo "  make adguard-setup      - Configure DNS rewrites for domain-based access"
@@ -85,37 +100,54 @@ pull: validate
 setup: env-check validate
 	@echo "Starting first-time setup..."
 	@echo ""
-	@echo "Step 1/5: Setting up Traefik dashboard password..."
+	@echo "Step 1/6: Setting up Traefik dashboard password..."
 	@./scripts/setup-traefik-password.sh
 	@echo ""
-	@echo "Step 2/5: Setting up SSL certificate storage..."
+	@echo "Step 2/6: Setting up SSL certificate storage..."
 	@$(MAKE) setup-certs
 	@echo ""
-	@echo "Step 3/5: Pulling pre-built images..."
+	@echo "Step 3/6: Setting up Homepage dashboard config..."
+	@mkdir -p data/homepage/config
+	@if [ ! -f "data/homepage/config/settings.yaml" ]; then \
+		echo "⚠️  Warning: Homepage config files not found in data/homepage/config/"; \
+		echo "Dashboard will not start correctly without configuration files."; \
+		echo "See tickets/dashboard-tickets/ticket_02_homepage_dashboard.md for setup."; \
+	else \
+		echo "✓ Homepage configuration found"; \
+	fi
+	@echo ""
+	@echo "Step 4/6: Pulling pre-built images..."
 	@$(COMPOSE) pull --ignore-pull-failures
 	@echo ""
-	@echo "Step 4/5: Starting services..."
+	@echo "Step 5/6: Starting services..."
 	@$(COMPOSE) up -d
 	@echo ""
-	@echo "Step 5/5: Configuring AdGuard DNS rewrites..."
+	@echo "Step 6/6: Configuring AdGuard DNS rewrites..."
 	@$(MAKE) adguard-setup
 	@echo ""
 	@$(COMPOSE) ps
 	@echo ""
 	@echo "✓ Setup complete! Services are running."
 	@echo ""
-	@echo "Access your services via domain names:"
+	@echo "Access your services:"
 	@set -a; . ./.env; set +a; \
 	if [ -n "$$DOMAIN" ]; then \
-		echo "  - Traefik Dashboard: https://traefik.$$DOMAIN"; \
-		echo "  - AdGuard Home:      https://adguard.$$DOMAIN"; \
-		echo "  - n8n:               https://n8n.$$DOMAIN"; \
-		echo "  - Grafana:           https://grafana.$$DOMAIN"; \
-		echo "  - Prometheus:        https://prometheus.$$DOMAIN"; \
-		echo "  - Alertmanager:      https://alerts.$$DOMAIN"; \
+		echo "  Via domain names:"; \
+		echo "    - Traefik Dashboard: https://traefik.$$DOMAIN"; \
+		echo "    - AdGuard Home:      https://adguard.$$DOMAIN"; \
+		echo "    - n8n:               https://n8n.$$DOMAIN"; \
+		echo "    - Grafana:           https://grafana.$$DOMAIN"; \
+		echo "    - Prometheus:        https://prometheus.$$DOMAIN"; \
+		echo "    - Alertmanager:      https://alerts.$$DOMAIN"; \
+		echo ""; \
+		echo "  Via IP address:"; \
+		echo "    - Homepage Dashboard: http://$$SERVER_IP:3100"; \
 	else \
 		echo "  ERROR: DOMAIN not set in .env file"; \
 		echo "  Please set DOMAIN=your-domain.com in .env"; \
+		echo ""; \
+		echo "  Via IP address:"; \
+		echo "    - Homepage Dashboard: http://$$SERVER_IP:3100"; \
 	fi
 	@echo ""
 	@echo "Note: First-time container initialization may take a few minutes."
@@ -199,6 +231,9 @@ logs-n8n:
 logs-wireguard:
 	@$(COMPOSE) logs -f wireguard
 
+logs-homepage:
+	@$(COMPOSE_DASHBOARD) logs -f homepage
+
 # Clean up all services (preserves ./data/)
 clean:
 	@echo "WARNING: This will remove all containers and volumes!"
@@ -219,6 +254,7 @@ purge:
 	@echo "  - n8n workflows and database"
 	@echo "  - WireGuard VPN configs"
 	@echo "  - All monitoring data (Grafana, Prometheus)"
+	@echo "  - Homepage dashboard configuration"
 	@echo "  - Let's Encrypt SSL certificates and renewal hooks"
 	@echo "  - Traefik configuration files"
 	@echo ""
@@ -255,7 +291,7 @@ adguard-setup: env-check
 	@./scripts/setup-adguard-dns.sh
 	@echo ""
 	@echo "Restarting AdGuard to apply configuration..."
-	@$(COMPOSE) restart adguard
+	@$(COMPOSE_CORE) restart adguard
 	@echo ""
 	@echo "✓ AdGuard DNS setup complete!"
 	@echo ""
@@ -291,9 +327,9 @@ traefik-password: env-check
 	@./scripts/setup-traefik-password.sh
 	@echo ""
 	@echo "Restarting Traefik to apply new password..."
-	@$(COMPOSE) stop traefik
-	@$(COMPOSE) rm -f traefik
-	@$(COMPOSE) up -d traefik
+	@$(COMPOSE_CORE) stop traefik
+	@$(COMPOSE_CORE) rm -f traefik
+	@$(COMPOSE_CORE) up -d traefik
 	@echo "✓ Traefik password updated and service restarted"
 
 # Let's Encrypt SSL Certificate Setup with certbot
@@ -330,9 +366,9 @@ ssl-setup: env-check
 	@./scripts/configure-traefik-file-provider.sh
 	@echo ""
 	@echo "Step 4/5: Recreating Traefik container with new configuration..."
-	@$(COMPOSE) stop traefik
-	@$(COMPOSE) rm -f traefik
-	@$(COMPOSE) up -d traefik
+	@$(COMPOSE_CORE) stop traefik
+	@$(COMPOSE_CORE) rm -f traefik
+	@$(COMPOSE_CORE) up -d traefik
 	@sleep 5
 	@echo ""
 	@echo "Step 5/5: Setting up automatic renewal..."
@@ -366,9 +402,9 @@ ssl-configure-traefik: env-check
 	@./scripts/configure-traefik-file-provider.sh
 	@echo ""
 	@echo "Restarting Traefik to apply configuration..."
-	@$(COMPOSE) stop traefik
-	@$(COMPOSE) rm -f traefik
-	@$(COMPOSE) up -d traefik
+	@$(COMPOSE_CORE) stop traefik
+	@$(COMPOSE_CORE) rm -f traefik
+	@$(COMPOSE_CORE) up -d traefik
 	@sleep 3
 	@echo "✓ Traefik configured and restarted"
 
@@ -383,3 +419,74 @@ ssl-renew-test:
 	@echo "This will simulate renewal without actually renewing certificates."
 	@echo ""
 	@sudo certbot renew --dry-run
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# Dashboard Management
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+# Setup Homepage dashboard (first time)
+dashboard-setup: env-check
+	@echo "Setting up Homepage Dashboard..."
+	@echo ""
+	@echo "Step 1/3: Creating config directory and verifying files..."
+	@mkdir -p data/homepage/config
+	@if [ ! -f "data/homepage/config/settings.yaml" ]; then \
+		echo "✗ Configuration files not found!"; \
+		echo ""; \
+		echo "Homepage config files should be in data/homepage/config/:"; \
+		echo "  - settings.yaml"; \
+		echo "  - widgets.yaml"; \
+		echo "  - docker.yaml"; \
+		echo "  - bookmarks.yaml"; \
+		echo "  - services.yaml"; \
+		echo ""; \
+		echo "These files should have been created during Ticket 02 implementation."; \
+		exit 1; \
+	fi
+	@echo "✓ Configuration files found"
+	@echo ""
+	@echo "Step 2/3: Ensuring home-server network exists..."
+	@if ! docker network inspect home-server &>/dev/null; then \
+		echo "Creating Docker network: home-server"; \
+		docker network create home-server; \
+	else \
+		echo "✓ Network already exists"; \
+	fi
+	@echo ""
+	@echo "Step 3/3: Starting Homepage dashboard..."
+	@$(COMPOSE_DASHBOARD) up -d
+	@echo ""
+	@echo "✓ Homepage Dashboard setup complete!"
+	@echo ""
+	@set -a; . ./.env; set +a; \
+	echo "Access your dashboard at: http://$$SERVER_IP:3100"
+	@echo ""
+	@echo "Check logs with: make dashboard-logs"
+
+# Start Homepage dashboard
+dashboard-start: env-check
+	@echo "Starting Homepage dashboard..."
+	@$(COMPOSE_DASHBOARD) up -d
+	@echo "✓ Homepage dashboard started"
+	@set -a; . ./.env; set +a; \
+	echo "Access at: http://$$SERVER_IP:3100"
+
+# Stop Homepage dashboard
+dashboard-stop:
+	@echo "Stopping Homepage dashboard..."
+	@$(COMPOSE_DASHBOARD) down
+	@echo "✓ Homepage dashboard stopped"
+
+# Restart Homepage dashboard
+dashboard-restart: env-check
+	@echo "Restarting Homepage dashboard..."
+	@$(COMPOSE_DASHBOARD) restart
+	@echo "✓ Homepage dashboard restarted"
+
+# Show Homepage dashboard logs
+dashboard-logs:
+	@$(COMPOSE_DASHBOARD) logs -f homepage
+
+# Show Homepage dashboard status
+dashboard-status:
+	@$(COMPOSE_DASHBOARD) ps
