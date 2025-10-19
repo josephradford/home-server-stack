@@ -5,7 +5,6 @@ services:
     environment:
       PUID: ${PUID:-1000}
       PGID: ${PGID:-1000}
-      HOMEPAGE_ALLOWED_HOSTS: "${SERVER_IP},localhost,127.0.0.1"
       # Pass through environment variables for configs
       HOMEPAGE_VAR_SERVER_IP: ${SERVER_IP}
       HOMEPAGE_VAR_ADGUARD_USER: ${ADGUARD_USERNAME}
