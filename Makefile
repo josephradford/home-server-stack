@@ -100,13 +100,21 @@ pull: validate
 setup: env-check validate
 	@echo "Starting first-time setup..."
 	@echo ""
-	@echo "Step 1/6: Setting up Traefik dashboard password..."
+	@echo "Step 1/7: Creating Docker network..."
+	@if ! docker network inspect home-server &>/dev/null; then \
+		echo "Creating Docker network: home-server"; \
+		docker network create home-server; \
+	else \
+		echo "✓ Network already exists"; \
+	fi
+	@echo ""
+	@echo "Step 2/7: Setting up Traefik dashboard password..."
 	@./scripts/setup-traefik-password.sh
 	@echo ""
-	@echo "Step 2/6: Setting up SSL certificate storage..."
+	@echo "Step 3/7: Setting up SSL certificate storage..."
 	@$(MAKE) setup-certs
 	@echo ""
-	@echo "Step 3/6: Setting up Homepage dashboard config..."
+	@echo "Step 4/7: Setting up Homepage dashboard config..."
 	@mkdir -p data/homepage/config
 	@if [ ! -f "data/homepage/config/settings.yaml" ]; then \
 		echo "⚠️  Warning: Homepage config files not found in data/homepage/config/"; \
@@ -116,13 +124,13 @@ setup: env-check validate
 		echo "✓ Homepage configuration found"; \
 	fi
 	@echo ""
-	@echo "Step 4/6: Pulling pre-built images..."
+	@echo "Step 5/7: Pulling pre-built images..."
 	@$(COMPOSE) pull --ignore-pull-failures
 	@echo ""
-	@echo "Step 5/6: Starting services..."
+	@echo "Step 6/7: Starting services..."
 	@$(COMPOSE) up -d
 	@echo ""
-	@echo "Step 6/6: Configuring AdGuard DNS rewrites..."
+	@echo "Step 7/7: Configuring AdGuard DNS rewrites..."
 	@$(MAKE) adguard-setup
 	@echo ""
 	@$(COMPOSE) ps
