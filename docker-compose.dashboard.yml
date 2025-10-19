@@ -1,0 +1,32 @@
+services:
+  homepage:
+    image: ghcr.io/gethomepage/homepage:latest
+    container_name: homepage
+    environment:
+      PUID: ${PUID:-1000}
+      PGID: ${PGID:-1000}
+      HOMEPAGE_ALLOWED_HOSTS: "${SERVER_IP},localhost,127.0.0.1"
+      # Pass through environment variables for configs
+      HOMEPAGE_VAR_SERVER_IP: ${SERVER_IP}
+      HOMEPAGE_VAR_ADGUARD_USER: ${ADGUARD_USERNAME}
+      HOMEPAGE_VAR_ADGUARD_PASS: ${ADGUARD_PASSWORD}
+      HOMEPAGE_VAR_GRAFANA_USER: ${GRAFANA_USERNAME:-admin}
+      HOMEPAGE_VAR_GRAFANA_PASS: ${GRAFANA_PASSWORD}
+      HOMEPAGE_VAR_TRANSPORTNSW_KEY: ${TRANSPORTNSW_API_KEY}
+      HOMEPAGE_VAR_GCAL_ICAL_URL: ${GOOGLE_CALENDAR_ICAL_URL}
+      HOMEPAGE_VAR_HOMEASSISTANT_URL: ${HOMEASSISTANT_URL}
+      HOMEPAGE_VAR_HOMEASSISTANT_TOKEN: ${HOMEASSISTANT_TOKEN}
+    ports:
+      - "3100:3000"
+    volumes:
+      - ./data/homepage/config:/app/config
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /:/host:ro
+    restart: unless-stopped
+    networks:
+      - home-server
+
+networks:
+  home-server:
+    name: home-server
+    external: true
