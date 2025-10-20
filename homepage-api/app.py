@@ -14,6 +14,9 @@ from datetime import datetime, timedelta
 import os
 import json
 from functools import lru_cache
+from ftplib import FTP
+from io import BytesIO
+import xml.etree.ElementTree as ET
 
 app = Flask(__name__)
 CORS(app)
@@ -24,9 +27,11 @@ HOMEASSISTANT_URL = os.getenv('HOMEASSISTANT_URL', 'http://homeassistant:8123')
 HOMEASSISTANT_TOKEN = os.getenv('HOMEASSISTANT_TOKEN')
 TOMTOM_API_KEY = os.getenv('TOMTOM_API_KEY')
 
-# BOM configuration
-BOM_PARRAMATTA_STATION_ID = '94764'  # Parramatta North station
-BOM_OBSERVATIONS_URL = f'http://www.bom.gov.au/fwo/IDN60801/IDN60801.{BOM_PARRAMATTA_STATION_ID}.json'
+# BOM FTP configuration
+BOM_FTP_HOST = 'ftp.bom.gov.au'
+BOM_FTP_PATH = '/anon/gen/fwo/'
+BOM_NSW_OBSERVATIONS_FILE = 'IDN60920.xml'  # NSW state observations
+BOM_PARRAMATTA_STATION = 'Parramatta'  # Station name to search for
 
 
 @app.route('/api/health')
@@ -51,43 +56,65 @@ def health_check():
 @lru_cache(maxsize=1)
 def bom_weather():
     """
-    Fetch weather data from Australian BOM for Parramatta area
+    Fetch weather data from Australian BOM for Parramatta area via FTP
+    Parses XML observations file to find Parramatta station data
     Cached for 5 minutes to respect BOM servers
     """
     try:
-        response = requests.get(BOM_OBSERVATIONS_URL, timeout=10)
-        response.raise_for_status()
-        data = response.json()
+        # Connect to BOM FTP server
+        ftp = FTP(BOM_FTP_HOST, timeout=10)
+        ftp.login()  # Anonymous login
+        ftp.cwd(BOM_FTP_PATH)
 
-        observations = data.get('observations', {}).get('data', [])
-        if not observations:
-            return jsonify({'error': 'No observation data available'}), 404
+        # Download XML file
+        file_data = BytesIO()
+        ftp.retrbinary(f'RETR {BOM_NSW_OBSERVATIONS_FILE}', file_data.write)
+        ftp.quit()
 
-        latest = observations[0]
+        # Parse XML
+        file_data.seek(0)
+        tree = ET.parse(file_data)
+        root = tree.getroot()
+
+        # Find Parramatta North station in the XML
+        station_data = None
+        for station in root.findall('.//station'):
+            station_desc = station.find('description')
+            if station_desc is not None and BOM_PARRAMATTA_STATION in station_desc.text:
+                station_data = station
+                break
+
+        if station_data is None:
+            return jsonify({'error': 'Parramatta station not found in BOM data'}), 404
+
+        # Extract weather data from XML
+        def get_element_text(parent, tag, default=None):
+            element = parent.find(f'.//{tag}')
+            return element.text if element is not None and element.text else default
 
         weather_data = {
             'current': {
-                'temp': latest.get('air_temp'),
-                'apparent_temp': latest.get('apparent_t'),
-                'humidity': latest.get('rel_hum'),
-                'wind_speed_kmh': latest.get('wind_spd_kmh'),
-                'wind_dir': latest.get('wind_dir'),
-                'rain_since_9am': latest.get('rain_trace', '0'),
-                'description': latest.get('weather', 'N/A')
+                'temp': float(get_element_text(station_data, 'air_temperature')) if get_element_text(station_data, 'air_temperature') else None,
+                'apparent_temp': float(get_element_text(station_data, 'apparent_temp')) if get_element_text(station_data, 'apparent_temp') else None,
+                'humidity': int(get_element_text(station_data, 'rel-humidity')) if get_element_text(station_data, 'rel-humidity') else None,
+                'wind_speed_kmh': int(get_element_text(station_data, 'wind-speed-kmh')) if get_element_text(station_data, 'wind-speed-kmh') else None,
+                'wind_dir': get_element_text(station_data, 'wind-dir', 'N/A'),
+                'rain_since_9am': get_element_text(station_data, 'rainfall-24hr', '0'),
+                'description': get_element_text(station_data, 'weather', 'N/A')
             },
             'station': {
-                'name': data.get('observations', {}).get('header', [{}])[0].get('name', 'Parramatta'),
+                'name': get_element_text(station_data, 'description', 'Parramatta'),
                 'location': 'North Parramatta, NSW'
             },
-            'updated': latest.get('aifstime_utc')
+            'updated': get_element_text(station_data, 'local-date-time-full')
         }
 
         return jsonify(weather_data)
 
-    except requests.exceptions.RequestException as e:
-        return jsonify({'error': f'Failed to fetch BOM data: {str(e)}'}), 500
+    except ET.ParseError as e:
+        return jsonify({'error': f'Failed to parse BOM XML: {str(e)}'}), 500
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': f'Failed to fetch BOM data: {str(e)}'}), 500
 
 
 # =============================================================================
@@ -281,4 +308,4 @@ if __name__ == '__main__':
     bom_weather.cache_clear()
 
     # Run server
-    app.run(host='0.0.0.0', port=5000, debug=False)
+    app.run(host='0.0.0.0', port=5200, debug=False)

@@ -39,6 +39,8 @@ GET /api/bom/weather
 ```
 
 Returns current weather for Parramatta area from Australian Bureau of Meteorology.
+Data is fetched via BOM's anonymous FTP server (`ftp.bom.gov.au/anon/gen/fwo/IDN60920.xml`) to comply with their automated access policy.
+The XML file contains NSW state observations and is parsed to extract Parramatta North station data.
 
 **Response:**
 ```json
@@ -157,13 +159,13 @@ HTTP status codes:
 
 ## Caching
 
-- BOM weather: Cached for 5 minutes
+- BOM weather: Cached for 5 minutes (reduces FTP connections)
 - Other endpoints: No caching
 
 ## Rate Limits
 
 Respect external API rate limits:
-- BOM: No official limit (be reasonable)
+- BOM: Uses FTP (no official rate limit, but caching recommended)
 - Transport NSW: 30 requests/minute
 - TomTom: Based on your plan
 
