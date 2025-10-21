@@ -76,37 +76,42 @@ def bom_weather():
         tree = ET.parse(file_data)
         root = tree.getroot()
 
-        # Find Parramatta North station in the XML
+        # Find Parramatta station by description attribute
         station_data = None
         for station in root.findall('.//station'):
-            station_desc = station.find('description')
-            if station_desc is not None and BOM_PARRAMATTA_STATION in station_desc.text:
+            description = station.get('description', '')
+            if BOM_PARRAMATTA_STATION in description:
                 station_data = station
                 break
 
         if station_data is None:
             return jsonify({'error': 'Parramatta station not found in BOM data'}), 404
 
-        # Extract weather data from XML
-        def get_element_text(parent, tag, default=None):
-            element = parent.find(f'.//{tag}')
+        # Extract weather data from XML elements
+        # BOM uses <element type="air_temperature">23.0</element> format
+        def get_element_value(parent, element_type, default=None):
+            element = parent.find(f".//element[@type='{element_type}']")
             return element.text if element is not None and element.text else default
+
+        # Get station metadata from attributes
+        station_name = station_data.get('description', 'Parramatta')
+        time_local = station_data.find('.//period').get('time-local') if station_data.find('.//period') is not None else None
 
         weather_data = {
             'current': {
-                'temp': float(get_element_text(station_data, 'air_temperature')) if get_element_text(station_data, 'air_temperature') else None,
-                'apparent_temp': float(get_element_text(station_data, 'apparent_temp')) if get_element_text(station_data, 'apparent_temp') else None,
-                'humidity': int(get_element_text(station_data, 'rel-humidity')) if get_element_text(station_data, 'rel-humidity') else None,
-                'wind_speed_kmh': int(get_element_text(station_data, 'wind-speed-kmh')) if get_element_text(station_data, 'wind-speed-kmh') else None,
-                'wind_dir': get_element_text(station_data, 'wind-dir', 'N/A'),
-                'rain_since_9am': get_element_text(station_data, 'rainfall-24hr', '0'),
-                'description': get_element_text(station_data, 'weather', 'N/A')
+                'temp': float(get_element_value(station_data, 'air_temperature')) if get_element_value(station_data, 'air_temperature') else None,
+                'apparent_temp': float(get_element_value(station_data, 'apparent_temp')) if get_element_value(station_data, 'apparent_temp') else None,
+                'humidity': int(get_element_value(station_data, 'rel-humidity')) if get_element_value(station_data, 'rel-humidity') else None,
+                'wind_speed_kmh': int(get_element_value(station_data, 'wind_spd_kmh')) if get_element_value(station_data, 'wind_spd_kmh') else None,
+                'wind_dir': get_element_value(station_data, 'wind_dir', 'N/A'),
+                'rain_since_9am': get_element_value(station_data, 'rainfall', '0'),
+                'description': get_element_value(station_data, 'weather', 'N/A')
             },
             'station': {
-                'name': get_element_text(station_data, 'description', 'Parramatta'),
+                'name': station_name,
                 'location': 'North Parramatta, NSW'
             },
-            'updated': get_element_text(station_data, 'local-date-time-full')
+            'updated': time_local
         }
 
         return jsonify(weather_data)
