@@ -1,0 +1,7 @@
+Flask==3.0.0
+flask-cors==4.0.0
+requests==2.31.0
+gunicorn==21.2.0
+weather-au @ git+https://github.com/tonyallan/weather-au.git@master
+beautifulsoup4==4.12.3
+lxml==5.1.0

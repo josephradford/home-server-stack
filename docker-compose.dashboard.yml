@@ -1,4 +1,40 @@
 services:
+  homepage-api:
+    build: ./homepage-api
+    container_name: homepage-api
+    environment:
+      # BOM Weather (Australian Bureau of Meteorology)
+      # Location search by suburb name (e.g., "parramatta", "sydney", "melbourne")
+      BOM_LOCATION: ${BOM_LOCATION:-parramatta}
+      # Transport NSW API
+      TRANSPORT_NSW_API_KEY: ${TRANSPORTNSW_API_KEY}
+      # Home Assistant
+      HOMEASSISTANT_URL: ${HOMEASSISTANT_URL:-http://homeassistant:8123}
+      HOMEASSISTANT_TOKEN: ${HOMEASSISTANT_TOKEN}
+      # TomTom Traffic API
+      TOMTOM_API_KEY: ${TOMTOM_API_KEY}
+    # No port exposure - access via Traefik or internal network only
+    restart: unless-stopped
+    networks:
+      - homeserver
+    volumes:
+      - ./data/homepage-api:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.homepage-api.rule=Host(`homepage-api.${DOMAIN}`)"
+      - "traefik.http.routers.homepage-api.entrypoints=websecure"
+      - "traefik.http.routers.homepage-api.tls=true"
+      # Using file provider certificate (wildcard from certbot)
+      - "traefik.http.services.homepage-api.loadbalancer.server.port=5000"
+      # Security: Apply admin-secure middleware (IP whitelist + rate limiting)
+      - "traefik.http.routers.homepage-api.middlewares=admin-secure"
+
   homepage:
     image: ghcr.io/gethomepage/homepage:latest
     container_name: homepage
