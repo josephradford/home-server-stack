@@ -211,10 +211,10 @@ services:
       - "traefik.http.middlewares.webhook-ratelimit.ratelimit.period=1m"
       - "traefik.http.middlewares.webhook-ratelimit.ratelimit.burst=50"
 
-      # Strict Rate Limiting for Admin Access
-      - "traefik.http.middlewares.admin-ratelimit.ratelimit.average=10"
+      # Rate Limiting for Admin Access (generous for development/testing)
+      - "traefik.http.middlewares.admin-ratelimit.ratelimit.average=60"
       - "traefik.http.middlewares.admin-ratelimit.ratelimit.period=1m"
-      - "traefik.http.middlewares.admin-ratelimit.ratelimit.burst=5"
+      - "traefik.http.middlewares.admin-ratelimit.ratelimit.burst=30"
 
       # IP Whitelist for Internal Services (RFC1918 + VPN)
       - "traefik.http.middlewares.internal-only.ipwhitelist.sourcerange=192.168.0.0/16,172.16.0.0/12,10.0.0.0/8"
