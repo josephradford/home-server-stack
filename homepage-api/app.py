@@ -13,10 +13,8 @@ import requests
 from datetime import datetime, timedelta
 import os
 import json
-from functools import lru_cache
-from ftplib import FTP
-from io import BytesIO
-import xml.etree.ElementTree as ET
+from functools import lru_cache, wraps
+from weather_au import api as weather_api
 
 app = Flask(__name__)
 CORS(app)
@@ -27,11 +25,9 @@ HOMEASSISTANT_URL = os.getenv('HOMEASSISTANT_URL', 'http://homeassistant:8123')
 HOMEASSISTANT_TOKEN = os.getenv('HOMEASSISTANT_TOKEN')
 TOMTOM_API_KEY = os.getenv('TOMTOM_API_KEY')
 
-# BOM FTP configuration
-BOM_FTP_HOST = 'ftp.bom.gov.au'
-BOM_FTP_PATH = '/anon/gen/fwo/'
-BOM_NSW_OBSERVATIONS_FILE = 'IDN60920.xml'  # NSW state observations
-BOM_PARRAMATTA_STATION = 'Parramatta'  # Station name to search for
+# BOM Weather Configuration (using weather-au library)
+# Location search string - suburb name only (e.g., "parramatta", "sydney")
+BOM_LOCATION = os.getenv('BOM_LOCATION', 'parramatta')
 
 
 @app.route('/api/health')
@@ -49,77 +45,206 @@ def health_check():
 
 
 # =============================================================================
-# BOM WEATHER
+# BOM WEATHER (using weather-au library)
 # =============================================================================
 
+# Cache decorator with time-based expiry
+def timed_lru_cache(seconds: int, maxsize: int = 128):
+    """LRU cache with time-based expiry"""
+    def wrapper_cache(func):
+        func = lru_cache(maxsize=maxsize)(func)
+        func.lifetime = timedelta(seconds=seconds)
+        func.expiration = datetime.utcnow() + func.lifetime
+
+        @wraps(func)
+        def wrapped_func(*args, **kwargs):
+            if datetime.utcnow() >= func.expiration:
+                func.cache_clear()
+                func.expiration = datetime.utcnow() + func.lifetime
+            return func(*args, **kwargs)
+
+        wrapped_func.cache_clear = func.cache_clear
+        return wrapped_func
+    return wrapper_cache
+
+
+@timed_lru_cache(seconds=300, maxsize=1)  # Cache for 5 minutes
+def get_weather_api(location):
+    """
+    Get weather API instance for a location
+    Cached to avoid repeated API calls
+    """
+    return weather_api.WeatherApi(search=location, debug=0)
+
+
 @app.route('/api/bom/weather')
-@lru_cache(maxsize=1)
 def bom_weather():
     """
-    Fetch weather data from Australian BOM for Parramatta area via FTP
-    Parses XML observations file to find Parramatta station data
+    Fetch comprehensive weather data from Australian BOM using weather-au library
+
+    Returns:
+        - Current observations (temperature, feels like, wind, rain, humidity)
+        - 7-day daily forecast (temps, rain chance/amount, UV, sunrise/sunset, fire danger)
+        - Hourly forecast (detailed hourly conditions)
+        - Next rain forecast (if available)
+
+    Uses BOM's official API via weather-au library for accurate, comprehensive data
     Cached for 5 minutes to respect BOM servers
     """
     try:
-        # Connect to BOM FTP server
-        ftp = FTP(BOM_FTP_HOST, timeout=10)
-        ftp.login()  # Anonymous login
-        ftp.cwd(BOM_FTP_PATH)
+        # Get weather API instance
+        w = get_weather_api(BOM_LOCATION)
 
-        # Download XML file
-        file_data = BytesIO()
-        ftp.retrbinary(f'RETR {BOM_NSW_OBSERVATIONS_FILE}', file_data.write)
-        ftp.quit()
+        # Get location info
+        location_data = w.location()
+        if not location_data:
+            return jsonify({'error': f'Location "{BOM_LOCATION}" not found'}), 404
 
-        # Parse XML
-        file_data.seek(0)
-        tree = ET.parse(file_data)
-        root = tree.getroot()
+        # Get current observations
+        try:
+            observations = w.observations()
+        except Exception:
+            observations = None
 
-        # Find Parramatta station by description attribute
-        station_data = None
-        for station in root.findall('.//station'):
-            description = station.get('description', '')
-            if BOM_PARRAMATTA_STATION in description:
-                station_data = station
-                break
+        # Get daily forecasts
+        try:
+            forecasts_daily = w.forecasts_daily()
+        except Exception:
+            forecasts_daily = None
 
-        if station_data is None:
-            return jsonify({'error': 'Parramatta station not found in BOM data'}), 404
+        # Get hourly forecasts
+        try:
+            forecasts_hourly = w.forecasts_hourly()
+        except Exception:
+            # Some locations don't have hourly forecasts available
+            forecasts_hourly = None
 
-        # Extract weather data from XML elements
-        # BOM uses <element type="air_temperature">23.0</element> format
-        def get_element_value(parent, element_type, default=None):
-            element = parent.find(f".//element[@type='{element_type}']")
-            return element.text if element is not None and element.text else default
+        # Get rain forecast
+        try:
+            forecast_rain = w.forecast_rain()
+        except Exception:
+            forecast_rain = None
 
-        # Get station metadata from attributes
-        station_name = station_data.get('description', 'Parramatta')
-        time_local = station_data.find('.//period').get('time-local') if station_data.find('.//period') is not None else None
-
+        # Build comprehensive response
         weather_data = {
-            'current': {
-                'temp': float(get_element_value(station_data, 'air_temperature')) if get_element_value(station_data, 'air_temperature') else None,
-                'apparent_temp': float(get_element_value(station_data, 'apparent_temp')) if get_element_value(station_data, 'apparent_temp') else None,
-                'humidity': int(get_element_value(station_data, 'rel-humidity')) if get_element_value(station_data, 'rel-humidity') else None,
-                'wind_speed_kmh': int(get_element_value(station_data, 'wind_spd_kmh')) if get_element_value(station_data, 'wind_spd_kmh') else None,
-                'wind_dir': get_element_value(station_data, 'wind_dir', 'N/A'),
-                'rain_since_9am': get_element_value(station_data, 'rainfall', '0'),
-                'description': get_element_value(station_data, 'weather', 'N/A')
+            'location': {
+                'name': location_data.get('name'),
+                'state': location_data.get('state'),
+                'geohash': location_data.get('geohash'),
+                'latitude': location_data.get('latitude'),
+                'longitude': location_data.get('longitude')
             },
-            'station': {
-                'name': station_name,
-                'location': 'North Parramatta, NSW'
-            },
-            'updated': time_local
+            'observations': None,
+            'forecast_daily': None,
+            'forecast_hourly': None,
+            'forecast_rain': None,
+            'updated': datetime.now().isoformat()
         }
+
+        # Process observations
+        if observations:
+            weather_data['observations'] = {
+                'temp': observations.get('temp'),
+                'temp_feels_like': observations.get('temp_feels_like'),
+                'rain_since_9am': observations.get('rain_since_9am'),
+                'humidity': observations.get('humidity'),
+                'wind': {
+                    'speed_kmh': observations.get('wind', {}).get('speed_kilometre'),
+                    'speed_knot': observations.get('wind', {}).get('speed_knot'),
+                    'direction': observations.get('wind', {}).get('direction')
+                },
+                'station': {
+                    'bom_id': observations.get('station', {}).get('bom_id'),
+                    'name': observations.get('station', {}).get('name'),
+                    'distance_m': observations.get('station', {}).get('distance')
+                }
+            }
+
+        # Process daily forecasts
+        if forecasts_daily:
+            weather_data['forecast_daily'] = []
+            for day in forecasts_daily:
+                rain_data = day.get('rain', {})
+                rain_amount = rain_data.get('amount', {}) if rain_data else {}
+                uv_data = day.get('uv', {})
+                astro_data = day.get('astronomical', {})
+                now_data = day.get('now', {})
+
+                forecast_day = {
+                    'date': day.get('date'),
+                    'temp_min': day.get('temp_min'),
+                    'temp_max': day.get('temp_max'),
+                    'extended_text': day.get('extended_text'),
+                    'short_text': day.get('short_text'),
+                    'icon_descriptor': day.get('icon_descriptor'),
+                    'rain': {
+                        'chance': rain_data.get('chance') if rain_data else None,
+                        'amount_min': rain_amount.get('min') if rain_amount else None,
+                        'amount_max': rain_amount.get('max') if rain_amount else None,
+                        'amount_units': rain_amount.get('units') if rain_amount else None
+                    },
+                    'uv': {
+                        'category': uv_data.get('category') if uv_data else None,
+                        'max_index': uv_data.get('max_index') if uv_data else None,
+                        'start_time': uv_data.get('start_time') if uv_data else None,
+                        'end_time': uv_data.get('end_time') if uv_data else None
+                    },
+                    'astronomical': {
+                        'sunrise_time': astro_data.get('sunrise_time') if astro_data else None,
+                        'sunset_time': astro_data.get('sunset_time') if astro_data else None
+                    },
+                    'fire_danger': day.get('fire_danger'),
+                    'now': {
+                        'is_night': now_data.get('is_night') if now_data else None,
+                        'now_label': now_data.get('now_label') if now_data else None,
+                        'temp_now': now_data.get('temp_now') if now_data else None,
+                        'later_label': now_data.get('later_label') if now_data else None,
+                        'temp_later': now_data.get('temp_later') if now_data else None
+                    }
+                }
+                weather_data['forecast_daily'].append(forecast_day)
+
+        # Process hourly forecasts
+        if forecasts_hourly:
+            weather_data['forecast_hourly'] = []
+            for period in forecasts_hourly:
+                rain_data = period.get('rain', {})
+                rain_amount = rain_data.get('amount', {}) if rain_data else {}
+                wind_data = period.get('wind', {})
+
+                forecast_3h = {
+                    'time': period.get('time'),
+                    'temp': period.get('temp'),
+                    'icon_descriptor': period.get('icon_descriptor'),
+                    'is_night': period.get('is_night'),
+                    'next_forecast_period': period.get('next_forecast_period'),
+                    'rain': {
+                        'chance': rain_data.get('chance') if rain_data else None,
+                        'amount_min': rain_amount.get('min') if rain_amount else None,
+                        'amount_max': rain_amount.get('max') if rain_amount else None,
+                        'amount_units': rain_amount.get('units') if rain_amount else None
+                    },
+                    'wind': {
+                        'speed_kmh': wind_data.get('speed_kilometre') if wind_data else None,
+                        'speed_knot': wind_data.get('speed_knot') if wind_data else None,
+                        'direction': wind_data.get('direction') if wind_data else None
+                    }
+                }
+                weather_data['forecast_hourly'].append(forecast_3h)
+
+        # Process rain forecast
+        if forecast_rain:
+            weather_data['forecast_rain'] = {
+                'amount': forecast_rain.get('amount'),
+                'chance': forecast_rain.get('chance'),
+                'start_time': forecast_rain.get('start_time'),
+                'period': forecast_rain.get('period')
+            }
 
         return jsonify(weather_data)
 
-    except ET.ParseError as e:
-        return jsonify({'error': f'Failed to parse BOM XML: {str(e)}'}), 500
     except Exception as e:
-        return jsonify({'error': f'Failed to fetch BOM data: {str(e)}'}), 500
+        return jsonify({'error': f'Failed to fetch BOM weather data: {str(e)}'}), 500
 
 
 # =============================================================================
@@ -309,8 +434,8 @@ def ha_locations():
 
 
 if __name__ == '__main__':
-    # Clear cache on startup
-    bom_weather.cache_clear()
+    # Clear weather API cache on startup
+    get_weather_api.cache_clear()
 
     # Run server
     app.run(host='0.0.0.0', port=5200, debug=False)

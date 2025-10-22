@@ -3,6 +3,9 @@ services:
     build: ./homepage-api
     container_name: homepage-api
     environment:
+      # BOM Weather (Australian Bureau of Meteorology)
+      # Location search by suburb name (e.g., "parramatta", "sydney", "melbourne")
+      BOM_LOCATION: ${BOM_LOCATION:-parramatta}
       # Transport NSW API
       TRANSPORT_NSW_API_KEY: ${TRANSPORTNSW_API_KEY}
       # Home Assistant
