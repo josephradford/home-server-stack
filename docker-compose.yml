@@ -22,7 +22,8 @@ services:
       # Using file provider certificate (wildcard from certbot)
       - "traefik.http.services.adguard.loadbalancer.server.port=80"
       # Security: VPN/Local access only - DNS admin interface should never be public
-      - "traefik.http.routers.adguard.middlewares=admin-secure"
+      # Note: Using admin-secure-no-ratelimit because AdGuard UI makes 10-15 API calls per page load
+      - "traefik.http.routers.adguard.middlewares=admin-secure-no-ratelimit"
 
   n8n-init:
     image: alpine:latest
@@ -224,8 +225,11 @@ services:
       # Webhook Security Chain
       - "traefik.http.middlewares.webhook-secure.chain.middlewares=security-headers,webhook-ratelimit"
 
-      # Admin Security Chain
+      # Admin Security Chain (with rate limiting)
       - "traefik.http.middlewares.admin-secure.chain.middlewares=internal-only,security-headers,admin-ratelimit"
+
+      # Admin Security Chain (without rate limiting - for services with many API calls like AdGuard)
+      - "traefik.http.middlewares.admin-secure-no-ratelimit.chain.middlewares=internal-only,security-headers"
 
     healthcheck:
       test: ["CMD", "traefik", "healthcheck", "--ping"]
