@@ -211,10 +211,12 @@ services:
       - "traefik.http.middlewares.webhook-ratelimit.ratelimit.period=1m"
       - "traefik.http.middlewares.webhook-ratelimit.ratelimit.burst=50"
 
-      # Strict Rate Limiting for Admin Access
-      - "traefik.http.middlewares.admin-ratelimit.ratelimit.average=10"
+      # Rate Limiting for Admin Access (generous for development/testing)
+      # Average: 100 requests per minute (allows dashboard refreshes with multiple API calls)
+      # Burst: 50 (handles page loads with many simultaneous requests like AdGuard)
+      - "traefik.http.middlewares.admin-ratelimit.ratelimit.average=100"
       - "traefik.http.middlewares.admin-ratelimit.ratelimit.period=1m"
-      - "traefik.http.middlewares.admin-ratelimit.ratelimit.burst=5"
+      - "traefik.http.middlewares.admin-ratelimit.ratelimit.burst=50"
 
       # IP Whitelist for Internal Services (RFC1918 + VPN)
       - "traefik.http.middlewares.internal-only.ipwhitelist.sourcerange=192.168.0.0/16,172.16.0.0/12,10.0.0.0/8"
@@ -223,9 +225,7 @@ services:
       - "traefik.http.middlewares.webhook-secure.chain.middlewares=security-headers,webhook-ratelimit"
 
       # Admin Security Chain
-      # TEMPORARY: Rate limiting disabled for troubleshooting
-      - "traefik.http.middlewares.admin-secure.chain.middlewares=internal-only,security-headers"
-      # - "traefik.http.middlewares.admin-secure.chain.middlewares=internal-only,security-headers,admin-ratelimit"
+      - "traefik.http.middlewares.admin-secure.chain.middlewares=internal-only,security-headers,admin-ratelimit"
 
     healthcheck:
       test: ["CMD", "traefik", "healthcheck", "--ping"]
