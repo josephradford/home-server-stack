@@ -1,0 +1,63 @@
+---
+# Home Server Services
+- Home Server:
+    - AdGuard Home:
+        icon: adguard-home.png
+        href: http://{{HOMEPAGE_VAR_SERVER_IP}}:80
+        description: Network-wide ad blocking
+        widget:
+          type: adguard
+          url: http://{{HOMEPAGE_VAR_SERVER_IP}}
+          username: {{HOMEPAGE_VAR_ADGUARD_USER}}
+          password: {{HOMEPAGE_VAR_ADGUARD_PASS}}
+
+    - n8n:
+        icon: n8n.png
+        href: https://{{HOMEPAGE_VAR_SERVER_IP}}:5678
+        description: Workflow automation
+        container: n8n
+
+    - Ollama:
+        icon: ollama.png
+        href: http://{{HOMEPAGE_VAR_SERVER_IP}}:11434
+        description: Local AI models
+        container: ollama
+
+    - Grafana:
+        icon: grafana.png
+        href: http://{{HOMEPAGE_VAR_SERVER_IP}}:3001
+        description: Monitoring dashboards
+        widget:
+          type: grafana
+          url: http://{{HOMEPAGE_VAR_SERVER_IP}}:3001
+          username: {{HOMEPAGE_VAR_GRAFANA_USER}}
+          password: {{HOMEPAGE_VAR_GRAFANA_PASS}}
+
+# Placeholder sections - will be populated by other tickets
+- Transport & Commute:
+    # Will be added in Ticket 06
+
+- Family & Location:
+    # Will be added in Ticket 03
+
+- Calendar & Tasks:
+    - BOM Weather:
+        icon: mdi-weather-partly-cloudy
+        href: http://www.bom.gov.au/
+        description: Australian weather forecast
+        widget:
+          type: customapi
+          url: http://homepage-api:5000/api/bom/weather
+          refreshInterval: 300000  # 5 minutes
+          mappings:
+            - field: observations.temp
+              label: Temperature
+              suffix: "°C"
+            - field: observations.temp_feels_like
+              label: Feels Like
+              suffix: "°C"
+            - field: observations.humidity
+              label: Humidity
+              suffix: "%"
+            - field: forecast_daily.0.short_text
+              label: Today
