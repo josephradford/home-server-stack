@@ -223,7 +223,9 @@ services:
       - "traefik.http.middlewares.webhook-secure.chain.middlewares=security-headers,webhook-ratelimit"
 
       # Admin Security Chain
-      - "traefik.http.middlewares.admin-secure.chain.middlewares=internal-only,security-headers,admin-ratelimit"
+      # TEMPORARY: Rate limiting disabled for troubleshooting
+      - "traefik.http.middlewares.admin-secure.chain.middlewares=internal-only,security-headers"
+      # - "traefik.http.middlewares.admin-secure.chain.middlewares=internal-only,security-headers,admin-ratelimit"
 
     healthcheck:
       test: ["CMD", "traefik", "healthcheck", "--ping"]
