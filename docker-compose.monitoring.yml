@@ -49,7 +49,8 @@ services:
       # Using file provider certificate (wildcard from certbot)
       - "traefik.http.services.grafana.loadbalancer.server.port=3000"
       # Security: VPN/Local access only - monitoring dashboards should never be public
-      - "traefik.http.routers.grafana.middlewares=admin-secure"
+      # Note: Using admin-secure-no-ratelimit because Grafana dashboards make many API calls per panel
+      - "traefik.http.routers.grafana.middlewares=admin-secure-no-ratelimit"
 
   alertmanager:
     image: prom/alertmanager:latest

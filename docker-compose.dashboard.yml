@@ -69,8 +69,9 @@ services:
       - "traefik.http.routers.homepage.tls=true"
       # Using file provider certificate (wildcard from certbot)
       - "traefik.http.services.homepage.loadbalancer.server.port=3000"
-      # Security: Apply admin-secure middleware (IP whitelist + rate limiting)
-      - "traefik.http.routers.homepage.middlewares=admin-secure"
+      # Security: Apply admin-secure middleware without rate limiting
+      # Note: Homepage loads multiple widgets simultaneously and may trigger rate limits
+      - "traefik.http.routers.homepage.middlewares=admin-secure-no-ratelimit"
 
 networks:
   homeserver:
