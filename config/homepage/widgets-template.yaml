@@ -17,7 +17,6 @@
 # System resources
 - resources:
     label: Server
-    expanded: false
     cpu: true
     cputemp: true
     units: metric
