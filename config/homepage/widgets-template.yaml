@@ -22,4 +22,4 @@
     units: metric
     memory: true
     uptime: true
-    # Note: disk monitoring removed - doesn't work reliably with Docker bind mounts
+    disk: /host
