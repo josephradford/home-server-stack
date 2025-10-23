@@ -2,7 +2,8 @@
 set -e
 
 # Configure Homepage Dashboard
-# This script overwrites the auto-generated config files with our customized versions
+# This script creates the Homepage config files with our customized versions
+# Only runs if config files don't already exist (preserves existing configuration)
 
 echo "🏠 Configuring Homepage Dashboard"
 echo "=================================="
@@ -18,6 +19,20 @@ source .env
 # Ensure config directory exists
 CONFIG_DIR="data/homepage/config"
 mkdir -p "$CONFIG_DIR"
+
+# Check if config files already exist
+if [ -f "$CONFIG_DIR/services.yaml" ] && [ -f "$CONFIG_DIR/settings.yaml" ]; then
+    echo "ℹ️  Homepage configuration files already exist"
+    echo "   Skipping configuration to preserve existing setup"
+    echo ""
+    echo "   To regenerate config files, remove them first:"
+    echo "   rm -rf $CONFIG_DIR/*.yaml"
+    echo ""
+    exit 0
+fi
+
+echo "📝 Creating Homepage configuration files..."
+echo ""
 
 echo "📝 Writing services.yaml..."
 cat > "$CONFIG_DIR/services.yaml" <<'EOF'
