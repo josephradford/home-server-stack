@@ -21,9 +21,7 @@
         icon: wireguard.png
         href: https://wireguard.{{HOMEPAGE_VAR_DOMAIN}}
         description: VPN server management
-        widget:
-          type: wireguard
-          url: http://wireguard
+        container: wireguard
 
     - Prometheus:
         icon: prometheus.png
@@ -31,7 +29,7 @@
         description: Metrics & alerting
         widget:
           type: prometheus
-          url: http://prometheus
+          url: http://prometheus:9090
 
     - Alertmanager:
         icon: alertmanager.png
@@ -39,7 +37,7 @@
         description: Alert management
         widget:
           type: alertmanager
-          url: http://alertmanager
+          url: http://alertmanager:9093
 
     - traefik:
         icon: traefik.png
@@ -47,7 +45,7 @@
         description: Reverse proxy management
         widget:
           type: traefik
-          url: http://traefik
+          url: https://traefik.{{HOMEPAGE_VAR_DOMAIN}}
 
     - Grafana:
         icon: grafana.png
