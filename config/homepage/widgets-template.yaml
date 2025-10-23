@@ -29,5 +29,5 @@
     expanded: false
     cpu: true
     memory: true
-    disk: /
+    disk: /host
     uptime: true
