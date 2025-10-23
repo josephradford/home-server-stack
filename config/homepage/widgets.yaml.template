@@ -1,0 +1,33 @@
+---
+# Top bar widgets
+- logo:
+    icon: https://raw.githubusercontent.com/walkxcode/dashboard-icons/main/png/home-assistant-alt.png
+
+- search:
+    provider: google
+    target: _blank
+
+- datetime:
+    text_size: xl
+    format:
+      dateStyle: long
+      timeStyle: short
+      hour12: false
+
+# Weather widget using OpenMeteo
+- openmeteo:
+    label: North Parramatta
+    latitude: -33.8
+    longitude: 151.0
+    timezone: Australia/Sydney
+    units: metric
+    cache: 5
+
+# System resources
+- resources:
+    label: Server
+    expanded: false
+    cpu: true
+    memory: true
+    disk: /
+    uptime: true

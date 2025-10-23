@@ -1,0 +1,21 @@
+---
+- Quick Links:
+    - Transport NSW:
+        - abbr: TN
+          href: https://transportnsw.info/
+    - BOM Sydney:
+        - abbr: BOM
+          href: http://www.bom.gov.au/nsw/sydney/
+    - Google Calendar:
+        - abbr: GC
+          href: https://calendar.google.com/
+
+- Admin:
+    - Router:
+        - abbr: RT
+          href: http://192.168.1.1/
+          description: Home router admin
+    - GitHub Repo:
+        - abbr: GH
+          href: https://github.com/josephradford/home-server-stack
+          description: This repo

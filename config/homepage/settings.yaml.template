@@ -1,0 +1,45 @@
+---
+title: Home Server Dashboard
+favicon: https://raw.githubusercontent.com/walkxcode/dashboard-icons/main/png/home-assistant-alt.png
+
+# Background configuration
+background:
+  image: https://images.unsplash.com/photo-1557683316-973673baf926
+  blur: sm
+  saturate: 50
+  brightness: 50
+  opacity: 50
+
+theme: dark
+color: slate
+
+# Layout configuration
+layout:
+  Home Server:
+    style: row
+    columns: 4
+  Transport & Commute:
+    style: row
+    columns: 2
+  Family & Location:
+    style: row
+    columns: 3
+  Calendar & Tasks:
+    style: row
+    columns: 2
+
+# UI preferences
+statusStyle: "dot"
+showStats: false
+hideVersion: true
+
+# Quick launch
+quicklaunch:
+  searchDescriptions: true
+  hideInternetSearch: false
+  showSearchSuggestions: true
+  hideVisitURL: false
+
+# Header style
+headerStyle: boxed
+target: _blank
