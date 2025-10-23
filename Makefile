@@ -107,14 +107,7 @@ setup: env-check validate
 	@$(MAKE) setup-certs
 	@echo ""
 	@echo "Step 3/6: Setting up Homepage dashboard config..."
-	@mkdir -p data/homepage/config
-	@if [ ! -f "data/homepage/config/settings.yaml" ]; then \
-		echo "⚠️  Warning: Homepage config files not found in data/homepage/config/"; \
-		echo "Dashboard will not start correctly without configuration files."; \
-		echo "See tickets/dashboard-tickets/ticket_02_homepage_dashboard.md for setup."; \
-	else \
-		echo "✓ Homepage configuration found"; \
-	fi
+	@./scripts/configure-homepage.sh
 	@echo ""
 	@echo "Step 4/6: Pulling pre-built images..."
 	@$(COMPOSE) pull --ignore-pull-failures
@@ -423,24 +416,14 @@ ssl-renew-test:
 dashboard-setup: env-check
 	@echo "Setting up Homepage Dashboard..."
 	@echo ""
-	@echo "Step 1/2: Creating config directory and verifying files..."
+	@echo "Step 1/3: Creating config directory..."
 	@mkdir -p data/homepage/config
-	@if [ ! -f "data/homepage/config/settings.yaml" ]; then \
-		echo "✗ Configuration files not found!"; \
-		echo ""; \
-		echo "Homepage config files should be in data/homepage/config/:"; \
-		echo "  - settings.yaml"; \
-		echo "  - widgets.yaml"; \
-		echo "  - docker.yaml"; \
-		echo "  - bookmarks.yaml"; \
-		echo "  - services.yaml"; \
-		echo ""; \
-		echo "These files should have been created during Ticket 02 implementation."; \
-		exit 1; \
-	fi
-	@echo "✓ Configuration files found"
+	@echo "✓ Config directory created"
 	@echo ""
-	@echo "Step 2/2: Starting Homepage dashboard (Docker Compose will create network)..."
+	@echo "Step 2/3: Generating Homepage configuration files..."
+	@./scripts/configure-homepage.sh
+	@echo ""
+	@echo "Step 3/3: Starting Homepage dashboard (Docker Compose will create network)..."
 	@$(COMPOSE_DASHBOARD) up -d
 	@echo ""
 	@echo "✓ Homepage Dashboard setup complete!"
