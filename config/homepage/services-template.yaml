@@ -35,17 +35,13 @@
         icon: alertmanager.png
         href: https://alertmanager.{{HOMEPAGE_VAR_DOMAIN}}
         description: Alert management
-        widget:
-          type: alertmanager
-          url: http://alertmanager:9093
+        container: alertmanager
 
-    - traefik:
+    - Traefik:
         icon: traefik.png
         href: https://traefik.{{HOMEPAGE_VAR_DOMAIN}}
         description: Reverse proxy management
-        widget:
-          type: traefik
-          url: https://traefik.{{HOMEPAGE_VAR_DOMAIN}}
+        container: traefik
 
     - Grafana:
         icon: grafana.png
