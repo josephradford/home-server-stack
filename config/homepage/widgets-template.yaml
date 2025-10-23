@@ -21,5 +21,5 @@
     cputemp: true
     units: metric
     memory: true
-    disk: /host
     uptime: true
+    # Note: disk monitoring removed - doesn't work reliably with Docker bind mounts
