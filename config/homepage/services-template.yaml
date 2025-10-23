@@ -3,7 +3,7 @@
 - Home Server:
     - AdGuard Home:
         icon: adguard-home.png
-        href: http://{{HOMEPAGE_VAR_SERVER_IP}}:8888
+        href: https://adguard.{{HOMEPAGE_VAR_DOMAIN}}
         description: Network-wide ad blocking
         widget:
           type: adguard
@@ -13,15 +13,41 @@
 
     - n8n:
         icon: n8n.png
-        href: https://{{HOMEPAGE_VAR_SERVER_IP}}:5678
+        href: https://n8n.{{HOMEPAGE_VAR_DOMAIN}}
         description: Workflow automation
         container: n8n
 
-    - Ollama:
-        icon: ollama.png
-        href: http://{{HOMEPAGE_VAR_SERVER_IP}}:11434
-        description: Local AI models
-        container: ollama
+    - Wireguard VPN:
+        icon: wireguard.png
+        href: https://wireguard.{{HOMEPAGE_VAR_DOMAIN}}
+        description: VPN server management
+        widget:
+          type: wireguard
+          url: http://wireguard
+
+    - Prometheus:
+        icon: prometheus.png
+        href: https://prometheus.{{HOMEPAGE_VAR_DOMAIN}}
+        description: Metrics & alerting
+        widget:
+          type: prometheus
+          url: http://prometheus
+
+    - Alertmanager:
+        icon: alertmanager.png
+        href: https://alertmanager.{{HOMEPAGE_VAR_DOMAIN}}
+        description: Alert management
+        widget:
+          type: alertmanager
+          url: http://alertmanager
+
+    - traefik:
+        icon: traefik.png
+        href: https://traefik.{{HOMEPAGE_VAR_DOMAIN}}
+        description: Reverse proxy management
+        widget:
+          type: traefik
+          url: http://traefik
 
     - Grafana:
         icon: grafana.png
