@@ -1,6 +1,6 @@
 ---
 title: Home Server Dashboard
-favicon: https://raw.githubusercontent.com/walkxcode/dashboard-icons/main/png/home-assistant-alt.png
+favicon: homepage.png
 
 # Background configuration
 background:
@@ -23,8 +23,8 @@ layout:
     columns: 2
 
 # UI preferences
-statusStyle: "dot"
-showStats: false
+#statusStyle: "dot"
+showStats: true
 hideVersion: true
 
 # Quick launch
