@@ -132,7 +132,8 @@ services:
     command:
       # API and Dashboard
       - "--api.dashboard=true"
-      - "--api.insecure=false"
+      # API exposed on port 8080 for internal Docker network access (not exposed externally)
+      - "--api.insecure=true"
 
       # Docker provider
       - "--providers.docker=true"

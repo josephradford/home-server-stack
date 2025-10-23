@@ -41,7 +41,9 @@
         icon: traefik.png
         href: https://traefik.{{HOMEPAGE_VAR_DOMAIN}}
         description: Reverse proxy management
-        container: traefik
+        widget:
+          type: traefik
+          url: http://traefik:8080
 
     - Grafana:
         icon: grafana.png
