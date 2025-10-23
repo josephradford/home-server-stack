@@ -3,11 +3,11 @@
 - Home Server:
     - AdGuard Home:
         icon: adguard-home.png
-        href: http://{{HOMEPAGE_VAR_SERVER_IP}}:80
+        href: http://{{HOMEPAGE_VAR_SERVER_IP}}:8888
         description: Network-wide ad blocking
         widget:
           type: adguard
-          url: http://{{HOMEPAGE_VAR_SERVER_IP}}
+          url: http://adguard-home
           username: {{HOMEPAGE_VAR_ADGUARD_USER}}
           password: {{HOMEPAGE_VAR_ADGUARD_PASS}}
 
@@ -25,11 +25,11 @@
 
     - Grafana:
         icon: grafana.png
-        href: http://{{HOMEPAGE_VAR_SERVER_IP}}:3001
+        href: https://grafana.{{HOMEPAGE_VAR_DOMAIN}}
         description: Monitoring dashboards
         widget:
           type: grafana
-          url: http://{{HOMEPAGE_VAR_SERVER_IP}}:3001
+          url: http://grafana:3000
           username: {{HOMEPAGE_VAR_GRAFANA_USER}}
           password: {{HOMEPAGE_VAR_GRAFANA_PASS}}
 
