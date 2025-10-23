@@ -64,7 +64,7 @@ fi
 
 # Copy template files
 for template in "${TEMPLATES[@]}"; do
-    template_file="$TEMPLATE_DIR/${template}.template"
+    template_file="$TEMPLATE_DIR/${template%.yaml}-template.yaml"
     target_file="$CONFIG_DIR/${template}"
 
     if [ ! -f "$template_file" ]; then
