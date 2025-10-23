@@ -18,12 +18,6 @@ layout:
   Home Server:
     style: row
     columns: 4
-  Transport & Commute:
-    style: row
-    columns: 2
-  Family & Location:
-    style: row
-    columns: 3
   Calendar & Tasks:
     style: row
     columns: 2

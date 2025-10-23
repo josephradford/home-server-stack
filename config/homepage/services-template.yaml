@@ -33,14 +33,6 @@
           username: {{HOMEPAGE_VAR_GRAFANA_USER}}
           password: {{HOMEPAGE_VAR_GRAFANA_PASS}}
 
-# Transport & Commute section - to be populated in Ticket 06
-- Transport & Commute:
-    # Will be added in Ticket 06
-
-# Family & Location section - to be populated in Ticket 03
-- Family & Location:
-    # Will be added in Ticket 03
-
 # Calendar & Tasks section
 - Calendar & Tasks:
     - BOM Weather:
