@@ -59,7 +59,7 @@ services:
     volumes:
       - ./data/homepage/config:/app/config
       - /var/run/docker.sock:/var/run/docker.sock:ro
-      - /:/host:ro
+      - /:/host  # Removed :ro - Homepage needs read-write access to check disk stats
     restart: unless-stopped
     networks:
       - homeserver
