@@ -23,16 +23,26 @@ mkdir -p "$CONFIG_DIR"
 # Check if config files already exist
 if [ -f "$CONFIG_DIR/services.yaml" ] && [ -f "$CONFIG_DIR/settings.yaml" ]; then
     echo "ℹ️  Homepage configuration files already exist"
-    echo "   Skipping configuration to preserve existing setup"
     echo ""
-    echo "   To regenerate config files, remove them first:"
-    echo "   rm -rf $CONFIG_DIR/*.yaml"
+    echo "⚠️  WARNING: Overwriting will replace your existing configuration!"
     echo ""
-    exit 0
-fi
+    echo "Would you like to overwrite them? (y/N)"
+    read -r response
 
-echo "📝 Creating Homepage configuration files..."
-echo ""
+    if [ "$response" != "y" ] && [ "$response" != "Y" ]; then
+        echo ""
+        echo "✓ Keeping existing configuration"
+        echo ""
+        exit 0
+    fi
+
+    echo ""
+    echo "📝 Overwriting existing configuration files..."
+    echo ""
+else
+    echo "📝 Creating Homepage configuration files..."
+    echo ""
+fi
 
 echo "📝 Writing services.yaml..."
 cat > "$CONFIG_DIR/services.yaml" <<'EOF'
