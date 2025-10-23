@@ -20,7 +20,39 @@ git clone <your-repo-url>
 cd home-server-stack
 ```
 
-### 2. Configure Environment Variables
+### 2. Setup User Permissions
+
+To run Docker commands without `sudo`, add your user to the docker group. This is a **one-time setup** that persists across reboots.
+
+```bash
+./scripts/setup-user-permissions.sh
+```
+
+**What this does:**
+- Adds your current user to the `docker` group
+- Allows running `docker` and `make` commands without `sudo`
+- Simplifies day-to-day operations
+
+**Important:** After running this script, you must **logout and login again** for the change to take effect.
+
+Alternatively, to apply the change in your current session only:
+```bash
+newgrp docker
+```
+
+**Verify it works:**
+```bash
+# After logging back in, this should work without sudo:
+docker ps
+```
+
+**Note:** If you skip this step, you'll need to prefix all `docker` and `make` commands with `sudo`:
+```bash
+sudo make setup
+sudo docker compose ps
+```
+
+### 3. Configure Environment Variables
 
 ```bash
 cp .env.example .env
@@ -46,7 +78,7 @@ nano .env
 
 See [CONFIGURATION.md](CONFIGURATION.md) for detailed configuration options.
 
-### 3. Deploy Stack
+### 4. Deploy Stack
 
 Run the automated setup which will:
 - Generate SSL certificates automatically (for n8n HTTPS)
