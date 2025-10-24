@@ -34,6 +34,13 @@ This is a self-hosted infrastructure stack running on Docker Compose, providing 
 
 ### Environment Setup
 ```bash
+# One-time: Install Docker from official repository (if using snap Docker)
+# Check: which docker (if shows /snap/bin/docker, run the installer)
+./scripts/install-docker-official.sh
+
+# One-time: Add user to docker group (enables docker commands without sudo)
+./scripts/setup-user-permissions.sh
+
 # Copy environment template and configure
 cp .env.example .env
 # Edit .env - set SERVER_IP, DOMAIN, passwords, GANDIV5_PERSONAL_ACCESS_TOKEN
