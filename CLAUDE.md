@@ -140,11 +140,19 @@ make purge
 ## Architecture & Key Concepts
 
 ### Multi-File Docker Compose
-The stack uses **two compose files** that are always composed together:
-- `docker-compose.yml` - Core services (AdGuard, n8n, WireGuard, Traefik)
-- `docker-compose.monitoring.yml` - Monitoring stack (Grafana, Prometheus, Alertmanager, exporters)
+The stack uses **four compose files** organized by logical function:
+- `docker-compose.yml` - Core services (AdGuard, n8n) - user-facing services that "do stuff"
+- `docker-compose.network.yml` - Network & Security (Traefik, Wireguard, Fail2ban) - infrastructure layer
+- `docker-compose.monitoring.yml` - Monitoring stack (Prometheus, Grafana, Alertmanager, exporters)
+- `docker-compose.dashboard.yml` - Dashboard (Homepage, Homepage API)
 
-The Makefile always combines both: `docker compose -f docker-compose.yml -f docker-compose.monitoring.yml`
+The Makefile combines all files by default: `docker compose -f docker-compose.yml -f docker-compose.network.yml -f docker-compose.monitoring.yml -f docker-compose.dashboard.yml`
+
+This organization provides:
+- **Clear separation of concerns** - Easy to understand what each file contains
+- **Logical grouping** - Services grouped by function (core, network, monitoring, dashboard)
+- **Modular deployment** - Can deploy subsets if needed (e.g., core + network without monitoring)
+- **Homepage dashboard alignment** - Dashboard sections mirror compose file organization
 
 ### Domain-Based Routing Architecture
 Services are accessed via **subdomain.DOMAIN** instead of IP:port combinations:

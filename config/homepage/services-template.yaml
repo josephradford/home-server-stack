@@ -1,6 +1,6 @@
 ---
-# Home Server Services
-- Home Server:
+# Core Services - Primary user-facing services that "do stuff"
+- Core Services:
     - AdGuard Home:
         icon: adguard-home.png
         href: https://adguard.{{HOMEPAGE_VAR_DOMAIN}}
@@ -22,59 +22,6 @@
         server: my-docker
         showStats: true
 
-    - Wireguard VPN:
-        icon: wireguard.png
-        href: https://wireguard.{{HOMEPAGE_VAR_DOMAIN}}
-        description: VPN server management
-        container: wireguard
-        server: my-docker
-        showStats: true
-
-    - Prometheus:
-        icon: prometheus.png
-        href: https://prometheus.{{HOMEPAGE_VAR_DOMAIN}}
-        description: Metrics & alerting
-        widget:
-          type: prometheus
-          url: http://prometheus:9090
-        container: prometheus
-        server: my-docker
-        showStats: true
-
-    - Alertmanager:
-        icon: alertmanager.png
-        href: https://alertmanager.{{HOMEPAGE_VAR_DOMAIN}}
-        description: Alert management
-        container: alertmanager
-        server: my-docker
-        showStats: true
-
-    - Traefik:
-        icon: traefik.png
-        href: https://traefik.{{HOMEPAGE_VAR_DOMAIN}}
-        description: Reverse proxy management
-        widget:
-          type: traefik
-          url: http://traefik:8080
-        container: traefik
-        server: my-docker
-        showStats: true
-
-    - Grafana:
-        icon: grafana.png
-        href: https://grafana.{{HOMEPAGE_VAR_DOMAIN}}
-        description: Monitoring dashboards
-        widget:
-          type: grafana
-          url: http://grafana:3000
-          username: {{HOMEPAGE_VAR_GRAFANA_USER}}
-          password: {{HOMEPAGE_VAR_GRAFANA_PASS}}
-        container: grafana
-        server: my-docker
-        showStats: true
-
-# Calendar & Tasks section
-- Calendar & Tasks:
     - BOM Weather:
         icon: mdi-weather-partly-cloudy
         href: http://www.bom.gov.au/
@@ -96,12 +43,37 @@
             - field: forecast_daily.0.short_text
               label: Today
 
-# Infrastructure Services (background services for monitoring and security)
-- Infrastructure:
-    - Fail2ban:
-        icon: mdi-shield-lock
-        description: Intrusion prevention system
-        container: fail2ban
+# Monitoring Stack - Metrics collection and visualization
+- Monitoring:
+    - Prometheus:
+        icon: prometheus.png
+        href: https://prometheus.{{HOMEPAGE_VAR_DOMAIN}}
+        description: Metrics & alerting
+        widget:
+          type: prometheus
+          url: http://prometheus:9090
+        container: prometheus
+        server: my-docker
+        showStats: true
+
+    - Grafana:
+        icon: grafana.png
+        href: https://grafana.{{HOMEPAGE_VAR_DOMAIN}}
+        description: Monitoring dashboards
+        widget:
+          type: grafana
+          url: http://grafana:3000
+          username: {{HOMEPAGE_VAR_GRAFANA_USER}}
+          password: {{HOMEPAGE_VAR_GRAFANA_PASS}}
+        container: grafana
+        server: my-docker
+        showStats: true
+
+    - Alertmanager:
+        icon: alertmanager.png
+        href: https://alertmanager.{{HOMEPAGE_VAR_DOMAIN}}
+        description: Alert management
+        container: alertmanager
         server: my-docker
         showStats: true
 
@@ -119,9 +91,39 @@
         server: my-docker
         showStats: true
 
+# Dashboard Services - Homepage dashboard and backend
+- Dashboard:
     - Homepage API:
         icon: mdi-api
         description: Backend API for custom widgets
         container: homepage-api
+        server: my-docker
+        showStats: true
+
+# Network & Security - Infrastructure services for routing, VPN, and security
+- Network & Security:
+    - Traefik:
+        icon: traefik.png
+        href: https://traefik.{{HOMEPAGE_VAR_DOMAIN}}
+        description: Reverse proxy management
+        widget:
+          type: traefik
+          url: http://traefik:8080
+        container: traefik
+        server: my-docker
+        showStats: true
+
+    - Wireguard VPN:
+        icon: wireguard.png
+        href: https://wireguard.{{HOMEPAGE_VAR_DOMAIN}}
+        description: VPN server management
+        container: wireguard
+        server: my-docker
+        showStats: true
+
+    - Fail2ban:
+        icon: mdi-shield-lock
+        description: Intrusion prevention system
+        container: fail2ban
         server: my-docker
         showStats: true

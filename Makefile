@@ -8,12 +8,18 @@
 .PHONY: dashboard-setup dashboard-start dashboard-stop dashboard-restart dashboard-logs dashboard-status
 
 # Compose file flags
-# COMPOSE_CORE: Base services + monitoring only
-# COMPOSE: All services including dashboard (default for most operations)
+# Services are organized into logical groups:
+# - docker-compose.yml: Core services (AdGuard, n8n)
+# - docker-compose.network.yml: Network & Security (Traefik, Wireguard, Fail2ban)
+# - docker-compose.monitoring.yml: Monitoring stack (Prometheus, Grafana, Alertmanager, exporters)
+# - docker-compose.dashboard.yml: Dashboard (Homepage, Homepage API)
+#
+# COMPOSE_CORE: Core + Network + Monitoring (everything except dashboard)
 # COMPOSE_DASHBOARD: Dashboard only (for dashboard-specific operations)
-COMPOSE_CORE := docker compose -f docker-compose.yml -f docker-compose.monitoring.yml
+# COMPOSE: All services (default for most operations)
+COMPOSE_CORE := docker compose -f docker-compose.yml -f docker-compose.network.yml -f docker-compose.monitoring.yml
 COMPOSE_DASHBOARD := docker compose -f docker-compose.dashboard.yml
-COMPOSE := docker compose -f docker-compose.yml -f docker-compose.monitoring.yml -f docker-compose.dashboard.yml
+COMPOSE := docker compose -f docker-compose.yml -f docker-compose.network.yml -f docker-compose.monitoring.yml -f docker-compose.dashboard.yml
 
 # Default target - show help
 help:
