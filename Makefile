@@ -8,12 +8,18 @@
 .PHONY: dashboard-setup dashboard-start dashboard-stop dashboard-restart dashboard-logs dashboard-status
 
 # Compose file flags
-# COMPOSE_CORE: Base services + monitoring only
-# COMPOSE: All services including dashboard (default for most operations)
+# Services are organized into logical groups:
+# - docker-compose.yml: Core services (AdGuard, n8n)
+# - docker-compose.network.yml: Network & Security (Traefik, Wireguard, Fail2ban)
+# - docker-compose.monitoring.yml: Monitoring stack (Prometheus, Grafana, Alertmanager, exporters)
+# - docker-compose.dashboard.yml: Dashboard (Homepage, Homepage API)
+#
+# COMPOSE_CORE: Core + Network + Monitoring (everything except dashboard)
 # COMPOSE_DASHBOARD: Dashboard only (for dashboard-specific operations)
-COMPOSE_CORE := docker compose -f docker-compose.yml -f docker-compose.monitoring.yml
+# COMPOSE: All services (default for most operations)
+COMPOSE_CORE := docker compose -f docker-compose.yml -f docker-compose.network.yml -f docker-compose.monitoring.yml
 COMPOSE_DASHBOARD := docker compose -f docker-compose.dashboard.yml
-COMPOSE := docker compose -f docker-compose.yml -f docker-compose.monitoring.yml -f docker-compose.dashboard.yml
+COMPOSE := docker compose -f docker-compose.yml -f docker-compose.network.yml -f docker-compose.monitoring.yml -f docker-compose.dashboard.yml
 
 # Default target - show help
 help:
@@ -100,29 +106,29 @@ pull: validate
 setup: env-check validate
 	@echo "Starting first-time setup..."
 	@echo ""
-	@echo "Step 1/6: Setting up Traefik dashboard password..."
+	@echo "Step 1/7: Setting up Traefik dashboard password..."
 	@./scripts/setup-traefik-password.sh
 	@echo ""
-	@echo "Step 2/6: Setting up SSL certificate storage..."
+	@echo "Step 2/7: Setting up SSL certificate storage..."
 	@$(MAKE) setup-certs
 	@echo ""
-	@echo "Step 3/6: Setting up Homepage dashboard config..."
-	@mkdir -p data/homepage/config
-	@if [ ! -f "data/homepage/config/settings.yaml" ]; then \
-		echo "⚠️  Warning: Homepage config files not found in data/homepage/config/"; \
-		echo "Dashboard will not start correctly without configuration files."; \
-		echo "See tickets/dashboard-tickets/ticket_02_homepage_dashboard.md for setup."; \
-	else \
-		echo "✓ Homepage configuration found"; \
-	fi
+	@echo "Step 3/7: Setting up Homepage dashboard config..."
+	@./scripts/configure-homepage.sh
 	@echo ""
-	@echo "Step 4/6: Pulling pre-built images..."
+	@echo "Step 4/7: Pulling pre-built images..."
 	@$(COMPOSE) pull --ignore-pull-failures
 	@echo ""
-	@echo "Step 5/6: Starting services (Docker Compose will create networks)..."
+	@echo "Step 5/7: Starting services (Docker Compose will create networks)..."
 	@$(COMPOSE) up -d
 	@echo ""
-	@echo "Step 6/6: Configuring AdGuard DNS rewrites..."
+	@echo "Step 6/7: Fixing data directory permissions..."
+	@echo "Containers create directories as root, fixing ownership for user access..."
+	@if [ -d "data" ]; then \
+		sudo chown -R $(shell id -u):$(shell getent group docker | cut -d: -f3) data/ && \
+		echo "✓ Data directory permissions fixed"; \
+	fi
+	@echo ""
+	@echo "Step 7/7: Configuring AdGuard DNS rewrites..."
 	@$(MAKE) adguard-setup
 	@echo ""
 	@$(COMPOSE) ps
@@ -423,24 +429,14 @@ ssl-renew-test:
 dashboard-setup: env-check
 	@echo "Setting up Homepage Dashboard..."
 	@echo ""
-	@echo "Step 1/2: Creating config directory and verifying files..."
+	@echo "Step 1/3: Creating config directory..."
 	@mkdir -p data/homepage/config
-	@if [ ! -f "data/homepage/config/settings.yaml" ]; then \
-		echo "✗ Configuration files not found!"; \
-		echo ""; \
-		echo "Homepage config files should be in data/homepage/config/:"; \
-		echo "  - settings.yaml"; \
-		echo "  - widgets.yaml"; \
-		echo "  - docker.yaml"; \
-		echo "  - bookmarks.yaml"; \
-		echo "  - services.yaml"; \
-		echo ""; \
-		echo "These files should have been created during Ticket 02 implementation."; \
-		exit 1; \
-	fi
-	@echo "✓ Configuration files found"
+	@echo "✓ Config directory created"
 	@echo ""
-	@echo "Step 2/2: Starting Homepage dashboard (Docker Compose will create network)..."
+	@echo "Step 2/3: Generating Homepage configuration files..."
+	@./scripts/configure-homepage.sh
+	@echo ""
+	@echo "Step 3/3: Starting Homepage dashboard (Docker Compose will create network)..."
 	@$(COMPOSE_DASHBOARD) up -d
 	@echo ""
 	@echo "✓ Homepage Dashboard setup complete!"

@@ -34,6 +34,13 @@ This is a self-hosted infrastructure stack running on Docker Compose, providing 
 
 ### Environment Setup
 ```bash
+# One-time: Install Docker from official repository (if using snap Docker)
+# Check: which docker (if shows /snap/bin/docker, run the installer)
+./scripts/install-docker-official.sh
+
+# One-time: Add user to docker group (enables docker commands without sudo)
+./scripts/setup-user-permissions.sh
+
 # Copy environment template and configure
 cp .env.example .env
 # Edit .env - set SERVER_IP, DOMAIN, passwords, GANDIV5_PERSONAL_ACCESS_TOKEN
@@ -133,11 +140,19 @@ make purge
 ## Architecture & Key Concepts
 
 ### Multi-File Docker Compose
-The stack uses **two compose files** that are always composed together:
-- `docker-compose.yml` - Core services (AdGuard, n8n, WireGuard, Traefik)
-- `docker-compose.monitoring.yml` - Monitoring stack (Grafana, Prometheus, Alertmanager, exporters)
+The stack uses **four compose files** organized by logical function:
+- `docker-compose.yml` - Core services (AdGuard, n8n) - user-facing services that "do stuff"
+- `docker-compose.network.yml` - Network & Security (Traefik, Wireguard, Fail2ban) - infrastructure layer
+- `docker-compose.monitoring.yml` - Monitoring stack (Prometheus, Grafana, Alertmanager, exporters)
+- `docker-compose.dashboard.yml` - Dashboard (Homepage, Homepage API)
 
-The Makefile always combines both: `docker compose -f docker-compose.yml -f docker-compose.monitoring.yml`
+The Makefile combines all files by default: `docker compose -f docker-compose.yml -f docker-compose.network.yml -f docker-compose.monitoring.yml -f docker-compose.dashboard.yml`
+
+This organization provides:
+- **Clear separation of concerns** - Easy to understand what each file contains
+- **Logical grouping** - Services grouped by function (core, network, monitoring, dashboard)
+- **Modular deployment** - Can deploy subsets if needed (e.g., core + network without monitoring)
+- **Homepage dashboard alignment** - Dashboard sections mirror compose file organization
 
 ### Domain-Based Routing Architecture
 Services are accessed via **subdomain.DOMAIN** instead of IP:port combinations:
@@ -418,8 +433,23 @@ Implementation roadmaps:
 3. Add environment variables to `.env.example` with descriptive comments
 4. Update service list in `SERVICES.md`
 5. Add monitoring if needed (Prometheus scrape target)
-6. Update documentation (README.md, relevant docs/)
-7. Test: `make validate && make start && make test-domain-access`
+6. **IMPORTANT: Add to Homepage dashboard** (`config/homepage/services-template.yaml`):
+   - Include container stats for resource monitoring:
+     ```yaml
+     - Service Name:
+         icon: service-icon.png
+         href: https://service.{{HOMEPAGE_VAR_DOMAIN}}
+         description: Service description
+         container: container-name  # Must match container_name in docker-compose
+         server: my-docker          # References docker.yaml
+         showStats: true            # Enables CPU, memory, network stats
+     ```
+   - If service has an API widget, include both widget AND container stats
+   - Container stats show system resources (CPU, RAM, network)
+   - Widgets show application metrics (queries, users, etc.)
+   - Both are complementary, not redundant
+7. Update documentation (README.md, relevant docs/)
+8. Test: `make validate && make start && make test-domain-access`
 
 ### Modifying Environment Variables
 1. Update `.env.example` with new/changed variables and comments

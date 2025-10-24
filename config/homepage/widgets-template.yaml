@@ -1,0 +1,27 @@
+---
+# Top bar widgets
+- logo:
+    icon: mdi-shield-home
+
+- search:
+    provider: duckduckgo
+    target: _blank
+
+- datetime:
+    text_size: xl
+    format:
+      dateStyle: long
+      timeStyle: short
+      hour12: false
+
+# System resources
+- resources:
+    label: Server
+    cpu: true
+    cputemp: true
+    tempmin: 0
+    tempmax: 80
+    units: metric
+    memory: true
+    uptime: true
+    # Note: disk monitoring removed - doesn't work reliably with Docker bind mounts

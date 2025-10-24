@@ -20,7 +20,63 @@ git clone <your-repo-url>
 cd home-server-stack
 ```
 
-### 2. Configure Environment Variables
+### 2. Install Docker (Official Repository)
+
+**If you installed Docker via snap** (common with Ubuntu's default installation), you should reinstall from Docker's official repository for better compatibility and Homepage container stats support.
+
+Check if you have snap Docker:
+```bash
+which docker
+# If output shows /snap/bin/docker, you have snap Docker
+```
+
+**Run the installation script** (one-time setup):
+```bash
+./scripts/install-docker-official.sh
+```
+
+**What this does:**
+- Removes snap Docker if present
+- Installs Docker CE from Docker's official repository
+- Automatically creates the `docker` group with proper permissions
+- Configures Docker daemon to start on boot
+- Preserves your data in `./data/` directories
+
+**Note:** If you already have Docker from the official repository (`/usr/bin/docker`), you can skip this step.
+
+### 3. Setup User Permissions
+
+To run Docker commands without `sudo`, add your user to the docker group. This is a **one-time setup** that persists across reboots.
+
+```bash
+./scripts/setup-user-permissions.sh
+```
+
+**What this does:**
+- Adds your current user to the `docker` group
+- Allows running `docker` and `make` commands without `sudo`
+- Simplifies day-to-day operations
+
+**Important:** After running this script, you must **logout and login again** for the change to take effect.
+
+Alternatively, to apply the change in your current session only:
+```bash
+newgrp docker
+```
+
+**Verify it works:**
+```bash
+# After logging back in, this should work without sudo:
+docker ps
+```
+
+**Note:** If you skip this step, you'll need to prefix all `docker` and `make` commands with `sudo`:
+```bash
+sudo make setup
+sudo docker compose ps
+```
+
+### 4. Configure Environment Variables
 
 ```bash
 cp .env.example .env
@@ -46,7 +102,7 @@ nano .env
 
 See [CONFIGURATION.md](CONFIGURATION.md) for detailed configuration options.
 
-### 3. Deploy Stack
+### 5. Deploy Stack
 
 Run the automated setup which will:
 - Generate SSL certificates automatically (for n8n HTTPS)
@@ -129,7 +185,7 @@ Once DNS is configured:
 
 See [TROUBLESHOOTING.md](TROUBLESHOOTING.md#domain-access-issues) for common DNS and certificate issues.
 
-### 4. Verify Deployment
+### 6. Verify Deployment
 
 Check that all services are running:
 
