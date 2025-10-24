@@ -16,12 +16,16 @@
         href: https://n8n.{{HOMEPAGE_VAR_DOMAIN}}
         description: Workflow automation
         container: n8n
+        server: my-docker
+        showStats: true
 
     - Wireguard VPN:
         icon: wireguard.png
         href: https://wireguard.{{HOMEPAGE_VAR_DOMAIN}}
         description: VPN server management
         container: wireguard
+        server: my-docker
+        showStats: true
 
     - Prometheus:
         icon: prometheus.png
@@ -36,6 +40,8 @@
         href: https://alertmanager.{{HOMEPAGE_VAR_DOMAIN}}
         description: Alert management
         container: alertmanager
+        server: my-docker
+        showStats: true
 
     - Traefik:
         icon: traefik.png
