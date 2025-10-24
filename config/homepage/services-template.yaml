@@ -1,4 +1,27 @@
 ---
+# Life - calendar, weather, etc
+- Today:
+    - BOM Weather:
+        icon: mdi-weather-partly-cloudy
+        href: http://www.bom.gov.au/
+        description: Australian weather forecast
+        widget:
+          type: customapi
+          url: http://homepage-api:5000/api/bom/weather
+          refreshInterval: 300000  # 5 minutes
+          mappings:
+            - field: observations.temp
+              label: Temperature
+              suffix: "°C"
+            - field: observations.temp_feels_like
+              label: Feels Like
+              suffix: "°C"
+            - field: observations.humidity
+              label: Humidity
+              suffix: "%"
+            - field: forecast_daily.0.short_text
+              label: Today
+
 # Core Services - Primary user-facing services that "do stuff"
 - Core Services:
     - AdGuard Home:
@@ -21,27 +44,6 @@
         container: n8n
         server: my-docker
         showStats: true
-
-    - BOM Weather:
-        icon: mdi-weather-partly-cloudy
-        href: http://www.bom.gov.au/
-        description: Australian weather forecast
-        widget:
-          type: customapi
-          url: http://homepage-api:5000/api/bom/weather
-          refreshInterval: 300000  # 5 minutes
-          mappings:
-            - field: observations.temp
-              label: Temperature
-              suffix: "°C"
-            - field: observations.temp_feels_like
-              label: Feels Like
-              suffix: "°C"
-            - field: observations.humidity
-              label: Humidity
-              suffix: "%"
-            - field: forecast_daily.0.short_text
-              label: Today
 
 # Monitoring Stack - Metrics collection and visualization
 - Monitoring:
@@ -71,7 +73,7 @@
 
     - Alertmanager:
         icon: alertmanager.png
-        href: https://alertmanager.{{HOMEPAGE_VAR_DOMAIN}}
+        href: https://alerts.{{HOMEPAGE_VAR_DOMAIN}}
         description: Alert management
         container: alertmanager
         server: my-docker
