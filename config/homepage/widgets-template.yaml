@@ -19,6 +19,8 @@
     label: Server
     cpu: true
     cputemp: true
+    tempmin: 0
+    tempmax: 80
     units: metric
     memory: true
     uptime: true
