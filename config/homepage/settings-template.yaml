@@ -14,29 +14,31 @@ theme: dark
 color: slate
 
 # Layout configuration
+useEqualHeights: true
 layout:
   Today:
     style: row
-    columns: 4
+    columns: 3
   Services:
-    style: grid
-    columns: 4
-  Core Services:
-    style: grid
-    columns: 3
-  Monitoring:
-    style: grid
-    columns: 4
-  Dashboard:
     style: row
-    columns: 3
-  Network & Security:
-    style: row
-    columns: 3
+    columns: 1
+    Core Services:
+      style: row
+      columns: 3
+    Monitoring:
+      style: row
+      columns: 3
+    Dashboard:
+      style: row
+      columns: 1
+    Network & Security:
+      style: row
+      columns: 3
+  
   
 
 # UI preferences
-#statusStyle: "dot"
+statusStyle: "dot"
 showStats: true
 hideVersion: false
 
