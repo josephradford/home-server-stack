@@ -20,6 +20,7 @@ layout:
     style: row
     columns: 3
   Services:
+    icon: mdi-docker
     style: row
     columns: 1
     Core Services:
