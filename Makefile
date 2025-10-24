@@ -100,22 +100,29 @@ pull: validate
 setup: env-check validate
 	@echo "Starting first-time setup..."
 	@echo ""
-	@echo "Step 1/6: Setting up Traefik dashboard password..."
+	@echo "Step 1/7: Setting up Traefik dashboard password..."
 	@./scripts/setup-traefik-password.sh
 	@echo ""
-	@echo "Step 2/6: Setting up SSL certificate storage..."
+	@echo "Step 2/7: Setting up SSL certificate storage..."
 	@$(MAKE) setup-certs
 	@echo ""
-	@echo "Step 3/6: Setting up Homepage dashboard config..."
+	@echo "Step 3/7: Setting up Homepage dashboard config..."
 	@./scripts/configure-homepage.sh
 	@echo ""
-	@echo "Step 4/6: Pulling pre-built images..."
+	@echo "Step 4/7: Pulling pre-built images..."
 	@$(COMPOSE) pull --ignore-pull-failures
 	@echo ""
-	@echo "Step 5/6: Starting services (Docker Compose will create networks)..."
+	@echo "Step 5/7: Starting services (Docker Compose will create networks)..."
 	@$(COMPOSE) up -d
 	@echo ""
-	@echo "Step 6/6: Configuring AdGuard DNS rewrites..."
+	@echo "Step 6/7: Fixing data directory permissions..."
+	@echo "Containers create directories as root, fixing ownership for user access..."
+	@if [ -d "data" ]; then \
+		sudo chown -R $(shell id -u):$(shell getent group docker | cut -d: -f3) data/ && \
+		echo "✓ Data directory permissions fixed"; \
+	fi
+	@echo ""
+	@echo "Step 7/7: Configuring AdGuard DNS rewrites..."
 	@$(MAKE) adguard-setup
 	@echo ""
 	@$(COMPOSE) ps
