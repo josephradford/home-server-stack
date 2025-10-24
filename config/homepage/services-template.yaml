@@ -95,3 +95,33 @@
               suffix: "%"
             - field: forecast_daily.0.short_text
               label: Today
+
+# Infrastructure Services (background services for monitoring and security)
+- Infrastructure:
+    - Fail2ban:
+        icon: mdi-shield-lock
+        description: Intrusion prevention system
+        container: fail2ban
+        server: my-docker
+        showStats: true
+
+    - Node Exporter:
+        icon: mdi-server
+        description: System metrics exporter
+        container: node-exporter
+        server: my-docker
+        showStats: true
+
+    - cAdvisor:
+        icon: mdi-docker
+        description: Container metrics exporter
+        container: cadvisor
+        server: my-docker
+        showStats: true
+
+    - Homepage API:
+        icon: mdi-api
+        description: Backend API for custom widgets
+        container: homepage-api
+        server: my-docker
+        showStats: true

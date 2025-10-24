@@ -425,8 +425,23 @@ Implementation roadmaps:
 3. Add environment variables to `.env.example` with descriptive comments
 4. Update service list in `SERVICES.md`
 5. Add monitoring if needed (Prometheus scrape target)
-6. Update documentation (README.md, relevant docs/)
-7. Test: `make validate && make start && make test-domain-access`
+6. **IMPORTANT: Add to Homepage dashboard** (`config/homepage/services-template.yaml`):
+   - Include container stats for resource monitoring:
+     ```yaml
+     - Service Name:
+         icon: service-icon.png
+         href: https://service.{{HOMEPAGE_VAR_DOMAIN}}
+         description: Service description
+         container: container-name  # Must match container_name in docker-compose
+         server: my-docker          # References docker.yaml
+         showStats: true            # Enables CPU, memory, network stats
+     ```
+   - If service has an API widget, include both widget AND container stats
+   - Container stats show system resources (CPU, RAM, network)
+   - Widgets show application metrics (queries, users, etc.)
+   - Both are complementary, not redundant
+7. Update documentation (README.md, relevant docs/)
+8. Test: `make validate && make start && make test-domain-access`
 
 ### Modifying Environment Variables
 1. Update `.env.example` with new/changed variables and comments
