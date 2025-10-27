@@ -41,8 +41,8 @@
 # Transport & Commute - Public transport and traffic
 - Transport & Commute:
     - Train Departures:
-        icon: {{HOMEPAGE_VAR_TRANSPORT_STOP_1_ICON:-mdi-train}}
-        description: {{HOMEPAGE_VAR_TRANSPORT_STOP_1_NAME:-North Parramatta Station}}
+        icon: {{HOMEPAGE_VAR_TRANSPORT_STOP_1_ICON}}
+        description: {{HOMEPAGE_VAR_TRANSPORT_STOP_1_NAME}}
         widget:
           type: customapi
           url: http://homepage-api:5000/api/transport/departures/{{HOMEPAGE_VAR_TRANSPORT_STOP_1_ID}}
@@ -58,8 +58,8 @@
               format: relativeDate
 
     - Bus Departures:
-        icon: {{HOMEPAGE_VAR_TRANSPORT_STOP_2_ICON:-mdi-bus}}
-        description: {{HOMEPAGE_VAR_TRANSPORT_STOP_2_NAME:-Bus Stop}}
+        icon: {{HOMEPAGE_VAR_TRANSPORT_STOP_2_ICON}}
+        description: {{HOMEPAGE_VAR_TRANSPORT_STOP_2_NAME}}
         widget:
           type: customapi
           url: http://homepage-api:5000/api/transport/departures/{{HOMEPAGE_VAR_TRANSPORT_STOP_2_ID}}
@@ -73,7 +73,7 @@
 
     - Morning Commute:
         icon: mdi-car
-        description: {{HOMEPAGE_VAR_TRAFFIC_ROUTE_1_NAME:-To Work}}
+        description: {{HOMEPAGE_VAR_TRAFFIC_ROUTE_1_NAME}}
         widget:
           type: customapi
           url: http://homepage-api:5000/api/traffic/route?origin={{HOMEPAGE_VAR_TRAFFIC_ROUTE_1_ORIGIN}}&destination={{HOMEPAGE_VAR_TRAFFIC_ROUTE_1_DESTINATION}}
@@ -90,7 +90,7 @@
 
     - Evening Commute:
         icon: mdi-home-import-outline
-        description: {{HOMEPAGE_VAR_TRAFFIC_ROUTE_2_NAME:-To Home}}
+        description: {{HOMEPAGE_VAR_TRAFFIC_ROUTE_2_NAME}}
         widget:
           type: customapi
           url: http://homepage-api:5000/api/traffic/route?origin={{HOMEPAGE_VAR_TRAFFIC_ROUTE_2_ORIGIN}}&destination={{HOMEPAGE_VAR_TRAFFIC_ROUTE_2_DESTINATION}}
