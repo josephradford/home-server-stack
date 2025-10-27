@@ -346,6 +346,65 @@ class TestErrorHandling:
         assert 'error' in data
 
 
+class TestTrafficActiveRoutes:
+    """Tests for /api/traffic/active-routes endpoint"""
+
+    @patch('app.get_active_routes')
+    def test_active_routes_success(self, mock_get_active_routes, client):
+        """Test successful active routes retrieval"""
+        mock_get_active_routes.return_value = [
+            {
+                'name': 'Morning Commute',
+                'origin': 'Home',
+                'destination': 'Work',
+                'route_num': 1,
+                'schedule': 'Mon-Fri 07:00-09:00'
+            },
+            {
+                'name': 'Evening Commute',
+                'origin': 'Work',
+                'destination': 'Home',
+                'route_num': 2,
+                'schedule': 'Mon-Fri 17:00-19:00'
+            }
+        ]
+
+        response = client.get('/api/traffic/active-routes')
+        assert response.status_code == 200
+
+        data = response.get_json()
+        assert 'routes' in data
+        assert 'count' in data
+        assert 'updated' in data
+        assert data['count'] == 2
+        assert len(data['routes']) == 2
+        assert data['routes'][0]['name'] == 'Morning Commute'
+        assert data['routes'][1]['name'] == 'Evening Commute'
+
+    @patch('app.get_active_routes')
+    def test_active_routes_empty(self, mock_get_active_routes, client):
+        """Test active routes when none are active"""
+        mock_get_active_routes.return_value = []
+
+        response = client.get('/api/traffic/active-routes')
+        assert response.status_code == 200
+
+        data = response.get_json()
+        assert data['count'] == 0
+        assert data['routes'] == []
+
+    @patch('app.get_active_routes')
+    def test_active_routes_error(self, mock_get_active_routes, client):
+        """Test active routes handles errors"""
+        mock_get_active_routes.side_effect = Exception('Configuration error')
+
+        response = client.get('/api/traffic/active-routes')
+        assert response.status_code == 500
+
+        data = response.get_json()
+        assert 'error' in data
+
+
 class TestCORSHeaders:
     """Tests for CORS configuration"""
 
