@@ -73,11 +73,7 @@
         description: {{HOMEPAGE_VAR_TRAFFIC_ROUTE_1_NAME:-To Work}}
         widget:
           type: customapi
-          url: http://homepage-api:5000/api/traffic/route
-          method: GET
-          params:
-            origin: {{HOMEPAGE_VAR_TRAFFIC_ROUTE_1_ORIGIN}}
-            destination: {{HOMEPAGE_VAR_TRAFFIC_ROUTE_1_DESTINATION}}
+          url: http://homepage-api:5000/api/traffic/route?origin={{HOMEPAGE_VAR_TRAFFIC_ROUTE_1_ORIGIN}}&destination={{HOMEPAGE_VAR_TRAFFIC_ROUTE_1_DESTINATION}}
           refreshInterval: 300000  # 5 minutes
           mappings:
             - field: travelTimeMinutes
@@ -88,24 +84,13 @@
               suffix: " min"
             - field: status
               label: Traffic
-              remap:
-                - value: clear
-                  to: "✅ Clear"
-                - value: moderate
-                  to: "🟡 Moderate"
-                - value: heavy
-                  to: "🔴 Heavy"
 
     - Evening Commute:
         icon: mdi-home-import-outline
         description: {{HOMEPAGE_VAR_TRAFFIC_ROUTE_2_NAME:-To Home}}
         widget:
           type: customapi
-          url: http://homepage-api:5000/api/traffic/route
-          method: GET
-          params:
-            origin: {{HOMEPAGE_VAR_TRAFFIC_ROUTE_2_ORIGIN}}
-            destination: {{HOMEPAGE_VAR_TRAFFIC_ROUTE_2_DESTINATION}}
+          url: http://homepage-api:5000/api/traffic/route?origin={{HOMEPAGE_VAR_TRAFFIC_ROUTE_2_ORIGIN}}&destination={{HOMEPAGE_VAR_TRAFFIC_ROUTE_2_DESTINATION}}
           refreshInterval: 300000
           mappings:
             - field: travelTimeMinutes
