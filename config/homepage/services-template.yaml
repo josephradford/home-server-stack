@@ -22,18 +22,21 @@
             - field: forecast_daily.0.short_text
               label: Today
 
-    - Google Calendar:
-        icon: google-calendar.png
-        href: https://calendar.google.com
-        description: Upcoming events
-        widget:
-          type: calendar
-          integrations:
-            - type: ical
-              url: {{HOMEPAGE_VAR_GCAL_ICAL_URL}}
-              name: Personal Calendar
-              color: blue
-              maxEvents: 5
+    # Uncomment after configuring Google Calendar iCal URL in .env
+    # Get iCal URL: Google Calendar → Settings → Integrate calendar → Copy "Secret iCal URL"
+    # Then set: GOOGLE_CALENDAR_ICAL_URL=https://calendar.google.com/calendar/ical/.../basic.ics
+    # - Google Calendar:
+    #     icon: google-calendar.png
+    #     href: https://calendar.google.com
+    #     description: Upcoming events
+    #     widget:
+    #       type: calendar
+    #       integrations:
+    #         - type: ical
+    #           url: {{HOMEPAGE_VAR_GCAL_ICAL_URL}}
+    #           name: Personal Calendar
+    #           color: blue
+    #           maxEvents: 5
 
 # Transport & Commute - Public transport and traffic
 - Transport & Commute:
