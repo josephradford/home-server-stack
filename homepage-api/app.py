@@ -20,7 +20,7 @@ app = Flask(__name__)
 CORS(app)
 
 # Configuration from environment variables
-TRANSPORT_NSW_API_KEY = os.getenv('TRANSPORT_NSW_API_KEY')
+TRANSPORT_NSW_API_KEY = os.getenv('TRANSPORT_NSW_API_KEY', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJfWHo1V0FvU3VPLUozOTRLSkNucXctX21SU08tdGNvWGhVdDBlekc3SU5zIiwiaWF0IjoxNzYxNTQwNjE1fQ.NPBTPZhPkPeMxmZKE7lgj09ARkJOIUuUpmwnk3zHQlI')
 HOMEASSISTANT_URL = os.getenv('HOMEASSISTANT_URL', 'http://homeassistant:8123')
 HOMEASSISTANT_TOKEN = os.getenv('HOMEASSISTANT_TOKEN')
 TOMTOM_API_KEY = os.getenv('TOMTOM_API_KEY')
@@ -286,13 +286,31 @@ def transport_departures(stop_id):
 
         for event in stop_events[:5]:  # Get next 5 departures
             transportation = event.get('transportation', {})
+            location = event.get('location', {})
+
+            # Calculate delay if realtime data is available
+            delay_minutes = 0
+            if event.get('isRealtimeControlled'):
+                try:
+                    planned_str = event.get('departureTimePlanned')
+                    estimated_str = event.get('departureTimeEstimated')
+                    if planned_str and estimated_str:
+                        # Parse ISO timestamps
+                        planned = datetime.fromisoformat(planned_str.replace('Z', '+00:00'))
+                        estimated = datetime.fromisoformat(estimated_str.replace('Z', '+00:00'))
+                        # Calculate difference in minutes
+                        delay_minutes = int((estimated - planned).total_seconds() / 60)
+                except (ValueError, AttributeError):
+                    # If parsing fails, default to 0
+                    delay_minutes = 0
+
             departures.append({
                 'time': event.get('departureTimePlanned'),
                 'destination': transportation.get('destination', {}).get('name'),
                 'line': transportation.get('number'),
-                'platform': transportation.get('origin', {}).get('platform'),
+                'platform': location.get('properties', {}).get('platformName'),
                 'realtime': event.get('isRealtimeControlled', False),
-                'delay_minutes': event.get('departureTimeEstimated', 0) - event.get('departureTimePlanned', 0) if event.get('isRealtimeControlled') else 0
+                'delay_minutes': delay_minutes
             })
 
         return jsonify({
