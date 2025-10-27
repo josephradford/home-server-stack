@@ -20,7 +20,7 @@ app = Flask(__name__)
 CORS(app)
 
 # Configuration from environment variables
-TRANSPORT_NSW_API_KEY = os.getenv('TRANSPORT_NSW_API_KEY', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJfWHo1V0FvU3VPLUozOTRLSkNucXctX21SU08tdGNvWGhVdDBlekc3SU5zIiwiaWF0IjoxNzYxNTQwNjE1fQ.NPBTPZhPkPeMxmZKE7lgj09ARkJOIUuUpmwnk3zHQlI')
+TRANSPORT_NSW_API_KEY = os.getenv('TRANSPORT_NSW_API_KEY')
 HOMEASSISTANT_URL = os.getenv('HOMEASSISTANT_URL', 'http://homeassistant:8123')
 HOMEASSISTANT_TOKEN = os.getenv('HOMEASSISTANT_TOKEN')
 TOMTOM_API_KEY = os.getenv('TOMTOM_API_KEY')
