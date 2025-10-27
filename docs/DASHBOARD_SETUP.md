@@ -95,14 +95,28 @@ TRAFFIC_ROUTE_2_SCHEDULE="Mon-Fri 17:00-19:00"
 ### Calendar Widget
 
 **Get iCal URL**:
-1. Open Google Calendar → Settings (gear icon)
-2. Select your calendar
-3. Scroll to "Integrate calendar"
-4. Copy "Secret address in iCal format"
+1. Open Google Calendar → Click **3 dots** next to your calendar (in left sidebar)
+2. Select **Settings and sharing**
+3. Scroll to **"Integrate calendar"** section
+4. Copy **"Secret address in iCal format"**
 
 **Configure in .env**:
 ```bash
-GOOGLE_CALENDAR_ICAL_URL=https://calendar.google.com/calendar/ical/.../basic.ics
+GOOGLE_CALENDAR_ICAL_URL=https://calendar.google.com/calendar/ical/[CALENDAR_ID]/private-[TOKEN]/basic.ics
+```
+
+**IMPORTANT - Common Mistakes**:
+- ❌ **Embed URL**: `.../calendar/embed?src=...` (won't work)
+- ❌ **Public URL without token**: `.../public/basic.ics` (only works if calendar is public)
+- ✅ **Private URL**: `.../private-XXXXX/basic.ics` (correct format)
+
+**URL Encoding**: If your calendar ID contains `@`, it must be URL encoded as `%40`:
+```bash
+# Wrong:
+example@group.calendar.google.com
+
+# Correct:
+example%40group.calendar.google.com
 ```
 
 **Privacy Note**: Anyone with the iCal URL can view your calendar. To reset, click "Reset" in calendar settings.
@@ -150,6 +164,23 @@ curl http://localhost:5000/api/traffic/active-routes
 - Verify iCal URL starts with `https://calendar.google.com`
 - Test URL in browser (should download .ics file)
 - Check logs: `docker logs homepage`
+
+### Calendar shows "API Error: Unexpected token '<'"
+This error means Homepage is receiving HTML instead of an .ics file.
+
+**Diagnose**:
+```bash
+# Check what the URL returns
+ICAL_URL=$(docker exec homepage env | grep GCAL_ICAL_URL | cut -d= -f2-)
+curl -s "$ICAL_URL" | head -20
+```
+
+**If you see `<html` or `<!DOCTYPE`**: Wrong URL format
+- You're likely using the embed URL or public URL without proper token
+- Get the correct private URL from: Calendar Settings → Integrate calendar → "Secret address in iCal format"
+
+**If you see `BEGIN:VCALENDAR`**: URL is correct
+- Check Homepage logs for other errors: `docker logs homepage 2>&1 | grep -i calendar`
 
 ### Wrong schedule times
 - Use 24-hour format: `07:00` not `7:00 AM`
