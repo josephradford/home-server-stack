@@ -27,7 +27,9 @@
         href: https://calendar.google.com
         description: Upcoming events
         widget:
-          type: agenda
+          type: calendar
+          view: agenda
+          showTime: true
           integrations:
             - type: ical
               url: {{HOMEPAGE_VAR_GCAL_ICAL_URL}}
