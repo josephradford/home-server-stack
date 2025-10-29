@@ -22,6 +22,93 @@
             - field: forecast_daily.0.short_text
               label: Today
 
+    - Google Calendar:
+        icon: google-calendar.png
+        href: https://calendar.google.com
+        description: Upcoming events
+        widget:
+          type: calendar
+          view: agenda
+          showTime: true
+          integrations:
+            - type: ical
+              url: {{HOMEPAGE_VAR_GCAL_ICAL_URL}}
+              name: Personal Calendar
+              color: blue
+              maxEvents: 5
+
+# Transport & Commute - Public transport and traffic
+- Transport & Commute:
+    - Train Departures:
+        icon: {{HOMEPAGE_VAR_TRANSPORT_STOP_1_ICON}}
+        description: {{HOMEPAGE_VAR_TRANSPORT_STOP_1_NAME}}
+        widget:
+          type: customapi
+          url: http://homepage-api:5000/api/transport/departures/{{HOMEPAGE_VAR_TRANSPORT_STOP_1_ID}}
+          refreshInterval: 60000  # 1 minute
+          mappings:
+            - field: departures.0.destination
+              label: Next Train
+            - field: departures.0.time
+              label: Departs
+              format: relativeDate
+            - field: departures.1.time
+              label: Following
+              format: relativeDate
+
+    - Bus Departures:
+        icon: {{HOMEPAGE_VAR_TRANSPORT_STOP_2_ICON}}
+        description: {{HOMEPAGE_VAR_TRANSPORT_STOP_2_NAME}}
+        widget:
+          type: customapi
+          url: http://homepage-api:5000/api/transport/departures/{{HOMEPAGE_VAR_TRANSPORT_STOP_2_ID}}
+          refreshInterval: 60000
+          mappings:
+            - field: departures.0.destination
+              label: Next Bus
+            - field: departures.0.time
+              label: Departs
+              format: relativeDate
+
+    - Morning Commute:
+        icon: mdi-car
+        description: {{HOMEPAGE_VAR_TRAFFIC_ROUTE_1_NAME}}
+        widget:
+          type: customapi
+          url: http://homepage-api:5000/api/traffic/route?origin={{HOMEPAGE_VAR_TRAFFIC_ROUTE_1_ORIGIN}}&destination={{HOMEPAGE_VAR_TRAFFIC_ROUTE_1_DESTINATION}}
+          refreshInterval: 300000  # 5 minutes
+          mappings:
+            - field: travelTimeMinutes
+              label: Drive Time
+              suffix: " min"
+            - field: trafficDelayMinutes
+              label: Delay
+              suffix: " min"
+            - field: status
+              label: Traffic
+
+    - Evening Commute:
+        icon: mdi-home-import-outline
+        description: {{HOMEPAGE_VAR_TRAFFIC_ROUTE_2_NAME}}
+        widget:
+          type: customapi
+          url: http://homepage-api:5000/api/traffic/route?origin={{HOMEPAGE_VAR_TRAFFIC_ROUTE_2_ORIGIN}}&destination={{HOMEPAGE_VAR_TRAFFIC_ROUTE_2_DESTINATION}}
+          refreshInterval: 300000
+          mappings:
+            - field: travelTimeMinutes
+              label: Drive Time
+              suffix: " min"
+            - field: trafficDelayMinutes
+              label: Delay
+              suffix: " min"
+            - field: status
+              label: Traffic
+
+    - Transport NSW:
+        icon: mdi-bus-multiple
+        href: https://transportnsw.info/
+        description: View all services
+
 # Core Services - Primary user-facing services that "do stuff"
 - Services:
   - Core Services:

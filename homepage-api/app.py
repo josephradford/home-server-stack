@@ -15,6 +15,7 @@ import os
 import json
 from functools import lru_cache, wraps
 from weather_au import api as weather_api
+from traffic_scheduler import get_active_routes, is_route_active
 
 app = Flask(__name__)
 CORS(app)
@@ -407,6 +408,40 @@ def geocode_address(address):
         return None
     except:
         return None
+
+
+@app.route('/api/traffic/active-routes')
+def active_routes():
+    """
+    Get list of currently active traffic routes based on schedule
+
+    Returns routes that are active based on their configured schedule
+    (e.g., morning commute only shows 7-9am on weekdays)
+
+    Example response:
+    {
+        "routes": [
+            {
+                "name": "Morning Commute",
+                "origin": "123 Home St, Parramatta NSW",
+                "destination": "456 Work St, Sydney NSW",
+                "route_num": 1,
+                "schedule": "Mon-Fri 07:00-09:00"
+            }
+        ],
+        "count": 1,
+        "updated": "2025-10-27T08:30:00.123456"
+    }
+    """
+    try:
+        routes = get_active_routes()
+        return jsonify({
+            'routes': routes,
+            'count': len(routes),
+            'updated': datetime.now().isoformat()
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 
 # =============================================================================
