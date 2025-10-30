@@ -119,10 +119,6 @@
           type: homeassistant
           url: {{HOMEPAGE_VAR_HOMEASSISTANT_URL}}
           key: {{HOMEPAGE_VAR_HOMEASSISTANT_TOKEN}}
-          custom:
-            - state: sensor.homeassistant_version
-              label: Version
-              field: state
         container: homeassistant
         server: my-docker
         showStats: true
