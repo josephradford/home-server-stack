@@ -3,7 +3,7 @@
 
 .PHONY: help setup update start stop restart logs build pull status clean purge validate env-check
 .PHONY: logs-n8n logs-wireguard logs-homepage logs-homeassistant
-.PHONY: adguard-setup setup-certs test-domain-access traefik-password
+.PHONY: adguard-setup homeassistant-setup setup-certs test-domain-access traefik-password
 .PHONY: ssl-setup ssl-copy-certs ssl-configure-traefik ssl-setup-renewal ssl-renew-test
 .PHONY: dashboard-setup dashboard-start dashboard-stop dashboard-restart dashboard-logs dashboard-status
 
@@ -56,8 +56,9 @@ help:
 	@echo "  make dashboard-status   - Show Homepage dashboard status"
 	@echo ""
 	@echo "Service Configuration:"
-	@echo "  make adguard-setup      - Configure DNS rewrites for domain-based access"
-	@echo "  make traefik-password   - Generate Traefik dashboard password from .env"
+	@echo "  make adguard-setup        - Configure DNS rewrites for domain-based access"
+	@echo "  make homeassistant-setup  - Setup Home Assistant configuration files"
+	@echo "  make traefik-password     - Generate Traefik dashboard password from .env"
 	@echo ""
 	@echo "SSL/TLS Certificate Management:"
 	@echo "  make ssl-setup          - Complete Let's Encrypt SSL setup (certbot + renewal)"
@@ -107,29 +108,32 @@ pull: validate
 setup: env-check validate
 	@echo "Starting first-time setup..."
 	@echo ""
-	@echo "Step 1/7: Setting up Traefik dashboard password..."
+	@echo "Step 1/8: Setting up Traefik dashboard password..."
 	@./scripts/setup-traefik-password.sh
 	@echo ""
-	@echo "Step 2/7: Setting up SSL certificate storage..."
+	@echo "Step 2/8: Setting up SSL certificate storage..."
 	@$(MAKE) setup-certs
 	@echo ""
-	@echo "Step 3/7: Setting up Homepage dashboard config..."
+	@echo "Step 3/8: Setting up Homepage dashboard config..."
 	@./scripts/configure-homepage.sh
 	@echo ""
-	@echo "Step 4/7: Pulling pre-built images..."
+	@echo "Step 4/8: Setting up Home Assistant config..."
+	@./scripts/setup-homeassistant.sh
+	@echo ""
+	@echo "Step 5/8: Pulling pre-built images..."
 	@$(COMPOSE) pull --ignore-pull-failures
 	@echo ""
-	@echo "Step 5/7: Starting services (Docker Compose will create networks)..."
+	@echo "Step 6/8: Starting services (Docker Compose will create networks)..."
 	@$(COMPOSE) up -d
 	@echo ""
-	@echo "Step 6/7: Fixing data directory permissions..."
+	@echo "Step 7/8: Fixing data directory permissions..."
 	@echo "Containers create directories as root, fixing ownership for user access..."
 	@if [ -d "data" ]; then \
 		sudo chown -R $(shell id -u):$(shell getent group docker | cut -d: -f3) data/ && \
 		echo "✓ Data directory permissions fixed"; \
 	fi
 	@echo ""
-	@echo "Step 7/7: Configuring AdGuard DNS rewrites..."
+	@echo "Step 8/8: Configuring AdGuard DNS rewrites..."
 	@$(MAKE) adguard-setup
 	@echo ""
 	@$(COMPOSE) ps
@@ -315,6 +319,13 @@ adguard-setup: env-check
 	fi
 	@set -a; . ./.env; set +a; \
 	echo "Configure network devices to use $$SERVER_IP as DNS server"
+
+# Home Assistant configuration setup
+homeassistant-setup: env-check
+	@echo "Setting up Home Assistant configuration..."
+	@./scripts/setup-homeassistant.sh
+	@echo ""
+	@echo "✓ Home Assistant configuration setup complete!"
 
 # Setup SSL certificate storage (for certbot-generated certs)
 setup-certs:

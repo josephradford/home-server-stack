@@ -10,7 +10,27 @@ Home Assistant provides location tracking and home automation capabilities for t
 
 ## Initial Setup
 
-### 1. Start Home Assistant
+### 1. Setup Configuration (Included in `make setup`)
+
+Home Assistant configuration is automatically set up during first-time deployment:
+
+```bash
+make setup  # Includes Home Assistant configuration setup
+```
+
+Or if you need to reset/update the configuration:
+
+```bash
+make homeassistant-setup  # Copies templates from config/homeassistant-template/
+```
+
+This automatically:
+- Creates `data/homeassistant/` directory
+- Copies `configuration.yaml` with correct trusted proxies for Traefik
+- Copies `secrets.yaml.example` template
+- Creates empty automation files
+
+### 2. Start Home Assistant
 
 ```bash
 make start
@@ -18,7 +38,7 @@ make start
 
 Home Assistant will start along with other services. First startup takes 60-120 seconds as it initializes the database and configuration.
 
-### 2. Monitor Startup
+### 3. Monitor Startup
 
 Watch the logs to ensure successful startup:
 
@@ -28,13 +48,13 @@ docker logs -f homeassistant
 
 Wait for the message: **"Home Assistant is running"** or **"Home Assistant initialized"**
 
-### 3. Access Home Assistant
+### 4. Access Home Assistant
 
 Open your browser and navigate to:
 - Direct access: `http://SERVER_IP:8123`
 - Via Traefik (requires VPN or local network): `https://home.DOMAIN`
 
-### 4. Complete Onboarding Wizard
+### 5. Complete Onboarding Wizard
 
 On first access, you'll be guided through the onboarding wizard:
 
@@ -199,34 +219,38 @@ data/homeassistant/
 
 ### 400 Bad Request when accessing via domain (https://home.DOMAIN)
 
-This is the most common issue when accessing Home Assistant through Traefik.
-
 **Symptom**: Direct access (`http://SERVER_IP:8123`) works, but domain access returns 400 Bad Request.
 
-**Cause**: Home Assistant isn't trusting the Traefik reverse proxy.
+**Cause**: Home Assistant isn't trusting the Traefik reverse proxy network.
 
-**Fix**:
-1. Edit `data/homeassistant/configuration.yaml`
-2. Update the `trusted_proxies` section:
-   ```yaml
-   http:
-     use_x_forwarded_for: true
-     trusted_proxies:
-       - 127.0.0.1
-       - ::1
-       - 172.16.0.0/12  # Docker bridge networks
-       - 192.168.0.0/16  # Local network range
-   ```
-3. Restart Home Assistant:
+**This should NOT happen** if you used `make setup` or `make homeassistant-setup`, as the configuration template includes the correct trusted proxies.
+
+**If it still happens**:
+
+1. Verify the configuration was copied correctly:
    ```bash
+   grep -A 5 "trusted_proxies" data/homeassistant/configuration.yaml
+   ```
+
+   Should show:
+   ```yaml
+   trusted_proxies:
+     - 127.0.0.1
+     - ::1
+     - 172.16.0.0/12  # Docker bridge networks
+     - 192.168.0.0/16  # Local network range
+   ```
+
+2. If the configuration is missing these proxies, re-run setup:
+   ```bash
+   make homeassistant-setup
    docker restart homeassistant
    ```
 
-**Verify fix**:
-```bash
-# Should now work
-curl -I https://home.DOMAIN
-```
+3. Verify fix:
+   ```bash
+   curl -I https://home.DOMAIN  # Should return 200 OK
+   ```
 
 ### Cannot access Home Assistant
 
