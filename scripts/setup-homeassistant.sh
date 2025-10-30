@@ -42,6 +42,13 @@ cp config/homeassistant-template/automations.yaml data/homeassistant/
 cp config/homeassistant-template/scripts.yaml data/homeassistant/
 cp config/homeassistant-template/scenes.yaml data/homeassistant/
 
+# Create secrets.yaml from example if it doesn't exist
+if [ ! -f data/homeassistant/secrets.yaml ]; then
+    echo "Creating secrets.yaml from template..."
+    cp config/homeassistant-template/secrets.yaml.example data/homeassistant/secrets.yaml
+    echo -e "${YELLOW}NOTE: Edit data/homeassistant/secrets.yaml to add your actual location coordinates${NC}"
+fi
+
 echo -e "${GREEN}✓ Home Assistant configuration files copied${NC}"
 echo ""
 echo "Configuration location: ./data/homeassistant/"
