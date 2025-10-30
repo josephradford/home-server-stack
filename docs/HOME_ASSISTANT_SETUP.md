@@ -182,6 +182,8 @@ data/homeassistant/
 
 **HTTP Configuration** (in `configuration.yaml`):
 - Trusts Traefik proxy headers for correct client IPs
+- **CRITICAL**: Must trust Docker network (172.16.0.0/12) and local network (192.168.0.0/16)
+- Without this, accessing via domain (Traefik) will return 400 Bad Request
 - Required for proper logging and security
 
 **Recorder** (in `configuration.yaml`):
@@ -194,6 +196,37 @@ data/homeassistant/
 - Triggers when person enters/leaves zone
 
 ## Troubleshooting
+
+### 400 Bad Request when accessing via domain (https://home.DOMAIN)
+
+This is the most common issue when accessing Home Assistant through Traefik.
+
+**Symptom**: Direct access (`http://SERVER_IP:8123`) works, but domain access returns 400 Bad Request.
+
+**Cause**: Home Assistant isn't trusting the Traefik reverse proxy.
+
+**Fix**:
+1. Edit `data/homeassistant/configuration.yaml`
+2. Update the `trusted_proxies` section:
+   ```yaml
+   http:
+     use_x_forwarded_for: true
+     trusted_proxies:
+       - 127.0.0.1
+       - ::1
+       - 172.16.0.0/12  # Docker bridge networks
+       - 192.168.0.0/16  # Local network range
+   ```
+3. Restart Home Assistant:
+   ```bash
+   docker restart homeassistant
+   ```
+
+**Verify fix**:
+```bash
+# Should now work
+curl -I https://home.DOMAIN
+```
 
 ### Cannot access Home Assistant
 

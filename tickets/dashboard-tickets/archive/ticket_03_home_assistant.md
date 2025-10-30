@@ -20,7 +20,8 @@ Successfully deployed Home Assistant as a core service for location tracking and
    - Created `configuration.yaml` with default config, zones, and recorder settings
    - Created `secrets.yaml.example` template for sensitive values
    - Created empty automation files (automations.yaml, scripts.yaml, scenes.yaml)
-   - Configured trusted proxies for Traefik integration
+   - Configured trusted proxies for Traefik integration (Docker networks + local network)
+   - **IMPORTANT**: Must trust 172.16.0.0/12 (Docker) and 192.168.0.0/16 (local) for Traefik access
    - Set database purge to 30 days to control size
 
 3. **Homepage Dashboard** (`config/homepage/services-template.yaml`):
@@ -73,6 +74,27 @@ Successfully deployed Home Assistant as a core service for location tracking and
 - ✅ Configuration files use correct YAML syntax
 - ✅ Homepage widget configuration matches Homepage documentation
 - ✅ Environment variables properly documented
+
+### Known Issues & Fixes
+
+**Issue**: 400 Bad Request when accessing via `https://home.${DOMAIN}` (direct access via IP:8123 works)
+
+**Cause**: Home Assistant requires explicit trust of reverse proxy networks. The initial configuration only trusted localhost.
+
+**Fix**: Update `data/homeassistant/configuration.yaml` after first deployment:
+```yaml
+http:
+  use_x_forwarded_for: true
+  trusted_proxies:
+    - 127.0.0.1
+    - ::1
+    - 172.16.0.0/12  # Docker bridge networks
+    - 192.168.0.0/16  # Local network range
+```
+
+Then restart: `docker restart homeassistant`
+
+This is now documented in the troubleshooting section of `docs/HOME_ASSISTANT_SETUP.md`.
 
 ### Next Steps
 
