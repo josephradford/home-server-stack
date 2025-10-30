@@ -2,14 +2,14 @@
 # Simplifies deployment and maintenance operations
 
 .PHONY: help setup update start stop restart logs build pull status clean purge validate env-check
-.PHONY: logs-n8n logs-wireguard logs-homepage
+.PHONY: logs-n8n logs-wireguard logs-homepage logs-homeassistant
 .PHONY: adguard-setup setup-certs test-domain-access traefik-password
 .PHONY: ssl-setup ssl-copy-certs ssl-configure-traefik ssl-setup-renewal ssl-renew-test
 .PHONY: dashboard-setup dashboard-start dashboard-stop dashboard-restart dashboard-logs dashboard-status
 
 # Compose file flags
 # Services are organized into logical groups:
-# - docker-compose.yml: Core services (AdGuard, n8n)
+# - docker-compose.yml: Core services (AdGuard, n8n, Home Assistant)
 # - docker-compose.network.yml: Network & Security (Traefik, Wireguard, Fail2ban)
 # - docker-compose.monitoring.yml: Monitoring stack (Prometheus, Grafana, Alertmanager, exporters)
 # - docker-compose.dashboard.yml: Dashboard (Homepage, Homepage API)
@@ -43,6 +43,7 @@ help:
 	@echo "Logs & Debugging:"
 	@echo "  make logs               - Show logs from all services"
 	@echo "  make logs-n8n           - Show n8n logs only"
+	@echo "  make logs-homeassistant - Show Home Assistant logs only"
 	@echo "  make logs-wireguard     - Show WireGuard logs only"
 	@echo "  make logs-homepage      - Show Homepage logs only"
 	@echo ""
@@ -143,6 +144,7 @@ setup: env-check validate
 		echo "    - Traefik Dashboard:  https://traefik.$$DOMAIN"; \
 		echo "    - AdGuard Home:       https://adguard.$$DOMAIN"; \
 		echo "    - n8n:                https://n8n.$$DOMAIN"; \
+		echo "    - Home Assistant:     https://home.$$DOMAIN"; \
 		echo "    - Grafana:            https://grafana.$$DOMAIN"; \
 		echo "    - Prometheus:         https://prometheus.$$DOMAIN"; \
 		echo "    - Alertmanager:       https://alerts.$$DOMAIN"; \
@@ -229,6 +231,9 @@ logs:
 logs-n8n:
 	@$(COMPOSE) logs -f n8n
 
+logs-homeassistant:
+	@$(COMPOSE) logs -f homeassistant
+
 logs-wireguard:
 	@$(COMPOSE) logs -f wireguard
 
@@ -253,6 +258,7 @@ purge:
 	@echo "  - All Docker images (requires re-download on next setup)"
 	@echo "  - AdGuard configuration and logs"
 	@echo "  - n8n workflows and database"
+	@echo "  - Home Assistant configuration and database"
 	@echo "  - WireGuard VPN configs"
 	@echo "  - All monitoring data (Grafana, Prometheus)"
 	@echo "  - Homepage dashboard configuration"
@@ -385,6 +391,7 @@ ssl-setup: env-check
 	if [ -n "$$DOMAIN" ]; then \
 		echo "Test your certificates:"; \
 		echo "  https://n8n.$$DOMAIN"; \
+		echo "  https://home.$$DOMAIN"; \
 		echo "  https://grafana.$$DOMAIN"; \
 		echo "  https://traefik.$$DOMAIN"; \
 	fi
