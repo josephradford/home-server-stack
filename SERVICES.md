@@ -43,6 +43,18 @@ Currently deployed and active services.
 - **Port:** 5678
 - **Authentication:** N8N_USER / N8N_PASSWORD from .env
 
+#### Home Assistant
+- **Purpose:** Location tracking and home automation
+- **Access:** https://home.${DOMAIN}
+- **Legacy:** http://SERVER_IP:8123
+- **Port:** 8123
+- **Authentication:** Set during initial setup
+- **Features:**
+  - Family location tracking via iOS/Android Companion App
+  - iCloud device tracking (AirPods, iPads, etc.)
+  - Home automation and location-based triggers
+  - Integration with n8n workflows
+
 ### Monitoring Stack
 
 #### Grafana
@@ -83,6 +95,7 @@ Currently deployed and active services.
 | Traefik | https://traefik.home.local | N/A |
 | AdGuard | https://adguard.home.local | http://IP:8888 |
 | n8n | https://n8n.home.local | http://IP:5678 |
+| Home Assistant | https://home.${DOMAIN} | http://IP:8123 |
 | Grafana | https://grafana.home.local | http://IP:3001 |
 | Prometheus | https://prometheus.home.local | http://IP:9090 |
 | Alertmanager | https://alerts.home.local | http://IP:9093 |
@@ -121,7 +134,6 @@ Services queued for implementation.
 Services that are popular, I have considered, but decided they don't fit my use case.
 
 - **[Calibre-Web](https://github.com/janeczku/calibre-web)** - Web app for browsing, reading and downloading eBooks stored in a Calibre database
-- **[Home Assistant](https://github.com/home-assistant/core)** - Open source home automation that puts local control and privacy first
 - **[Gitea](https://github.com/go-gitea/gitea)** - Git with a cup of tea! Painless self-hosted all-in-one software development service
 - **[Authentik](https://github.com/goauthentik/authentik)** - The authentication glue you need (Identity Provider and SSO)
 

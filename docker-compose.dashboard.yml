@@ -60,6 +60,9 @@ services:
       HOMEPAGE_VAR_ADGUARD_PASS: ${ADGUARD_PASSWORD}
       HOMEPAGE_VAR_GRAFANA_USER: ${GRAFANA_USERNAME:-admin}
       HOMEPAGE_VAR_GRAFANA_PASS: ${GRAFANA_PASSWORD}
+      # Home Assistant
+      HOMEPAGE_VAR_HOMEASSISTANT_URL: ${HOMEASSISTANT_URL:-http://homeassistant:8123}
+      HOMEPAGE_VAR_HOMEASSISTANT_TOKEN: ${HOMEASSISTANT_TOKEN}
       # Calendar
       HOMEPAGE_VAR_GCAL_ICAL_URL: ${GOOGLE_CALENDAR_ICAL_URL}
       # Transport Stops (used in widget URL templates in services.yaml)

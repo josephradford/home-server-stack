@@ -121,6 +121,59 @@ example%40group.calendar.google.com
 
 **Privacy Note**: Anyone with the iCal URL can view your calendar. To reset, click "Reset" in calendar settings.
 
+### Home Assistant Integration
+
+Home Assistant provides:
+- **Family location tracking** via iOS/Android Companion App
+- **iCloud device tracking** (AirPods, iPads, etc.)
+- **Home automation** and location-based triggers
+- **Integration with n8n** for advanced workflows
+
+**Quick Start**:
+
+1. Deploy Home Assistant (included in core services):
+   ```bash
+   make start  # Starts all services including Home Assistant
+   ```
+
+2. Access Home Assistant at http://SERVER_IP:8123
+
+3. Complete onboarding wizard:
+   - Create admin account
+   - Set location (e.g., North Parramatta, NSW)
+   - Skip device discovery for now
+
+4. Generate API token for Homepage dashboard:
+   - Click your profile (bottom left)
+   - Scroll to "Long-Lived Access Tokens"
+   - Click "Create Token"
+   - Name it "Homepage Dashboard"
+   - Copy the token
+
+5. Add token to `.env`:
+   ```bash
+   HOMEASSISTANT_TOKEN=your_token_here
+   ```
+
+6. Restart Homepage to see the widget:
+   ```bash
+   docker restart homepage
+   ```
+
+**iOS Companion App**:
+
+Install "Home Assistant" from the App Store and configure for:
+- Location tracking (Always Allow)
+- Device tracking (AirPods, iPads)
+- Sensor data (battery, activity, etc.)
+
+Detailed instructions in **Ticket 09** and the [Home Assistant Setup Guide](HOME_ASSISTANT_SETUP.md).
+
+**Widget Features**:
+- Shows Home Assistant version
+- Displays entity states
+- Container resource monitoring (CPU, memory, network)
+
 ## Widget Refresh Intervals
 
 Configured in `config/homepage/services-template.yaml`:

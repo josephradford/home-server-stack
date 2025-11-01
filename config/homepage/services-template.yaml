@@ -109,6 +109,28 @@
         href: https://transportnsw.info/
         description: View all services
 
+# Family & Location - Location tracking and automation
+- Family & Location:
+    - Home Assistant:
+        icon: home-assistant.png
+        href: http://{{HOMEPAGE_VAR_SERVER_IP}}:8123
+        description: Location & Automation Hub
+        widget:
+          type: homeassistant
+          url: {{HOMEPAGE_VAR_HOMEASSISTANT_URL}}
+          key: {{HOMEPAGE_VAR_HOMEASSISTANT_TOKEN}}
+        container: homeassistant
+        server: my-docker
+        showStats: true
+
+    - Family Map:
+        icon: mdi-map-marker-multiple
+        href: http://{{HOMEPAGE_VAR_SERVER_IP}}:8123/lovelace/map
+        description: View all locations
+
+    # Person entities will be added after iOS app setup
+    # See Ticket 09 for iOS Companion App configuration
+
 # Core Services - Primary user-facing services that "do stuff"
 - Services:
   - Core Services:
