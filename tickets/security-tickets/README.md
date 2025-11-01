@@ -22,24 +22,24 @@ This directory contains security improvement tickets for the Home Server Stack p
 **Establish VPN as primary security boundary**
 
 1. ✅ [Fix Privileged Container (cAdvisor)](01-fix-privileged-cadvisor.md) - 2-3 hours
-2. ✅ [Implement Secret Scanning Pre-Commit Hooks](02-secret-scanning-pre-commit-hooks.md) - 2-3 hours
+2. ✅ [Implement Secret Scanning Pre-Commit Hooks](archived/02-secret-scanning-pre-commit-hooks.md) - 2-3 hours
 3. ✅ [Pin All Docker Image Versions](03-pin-docker-image-versions.md) - 2-4 hours
-4. **🆕 [WireGuard VPN Hardening](17-wireguard-hardening.md) - 3-4 hours** ⭐ **HIGHEST PRIORITY**
+4. **⬜ [WireGuard VPN Hardening](17-wireguard-hardening.md) - 1-2 hours** (70% complete - monitoring and fail2ban remaining)
 
-**Total Phase 1**: 9-13 hours
+**Total Phase 1**: 7-11 hours (reduced from 9-13 hours)
 
 ### Phase 2: Week 2-3 (High Priority - Hybrid Exposure)
 **Configure selective exposure for n8n webhooks**
 
 5. ⬜ [Implement Network Segmentation](05-network-segmentation.md) - 3-4 hours
    - *Updated for VPN-first hybrid model*
-6. ⬜ [n8n Path-Based Access Control (Reverse Proxy)](06-reverse-proxy-rate-limiting.md) - 2-3 hours
-   - *Simplified for n8n-only; webhooks public, UI requires VPN*
-7. ⬜ [Let's Encrypt for n8n Webhooks](04-tls-certificate-monitoring.md) - 2-3 hours
-   - *Focused on n8n only; VPN services use self-signed certs*
+6. ✅ [Reverse Proxy & Rate Limiting](archived/06-reverse-proxy-rate-limiting.md) - **COMPLETE**
+   - *Traefik fully configured with admin-secure and webhook-secure middlewares*
+7. ⬜ [Add Certificate Expiry Monitoring](04-tls-certificate-monitoring.md) - 1-2 hours
+   - *Let's Encrypt already deployed - only monitoring needed*
 8. ⬜ [Add Image Vulnerability Scanning to CI/CD](07-image-vulnerability-scanning.md) - 3-4 hours
 
-**Total Phase 2**: 10-14 hours
+**Total Phase 2**: 7-10 hours (reduced from 10-14 hours)
 
 ### Phase 3: Month 2 (Medium Priority Hardening)
 **Operational excellence and defense in depth**
@@ -65,8 +65,13 @@ This directory contains security improvement tickets for the Home Server Stack p
 
 ## Total Estimated Time
 
-**Critical Path (Phases 1-3)**: 33-46 hours
-**With Optional Enhancements (Phase 4)**: 52-73 hours
+**Critical Path (Phases 1-3)**: 28-40 hours (reduced from 33-46 hours)
+**With Optional Enhancements (Phase 4)**: 47-67 hours (reduced from 52-73 hours)
+
+**Reductions:**
+- Ticket #06 (Reverse Proxy) already complete: -2-3 hours
+- Ticket #04 (Certificate Monitoring) simplified: -1 hour
+- Ticket #17 (WireGuard) 70% complete: -2 hours
 
 **VPN-First Benefits:**
 - 🎯 Reduced implementation time (removed full reverse proxy, simplified certs)
@@ -82,28 +87,28 @@ This directory contains security improvement tickets for the Home Server Stack p
 
 ## Security Impact Summary (VPN-First Model)
 
-| Ticket | Security Impact | Risk Reduction | Priority |
-|--------|----------------|----------------|----------|
-| #17 🆕 | **WireGuard VPN - Primary security boundary** | **90% attack surface reduction** | ⭐ Critical |
-| #01 | Remove privileged container access | 95% container escape prevention | Critical |
-| #02 | Prevent secret leakage | 90% reduction in credential exposure | Critical |
-| #03 | Prevent supply chain attacks | 80% reduction in supply chain risk | Critical |
-| #05 | Network isolation (VPN-aware) | 60% reduction in lateral movement | High |
-| #06 | n8n webhook path control | 85% reduction in n8n attack surface | High |
-| #04 | Let's Encrypt for n8n webhooks | 100% webhook cert validation | High |
-| #07 | Block vulnerable images | 80% reduction in known CVEs | High |
-| #09 | Security event visibility | 50% faster incident detection | Medium |
-| #10 | Data protection & recovery | 90% reduction in data loss risk | Medium |
-| #11 | Resource protection | 40% reduction in DoS risk | Medium |
-| #12 | Faster incident response | 60% faster response time | Medium |
-| #08 | SSO/MFA (Optional) | 20% additional defense-in-depth | Optional |
-| #13-16 | Process improvements | Ongoing risk reduction | Optional |
+| Ticket | Security Impact | Risk Reduction | Priority | Status |
+|--------|----------------|----------------|----------|--------|
+| #17 🆕 | **WireGuard VPN - Primary security boundary** | **90% attack surface reduction** | ⭐ Critical | 70% Complete |
+| #01 | Remove privileged container access | 95% container escape prevention | Critical | ✅ Complete |
+| #02 | Prevent secret leakage | 90% reduction in credential exposure | Critical | ✅ Complete |
+| #03 | Prevent supply chain attacks | 80% reduction in supply chain risk | Critical | ✅ Complete |
+| #05 | Network isolation (VPN-aware) | 60% reduction in lateral movement | High | Pending |
+| #06 | Traefik reverse proxy with rate limiting | 85% protection for all services | High | ✅ Complete |
+| #04 | Certificate expiry monitoring | 95% cert-related outage prevention | High | Pending (simplified) |
+| #07 | Block vulnerable images | 80% reduction in known CVEs | High | Pending |
+| #09 | Security event visibility | 50% faster incident detection | Medium | Pending |
+| #10 | Data protection & recovery | 90% reduction in data loss risk | Medium | Pending |
+| #11 | Resource protection | 40% reduction in DoS risk | Medium | Pending |
+| #12 | Faster incident response | 60% faster response time | Medium | Pending |
+| #08 | SSO/MFA (Optional) | 20% additional defense-in-depth | Optional | Pending |
+| #13-16 | Process improvements | Ongoing risk reduction | Optional | Pending |
 
 **Key Changes:**
-- **#17 (WireGuard)**: Now the most critical ticket - provides 90% of security value
-- **#06 (Reverse Proxy)**: Simplified to n8n-only path-based routing
-- **#04 (TLS)**: Focused on n8n webhooks only; VPN services use self-signed
-- **#08 (Auth/MFA)**: Downgraded to optional - VPN provides primary auth
+- **#17 (WireGuard)**: Most critical ticket - provides 90% of security value (70% done)
+- **#06 (Reverse Proxy)**: ✅ **COMPLETE** - Traefik with admin-secure and webhook-secure middlewares fully deployed
+- **#04 (TLS Monitoring)**: Simplified - Let's Encrypt deployed, only monitoring remains
+- **#08 (Auth/MFA)**: Optional - VPN provides primary auth
 
 ## Quick Start (VPN-First)
 
