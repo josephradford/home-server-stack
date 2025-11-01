@@ -1,134 +1,98 @@
 # WireGuard VPN Hardening and Security
 
 ## Priority: 1 (Critical)
-## Estimated Time: 3-4 hours
+## Estimated Time: 1-2 hours (reduced from 3-4 hours - 70% complete)
 ## Phase: Week 1 - Critical Security Foundation
 
+> **📋 Current State:**
+> - ✅ Split tunneling **already configured** (192.168.1.0/24, 10.13.13.0/24)
+> - ✅ Peer management script **already exists** (`scripts/wireguard-peer-management.sh`)
+> - ✅ Routing test script **already exists** (`scripts/test-wireguard-routing.sh`)
+> - ✅ Security documentation **already exists** (`docs/WIREGUARD_SECURITY.md`)
+> - ❌ **Missing:** Fail2ban jail for WireGuard
+> - ❌ **Missing:** Prometheus monitoring and alerts for VPN
+
 ## Description
-Harden the WireGuard VPN as the primary security boundary for the home server stack. Since WireGuard is the only publicly exposed service (besides n8n webhooks), it becomes the critical authentication and access control layer. This ticket implements security best practices, monitoring, and fail-safes for VPN access.
+Harden the WireGuard VPN as the primary security boundary for the home server stack. Since WireGuard is the only publicly exposed service (besides n8n webhooks), it becomes the critical authentication and access control layer. This ticket completes the remaining monitoring and intrusion detection for VPN access.
+
+**Note:** Most hardening is already implemented. This ticket focuses on adding fail2ban protection and Prometheus monitoring for the existing WireGuard setup.
 
 ## Acceptance Criteria
-- [ ] WireGuard configuration hardened with minimal ALLOWEDIPS
-- [ ] Strong peer key management and rotation policy
-- [ ] Fail2ban configured for VPN port scanning/brute force
-- [ ] VPN connection monitoring and alerting
-- [ ] Peer management documentation
-- [ ] Emergency access procedure documented
-- [ ] DNS routing through VPN tested
-- [ ] IP forwarding and routing rules validated
-- [ ] Regular peer key rotation schedule established
+- [x] WireGuard configuration hardened with minimal ALLOWEDIPS ✅ **DONE**
+- [x] Strong peer key management and rotation policy ✅ **DONE** (`scripts/wireguard-peer-management.sh`)
+- [ ] Fail2ban configured for VPN port scanning/brute force ❌ **TODO**
+- [ ] VPN connection monitoring and alerting ❌ **TODO**
+- [x] Peer management documentation ✅ **DONE** (`docs/WIREGUARD_SECURITY.md`)
+- [x] Emergency access procedure documented ✅ **DONE** (`docs/WIREGUARD_SECURITY.md`)
+- [x] DNS routing through VPN tested ✅ **DONE** (`scripts/test-wireguard-routing.sh`)
+- [x] IP forwarding and routing rules validated ✅ **DONE** (`scripts/test-wireguard-routing.sh`)
+- [x] Regular peer key rotation schedule established ✅ **DONE** (documented in security guide)
 
 ## Technical Implementation Details
 
 ### Files to Create/Modify
-1. `docker-compose.yml` - Update WireGuard security settings
-2. `.env.example` - Update WireGuard configuration variables
-3. `scripts/wireguard-peer-management.sh` - Peer management script (new file)
-4. `monitoring/prometheus/alert_rules.yml` - Add VPN monitoring alerts
-5. `fail2ban/wireguard.conf` - Fail2ban configuration (new file)
-6. `docs/WIREGUARD_SECURITY.md` - VPN security documentation (new file)
+1. ~~`docker-compose.yml`~~ - ✅ **DONE** - WireGuard security settings already hardened
+2. ~~`.env.example`~~ - ✅ **DONE** - WireGuard configuration variables documented
+3. ~~`scripts/wireguard-peer-management.sh`~~ - ✅ **DONE** - Peer management script exists
+4. `monitoring/prometheus/alert_rules.yml` - ❌ **TODO** - Add VPN monitoring alerts
+5. `config/fail2ban/filter.d/wireguard.conf` - ❌ **TODO** - Fail2ban filter configuration
+6. `config/fail2ban/jail.local` - ❌ **TODO** - Add WireGuard jail
+7. ~~`docs/WIREGUARD_SECURITY.md`~~ - ✅ **DONE** - VPN security documentation exists
 
-### Current Configuration Issues
+### ✅ Already Implemented (Reference Only - DO NOT MODIFY)
 
-**docker-compose.yml:119-120**
+#### WireGuard Configuration (docker-compose.network.yml:28-31)
 ```yaml
-# ⚠️ SECURITY ISSUE: Routes ALL traffic through VPN
-- INTERNAL_SUBNET=${WIREGUARD_SUBNET:-10.13.13.0}
-- ALLOWEDIPS=${WIREGUARD_ALLOWEDIPS:-0.0.0.0/0}
+# ✅ SECURE: Split tunneling configured
+- INTERNAL_SUBNET=${WIREGUARD_SUBNET:-10.13.13.0/24}
+- ALLOWEDIPS=${WIREGUARD_ALLOWEDIPS:-192.168.1.0/24,10.13.13.0/24}
 ```
 
-This allows full tunneling and routes all client traffic through the VPN, which:
-- Increases bandwidth usage unnecessarily
-- Creates privacy implications for client traffic
-- Makes the server a potential abuse vector
+**Benefits:**
+- ✅ Only routes home network traffic through VPN
+- ✅ Prevents full tunneling bandwidth abuse
+- ✅ Reduces privacy implications for client traffic
 
-### Step 1: Harden WireGuard Configuration
+#### Peer Management (`scripts/wireguard-peer-management.sh`)
+Already implemented with commands:
+- `list` - List all peers and their status
+- `qr <peer_name>` - Show QR code for peer configuration
+- `add <peer_name>` - Add a new peer
+- `remove <peer_name>` - Remove a peer
+- `rotate` - Rotate all peer keys
+- `check` - Run security checks
 
-**Update docker-compose.yml:**
-```yaml
-wireguard:
-  image: lscr.io/linuxserver/wireguard:v1.0.20210914@sha256:REPLACE_WITH_ACTUAL_DIGEST
-  container_name: wireguard
-  restart: unless-stopped
-  cap_add:
-    - NET_ADMIN
-    # Remove SYS_MODULE if kernel module already loaded
-  cap_drop:
-    - ALL
-  security_opt:
-    - no-new-privileges:true
-  read_only: true  # Make filesystem read-only
-  tmpfs:
-    - /tmp
-    - /run
-  environment:
-    - PUID=1000
-    - PGID=1000
-    - TZ=${TIMEZONE}
-    - SERVERURL=${WIREGUARD_SERVERURL}
-    - SERVERPORT=${WIREGUARD_PORT:-51820}
-    - PEERS=${WIREGUARD_PEERS:-5}
-    - PEERDNS=${SERVER_IP}
-    # CRITICAL: Only route home network traffic through VPN
-    - INTERNAL_SUBNET=${WIREGUARD_SUBNET:-10.13.13.0/24}
-    - ALLOWEDIPS=${WIREGUARD_ALLOWEDIPS:-192.168.1.0/24,10.13.13.0/24}
-    - LOG_CONFS=${WIREGUARD_LOG_CONFS:-true}
-    - PERSISTENTKEEPALIVE_PEERS=${WIREGUARD_KEEPALIVE:-25}
-  ports:
-    - "${WIREGUARD_PORT:-51820}:51820/udp"
-    - "${SERVER_IP}:51821:51821/tcp"  # Admin UI - local only
-  volumes:
-    - ./data/wireguard:/config
-    - /lib/modules:/lib/modules:ro
-  sysctls:
-    - net.ipv4.conf.all.src_valid_mark=1
-    - net.ipv4.ip_forward=1
-  networks:
-    - frontend
-    - backend
-    - monitoring
-  healthcheck:
-    test: ["CMD", "wg", "show"]
-    interval: 30s
-    timeout: 10s
-    retries: 3
-  labels:
-    # Prometheus metrics from container logs
-    - "prometheus.io/scrape=true"
-    - "prometheus.io/port=51821"
-```
+#### Security Documentation (`docs/WIREGUARD_SECURITY.md`)
+Already documented:
+- VPN-first security architecture
+- Peer management procedures
+- Emergency access procedures
+- Security checklist
+- Best practices
 
-**Update .env.example:**
-```bash
-# WireGuard VPN Configuration
-WIREGUARD_SERVERURL=vpn.yourdomain.com
-WIREGUARD_PORT=51820
-WIREGUARD_PEERS=5
-WIREGUARD_SUBNET=10.13.13.0/24
-# CRITICAL: Only route home network and VPN subnet
-# DO NOT use 0.0.0.0/0 unless you want full tunneling
-WIREGUARD_ALLOWEDIPS=192.168.1.0/24,10.13.13.0/24
-WIREGUARD_KEEPALIVE=25
-WIREGUARD_LOG_CONFS=true
-```
+### ❌ Remaining Work
 
-### Step 2: Implement Fail2ban for VPN Protection
+### Step 1: Add WireGuard Fail2ban Protection
 
-**Create fail2ban/jail.d/wireguard.conf:**
+**Note:** Fail2ban container already exists (`docker-compose.network.yml`), we just need to add WireGuard-specific configuration.
+
+**Update `config/fail2ban/jail.local`** - Add WireGuard jail:
 ```ini
+# ... existing jails (traefik-auth, traefik-webhook, traefik-scanner) ...
+
 [wireguard]
 enabled = true
 port = 51820
 protocol = udp
 filter = wireguard
 logpath = /var/log/syslog
-maxretry = 3
-findtime = 600
-bantime = 3600
+maxretry = 5
+findtime = 10m
+bantime = 1h
 action = iptables-allports[name=wireguard, protocol=udp]
 ```
 
-**Create fail2ban/filter.d/wireguard.conf:**
+**Create `config/fail2ban/filter.d/wireguard.conf`:**
 ```ini
 [Definition]
 # Fail2ban filter for WireGuard
@@ -140,223 +104,14 @@ failregex = ^.*wireguard.*: Invalid handshake initiation from <HOST>.*$
 ignoreregex =
 ```
 
-**Add fail2ban to docker-compose.yml:**
-```yaml
-services:
-  fail2ban:
-    image: crazymax/fail2ban:latest@sha256:REPLACE_WITH_ACTUAL_DIGEST
-    container_name: fail2ban
-    restart: unless-stopped
-    network_mode: "host"
-    cap_add:
-      - NET_ADMIN
-      - NET_RAW
-    volumes:
-      - ./fail2ban:/data
-      - /var/log:/var/log:ro
-    environment:
-      - TZ=${TIMEZONE}
-      - F2B_LOG_LEVEL=INFO
-      - F2B_DB_PURGE_AGE=30d
-```
-
-### Step 3: Peer Management and Key Rotation
-
-**Create scripts/wireguard-peer-management.sh:**
+**Restart fail2ban** to apply changes:
 ```bash
-#!/bin/bash
-# WireGuard Peer Management Script
-
-set -e
-
-WIREGUARD_CONFIG_DIR="./data/wireguard"
-ACTION="${1:-list}"
-PEER_NAME="$2"
-
-function list_peers() {
-    echo "📋 Current WireGuard Peers:"
-    docker exec wireguard wg show all
-    echo ""
-    echo "📁 Peer Configuration Files:"
-    ls -lh "$WIREGUARD_CONFIG_DIR/peer_"* 2>/dev/null || echo "No peer configs found"
-}
-
-function show_peer_qr() {
-    if [ -z "$PEER_NAME" ]; then
-        echo "❌ Error: Peer name required"
-        echo "Usage: $0 qr <peer_name>"
-        exit 1
-    fi
-
-    echo "📱 QR Code for peer: $PEER_NAME"
-    docker exec wireguard /app/show-peer "$PEER_NAME"
-}
-
-function add_peer() {
-    if [ -z "$PEER_NAME" ]; then
-        echo "❌ Error: Peer name required"
-        echo "Usage: $0 add <peer_name>"
-        exit 1
-    fi
-
-    echo "➕ Adding new peer: $PEER_NAME"
-
-    # Regenerate config with new peer count
-    CURRENT_PEERS=$(docker exec wireguard wg show wg0 peers | wc -l)
-    NEW_PEER_COUNT=$((CURRENT_PEERS + 1))
-
-    docker stop wireguard
-    docker rm wireguard
-
-    # Update PEERS environment variable and restart
-    echo "🔄 Restarting WireGuard with $NEW_PEER_COUNT peers..."
-    # User should update .env and restart manually
-    echo "⚠️  Update WIREGUARD_PEERS=$NEW_PEER_COUNT in .env and run:"
-    echo "   docker-compose up -d wireguard"
-}
-
-function remove_peer() {
-    if [ -z "$PEER_NAME" ]; then
-        echo "❌ Error: Peer name required"
-        echo "Usage: $0 remove <peer_name>"
-        exit 1
-    fi
-
-    echo "🗑️  Removing peer: $PEER_NAME"
-    echo "⚠️  WARNING: This will disconnect the peer immediately!"
-    read -p "Are you sure? (yes/no): " confirm
-
-    if [ "$confirm" != "yes" ]; then
-        echo "Cancelled."
-        exit 0
-    fi
-
-    # Remove peer configuration
-    rm -f "$WIREGUARD_CONFIG_DIR/peer_$PEER_NAME"*
-
-    echo "✅ Peer $PEER_NAME removed. Restart WireGuard to apply:"
-    echo "   docker-compose restart wireguard"
-}
-
-function rotate_keys() {
-    echo "🔑 WireGuard Key Rotation"
-    echo "⚠️  WARNING: This will regenerate ALL peer keys and QR codes!"
-    echo "⚠️  All clients must reconfigure with new keys!"
-    read -p "Are you sure? (yes/no): " confirm
-
-    if [ "$confirm" != "yes" ]; then
-        echo "Cancelled."
-        exit 0
-    fi
-
-    # Backup current config
-    BACKUP_DIR="./backups/wireguard-$(date +%Y%m%d-%H%M%S)"
-    mkdir -p "$BACKUP_DIR"
-    cp -r "$WIREGUARD_CONFIG_DIR"/* "$BACKUP_DIR/"
-
-    echo "💾 Backup created: $BACKUP_DIR"
-
-    # Remove and recreate WireGuard
-    docker stop wireguard
-    docker rm wireguard
-    rm -rf "$WIREGUARD_CONFIG_DIR"/*
-
-    echo "🔄 Recreating WireGuard with new keys..."
-    docker-compose up -d wireguard
-
-    echo "✅ Key rotation complete!"
-    echo "📋 New peer configurations available in: $WIREGUARD_CONFIG_DIR"
-}
-
-function check_security() {
-    echo "🔒 WireGuard Security Check"
-    echo ""
-
-    # Check if 0.0.0.0/0 is configured (bad)
-    if docker exec wireguard cat /config/wg0.conf | grep -q "0.0.0.0/0"; then
-        echo "⚠️  WARNING: Full tunneling (0.0.0.0/0) detected!"
-        echo "   This routes ALL client traffic through VPN"
-        echo "   Recommendation: Use split tunneling (192.168.1.0/24,10.13.13.0/24)"
-    else
-        echo "✅ Split tunneling configured"
-    fi
-
-    # Check peer count
-    PEER_COUNT=$(docker exec wireguard wg show wg0 peers | wc -l)
-    echo "📊 Active peers: $PEER_COUNT"
-
-    # Check port exposure
-    if netstat -tuln | grep -q ":51820"; then
-        echo "✅ WireGuard port 51820/udp is listening"
-    else
-        echo "❌ WireGuard port not listening!"
-    fi
-
-    # Check firewall
-    if command -v ufw &> /dev/null; then
-        if ufw status | grep -q "51820/udp"; then
-            echo "✅ UFW firewall rule configured"
-        else
-            echo "⚠️  No UFW rule for WireGuard port"
-        fi
-    fi
-
-    echo ""
-    echo "🔐 Security Recommendations:"
-    echo "   - Rotate keys every 90 days"
-    echo "   - Limit peer count to necessary devices"
-    echo "   - Monitor connection logs regularly"
-    echo "   - Use strong DNS filtering (AdGuard)"
-}
-
-case "$ACTION" in
-    list)
-        list_peers
-        ;;
-    qr)
-        show_peer_qr
-        ;;
-    add)
-        add_peer
-        ;;
-    remove)
-        remove_peer
-        ;;
-    rotate)
-        rotate_keys
-        ;;
-    check)
-        check_security
-        ;;
-    *)
-        echo "WireGuard Peer Management"
-        echo ""
-        echo "Usage: $0 <command> [peer_name]"
-        echo ""
-        echo "Commands:"
-        echo "  list              List all peers and their status"
-        echo "  qr <peer_name>    Show QR code for peer configuration"
-        echo "  add <peer_name>   Add a new peer"
-        echo "  remove <peer_name> Remove a peer"
-        echo "  rotate            Rotate all peer keys (WARNING: disconnects all)"
-        echo "  check             Run security checks"
-        echo ""
-        echo "Examples:"
-        echo "  $0 list"
-        echo "  $0 qr phone"
-        echo "  $0 add laptop"
-        echo "  $0 remove old-device"
-        exit 1
-        ;;
-esac
+docker compose -f docker-compose.yml -f docker-compose.network.yml restart fail2ban
 ```
 
-Make executable:
-```bash
-chmod +x scripts/wireguard-peer-management.sh
-```
+### Step 2: Add VPN Monitoring to Prometheus
 
-### Step 4: Add VPN Monitoring to Prometheus
+**Note:** WireGuard doesn't natively export Prometheus metrics. We'll monitor container health and create alerts based on service availability.
 
 **Update monitoring/prometheus/prometheus.yml:**
 ```yaml
@@ -422,228 +177,43 @@ groups:
           description: "{{ $value }} IPs have been banned for attacking WireGuard."
 ```
 
-### Step 5: Network Routing Validation
-
-**Create scripts/test-wireguard-routing.sh:**
-```bash
-#!/bin/bash
-# Test WireGuard routing and connectivity
-
-set -e
-
-echo "🧪 WireGuard Routing and Security Test"
-echo ""
-
-# Test 1: Check WireGuard interface
-echo "1️⃣  Checking WireGuard interface..."
-if docker exec wireguard wg show wg0 &> /dev/null; then
-    echo "   ✅ wg0 interface is up"
-else
-    echo "   ❌ wg0 interface not found!"
-    exit 1
-fi
-
-# Test 2: Check IP forwarding
-echo "2️⃣  Checking IP forwarding..."
-if docker exec wireguard sysctl net.ipv4.ip_forward | grep -q "= 1"; then
-    echo "   ✅ IP forwarding enabled"
-else
-    echo "   ⚠️  IP forwarding disabled"
-fi
-
-# Test 3: Check allowed IPs configuration
-echo "3️⃣  Checking AllowedIPs configuration..."
-ALLOWED_IPS=$(docker exec wireguard cat /config/peer1/peer1.conf | grep AllowedIPs | cut -d'=' -f2 | xargs)
-if [[ "$ALLOWED_IPS" == *"0.0.0.0/0"* ]]; then
-    echo "   ⚠️  Full tunneling detected: $ALLOWED_IPS"
-    echo "   Recommendation: Use split tunneling for better security"
-else
-    echo "   ✅ Split tunneling configured: $ALLOWED_IPS"
-fi
-
-# Test 4: Check DNS routing
-echo "4️⃣  Checking DNS configuration..."
-PEER_DNS=$(docker exec wireguard cat /config/peer1/peer1.conf | grep DNS | cut -d'=' -f2 | xargs)
-echo "   DNS: $PEER_DNS"
-if [ -n "$PEER_DNS" ]; then
-    echo "   ✅ DNS routing configured (AdGuard)"
-else
-    echo "   ⚠️  No DNS configured"
-fi
-
-# Test 5: Check firewall rules
-echo "5️⃣  Checking firewall rules..."
-if command -v ufw &> /dev/null; then
-    if sudo ufw status | grep -q "51820/udp"; then
-        echo "   ✅ UFW rule exists for WireGuard"
-    else
-        echo "   ⚠️  No UFW rule found. Add with: sudo ufw allow 51820/udp"
-    fi
-fi
-
-# Test 6: Check peer connectivity
-echo "6️⃣  Checking peer handshakes..."
-PEER_COUNT=$(docker exec wireguard wg show wg0 peers | wc -l)
-ACTIVE_PEERS=$(docker exec wireguard wg show wg0 latest-handshakes | awk '$2 > 0' | wc -l)
-echo "   Total peers: $PEER_COUNT"
-echo "   Active peers: $ACTIVE_PEERS"
-
-echo ""
-echo "✅ WireGuard routing test complete!"
-```
-
-### Step 6: Security Documentation
-
-**Create docs/WIREGUARD_SECURITY.md:**
-```markdown
-# WireGuard VPN Security Guide
-
-## Overview
-WireGuard is the primary security boundary for the home server stack. All administrative access requires VPN connection.
-
-## Security Architecture
-
-### What's Behind VPN
-- ✅ Grafana UI
-- ✅ Prometheus UI
-- ✅ AdGuard Admin
-- ✅ n8n UI (admin interface)
-- ✅ Ollama API
-
-### What's Publicly Exposed
-- ⚠️ n8n webhook endpoints (`/webhook/*` only)
-- ⚠️ WireGuard port 51820/udp
-
-## Peer Management
-
-### Adding a New Device
-```bash
-./scripts/wireguard-peer-management.sh add phone
-# Update .env with new peer count
-docker-compose up -d wireguard
-./scripts/wireguard-peer-management.sh qr phone
-```
-
-### Removing a Device
-```bash
-./scripts/wireguard-peer-management.sh remove old-laptop
-docker-compose restart wireguard
-```
-
-### Key Rotation (Every 90 Days)
-```bash
-./scripts/wireguard-peer-management.sh rotate
-# Distribute new configs to all users
-```
-
-## Emergency Access
-
-### If VPN Fails
-1. **Physical access** - Connect directly to server
-2. **Temporary port opening**:
-   ```bash
-   sudo ufw allow from YOUR_IP to any port 22
-   ssh user@server
-   # Diagnose and fix VPN
-   sudo ufw delete allow from YOUR_IP to any port 22
-   ```
-
-### If Locked Out
-1. Access via local network
-2. Check WireGuard logs: `docker logs wireguard`
-3. Verify firewall: `sudo ufw status`
-4. Regenerate peer config if needed
-
-## Security Checklist
-
-- [ ] Split tunneling configured (not 0.0.0.0/0)
-- [ ] Fail2ban active for VPN port
-- [ ] Maximum 10 peer configurations
-- [ ] Key rotation scheduled (quarterly)
-- [ ] Monitoring alerts configured
-- [ ] Emergency access procedure tested
-- [ ] DNS routing through AdGuard
-- [ ] Firewall rules verified
-
-## Monitoring
-
-### Check VPN Status
-```bash
-./scripts/wireguard-peer-management.sh list
-```
-
-### View Connection Logs
-```bash
-docker logs wireguard --tail 100 -f
-```
-
-### Prometheus Alerts
-- VPN service down
-- Excessive connection attempts
-- No active peers for extended time
-
-## Best Practices
-
-1. **Limit peers** - Only create necessary peer configs
-2. **Name peers clearly** - Use descriptive names (phone, laptop, etc.)
-3. **Rotate keys** - Every 90 days minimum
-4. **Monitor connections** - Review logs weekly
-5. **Test emergency access** - Quarterly drill
-6. **Document changes** - Keep peer list updated
-7. **Use strong DNS** - Route through AdGuard for filtering
-
-## Troubleshooting
-
-### Can't connect to VPN
-- Check firewall allows 51820/udp
-- Verify server IP/domain is correct
-- Check WireGuard container is running
-- Review handshake logs
-
-### Connected but can't access services
-- Verify AllowedIPs includes home network
-- Check DNS is set to AdGuard IP
-- Test connectivity: `ping 192.168.1.100`
-- Verify service is running
-
-### Performance issues
-- Check persistent keepalive setting
-- Verify MTU settings
-- Monitor bandwidth usage
-- Consider reducing peer count
-```
+**Note:** These alerts assume WireGuard exports metrics. If metrics are not available, the alerts will not fire. Consider using a WireGuard exporter like `prometheus-wireguard-exporter` for detailed metrics.
 
 ### Testing Commands
+
 ```bash
-# Test WireGuard configuration
-docker-compose up -d wireguard
+# 1. Test fail2ban WireGuard jail configuration
+docker compose -f docker-compose.yml -f docker-compose.network.yml restart fail2ban
 
-# Verify security settings
-./scripts/wireguard-peer-management.sh check
+# Check fail2ban status
+docker exec fail2ban fail2ban-client status
 
-# Test routing
-./scripts/test-wireguard-routing.sh
-
-# Generate peer QR code
-./scripts/wireguard-peer-management.sh qr peer1
-
-# Test fail2ban
-docker-compose up -d fail2ban
+# Check WireGuard jail specifically
 docker exec fail2ban fail2ban-client status wireguard
 
-# Monitor VPN connections
+# View fail2ban logs
+docker logs fail2ban --tail 50 -f
+
+# 2. Test Prometheus monitoring (if WireGuard metrics are available)
+# Check if WireGuard is being scraped
+curl -s http://${SERVER_IP}:9090/api/v1/targets | jq '.data.activeTargets[] | select(.job=="wireguard")'
+
+# Test VPN alerts are loaded
+curl -s http://${SERVER_IP}:9090/api/v1/rules | jq '.data.groups[] | select(.name=="vpn_alerts")'
+
+# Check WireGuard service status
+curl http://${SERVER_IP}:9090/api/v1/query?query=up{job=\"wireguard\"}
+
+# 3. Verify existing features still work (already implemented)
+./scripts/wireguard-peer-management.sh check
+./scripts/test-wireguard-routing.sh
+
+# 4. Monitor VPN connections
 watch 'docker exec wireguard wg show'
 
-# Test from client device after connecting to VPN:
-# Should work (internal services):
-curl https://grafana.yourdomain.com
-curl http://192.168.1.100:9090  # Prometheus
-
-# Should work (public webhook):
-curl https://n8n.yourdomain.com/webhook/test
-
-# Check Prometheus metrics
-curl http://${SERVER_IP}:9090/api/v1/query?query=up{job=\"wireguard\"}
+# 5. Test from client device after connecting to VPN
+curl https://grafana.${DOMAIN}  # Should work
+curl https://n8n.${DOMAIN}     # Should work
 ```
 
 ## Success Metrics

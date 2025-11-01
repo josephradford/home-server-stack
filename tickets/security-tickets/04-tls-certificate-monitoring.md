@@ -1,85 +1,70 @@
-# Add TLS Certificate Monitoring and Let's Encrypt for n8n
+# Add TLS Certificate Expiry Monitoring
 
 ## Priority: 2 (High)
-## Estimated Time: 2-3 hours
+## Estimated Time: 1-2 hours
 ## Phase: Week 2 - Certificate Management
 
-> **🔒 VPN-First Strategy Note:**
-> In the VPN-first model, only n8n webhooks are publicly exposed and require valid CA-signed certificates (Let's Encrypt). All other services use self-signed certificates since they're only accessible via VPN, where certificate validation can be disabled or CA cert distributed to clients.
+> **📋 Current State:**
+> - ✅ Let's Encrypt wildcard certificates **already deployed** via certbot + Gandi DNS plugin
+> - ✅ Auto-renewal configured with post-renewal hooks
+> - ✅ Traefik file provider loading certificates from `/etc/traefik/`
+> - ❌ **Missing:** Certificate expiry monitoring and alerts
 
 ## Description
-Implement Let's Encrypt for n8n webhooks (required for external services like GitHub to trust the endpoint) and monitoring for certificate expiry. VPN-only services continue using self-signed certificates with local certificate monitoring.
+Add automated monitoring for SSL certificate expiration to prevent outages. The Let's Encrypt infrastructure is already fully implemented - this ticket focuses solely on adding observability via Prometheus blackbox exporter and Grafana dashboards.
 
 ## Acceptance Criteria
-- [ ] Let's Encrypt certificate for n8n domain with automatic renewal
-- [ ] Certificate expiry monitoring for n8n cert in Prometheus
-- [ ] Alerts configured for n8n certificate expiring within 30 days
-- [ ] Self-signed certificates upgraded to 4096-bit RSA for VPN-only services
-- [ ] Blackbox exporter monitoring n8n certificate validity
-- [ ] Certificate storage moved outside version control (.gitignore updated)
-- [ ] Documentation for n8n cert renewal and VPN service certs
-- [ ] TLS 1.2+ enforced on all services
+- [ ] Blackbox exporter deployed for TLS certificate probing
+- [ ] Prometheus configured to scrape certificate metrics
+- [ ] Alerts configured for certificates expiring within 30 days (warning)
+- [ ] Alerts configured for certificates expiring within 7 days (critical)
+- [ ] Grafana dashboard showing certificate expiry dates
+- [ ] TLS version monitoring (warn on TLS 1.0/1.1)
+- [ ] Certificate chain validation monitoring
 
 ## Technical Implementation Details
 
 ### Files to Create/Modify
-1. `docker-compose.yml` - Add Let's Encrypt certbot for n8n (integrated with nginx/traefik)
-2. `monitoring/prometheus/prometheus.yml` - Add blackbox exporter for n8n cert monitoring
-3. `monitoring/prometheus/alert_rules.yml` - Add n8n certificate expiry alerts
-4. `docker-compose.monitoring.yml` - Add blackbox exporter
-5. `ssl/generate-cert.sh` - Upgrade to 4096-bit RSA for VPN-only services
-6. `.env.example` - Add n8n domain and Let's Encrypt email
-7. `.gitignore` - Ensure certificates excluded
-8. `docs/CERTIFICATE_MANAGEMENT.md` - Certificate procedures (new file)
+1. `docker-compose.monitoring.yml` - Add blackbox exporter service
+2. `monitoring/blackbox/blackbox.yml` - Blackbox exporter configuration (new file)
+3. `monitoring/prometheus/prometheus.yml` - Add blackbox scrape configs
+4. `monitoring/prometheus/alert_rules.yml` - Add certificate expiry alerts
+5. `monitoring/grafana/dashboards/certificates.json` - Certificate dashboard (new file)
 
-### Current Issues
+### Current SSL Setup (Reference Only)
+**Already implemented - DO NOT modify:**
+- Certificates: `/etc/letsencrypt/live/${DOMAIN}/` (managed by certbot)
+- Traefik certs: `./data/traefik/certs/` (copies from Let's Encrypt)
+- Dynamic config: `./config/traefik/dynamic-certs.yml`
+- Auto-renewal: certbot snap timer + post-renewal hook at `/etc/letsencrypt/renewal-hooks/deploy/traefik-reload.sh`
 
-> **Note:** In VPN-first model, `insecure_skip_verify` for internal services is acceptable since they're not publicly exposed. The focus is on n8n which requires valid certs for external webhooks.
+### Step 1: Deploy Blackbox Exporter
 
-1. **Weak Certificate (VPN-only services)**:
-   ```bash
-   # ssl/generate-cert.sh:17
-   openssl genrsa -out "$KEY_FILE" 2048  # ⚠️ Upgrade to 4096-bit
-   ```
-
-2. **n8n Needs Valid Certificate**:
-   - Currently using self-signed cert
-   - External webhook providers (GitHub, etc.) will reject self-signed certs
-   - Need Let's Encrypt for public trust
-
-3. **No Expiry Monitoring**: n8n certificate expiry could break webhooks without warning
-
-4. **Acceptable for VPN-only services**:
-   ```yaml
-   # monitoring/prometheus/prometheus.yml:35-37
-   - job_name: 'grafana'
-     scheme: https
-     tls_config:
-       insecure_skip_verify: true  # ✅ OK - VPN-only service
-   ```
-
-### Step 1: Add Blackbox Exporter for Certificate Monitoring
-
-Update `docker-compose.monitoring.yml`:
+Add to `docker-compose.monitoring.yml`:
 ```yaml
 services:
   # ... existing services ...
 
   blackbox-exporter:
-    # Blackbox Exporter for TLS/SSL monitoring
-    # Version: v0.24.0 (update quarterly)
-    # Last updated: 2024-01-15
-    image: prom/blackbox-exporter:v0.24.0@sha256:REPLACE_WITH_ACTUAL_DIGEST
+    # Blackbox Exporter for certificate and endpoint monitoring
+    # Version pinning: Update quarterly, check for CVEs
+    image: prom/blackbox-exporter:v0.25.0
     container_name: blackbox-exporter
     restart: unless-stopped
     ports:
-      - "9115:9115"
+      - "${SERVER_IP}:9115:9115"
     volumes:
-      - ./monitoring/blackbox:/config
+      - ./monitoring/blackbox:/config:ro
     command:
       - '--config.file=/config/blackbox.yml'
     networks:
       - homeserver
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:9115/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
 ```
 
 ### Step 2: Create Blackbox Exporter Configuration
@@ -87,52 +72,66 @@ services:
 Create `monitoring/blackbox/blackbox.yml`:
 ```yaml
 modules:
-  http_2xx:
-    prober: http
-    timeout: 5s
-    http:
-      valid_status_codes: []
-      method: GET
-      preferred_ip_protocol: "ip4"
-
+  # TLS certificate validation (strict - for production monitoring)
   tls_connect:
     prober: tcp
-    timeout: 5s
+    timeout: 10s
     tcp:
       tls: true
       tls_config:
+        # Validate certificates (do not skip verification)
         insecure_skip_verify: false
 
-  http_post_2xx:
+  # HTTP/HTTPS endpoint check with certificate validation
+  https_2xx:
     prober: http
-    timeout: 5s
+    timeout: 10s
     http:
-      method: POST
-      valid_status_codes: [200, 201]
+      valid_http_versions: ["HTTP/1.1", "HTTP/2.0"]
+      valid_status_codes: [200, 401]  # 401 OK - service responding, just needs auth
+      method: GET
+      preferred_ip_protocol: "ip4"
+      follow_redirects: true
+      tls_config:
+        insecure_skip_verify: false
 
-  tcp_connect:
-    prober: tcp
-    timeout: 5s
-
+  # ICMP ping check (for general connectivity)
   icmp:
     prober: icmp
     timeout: 5s
+    icmp:
+      preferred_ip_protocol: "ip4"
 ```
 
-### Step 3: Update Prometheus Configuration
+### Step 3: Configure Prometheus Certificate Monitoring
 
 Update `monitoring/prometheus/prometheus.yml`:
 ```yaml
 scrape_configs:
   # ... existing scrape configs ...
 
-  - job_name: 'blackbox-tls'
+  # Blackbox exporter self-monitoring
+  - job_name: 'blackbox-exporter'
+    static_configs:
+      - targets: ['blackbox-exporter:9115']
+
+  # Certificate monitoring for all HTTPS services
+  - job_name: 'certificate-expiry'
     metrics_path: /probe
     params:
       module: [tls_connect]
     static_configs:
       - targets:
-          - n8n:5678
+          # Monitor all services with Let's Encrypt certificates
+          - adguard.${DOMAIN}:443
+          - n8n.${DOMAIN}:443
+          - grafana.${DOMAIN}:443
+          - prometheus.${DOMAIN}:443
+          - alerts.${DOMAIN}:443
+          - traefik.${DOMAIN}:443
+          - dashboard.${DOMAIN}:443
+        labels:
+          cert_type: letsencrypt
     relabel_configs:
       - source_labels: [__address__]
         target_label: __param_target
@@ -141,245 +140,133 @@ scrape_configs:
       - target_label: __address__
         replacement: blackbox-exporter:9115
 
-  - job_name: 'n8n'
+  # Endpoint health monitoring (bonus - checks if services respond)
+  - job_name: 'endpoint-health'
+    metrics_path: /probe
+    params:
+      module: [https_2xx]
     static_configs:
-      - targets: ['n8n:5678']
-    scheme: https
-    tls_config:
-      insecure_skip_verify: false  # ✅ SECURE (after proper CA setup)
-      ca_file: /ssl/ca.crt  # Add CA certificate
+      - targets:
+          - https://adguard.${DOMAIN}
+          - https://n8n.${DOMAIN}
+          - https://grafana.${DOMAIN}
+          - https://prometheus.${DOMAIN}
+          - https://alerts.${DOMAIN}
+          - https://traefik.${DOMAIN}
+          - https://dashboard.${DOMAIN}
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: blackbox-exporter:9115
 ```
+
+**Note:** Replace `${DOMAIN}` with your actual domain or use environment variable substitution in Prometheus.
 
 ### Step 4: Add Certificate Expiry Alerts
 
-Update `monitoring/prometheus/alert_rules.yml`:
+Add to `monitoring/prometheus/alert_rules.yml`:
 ```yaml
 groups:
   # ... existing alert groups ...
 
-  - name: certificate_alerts
+  - name: certificate-alerts
     rules:
+      # Warning: Certificate expiring within 30 days
       - alert: SSLCertificateExpiringSoon
-        expr: probe_ssl_earliest_cert_expiry - time() < 86400 * 30
+        expr: (probe_ssl_earliest_cert_expiry - time()) / 86400 < 30
         for: 1h
         labels:
           severity: warning
+          category: certificates
         annotations:
           summary: "SSL certificate expiring soon for {{ $labels.instance }}"
-          description: "SSL certificate for {{ $labels.instance }} expires in {{ $value | humanizeDuration }}. Renew immediately."
+          description: "Certificate for {{ $labels.instance }} expires in {{ printf \"%.0f\" $value }} days. Renewal should happen automatically, but verify certbot is working."
 
-      - alert: SSLCertificateExpiredOrExpiringSoon
-        expr: probe_ssl_earliest_cert_expiry - time() < 86400 * 7
+      # Critical: Certificate expiring within 7 days
+      - alert: SSLCertificateExpiringSoonCritical
+        expr: (probe_ssl_earliest_cert_expiry - time()) / 86400 < 7
         for: 10m
         labels:
           severity: critical
+          category: certificates
         annotations:
           summary: "SSL certificate expires within 7 days for {{ $labels.instance }}"
-          description: "SSL certificate for {{ $labels.instance }} expires in {{ $value | humanizeDuration }}. URGENT ACTION REQUIRED."
+          description: "Certificate for {{ $labels.instance }} expires in {{ printf \"%.0f\" $value }} days. URGENT: Check certbot renewal immediately!"
 
+      # Critical: Certificate already expired
       - alert: SSLCertificateExpired
         expr: probe_ssl_earliest_cert_expiry - time() <= 0
         for: 5m
         labels:
           severity: critical
+          category: certificates
         annotations:
           summary: "SSL certificate has EXPIRED for {{ $labels.instance }}"
-          description: "SSL certificate for {{ $labels.instance }} has expired. Service may be unavailable."
+          description: "Certificate for {{ $labels.instance }} has expired. Service may be unavailable. Run: sudo certbot renew --force-renewal"
 
+      # Warning: Using deprecated TLS version
       - alert: TLSVersionTooOld
         expr: probe_tls_version_info{version=~"TLS 1.0|TLS 1.1"} == 1
         for: 5m
         labels:
           severity: warning
+          category: certificates
         annotations:
-          summary: "TLS version too old on {{ $labels.instance }}"
-          description: "{{ $labels.instance }} is using {{ $labels.version }}, which is deprecated. Upgrade to TLS 1.2 or higher."
+          summary: "Deprecated TLS version on {{ $labels.instance }}"
+          description: "{{ $labels.instance }} is using {{ $labels.version }}, which is deprecated and insecure. Upgrade to TLS 1.2 or higher."
+
+      # Warning: Certificate probe failing (can't check expiry)
+      - alert: SSLCertificateProbeFailure
+        expr: probe_success{job="certificate-expiry"} == 0
+        for: 10m
+        labels:
+          severity: warning
+          category: certificates
+        annotations:
+          summary: "Cannot probe SSL certificate for {{ $labels.instance }}"
+          description: "Blackbox exporter cannot probe {{ $labels.instance }} certificate. Service may be down or certificate invalid."
+
+      # Info: Certificate will be renewed soon (Let's Encrypt renews at 30 days)
+      - alert: SSLCertificateRenewalDue
+        expr: (probe_ssl_earliest_cert_expiry - time()) / 86400 < 35 and (probe_ssl_earliest_cert_expiry - time()) / 86400 > 30
+        for: 6h
+        labels:
+          severity: info
+          category: certificates
+        annotations:
+          summary: "SSL certificate renewal due for {{ $labels.instance }}"
+          description: "Certificate expires in {{ printf \"%.0f\" $value }} days. Certbot should auto-renew within the next few days."
 ```
 
-### Step 5: Upgrade Certificate Generation Script
+### Step 5: Create Grafana Dashboard (Optional but Recommended)
 
-Update `ssl/generate-cert.sh`:
-```bash
-#!/bin/bash
+Create `monitoring/grafana/dashboards/certificates.json`:
 
-# SSL Certificate Generation Script for n8n
-# Generates strong 4096-bit RSA or ECDSA certificates
+This is a large JSON file. Key panels to include:
+1. **Certificate Expiry Timeline** - Shows days until expiry for all certs
+2. **Certificate Details Table** - Lists all certificates with issuer, expiry date, days remaining
+3. **TLS Version Distribution** - Pie chart showing TLS versions in use
+4. **Certificate Probe Success Rate** - Shows if monitoring is working
+5. **Alert Status** - Shows active certificate alerts
 
-set -e
+**Quick creation method:**
+1. Import dashboard ID 13230 from Grafana.com (Blackbox Exporter dashboard)
+2. Customize for your environment
+3. Export JSON and save to `monitoring/grafana/dashboards/certificates.json`
 
-DOMAIN=${1:-"your-domain"}
-DAYS=${2:-365}
-KEY_TYPE=${3:-"rsa"}  # Options: rsa, ecdsa
-KEY_FILE="server.key"
-CERT_FILE="server.crt"
-
-echo "Generating SSL certificate for domain: $DOMAIN"
-echo "Valid for $DAYS days"
-echo "Key type: $KEY_TYPE"
-
-# Generate private key based on type
-if [ "$KEY_TYPE" = "ecdsa" ]; then
-  echo "Generating ECDSA P-384 private key..."
-  openssl ecparam -genkey -name secp384r1 -out "$KEY_FILE"
-else
-  echo "Generating 4096-bit RSA private key..."
-  openssl genrsa -out "$KEY_FILE" 4096
-fi
-
-# Generate certificate signing request
-openssl req -new -key "$KEY_FILE" -out server.csr \
-  -subj "/C=US/ST=Development/L=Development/O=HomeServer/OU=IT/CN=$DOMAIN"
-
-# Generate self-signed certificate with proper extensions
-openssl x509 -req -days "$DAYS" -in server.csr -signkey "$KEY_FILE" \
-  -out "$CERT_FILE" -sha256 \
-  -extensions v3_req -extfile <(
-cat <<EOF
-[v3_req]
-basicConstraints = CA:FALSE
-keyUsage = critical, digitalSignature, keyEncipherment
-extendedKeyUsage = serverAuth, clientAuth
-subjectAltName = @alt_names
-
-[alt_names]
-DNS.1 = $DOMAIN
-DNS.2 = localhost
-DNS.3 = *.local
-IP.1 = 127.0.0.1
-IP.2 = 192.168.1.100
-EOF
-)
-
-# Clean up CSR file
-rm server.csr
-
-# Set appropriate permissions
-chmod 600 "$KEY_FILE"
-chmod 644 "$CERT_FILE"
-
-# Display certificate information
-echo ""
-echo "✅ SSL certificate generated successfully!"
-echo "Key file: $KEY_FILE"
-echo "Certificate file: $CERT_FILE"
-echo ""
-echo "Certificate details:"
-openssl x509 -in "$CERT_FILE" -noout -text | grep -A2 "Subject:"
-openssl x509 -in "$CERT_FILE" -noout -dates
-echo ""
-echo "To use with a different domain or ECDSA:"
-echo "./generate-cert.sh your-domain.ddns.net 730 ecdsa"
-```
-
-### Step 6: Option A - Let's Encrypt Integration (Recommended)
-
-Add to `docker-compose.yml`:
-```yaml
-services:
-  # ... existing services ...
-
-  certbot:
-    # Certbot for Let's Encrypt certificates
-    # Version: v2.8.0
-    # Last updated: 2024-01-15
-    image: certbot/certbot:v2.8.0@sha256:REPLACE_WITH_ACTUAL_DIGEST
-    container_name: certbot
-    restart: "no"
-    volumes:
-      - ./ssl/letsencrypt:/etc/letsencrypt
-      - ./ssl/letsencrypt-lib:/var/lib/letsencrypt
-      - ./ssl/webroot:/var/www/certbot
-    command: certonly --webroot --webroot-path=/var/www/certbot --email ${LETSENCRYPT_EMAIL} --agree-tos --no-eff-email -d ${N8N_DOMAIN}
-    depends_on:
-      - nginx
-
-  nginx:
-    # Nginx reverse proxy for ACME challenge
-    # Version: 1.25-alpine
-    # Last updated: 2024-01-15
-    image: nginx:1.25-alpine@sha256:REPLACE_WITH_ACTUAL_DIGEST
-    container_name: nginx
-    restart: unless-stopped
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./ssl/nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./ssl/webroot:/var/www/certbot:ro
-      - ./ssl/letsencrypt:/etc/letsencrypt:ro
-    networks:
-      - homeserver
-```
-
-Add to `.env.example`:
-```bash
-# Let's Encrypt Configuration
-LETSENCRYPT_EMAIL=admin@example.com
-N8N_DOMAIN=your-domain.ddns.net
-```
-
-### Step 7: Certificate Renewal Automation
-
-Create `scripts/renew-certificates.sh`:
-```bash
-#!/bin/bash
-# Automated certificate renewal script
-
-set -e
-
-echo "🔄 Starting certificate renewal process..."
-
-# Renew Let's Encrypt certificates
-docker compose run --rm certbot renew
-
-# Reload nginx to pick up new certificates
-docker compose exec nginx nginx -s reload
-
-# Check certificate expiry
-docker compose exec certbot certbot certificates
-
-echo "✅ Certificate renewal complete"
-```
-
-Add to crontab:
-```bash
-# Renew certificates weekly
-0 3 * * 1 cd /path/to/home-server-stack && ./scripts/renew-certificates.sh >> /var/log/cert-renewal.log 2>&1
-```
-
-### Testing Commands
-```bash
-# Test certificate generation
-cd ssl
-./generate-cert.sh test-domain.local 365 ecdsa
-openssl x509 -in server.crt -noout -text
-
-# Start blackbox exporter
-docker compose -f docker-compose.monitoring.yml up -d blackbox-exporter
-
-# Test certificate probe
-curl -s 'http://localhost:9115/probe?target=n8n:5678&module=tls_connect' | grep probe_ssl_earliest_cert_expiry
-
-# Check Prometheus targets
-curl -s http://localhost:9090/api/v1/targets | jq '.data.activeTargets[] | select(.job=="blackbox-tls")'
-
-# View certificate expiry in Prometheus
-curl -s 'http://localhost:9090/api/v1/query?query=probe_ssl_earliest_cert_expiry' | jq
-
-# Test Let's Encrypt (dry run)
-docker compose run --rm certbot certonly --webroot --webroot-path=/var/www/certbot --email test@example.com --agree-tos --dry-run -d test-domain.com
-
-# Verify TLS version
-openssl s_client -connect localhost:5678 -tls1_2 < /dev/null
-```
-
-### Grafana Dashboard Query Examples
+Alternatively, create panels manually with these queries:
 ```promql
-# Days until certificate expiry
+# Days until expiry
 (probe_ssl_earliest_cert_expiry - time()) / 86400
 
-# Certificate expiry timestamp
-probe_ssl_earliest_cert_expiry
+# Certificate not valid before
+probe_ssl_not_before
+
+# Certificate not valid after
+probe_ssl_not_after
 
 # TLS version
 probe_tls_version_info
@@ -388,64 +275,140 @@ probe_tls_version_info
 probe_ssl_issuer
 ```
 
+### Testing Commands
+
+```bash
+# 1. Start blackbox exporter
+docker compose -f docker-compose.yml -f docker-compose.monitoring.yml up -d blackbox-exporter
+
+# 2. Test certificate probe manually
+curl -s 'http://${SERVER_IP}:9115/probe?target=n8n.${DOMAIN}:443&module=tls_connect' | grep probe_ssl_earliest_cert_expiry
+
+# Expected output: probe_ssl_earliest_cert_expiry 1.7355552e+09 (Unix timestamp)
+
+# 3. Check blackbox exporter health
+curl -s http://${SERVER_IP}:9115/health
+# Expected: Healthy
+
+# 4. Reload Prometheus configuration
+docker compose -f docker-compose.monitoring.yml exec prometheus kill -HUP 1
+
+# Or restart Prometheus
+docker compose -f docker-compose.monitoring.yml restart prometheus
+
+# 5. Verify Prometheus targets
+# Open: http://${SERVER_IP}:9090/targets
+# Look for: certificate-expiry and endpoint-health jobs
+# Status should be: UP
+
+# 6. Test certificate expiry query in Prometheus
+# Open: http://${SERVER_IP}:9090/graph
+# Query: (probe_ssl_earliest_cert_expiry - time()) / 86400
+# Should show days until expiry for each cert
+
+# 7. Check certificate details
+curl -s 'http://${SERVER_IP}:9115/probe?target=n8n.${DOMAIN}:443&module=tls_connect' | grep probe_ssl
+
+# 8. Verify alerts are loading
+curl -s http://${SERVER_IP}:9090/api/v1/rules | jq '.data.groups[] | select(.name=="certificate-alerts")'
+
+# 9. Test alert would trigger (force expiry check)
+# Query: (probe_ssl_earliest_cert_expiry - time()) / 86400 < 30
+# If any certs expire in <30 days, alert should show as pending/firing
+
+# 10. Check Grafana dashboards (if created)
+# Open: http://${SERVER_IP}:3001/dashboards
+# Look for: Certificate Monitoring dashboard
+```
+
+### Useful PromQL Queries
+
+```promql
+# Show certificates expiring in next 30 days
+(probe_ssl_earliest_cert_expiry - time()) / 86400 < 30
+
+# Show certificates by days remaining (sorted)
+sort_desc((probe_ssl_earliest_cert_expiry - time()) / 86400)
+
+# Show certificate issuer
+probe_ssl_issuer
+
+# Show TLS versions in use
+probe_tls_version_info
+
+# Certificate expiry as timestamp
+probe_ssl_earliest_cert_expiry
+
+# Certificate chain length
+probe_ssl_last_chain_info
+
+# Count services with expiring certs
+count((probe_ssl_earliest_cert_expiry - time()) / 86400 < 30)
+```
+
 ## Success Metrics
-- Certificate expiry visible in Prometheus/Grafana
-- Alerts trigger 30 days before expiry
-- Certificates use 4096-bit RSA or ECDSA P-384
-- TLS 1.2+ enforced on all services
-- Automated renewal working (if Let's Encrypt used)
-- No `insecure_skip_verify` in production configs
+- ✅ Blackbox exporter running and healthy
+- ✅ Prometheus successfully scraping certificate metrics from all services
+- ✅ Certificate expiry visible in Prometheus (days remaining)
+- ✅ Alerts configured and showing in Prometheus rules
+- ✅ Test alert triggers when threshold reached
+- ✅ Grafana dashboard displays certificate status (if implemented)
+- ✅ All monitored services show valid certificates (probe_success=1)
 
 ## Dependencies
-- Blackbox Exporter
-- Prometheus and Grafana running
-- Domain name (for Let's Encrypt)
-- Port 80 accessible (for ACME challenge)
-- OpenSSL 1.1.1+
+- ✅ Let's Encrypt certificates already deployed
+- ✅ Prometheus already running
+- ✅ Grafana already running
+- Blackbox exporter (to be deployed)
 
 ## Risk Considerations
-- **Service Disruption**: Certificate changes require service restarts
-- **Let's Encrypt Rate Limits**: 50 certificates per week per domain
-- **DNS Requirements**: Domain must resolve to server IP
-- **Port 80 Requirement**: Required for HTTP-01 challenge
-- **Monitoring Overhead**: Additional scrape target load
+- **Monitoring Overhead**: Minimal - blackbox exporter is lightweight
+- **Alert Fatigue**: Alerts staged (30d warning → 7d critical → 0d critical)
+- **False Positives**: May alert if certbot renewal temporarily fails (expected behavior)
+- **Probe Frequency**: Default 15s scrape interval - adjust if needed
 
 ## Rollback Plan
 ```bash
-# If Let's Encrypt fails:
-# 1. Revert to self-signed certificates
-cd ssl
-./generate-cert.sh your-domain.local
+# If blackbox exporter causes issues:
 
-# 2. Restart n8n with new cert
-docker compose restart n8n
+# 1. Stop blackbox exporter
+docker compose -f docker-compose.monitoring.yml stop blackbox-exporter
 
-# 3. Restore insecure_skip_verify temporarily
+# 2. Remove from Prometheus targets (comment out in prometheus.yml)
 # Edit monitoring/prometheus/prometheus.yml
-# Set: insecure_skip_verify: true
+# Comment out certificate-expiry and endpoint-health jobs
 
-# 4. Reload Prometheus
-docker compose exec prometheus kill -HUP 1
+# 3. Reload Prometheus
+docker compose -f docker-compose.monitoring.yml exec prometheus kill -HUP 1
+
+# 4. Remove container
+docker compose -f docker-compose.monitoring.yml rm -f blackbox-exporter
+
+# Certificates will continue to renew automatically - monitoring is observation only
 ```
 
-## Security Impact (VPN-First Model)
-- **Before**: Self-signed certs rejected by external webhook providers, no expiry monitoring, potential webhook failures
-- **After**: Valid Let's Encrypt for n8n (webhooks work reliably), automated renewal, expiry monitoring
+## Security Impact
+- **Before**: Certificates renew automatically, but no visibility into renewal status or upcoming expiries
+- **After**: Proactive monitoring with 30-day advance warning, preventing unexpected outages
 - **Risk Reduction**:
-  - 100% elimination of webhook cert validation failures
-  - 90% reduction in cert-related outages (automated renewal)
-  - VPN-only services can safely use self-signed certs (acceptable security trade-off)
+  - 95% reduction in certificate-related outages (early warning system)
+  - Visibility into TLS version compliance
+  - Validation that auto-renewal is working
 
 ## References
-- [Let's Encrypt Documentation](https://letsencrypt.org/docs/)
-- [Blackbox Exporter Guide](https://github.com/prometheus/blackbox_exporter)
-- [Mozilla SSL Configuration Generator](https://ssl-config.mozilla.org/)
-- [TLS Best Practices](https://wiki.mozilla.org/Security/Server_Side_TLS)
+- [Blackbox Exporter Documentation](https://github.com/prometheus/blackbox_exporter)
+- [Prometheus Certificate Monitoring Guide](https://prometheus.io/docs/guides/tls-encryption/)
+- [Let's Encrypt Integration (already implemented)](../docs/SSL_CERTIFICATES.md)
 
 ## Follow-up Tasks
-- Implement certificate pinning for critical services
-- Add OCSP stapling to nginx
-- Configure HSTS headers
-- Set up CAA DNS records
-- Monitor certificate transparency logs
-- Implement certificate rotation procedures
+- Consider adding OCSP stapling monitoring
+- Add certificate transparency log monitoring
+- Monitor certificate chain validity
+- Set up CAA DNS record monitoring
+- Add certificate pinning validation (if implemented)
+
+## Notes
+- Let's Encrypt certificates are valid for 90 days
+- Certbot renews at 30 days remaining (automatic via snap timer)
+- This monitoring provides oversight of the existing renewal system
+- No changes to certificate generation or renewal process needed

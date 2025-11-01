@@ -1,6 +1,25 @@
 # Deploy Reverse Proxy for n8n Path-Based Access Control
 
-## Priority: 3 (Medium)
+> **✅ COMPLETED - Archived 2025-10-30**
+>
+> This ticket has been fully implemented:
+> - ✅ Traefik reverse proxy deployed with domain-based routing
+> - ✅ `admin-secure` middleware: IP whitelist (RFC1918) + security headers + rate limiting (100 req/min)
+> - ✅ `webhook-secure` middleware: Security headers + generous rate limiting (100 req/min) for future public webhooks
+> - ✅ All admin services protected with VPN/local-only access
+> - ✅ Fail2ban integration with Traefik (auth, webhook, scanner jails)
+> - ✅ Security monitoring in Prometheus (401s, 429s, scanning attempts)
+> - ✅ Let's Encrypt SSL certificates via certbot
+>
+> **Implementation details:**
+> - Middleware chains defined in `docker-compose.network.yml:136-159`
+> - All services using `admin-secure` or `admin-secure-no-ratelimit` as appropriate
+> - Fail2ban configuration in `config/fail2ban/jail.local`
+> - Security alerts in `monitoring/prometheus/alert_rules.yml` (security-alerts group)
+>
+> **Note:** While ticket focused on n8n-only exposure, we implemented a comprehensive solution for all services. n8n webhooks are not yet publicly exposed (still requires VPN access) - this is intentional and can be changed when needed by creating a separate router for `/webhook/*` paths with `webhook-secure` middleware. See `docker-compose.yml:82-89` for TODO comments on webhook architecture.
+
+## Priority: 3 (Medium) - ✅ COMPLETED
 ## Estimated Time: 2-3 hours
 ## Phase: Week 2-3 - Path-Based Security
 
