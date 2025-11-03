@@ -273,10 +273,10 @@ purge:
 	@echo "  - All monitoring data (Grafana, Prometheus)"
 	@echo "  - Homepage dashboard configuration"
 	@echo "  - Let's Encrypt SSL certificates and renewal hooks"
-	@echo "  - Traefik configuration files"
+	@echo "  - Generated Traefik SSL configuration (dynamic-certs.yml)"
 	@echo ""
 	@echo "💡 RECOMMENDATION: Back up your data before proceeding!"
-	@echo "   tar -czf backup-$$(date +%Y%m%d-%H%M%S).tar.gz ./data/ ./config/"
+	@echo "   tar -czf backup-$$(date +%Y%m%d-%H%M%S).tar.gz ./data/ .env"
 	@echo ""
 	@echo "Press Ctrl+C to cancel, or Enter to continue..."
 	@read confirm
@@ -292,8 +292,8 @@ purge:
 	@$(COMPOSE) down -v
 	@echo "Removing all data directories..."
 	@rm -rf ./data/
-	@echo "Removing Traefik configuration..."
-	@rm -rf ./config/
+	@echo "Removing generated Traefik configuration..."
+	@rm -rf ./config/traefik/
 	@echo "Removing Let's Encrypt certificates and configuration..."
 	@sudo rm -rf /etc/letsencrypt/
 	@echo "Removing SSL renewal hook..."
