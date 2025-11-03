@@ -155,6 +155,14 @@
           server: my-docker
           showStats: true
 
+      - Actual Budget:
+          icon: actual.png
+          href: https://budget.{{HOMEPAGE_VAR_DOMAIN}}
+          description: Personal finance & budgeting
+          container: actualbudget
+          server: my-docker
+          showStats: true
+
   # Monitoring Stack - Metrics collection and visualization
   - Monitoring:
       - Prometheus:
