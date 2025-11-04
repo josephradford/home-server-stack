@@ -3,7 +3,7 @@
 
 .PHONY: help setup update start stop restart logs build pull status clean purge validate env-check
 .PHONY: logs-n8n logs-wireguard logs-homepage logs-homeassistant logs-actualbudget
-.PHONY: adguard-setup homeassistant-setup setup-certs test-domain-access traefik-password
+.PHONY: adguard-setup homeassistant-setup wireguard-routing-setup setup-certs test-domain-access traefik-password
 .PHONY: ssl-setup ssl-copy-certs ssl-configure-traefik ssl-setup-renewal ssl-renew-test
 .PHONY: dashboard-setup dashboard-start dashboard-stop dashboard-restart dashboard-logs dashboard-status
 
@@ -57,9 +57,10 @@ help:
 	@echo "  make dashboard-status   - Show Homepage dashboard status"
 	@echo ""
 	@echo "Service Configuration:"
-	@echo "  make adguard-setup        - Configure DNS rewrites for domain-based access"
-	@echo "  make homeassistant-setup  - Setup Home Assistant configuration files"
-	@echo "  make traefik-password     - Generate Traefik dashboard password from .env"
+	@echo "  make adguard-setup            - Configure DNS rewrites for domain-based access"
+	@echo "  make homeassistant-setup      - Setup Home Assistant configuration files"
+	@echo "  make wireguard-routing-setup  - Setup iptables routing for WireGuard VPN"
+	@echo "  make traefik-password         - Generate Traefik dashboard password from .env"
 	@echo ""
 	@echo "SSL/TLS Certificate Management:"
 	@echo "  make ssl-setup          - Complete Let's Encrypt SSL setup (certbot + renewal)"
@@ -127,14 +128,17 @@ setup: env-check validate
 	@echo "Step 6/8: Starting services (Docker Compose will create networks)..."
 	@$(COMPOSE) up -d
 	@echo ""
-	@echo "Step 7/8: Fixing data directory permissions..."
+	@echo "Step 7/9: Fixing data directory permissions..."
 	@echo "Containers create directories as root, fixing ownership for user access..."
 	@if [ -d "data" ]; then \
 		sudo chown -R $(shell id -u):$(shell getent group docker | cut -d: -f3) data/ && \
 		echo "✓ Data directory permissions fixed"; \
 	fi
 	@echo ""
-	@echo "Step 8/8: Configuring AdGuard DNS rewrites..."
+	@echo "Step 8/9: Setting up WireGuard VPN routing..."
+	@./scripts/setup-wireguard-routing.sh
+	@echo ""
+	@echo "Step 9/9: Configuring AdGuard DNS rewrites..."
 	@$(MAKE) adguard-setup
 	@echo ""
 	@$(COMPOSE) ps
@@ -332,6 +336,11 @@ homeassistant-setup: env-check
 	@./scripts/setup-homeassistant.sh
 	@echo ""
 	@echo "✓ Home Assistant configuration setup complete!"
+
+# WireGuard VPN routing setup
+wireguard-routing-setup: env-check
+	@echo "Setting up WireGuard VPN routing (iptables forwarding rules)..."
+	@./scripts/setup-wireguard-routing.sh
 
 # Setup SSL certificate storage (for certbot-generated certs)
 setup-certs:
