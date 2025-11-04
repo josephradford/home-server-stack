@@ -2,14 +2,14 @@
 # Simplifies deployment and maintenance operations
 
 .PHONY: help setup update start stop restart logs build pull status clean purge validate env-check
-.PHONY: logs-n8n logs-wireguard logs-homepage logs-homeassistant logs-actualbudget
+.PHONY: logs-n8n logs-wireguard logs-homepage logs-homeassistant logs-actualbudget logs-wallabag
 .PHONY: adguard-setup homeassistant-setup setup-certs test-domain-access traefik-password
 .PHONY: ssl-setup ssl-copy-certs ssl-configure-traefik ssl-setup-renewal ssl-renew-test
 .PHONY: dashboard-setup dashboard-start dashboard-stop dashboard-restart dashboard-logs dashboard-status
 
 # Compose file flags
 # Services are organized into logical groups:
-# - docker-compose.yml: Core services (AdGuard, n8n, Home Assistant, Actual Budget)
+# - docker-compose.yml: Core services (AdGuard, n8n, Home Assistant, Actual Budget, Wallabag)
 # - docker-compose.network.yml: Network & Security (Traefik, Wireguard, Fail2ban)
 # - docker-compose.monitoring.yml: Monitoring stack (Prometheus, Grafana, Alertmanager, exporters)
 # - docker-compose.dashboard.yml: Dashboard (Homepage, Homepage API)
@@ -45,6 +45,7 @@ help:
 	@echo "  make logs-n8n           - Show n8n logs only"
 	@echo "  make logs-homeassistant - Show Home Assistant logs only"
 	@echo "  make logs-actualbudget  - Show Actual Budget logs only"
+	@echo "  make logs-wallabag      - Show Wallabag logs only"
 	@echo "  make logs-wireguard     - Show WireGuard logs only"
 	@echo "  make logs-homepage      - Show Homepage logs only"
 	@echo ""
@@ -242,6 +243,9 @@ logs-homeassistant:
 
 logs-actualbudget:
 	@$(COMPOSE) logs -f actualbudget
+
+logs-wallabag:
+	@$(COMPOSE) logs -f wallabag
 
 logs-wireguard:
 	@$(COMPOSE) logs -f wireguard

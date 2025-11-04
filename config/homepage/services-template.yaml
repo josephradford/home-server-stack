@@ -163,6 +163,14 @@
           server: my-docker
           showStats: true
 
+      - Wallabag:
+          icon: wallabag.png
+          href: https://wallabag.{{HOMEPAGE_VAR_DOMAIN}}
+          description: Read-it-later & article saving
+          container: wallabag
+          server: my-docker
+          showStats: true
+
   # Monitoring Stack - Metrics collection and visualization
   - Monitoring:
       - Prometheus:

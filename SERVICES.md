@@ -55,6 +55,31 @@ Currently deployed and active services.
   - Home automation and location-based triggers
   - Integration with n8n workflows
 
+#### Actual Budget
+- **Purpose:** Self-hosted personal finance and budgeting
+- **Access:** https://actual.${DOMAIN}
+- **Port:** 5006 (internal)
+- **Authentication:** No login required (VPN/local access only)
+- **Features:**
+  - Privacy-focused budgeting with local data storage
+  - Bank sync support (SimpleFIN, GoCardless)
+  - Mobile apps for iOS and Android
+  - End-to-end encrypted sync
+  - Zero-based budgeting methodology
+
+#### Wallabag
+- **Purpose:** Self-hosted read-it-later service
+- **Access:** https://wallabag.${DOMAIN}
+- **Port:** 80 (internal)
+- **Authentication:** wallabag / wallabag (change after first login)
+- **Features:**
+  - Save web articles for offline reading
+  - Browser extensions for Chrome, Firefox, Safari
+  - Mobile apps for iOS and Android
+  - Tagging and annotation support
+  - RSS feeds for saved articles
+  - Privacy-focused alternative to Pocket/Instapaper
+
 ### Monitoring Stack
 
 #### Grafana
@@ -96,6 +121,8 @@ Currently deployed and active services.
 | AdGuard | https://adguard.home.local | http://IP:8888 |
 | n8n | https://n8n.home.local | http://IP:5678 |
 | Home Assistant | https://home.${DOMAIN} | http://IP:8123 |
+| Actual Budget | https://actual.${DOMAIN} | N/A |
+| Wallabag | https://wallabag.${DOMAIN} | N/A |
 | Grafana | https://grafana.home.local | http://IP:3001 |
 | Prometheus | https://prometheus.home.local | http://IP:9090 |
 | Alertmanager | https://alerts.home.local | http://IP:9093 |
@@ -114,7 +141,6 @@ Services queued for implementation.
 - [ ] **[Kiwix](https://github.com/kiwix)** - Offline content reader with ZIM file support for Wikipedia and educational content
 - [ ] **[Immich](https://github.com/immich-app/immich)** - High performance self-hosted photo and video management solution (Apple Photos alternative)
 - [ ] **[Tandoor Recipes](https://github.com/TandoorRecipes/recipes)** - Application for managing recipes, planning meals, and building shopping lists
-- [ ] **[Actual Budget](https://github.com/actualbudget/actual)** - A local-first personal finance app
 - [ ] **[Jellyfin](https://github.com/jellyfin/jellyfin)** - The Free Software Media System for movies, TV shows, and music
 - [ ] **[Navidrome](https://github.com/navidrome/navidrome)** - Modern Music Server and Streamer compatible with Subsonic/Airsonic (alternative to Jellyfin for music)
 - [ ] **[Sonarr](https://github.com/Sonarr/Sonarr)** - Smart PVR for newsgroup and bittorrent users (TV show automation)
