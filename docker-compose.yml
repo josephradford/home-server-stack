@@ -4,6 +4,8 @@
 # - AdGuard Home: Network-wide ad blocking and DNS server
 # - n8n: Workflow automation platform
 # - Home Assistant: Location tracking and home automation
+# - Actual Budget: Personal finance and budgeting
+# - Wallabag: Read-it-later and article saving
 
 services:
   adguard:
@@ -138,6 +140,34 @@ services:
       - "traefik.http.services.actualbudget.loadbalancer.server.port=5006"
       # Security: VPN/Local access only - financial data should be private
       - "traefik.http.routers.actualbudget.middlewares=admin-secure"
+
+  wallabag:
+    image: wallabag/wallabag:latest
+    container_name: wallabag
+    restart: unless-stopped
+    expose:
+      - 80
+    environment:
+      - SYMFONY__ENV__DOMAIN_NAME=https://wallabag.${DOMAIN}
+      - SYMFONY__ENV__SERVER_NAME="Wallabag"
+      - SYMFONY__ENV__FOSUSER_REGISTRATION=false
+      - SYMFONY__ENV__DATABASE_DRIVER=pdo_sqlite
+      - SYMFONY__ENV__DATABASE_HOST=127.0.0.1
+      - SYMFONY__ENV__DATABASE_NAME=symfony
+    volumes:
+      - ./data/wallabag/data:/var/www/wallabag/data
+      - ./data/wallabag/images:/var/www/wallabag/web/assets/images
+    networks:
+      - homeserver
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.wallabag.rule=Host(`wallabag.${DOMAIN}`)"
+      - "traefik.http.routers.wallabag.entrypoints=websecure"
+      - "traefik.http.routers.wallabag.tls=true"
+      # Using file provider certificate (wildcard from certbot)
+      - "traefik.http.services.wallabag.loadbalancer.server.port=80"
+      # Security: VPN/Local access only - reading list should be private
+      - "traefik.http.routers.wallabag.middlewares=admin-secure"
 
 networks:
   homeserver:
