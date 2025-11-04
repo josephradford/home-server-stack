@@ -150,7 +150,7 @@ setup: env-check validate
 		echo "    - AdGuard Home:       https://adguard.$$DOMAIN"; \
 		echo "    - n8n:                https://n8n.$$DOMAIN"; \
 		echo "    - Home Assistant:     https://home.$$DOMAIN"; \
-		echo "    - Actual Budget:      https://budget.$$DOMAIN"; \
+		echo "    - Actual Budget:      https://actual.$$DOMAIN"; \
 		echo "    - Grafana:            https://grafana.$$DOMAIN"; \
 		echo "    - Prometheus:         https://prometheus.$$DOMAIN"; \
 		echo "    - Alertmanager:       https://alerts.$$DOMAIN"; \
@@ -409,7 +409,7 @@ ssl-setup: env-check
 		echo "Test your certificates:"; \
 		echo "  https://n8n.$$DOMAIN"; \
 		echo "  https://home.$$DOMAIN"; \
-		echo "  https://budget.$$DOMAIN"; \
+		echo "  https://actual.$$DOMAIN"; \
 		echo "  https://grafana.$$DOMAIN"; \
 		echo "  https://traefik.$$DOMAIN"; \
 	fi

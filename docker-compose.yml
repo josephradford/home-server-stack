@@ -131,7 +131,7 @@ services:
       - homeserver
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.actualbudget.rule=Host(`budget.${DOMAIN}`)"
+      - "traefik.http.routers.actualbudget.rule=Host(`actual.${DOMAIN}`)"
       - "traefik.http.routers.actualbudget.entrypoints=websecure"
       - "traefik.http.routers.actualbudget.tls=true"
       # Using file provider certificate (wildcard from certbot)

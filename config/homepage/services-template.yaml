@@ -157,7 +157,7 @@
 
       - Actual Budget:
           icon: actual.png
-          href: https://budget.{{HOMEPAGE_VAR_DOMAIN}}
+          href: https://actual.{{HOMEPAGE_VAR_DOMAIN}}
           description: Personal finance & budgeting
           container: actualbudget
           server: my-docker
