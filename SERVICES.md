@@ -55,6 +55,34 @@ Currently deployed and active services.
   - Home automation and location-based triggers
   - Integration with n8n workflows
 
+#### Actual Budget
+- **Purpose:** Self-hosted personal finance and budgeting
+- **Access:** https://actual.${DOMAIN}
+- **Port:** 5006 (internal)
+- **Authentication:** No login required (VPN/local access only)
+- **Features:**
+  - Privacy-focused budgeting with local data storage
+  - Bank sync support (SimpleFIN, GoCardless)
+  - Mobile apps for iOS and Android
+  - End-to-end encrypted sync
+  - Zero-based budgeting methodology
+
+#### Mealie
+- **Purpose:** Self-hosted meal planner and recipe manager
+- **Access:** https://mealie.${DOMAIN}
+- **Port:** 9000 (internal)
+- **Authentication:** changeme@example.com / MyPassword (change after first login)
+- **Features:**
+  - Recipe management with image support and tags
+  - Meal planning calendar with drag-and-drop interface
+  - Automatic shopping list generation from meal plans
+  - Recipe import from URLs (supports 1000+ websites)
+  - Cooking mode with step-by-step instructions
+  - Mobile-responsive web interface
+  - RESTful API for integrations
+  - Multi-user support with permissions
+  - Mobile apps for iOS and Android
+
 ### Monitoring Stack
 
 #### Grafana
@@ -96,6 +124,8 @@ Currently deployed and active services.
 | AdGuard | https://adguard.home.local | http://IP:8888 |
 | n8n | https://n8n.home.local | http://IP:5678 |
 | Home Assistant | https://home.${DOMAIN} | http://IP:8123 |
+| Actual Budget | https://actual.${DOMAIN} | N/A |
+| Mealie | https://mealie.${DOMAIN} | N/A |
 | Grafana | https://grafana.home.local | http://IP:3001 |
 | Prometheus | https://prometheus.home.local | http://IP:9090 |
 | Alertmanager | https://alerts.home.local | http://IP:9093 |
@@ -113,8 +143,6 @@ Services queued for implementation.
 - [ ] **[Bookwyrm](https://github.com/bookwyrm-social/bookwyrm)** - Social reading and book tracking platform
 - [ ] **[Kiwix](https://github.com/kiwix)** - Offline content reader with ZIM file support for Wikipedia and educational content
 - [ ] **[Immich](https://github.com/immich-app/immich)** - High performance self-hosted photo and video management solution (Apple Photos alternative)
-- [ ] **[Tandoor Recipes](https://github.com/TandoorRecipes/recipes)** - Application for managing recipes, planning meals, and building shopping lists
-- [ ] **[Actual Budget](https://github.com/actualbudget/actual)** - A local-first personal finance app
 - [ ] **[Jellyfin](https://github.com/jellyfin/jellyfin)** - The Free Software Media System for movies, TV shows, and music
 - [ ] **[Navidrome](https://github.com/navidrome/navidrome)** - Modern Music Server and Streamer compatible with Subsonic/Airsonic (alternative to Jellyfin for music)
 - [ ] **[Sonarr](https://github.com/Sonarr/Sonarr)** - Smart PVR for newsgroup and bittorrent users (TV show automation)
