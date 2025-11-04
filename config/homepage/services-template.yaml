@@ -163,6 +163,14 @@
           server: my-docker
           showStats: true
 
+      - Mealie:
+          icon: mealie.png
+          href: https://mealie.{{HOMEPAGE_VAR_DOMAIN}}
+          description: Meal planning & recipes
+          container: mealie
+          server: my-docker
+          showStats: true
+
   # Monitoring Stack - Metrics collection and visualization
   - Monitoring:
       - Prometheus:
