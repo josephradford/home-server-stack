@@ -4,6 +4,8 @@
 # - AdGuard Home: Network-wide ad blocking and DNS server
 # - n8n: Workflow automation platform
 # - Home Assistant: Location tracking and home automation
+# - Actual Budget: Personal finance and budgeting
+# - Mealie: Meal planning and recipe management
 
 services:
   adguard:
@@ -138,6 +140,33 @@ services:
       - "traefik.http.services.actualbudget.loadbalancer.server.port=5006"
       # Security: VPN/Local access only - financial data should be private
       - "traefik.http.routers.actualbudget.middlewares=admin-secure"
+
+  mealie:
+    image: ghcr.io/mealie-recipes/mealie:latest
+    container_name: mealie
+    restart: unless-stopped
+    expose:
+      - 9000
+    environment:
+      - BASE_URL=https://mealie.${DOMAIN}
+      - ALLOW_SIGNUP=false
+      - TZ=${TIMEZONE}
+      - MAX_WORKERS=1
+      - WEB_CONCURRENCY=1
+      - DB_ENGINE=sqlite
+    volumes:
+      - ./data/mealie:/app/data/
+    networks:
+      - homeserver
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.mealie.rule=Host(`mealie.${DOMAIN}`)"
+      - "traefik.http.routers.mealie.entrypoints=websecure"
+      - "traefik.http.routers.mealie.tls=true"
+      # Using file provider certificate (wildcard from certbot)
+      - "traefik.http.services.mealie.loadbalancer.server.port=9000"
+      # Security: VPN/Local access only - meal planning and recipes should be private
+      - "traefik.http.routers.mealie.middlewares=admin-secure"
 
 networks:
   homeserver:
