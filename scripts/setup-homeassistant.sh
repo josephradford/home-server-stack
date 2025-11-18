@@ -12,16 +12,19 @@ NC='\033[0m' # No Color
 
 echo -e "${GREEN}Setting up Home Assistant configuration...${NC}"
 
-# Load environment variables
-if [ ! -f .env ]; then
-    echo -e "${RED}ERROR: .env file not found!${NC}"
+# Load environment variables (support both .env and .env.local)
+ENV_FILE="${ENV_FILE:-.env}"
+
+if [ ! -f "$ENV_FILE" ]; then
+    echo -e "${RED}ERROR: $ENV_FILE file not found!${NC}"
     echo "Run: cp .env.example .env"
     echo "Then edit .env with your configuration"
     exit 1
 fi
 
+echo "Using environment file: $ENV_FILE"
 set -a
-source .env
+source "$ENV_FILE"
 set +a
 
 # Verify required variables

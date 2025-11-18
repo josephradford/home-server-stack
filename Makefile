@@ -6,6 +6,7 @@
 .PHONY: adguard-setup homeassistant-setup wireguard-routing-setup setup-certs test-domain-access traefik-password
 .PHONY: ssl-setup ssl-copy-certs ssl-configure-traefik ssl-setup-renewal ssl-renew-test
 .PHONY: dashboard-setup dashboard-start dashboard-stop dashboard-restart dashboard-logs dashboard-status
+.PHONY: local-setup local-start local-stop local-restart local-logs local-status local-clean deploy
 
 # Compose file flags
 # Services are organized into logical groups:
@@ -17,9 +18,11 @@
 # COMPOSE_CORE: Core + Network + Monitoring (everything except dashboard)
 # COMPOSE_DASHBOARD: Dashboard only (for dashboard-specific operations)
 # COMPOSE: All services (default for most operations)
+# COMPOSE_LOCAL: All services with local development overrides
 COMPOSE_CORE := docker compose -f docker-compose.yml -f docker-compose.network.yml -f docker-compose.monitoring.yml
 COMPOSE_DASHBOARD := docker compose -f docker-compose.dashboard.yml
 COMPOSE := docker compose -f docker-compose.yml -f docker-compose.network.yml -f docker-compose.monitoring.yml -f docker-compose.dashboard.yml
+COMPOSE_LOCAL := docker compose -f docker-compose.yml -f docker-compose.network.yml -f docker-compose.monitoring.yml -f docker-compose.dashboard.yml -f docker-compose.local.yml --env-file .env.local
 
 # Default target - show help
 help:
@@ -28,6 +31,16 @@ help:
 	@echo "Setup & Deployment:"
 	@echo "  make setup              - First time setup (core + monitoring + dashboard)"
 	@echo "  make env-check          - Verify .env file exists and is configured"
+	@echo "  make deploy             - Deploy to remote server via SSH"
+	@echo ""
+	@echo "Local Development (Mac/Docker Desktop):"
+	@echo "  make local-setup        - First time local setup (no SSL/DNS)"
+	@echo "  make local-start        - Start services locally"
+	@echo "  make local-stop         - Stop local services"
+	@echo "  make local-restart      - Restart local services"
+	@echo "  make local-logs         - View local service logs"
+	@echo "  make local-status       - Show local service status"
+	@echo "  make local-clean        - Remove local containers"
 	@echo ""
 	@echo "Service Management:"
 	@echo "  make start              - Start all services (core + monitoring + dashboard)"
@@ -111,16 +124,16 @@ setup: env-check validate
 	@echo "Starting first-time setup..."
 	@echo ""
 	@echo "Step 1/8: Setting up Traefik dashboard password..."
-	@./scripts/setup-traefik-password.sh
+	@ENV_FILE=.env ./scripts/setup-traefik-password.sh
 	@echo ""
 	@echo "Step 2/8: Setting up SSL certificate storage..."
 	@$(MAKE) setup-certs
 	@echo ""
 	@echo "Step 3/8: Setting up Homepage dashboard config..."
-	@./scripts/configure-homepage.sh
+	@ENV_FILE=.env FORCE_OVERWRITE=true ./scripts/configure-homepage.sh
 	@echo ""
 	@echo "Step 4/8: Setting up Home Assistant config..."
-	@./scripts/setup-homeassistant.sh
+	@ENV_FILE=.env ./scripts/setup-homeassistant.sh
 	@echo ""
 	@echo "Step 5/8: Pulling pre-built images..."
 	@$(COMPOSE) pull --ignore-pull-failures
@@ -357,7 +370,7 @@ test-domain-access: env-check
 # Setup Traefik dashboard password
 traefik-password: env-check
 	@echo "Setting up Traefik dashboard password..."
-	@./scripts/setup-traefik-password.sh
+	@ENV_FILE=.env ./scripts/setup-traefik-password.sh
 	@echo ""
 	@echo "Restarting Traefik to apply new password..."
 	@$(COMPOSE_CORE) stop traefik
@@ -507,3 +520,113 @@ dashboard-logs:
 # Show Homepage dashboard status
 dashboard-status:
 	@$(COMPOSE_DASHBOARD) ps
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# Local Development (Mac/Docker Desktop)
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+# Setup local development environment
+local-setup:
+	@echo "Setting up local development environment..."
+	@if [ ! -f .env.local ]; then \
+		echo "Creating .env.local from .env.local.example..."; \
+		cp .env.local.example .env.local; \
+		echo "✓ .env.local created"; \
+		echo ""; \
+		echo "Please edit .env.local if needed (default values should work)"; \
+	else \
+		echo "✓ .env.local already exists"; \
+	fi
+	@echo ""
+	@echo "Validating local configuration..."
+	@$(COMPOSE_LOCAL) config --quiet
+	@echo "✓ Configuration valid"
+	@echo ""
+	@echo "Creating data directories..."
+	@mkdir -p data/n8n data/homeassistant data/actualbudget data/grafana data/prometheus data/alertmanager data/homepage/config data/traefik
+	@echo "✓ Data directories created"
+	@echo ""
+	@echo "Setting up Homepage configuration..."
+	@ENV_FILE=.env.local FORCE_OVERWRITE=true ./scripts/configure-homepage.sh
+	@echo ""
+	@echo "Setting up Home Assistant configuration..."
+	@ENV_FILE=.env.local ./scripts/setup-homeassistant.sh
+	@echo ""
+	@echo "Starting local services..."
+	@$(COMPOSE_LOCAL) up -d
+	@echo ""
+	@echo "✓ Local development environment ready!"
+	@echo ""
+	@echo "Access your services:"
+	@echo "  - Homepage Dashboard:  http://localhost:3000"
+	@echo "  - Traefik Dashboard:   http://localhost:8080"
+	@echo "  - n8n:                 http://localhost:5678"
+	@echo "  - Home Assistant:      http://localhost:8123"
+	@echo "  - Actual Budget:       http://localhost:5006"
+	@echo "  - Grafana:             http://localhost:3001"
+	@echo "  - Prometheus:          http://localhost:9090"
+	@echo "  - Alertmanager:        http://localhost:9093"
+	@echo ""
+	@echo "Note: AdGuard, WireGuard, and Fail2ban are disabled in local mode"
+	@echo ""
+	@echo "Commands:"
+	@echo "  - make local-logs      - View logs"
+	@echo "  - make local-status    - Check service status"
+	@echo "  - make local-stop      - Stop all services"
+
+# Start local development services
+local-start:
+	@if [ ! -f .env.local ]; then \
+		echo "ERROR: .env.local not found"; \
+		echo "Run: make local-setup"; \
+		exit 1; \
+	fi
+	@echo "Starting local development services..."
+	@$(COMPOSE_LOCAL) up -d
+	@echo "✓ Services started"
+	@echo ""
+	@echo "Access at: http://localhost:3000 (Homepage)"
+
+# Stop local development services
+local-stop:
+	@echo "Stopping local development services..."
+	@$(COMPOSE_LOCAL) down
+	@echo "✓ Services stopped"
+
+# Restart local development services
+local-restart:
+	@echo "Restarting local development services..."
+	@$(COMPOSE_LOCAL) restart
+	@echo "✓ Services restarted"
+
+# View local development logs
+local-logs:
+	@$(COMPOSE_LOCAL) logs -f
+
+# Show local development service status
+local-status:
+	@$(COMPOSE_LOCAL) ps
+
+# Clean local development environment
+local-clean:
+	@echo "Removing local development containers..."
+	@$(COMPOSE_LOCAL) down -v
+	@echo "✓ Local containers removed"
+	@echo ""
+	@echo "Note: ./data/ directories preserved"
+	@echo "To remove data: rm -rf ./data/"
+
+# Deploy to remote server
+deploy:
+	@if [ -z "$(SERVER)" ]; then \
+		echo "ERROR: SERVER variable required"; \
+		echo ""; \
+		echo "Usage: make deploy SERVER=user@host [BRANCH=main]"; \
+		echo ""; \
+		echo "Examples:"; \
+		echo "  make deploy SERVER=joe@192.168.1.100"; \
+		echo "  make deploy SERVER=joe@homeserver.local BRANCH=feature/new-service"; \
+		echo ""; \
+		exit 1; \
+	fi
+	@./scripts/deploy-to-server.sh $(SERVER) $(BRANCH)

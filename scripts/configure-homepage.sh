@@ -8,13 +8,16 @@ set -e
 echo "🏠 Configuring Homepage Dashboard"
 echo "=================================="
 
-# Load environment variables
-if [ ! -f .env ]; then
-    echo "❌ Error: .env file not found"
+# Load environment variables (support both .env and .env.local)
+ENV_FILE="${ENV_FILE:-.env}"
+
+if [ ! -f "$ENV_FILE" ]; then
+    echo "❌ Error: $ENV_FILE file not found"
     exit 1
 fi
 
-source .env
+echo "📋 Using environment file: $ENV_FILE"
+source "$ENV_FILE"
 
 # Ensure config directory exists
 CONFIG_DIR="data/homepage/config"
@@ -41,22 +44,30 @@ TEMPLATES=(
 # Check if config files already exist
 if [ -f "$CONFIG_DIR/services.yaml" ] && [ -f "$CONFIG_DIR/settings.yaml" ]; then
     echo "ℹ️  Homepage configuration files already exist"
-    echo ""
-    echo "⚠️  WARNING: Overwriting will replace your existing configuration!"
-    echo ""
-    echo "Would you like to overwrite them? (y/N)"
-    read -r response
 
-    if [ "$response" != "y" ] && [ "$response" != "Y" ]; then
+    # Skip prompt if FORCE_OVERWRITE is set (used by automated setup)
+    if [ "${FORCE_OVERWRITE}" = "true" ]; then
         echo ""
-        echo "✓ Keeping existing configuration"
+        echo "📝 Overwriting existing configuration files (automated setup)..."
         echo ""
-        exit 0
+    else
+        echo ""
+        echo "⚠️  WARNING: Overwriting will replace your existing configuration!"
+        echo ""
+        echo "Would you like to overwrite them? (y/N)"
+        read -r response
+
+        if [ "$response" != "y" ] && [ "$response" != "Y" ]; then
+            echo ""
+            echo "✓ Keeping existing configuration"
+            echo ""
+            exit 0
+        fi
+
+        echo ""
+        echo "📝 Overwriting existing configuration files..."
+        echo ""
     fi
-
-    echo ""
-    echo "📝 Overwriting existing configuration files..."
-    echo ""
 else
     echo "📝 Creating Homepage configuration files..."
     echo ""
