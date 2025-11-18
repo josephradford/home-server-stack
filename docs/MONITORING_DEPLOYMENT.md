@@ -38,18 +38,59 @@ This deploys all services including:
    ```
 
 ## Access URLs
-- **Grafana:** http://SERVER_IP:3001 (admin/GRAFANA_PASSWORD)
-- **Prometheus:** http://SERVER_IP:9090
-- **AlertManager:** http://SERVER_IP:9093
-- **cAdvisor:** http://SERVER_IP:8080
+- **Grafana:** https://grafana.DOMAIN or http://SERVER_IP:3001 (admin/GRAFANA_PASSWORD)
+- **Prometheus:** https://prometheus.DOMAIN or http://SERVER_IP:9090
+- **AlertManager:** https://alerts.DOMAIN or http://SERVER_IP:9093
+- **cAdvisor:** http://SERVER_IP:8081
 - **Node Exporter:** http://SERVER_IP:9100
 
 ## Pre-configured Dashboards
-- System Overview (CPU, memory, disk, network)
-- Container Health (Docker container status and resources)
-- Resource Utilization (Historical trends and top consumers)
-- Node Exporter Full (System metrics)
-- Docker Container Monitoring (Container metrics)
+
+Grafana includes three automatically provisioned dashboards:
+
+### 1. System Overview
+**URL:** `https://grafana.DOMAIN/d/system-overview`
+
+Real-time system health monitoring with:
+- **Resource Gauges:** CPU, Memory, and Disk usage with color-coded thresholds
+- **Memory Details:** Used vs Available memory trends
+- **Network I/O:** Interface traffic (RX/TX) by device
+- **Load Average:** 1m, 5m, 15m system load
+- **System Stats:** Uptime, CPU cores, total memory, disk space
+
+**Refresh:** 30s | **Default Range:** Last 6 hours
+
+### 2. Container Health
+**URL:** `https://grafana.DOMAIN/d/container-health`
+
+Docker container monitoring:
+- **Container Status Bar:** Live status of all running containers
+- **CPU Usage:** Per-container CPU utilization trends
+- **Memory Usage:** Container memory consumption
+- **Network I/O:** Container network traffic (RX/TX with negative RX)
+- **Resource Table:** Top consumers sorted by CPU/Memory
+- **Summary Stats:** Total containers, CPU, memory, network usage
+
+**Refresh:** 30s | **Default Range:** Last 1 hour
+
+### 3. Resource Utilization
+**URL:** `https://grafana.DOMAIN/d/resource-utilization`
+
+Historical trends for capacity planning:
+- **CPU by Core:** Per-core utilization over time
+- **Memory Trends:** Used, Cached, and Buffers breakdown
+- **Disk I/O Trends:** Read/Write operations by device
+- **Network Patterns:** Traffic patterns by interface
+- **Container Allocation:** Stacked CPU and memory by container
+- **Top Consumers Table:** Detailed resource usage with CPU%, Memory, Network
+
+**Refresh:** 1m | **Default Range:** Last 24 hours
+
+All dashboards include:
+- **Time Range Selectors:** 1h, 6h, 12h, 24h, 7d
+- **Refresh Intervals:** 5s, 30s, 1m, 5m, 15m
+- **Color-coded Thresholds:** Green (healthy), Yellow (warning), Red (critical)
+- **Responsive Design:** Mobile-friendly layouts
 
 ## Troubleshooting
 

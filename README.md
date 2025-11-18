@@ -12,6 +12,9 @@ A complete self-hosted infrastructure for home automation, AI, and network servi
 
 **Monitoring Stack:**
 - **[Grafana](https://github.com/grafana/grafana)** - Metrics visualization and dashboards
+  - **System Overview** - CPU, memory, disk, network metrics
+  - **Container Health** - Docker container status and resource usage
+  - **Resource Utilization** - Historical trends and capacity planning
 - **[Prometheus](https://github.com/prometheus/prometheus)** - Metrics collection and alerting
 - **[Alertmanager](https://github.com/prometheus/alertmanager)** - Alert routing and management
 - **[Node Exporter](https://github.com/prometheus/node_exporter)** - System metrics exporter

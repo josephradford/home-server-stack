@@ -17,34 +17,10 @@
   },
   "editable": true,
   "fiscalYearStartMonth": 0,
-  "graphTooltip": 0,
+  "graphTooltip": 1,
   "id": null,
-  "links": [
-    {
-      "asDropdown": false,
-      "icon": "external link",
-      "includeVars": false,
-      "keepTime": true,
-      "tags": [],
-      "targetBlank": false,
-      "title": "System Overview",
-      "tooltip": "View overall system metrics",
-      "type": "link",
-      "url": "/d/system-overview"
-    },
-    {
-      "asDropdown": false,
-      "icon": "external link",
-      "includeVars": false,
-      "keepTime": true,
-      "tags": [],
-      "targetBlank": false,
-      "title": "Resource Utilization",
-      "tooltip": "View historical resource trends",
-      "type": "link",
-      "url": "/d/resource-utilization"
-    }
-  ],
+  "links": [],
+  "liveNow": false,
   "panels": [
     {
       "datasource": {
@@ -56,13 +32,33 @@
           "color": {
             "mode": "thresholds"
           },
-          "mappings": [],
+          "mappings": [
+            {
+              "options": {
+                "0": {
+                  "color": "red",
+                  "index": 0,
+                  "text": "Down"
+                },
+                "1": {
+                  "color": "green",
+                  "index": 1,
+                  "text": "Running"
+                }
+              },
+              "type": "value"
+            }
+          ],
           "thresholds": {
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
+                "color": "red",
                 "value": null
+              },
+              {
+                "color": "green",
+                "value": 1
               }
             ]
           }
@@ -71,16 +67,16 @@
       },
       "gridPos": {
         "h": 8,
-        "w": 6,
+        "w": 24,
         "x": 0,
         "y": 0
       },
       "id": 1,
       "options": {
-        "colorMode": "value",
-        "graphMode": "none",
-        "justifyMode": "auto",
-        "orientation": "auto",
+        "displayMode": "gradient",
+        "minVizHeight": 10,
+        "minVizWidth": 0,
+        "orientation": "horizontal",
         "reduceOptions": {
           "values": false,
           "calcs": [
@@ -88,79 +84,24 @@
           ],
           "fields": ""
         },
-        "showPercentChange": false,
-        "textMode": "auto",
-        "wideLayout": true
+        "showUnfilled": true
       },
-      "pluginVersion": "11.0.0",
+      "pluginVersion": "10.0.0",
       "targets": [
         {
           "datasource": {
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "count(container_last_seen{name=~\".+\"})",
-          "refId": "A"
-        }
-      ],
-      "title": "Containers Running",
-      "type": "stat",
-      "description": "Total number of active Docker containers currently running on the system."
-    },
-    {
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "color": {
-            "mode": "palette-classic"
-          },
-          "custom": {
-            "hideFrom": {
-              "tooltip": false,
-              "viz": false,
-              "legend": false
-            }
-          },
-          "mappings": []
-        },
-        "overrides": []
-      },
-      "gridPos": {
-        "h": 8,
-        "w": 6,
-        "x": 6,
-        "y": 0
-      },
-      "id": 2,
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom",
-          "showLegend": true
-        },
-        "pieType": "pie",
-        "tooltip": {
-          "mode": "single",
-          "sort": "none"
-        }
-      },
-      "targets": [
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "container_last_seen{name=~\".+\"}",
+          "editorMode": "code",
+          "expr": "time() - container_last_seen{name=~\".+\",name!~\".*POD.*\"} < 60",
           "legendFormat": "{{name}}",
+          "range": true,
           "refId": "A"
         }
       ],
       "title": "Container Status",
-      "type": "piechart",
-      "description": "Distribution of running containers by name. Each slice represents one container."
+      "type": "bargauge"
     },
     {
       "datasource": {
@@ -173,7 +114,6 @@
             "mode": "palette-classic"
           },
           "custom": {
-            "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
             "axisLabel": "",
@@ -187,14 +127,13 @@
               "viz": false,
               "legend": false
             },
-            "insertNulls": false,
             "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
             "scaleDistribution": {
               "type": "linear"
             },
-            "showPoints": "auto",
+            "showPoints": "never",
             "spanNulls": false,
             "stacking": {
               "group": "A",
@@ -205,6 +144,8 @@
             }
           },
           "mappings": [],
+          "max": 100,
+          "min": 0,
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -225,20 +166,20 @@
       "gridPos": {
         "h": 8,
         "w": 12,
-        "x": 12,
-        "y": 0
+        "x": 0,
+        "y": 8
       },
-      "id": 3,
+      "id": 2,
       "options": {
         "legend": {
-          "calcs": [],
-          "displayMode": "list",
+          "calcs": ["mean", "max"],
+          "displayMode": "table",
           "placement": "bottom",
           "showLegend": true
         },
         "tooltip": {
-          "mode": "single",
-          "sort": "none"
+          "mode": "multi",
+          "sort": "desc"
         }
       },
       "targets": [
@@ -247,14 +188,15 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "rate(container_cpu_usage_seconds_total{name=~\".+\"}[5m]) * 100",
+          "editorMode": "code",
+          "expr": "rate(container_cpu_usage_seconds_total{name=~\".+\",name!~\".*POD.*\"}[5m]) * 100",
           "legendFormat": "{{name}}",
+          "range": true,
           "refId": "A"
         }
       ],
       "title": "Container CPU Usage",
-      "type": "timeseries",
-      "description": "CPU usage percentage for each container over time."
+      "type": "timeseries"
     },
     {
       "datasource": {
@@ -267,7 +209,6 @@
             "mode": "palette-classic"
           },
           "custom": {
-            "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
             "axisLabel": "",
@@ -281,14 +222,13 @@
               "viz": false,
               "legend": false
             },
-            "insertNulls": false,
             "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
             "scaleDistribution": {
               "type": "linear"
             },
-            "showPoints": "auto",
+            "showPoints": "never",
             "spanNulls": false,
             "stacking": {
               "group": "A",
@@ -312,27 +252,27 @@
               }
             ]
           },
-          "unit": "bytes"
+          "unit": "decbytes"
         },
         "overrides": []
       },
       "gridPos": {
         "h": 8,
         "w": 12,
-        "x": 0,
+        "x": 12,
         "y": 8
       },
-      "id": 4,
+      "id": 3,
       "options": {
         "legend": {
-          "calcs": [],
-          "displayMode": "list",
+          "calcs": ["mean", "max"],
+          "displayMode": "table",
           "placement": "bottom",
           "showLegend": true
         },
         "tooltip": {
-          "mode": "single",
-          "sort": "none"
+          "mode": "multi",
+          "sort": "desc"
         }
       },
       "targets": [
@@ -341,14 +281,15 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "container_memory_usage_bytes{name=~\".+\"}",
+          "editorMode": "code",
+          "expr": "container_memory_usage_bytes{name=~\".+\",name!~\".*POD.*\"}",
           "legendFormat": "{{name}}",
+          "range": true,
           "refId": "A"
         }
       ],
       "title": "Container Memory Usage",
-      "type": "timeseries",
-      "description": "Memory consumption in bytes for each running container."
+      "type": "timeseries"
     },
     {
       "datasource": {
@@ -361,7 +302,6 @@
             "mode": "palette-classic"
           },
           "custom": {
-            "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
             "axisLabel": "",
@@ -375,14 +315,13 @@
               "viz": false,
               "legend": false
             },
-            "insertNulls": false,
             "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
             "scaleDistribution": {
               "type": "linear"
             },
-            "showPoints": "auto",
+            "showPoints": "never",
             "spanNulls": false,
             "stacking": {
               "group": "A",
@@ -408,7 +347,7 @@
           {
             "matcher": {
               "id": "byRegexp",
-              "options": ".*Transmit.*"
+              "options": ".*RX"
             },
             "properties": [
               {
@@ -422,20 +361,20 @@
       "gridPos": {
         "h": 8,
         "w": 12,
-        "x": 12,
-        "y": 8
+        "x": 0,
+        "y": 16
       },
-      "id": 5,
+      "id": 4,
       "options": {
         "legend": {
-          "calcs": [],
-          "displayMode": "list",
+          "calcs": ["mean"],
+          "displayMode": "table",
           "placement": "bottom",
           "showLegend": true
         },
         "tooltip": {
-          "mode": "single",
-          "sort": "none"
+          "mode": "multi",
+          "sort": "desc"
         }
       },
       "targets": [
@@ -444,8 +383,10 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "rate(container_network_receive_bytes_total{name=~\".+\"}[5m])",
-          "legendFormat": "{{name}} - Receive",
+          "editorMode": "code",
+          "expr": "rate(container_network_receive_bytes_total{name=~\".+\",name!~\".*POD.*\"}[5m])",
+          "legendFormat": "{{name}} RX",
+          "range": true,
           "refId": "A"
         },
         {
@@ -453,14 +394,15 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "rate(container_network_transmit_bytes_total{name=~\".+\"}[5m])",
-          "legendFormat": "{{name}} - Transmit",
+          "editorMode": "code",
+          "expr": "rate(container_network_transmit_bytes_total{name=~\".+\",name!~\".*POD.*\"}[5m])",
+          "legendFormat": "{{name}} TX",
+          "range": true,
           "refId": "B"
         }
       ],
       "title": "Container Network I/O",
-      "type": "timeseries",
-      "description": "Network traffic rates for all containers. Negative values show transmit."
+      "type": "timeseries"
     },
     {
       "datasource": {
@@ -486,9 +428,164 @@
               {
                 "color": "green",
                 "value": null
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "CPU %"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percent"
               },
               {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "green",
+                      "value": null
+                    },
+                    {
+                      "color": "yellow",
+                      "value": 50
+                    },
+                    {
+                      "color": "red",
+                      "value": 80
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-background"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Memory"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "decbytes"
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 16
+      },
+      "id": 5,
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "countRows": false,
+          "fields": "",
+          "reducer": ["sum"],
+          "show": false
+        },
+        "showHeader": true,
+        "sortBy": [
+          {
+            "desc": true,
+            "displayName": "CPU %"
+          }
+        ]
+      },
+      "pluginVersion": "10.0.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "rate(container_cpu_usage_seconds_total{name=~\".+\",name!~\".*POD.*\"}[5m]) * 100",
+          "format": "table",
+          "legendFormat": "{{name}}",
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "container_memory_usage_bytes{name=~\".+\",name!~\".*POD.*\"}",
+          "format": "table",
+          "hide": false,
+          "legendFormat": "{{name}}",
+          "range": true,
+          "refId": "B"
+        }
+      ],
+      "title": "Top Resource Consumers",
+      "transformations": [
+        {
+          "id": "seriesToColumns",
+          "options": {
+            "byField": "name"
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time": true,
+              "id": true,
+              "instance": true,
+              "job": true,
+              "image": true
+            },
+            "indexByName": {},
+            "renameByName": {
+              "name": "Container",
+              "Value #A": "CPU %",
+              "Value #B": "Memory"
+            }
+          }
+        }
+      ],
+      "type": "table"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
                 "color": "red",
+                "value": null
+              },
+              {
+                "color": "green",
                 "value": 1
               }
             ]
@@ -497,65 +594,234 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 8,
-        "w": 24,
+        "h": 4,
+        "w": 6,
         "x": 0,
-        "y": 16
+        "y": 24
       },
       "id": 6,
       "options": {
-        "cellHeight": "sm",
-        "footer": {
-          "countRows": false,
-          "fields": "",
-          "reducer": [
-            "sum"
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
           ],
-          "show": false
+          "fields": ""
         },
-        "showHeader": true
+        "textMode": "auto"
       },
-      "pluginVersion": "11.0.0",
+      "pluginVersion": "10.0.0",
       "targets": [
         {
           "datasource": {
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "increase(container_start_time_seconds{name=~\".+\"}[1h])",
-          "format": "table",
-          "legendFormat": "{{name}}",
+          "editorMode": "code",
+          "expr": "count(time() - container_last_seen{name=~\".+\",name!~\".*POD.*\"} < 60)",
+          "legendFormat": "Running",
+          "range": true,
           "refId": "A"
         }
       ],
-      "title": "Container Restart Count (Last Hour)",
-      "transformations": [
+      "title": "Containers Running",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 6,
+        "y": 24
+      },
+      "id": 7,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        },
+        "textMode": "auto"
+      },
+      "pluginVersion": "10.0.0",
+      "targets": [
         {
-          "id": "organize",
-          "options": {
-            "excludeByName": {
-              "Time": true,
-              "__name__": true,
-              "id": true,
-              "image": false,
-              "instance": true,
-              "job": true
-            },
-            "indexByName": {},
-            "renameByName": {
-              "Value": "Restarts",
-              "name": "Container"
-            }
-          }
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum(rate(container_cpu_usage_seconds_total{name=~\".+\",name!~\".*POD.*\"}[5m])) * 100",
+          "legendFormat": "Total CPU",
+          "range": true,
+          "refId": "A"
         }
       ],
-      "type": "table",
-      "description": "Number of container restarts in the past hour. Non-zero values may indicate issues."
+      "title": "Total Container CPU",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "decbytes"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 12,
+        "y": 24
+      },
+      "id": 8,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        },
+        "textMode": "auto"
+      },
+      "pluginVersion": "10.0.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum(container_memory_usage_bytes{name=~\".+\",name!~\".*POD.*\"})",
+          "legendFormat": "Total Memory",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Total Container Memory",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "Bps"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 18,
+        "y": 24
+      },
+      "id": 9,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        },
+        "textMode": "auto"
+      },
+      "pluginVersion": "10.0.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "sum(rate(container_network_receive_bytes_total{name=~\".+\",name!~\".*POD.*\"}[5m])) + sum(rate(container_network_transmit_bytes_total{name=~\".+\",name!~\".*POD.*\"}[5m]))",
+          "legendFormat": "Total Network",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Total Network I/O",
+      "type": "stat"
     }
   ],
   "refresh": "30s",
-  "schemaVersion": 39,
-  "tags": [],
+  "schemaVersion": 38,
+  "style": "dark",
+  "tags": ["containers", "docker", "health"],
   "templating": {
     "list": []
   },
@@ -564,17 +830,11 @@
     "to": "now"
   },
   "timepicker": {
-    "refresh_intervals": [
-      "5s",
-      "30s",
-      "1m",
-      "5m",
-      "15m"
-    ]
+    "refresh_intervals": ["5s", "30s", "1m", "5m", "15m"]
   },
-  "timezone": "browser",
+  "timezone": "",
   "title": "Container Health",
   "uid": "container-health",
-  "version": 1,
+  "version": 0,
   "weekStart": ""
 }
