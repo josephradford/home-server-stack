@@ -4,7 +4,7 @@
 .PHONY: help setup update start stop restart logs build pull status clean purge validate env-check
 .PHONY: logs-n8n logs-homepage logs-homeassistant logs-actualbudget
 .PHONY: adguard-setup homeassistant-setup setup-certs test-domain-access traefik-password
-.PHONY: wireguard-status wireguard-install
+.PHONY: wireguard-status wireguard-install wireguard-check
 .PHONY: ssl-setup ssl-copy-certs ssl-configure-traefik ssl-setup-renewal ssl-renew-test
 .PHONY: dashboard-setup dashboard-start dashboard-stop dashboard-restart dashboard-logs dashboard-status
 
@@ -114,7 +114,7 @@ pull: validate
 	@echo "✓ Images pulled"
 
 # First time setup
-setup: env-check validate
+setup: env-check validate wireguard-check
 	@echo "Starting first-time setup..."
 	@echo ""
 	@echo "Step 1/8: Setting up Traefik dashboard password..."
@@ -135,17 +135,14 @@ setup: env-check validate
 	@echo "Step 6/8: Starting services (Docker Compose will create networks)..."
 	@$(COMPOSE) up -d
 	@echo ""
-	@echo "Step 7/9: Fixing data directory permissions..."
+	@echo "Step 7/8: Fixing data directory permissions..."
 	@echo "Containers create directories as root, fixing ownership for user access..."
 	@if [ -d "data" ]; then \
 		sudo chown -R $(shell id -u):$(shell getent group docker | cut -d: -f3) data/ && \
 		echo "✓ Data directory permissions fixed"; \
 	fi
 	@echo ""
-	@echo "Step 8/9: Setting up WireGuard VPN routing..."
-	@./scripts/setup-wireguard-routing.sh
-	@echo ""
-	@echo "Step 9/9: Configuring AdGuard DNS rewrites..."
+	@echo "Step 8/8: Configuring AdGuard DNS rewrites..."
 	@$(MAKE) adguard-setup
 	@echo ""
 	@$(COMPOSE) ps
@@ -204,8 +201,33 @@ setup: env-check validate
 	@echo ""
 	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
+# Check WireGuard is running (required for all Docker operations)
+wireguard-check:
+	@if ! systemctl is-active --quiet wg-quick@wg0; then \
+		echo "❌ ERROR: WireGuard VPN is not running!"; \
+		echo ""; \
+		echo "WireGuard must be running before starting Docker services."; \
+		echo "This ensures your remote VPN access survives Docker restarts."; \
+		echo ""; \
+		echo "To set up WireGuard:"; \
+		echo ""; \
+		echo "1. Install WireGuard (one-time):"; \
+		echo "   make wireguard-install"; \
+		echo ""; \
+		echo "2. Create server configuration:"; \
+		echo "   sudo ./scripts/setup-wireguard-server.sh"; \
+		echo ""; \
+		echo "3. Enable and start the service:"; \
+		echo "   sudo systemctl enable --now wg-quick@wg0"; \
+		echo ""; \
+		echo "4. Verify it's running:"; \
+		echo "   make wireguard-status"; \
+		echo ""; \
+		exit 1; \
+	fi
+
 # Update all services
-update: env-check validate
+update: env-check validate wireguard-check
 	@echo "Updating all services..."
 	@echo ""
 	@echo "Step 1/2: Pulling latest images..."
@@ -219,7 +241,7 @@ update: env-check validate
 	@echo "Check status with: make status"
 
 # Start all services
-start: env-check
+start: env-check wireguard-check
 	@echo "Starting all services..."
 	@$(COMPOSE) up -d
 	@echo "✓ All services started"
@@ -231,7 +253,7 @@ stop:
 	@echo "✓ All services stopped"
 
 # Restart all services
-restart: env-check
+restart: env-check wireguard-check
 	@echo "Restarting all services..."
 	@$(COMPOSE) restart
 	@echo "✓ All services restarted"
