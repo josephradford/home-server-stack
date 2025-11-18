@@ -2,53 +2,13 @@
 # Network & Security Services
 # This file contains infrastructure services for networking, reverse proxy, and security
 # - Traefik: Reverse proxy with automatic SSL and domain-based routing
-# - Wireguard: VPN server for secure remote access
 # - Fail2ban: Intrusion prevention system that monitors and blocks malicious traffic
+#
+# NOTE: WireGuard is now installed as a system service (not Docker)
+# This prevents VPN disconnection when Docker services are restarted.
+# See: ./scripts/install-wireguard.sh
 
 services:
-  # Wireguard - VPN server for secure remote access
-  wireguard:
-    image: lscr.io/linuxserver/wireguard:latest
-    container_name: wireguard
-    restart: unless-stopped
-    cap_add:
-      - NET_ADMIN
-      - SYS_MODULE
-    # Security note: LinuxServer.io containers use s6-overlay init system
-    # Dropping all capabilities or no-new-privileges prevents init from executing
-    # Keep only the required NET_ADMIN and SYS_MODULE capabilities
-    environment:
-      - PUID=1000
-      - PGID=1000
-      - TZ=${TIMEZONE}
-      - SERVERURL=${WIREGUARD_SERVERURL}
-      - SERVERPORT=${WIREGUARD_PORT:-51820}
-      - PEERS=${WIREGUARD_PEERS:-5}
-      - PEERDNS=${SERVER_IP}
-      # CRITICAL: Split tunneling - only route home network traffic through VPN
-      # DO NOT use 0.0.0.0/0 unless you want full tunneling (not recommended)
-      - INTERNAL_SUBNET=${WIREGUARD_SUBNET:-10.13.13.0/24}
-      - ALLOWEDIPS=${WIREGUARD_ALLOWEDIPS:-192.168.1.0/24,10.13.13.0/24}
-      - LOG_CONFS=${WIREGUARD_LOG_CONFS:-true}
-      - PERSISTENTKEEPALIVE_PEERS=${WIREGUARD_KEEPALIVE:-25}
-    ports:
-      - "${WIREGUARD_PORT:-51820}:51820/udp"
-      - "${SERVER_IP}:51821:51821/tcp"
-    volumes:
-      - ./data/wireguard:/config
-      - /lib/modules:/lib/modules:ro
-    sysctls:
-      - net.ipv4.conf.all.src_valid_mark=1
-      - net.ipv4.ip_forward=1
-    networks:
-      - homeserver
-    healthcheck:
-      test: ["CMD", "test", "-f", "/config/wg0.conf"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 10s
-
   # Traefik - Reverse proxy for domain-based service access
   traefik:
     image: traefik:v3.2
