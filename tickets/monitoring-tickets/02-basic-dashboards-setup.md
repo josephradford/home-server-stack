@@ -8,13 +8,13 @@
 Create essential Grafana dashboards for system overview, container health, and resource utilization monitoring. These dashboards provide immediate visibility into infrastructure health.
 
 ## Acceptance Criteria
-- [ ] System overview dashboard showing CPU, memory, disk, network
-- [ ] Container health dashboard showing all service status
-- [ ] Resource utilization dashboard with historical trends
-- [ ] Dashboards automatically provisioned on Grafana startup
-- [ ] All panels showing data from Prometheus
-- [ ] Responsive design for mobile/tablet viewing
-- [ ] Proper time range selectors and refresh intervals
+- [x] System overview dashboard showing CPU, memory, disk, network
+- [x] Container health dashboard showing all service status
+- [x] Resource utilization dashboard with historical trends
+- [x] Dashboards automatically provisioned on Grafana startup
+- [x] All panels showing data from Prometheus
+- [x] Responsive design for mobile/tablet viewing
+- [x] Proper time range selectors and refresh intervals
 
 ## Technical Implementation Details
 

@@ -17,34 +17,10 @@
   },
   "editable": true,
   "fiscalYearStartMonth": 0,
-  "graphTooltip": 0,
+  "graphTooltip": 1,
   "id": null,
-  "links": [
-    {
-      "asDropdown": false,
-      "icon": "external link",
-      "includeVars": false,
-      "keepTime": true,
-      "tags": [],
-      "targetBlank": false,
-      "title": "System Overview",
-      "tooltip": "View current system metrics",
-      "type": "link",
-      "url": "/d/system-overview"
-    },
-    {
-      "asDropdown": false,
-      "icon": "external link",
-      "includeVars": false,
-      "keepTime": true,
-      "tags": [],
-      "targetBlank": false,
-      "title": "Container Health",
-      "tooltip": "View container status and health",
-      "type": "link",
-      "url": "/d/container-health"
-    }
-  ],
+  "links": [],
+  "liveNow": false,
   "panels": [
     {
       "datasource": {
@@ -57,38 +33,38 @@
             "mode": "palette-classic"
           },
           "custom": {
-            "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
             "drawStyle": "line",
-            "fillOpacity": 10,
+            "fillOpacity": 20,
             "gradientMode": "none",
             "hideFrom": {
               "tooltip": false,
               "viz": false,
               "legend": false
             },
-            "insertNulls": false,
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
             "pointSize": 5,
             "scaleDistribution": {
               "type": "linear"
             },
-            "showPoints": "auto",
+            "showPoints": "never",
             "spanNulls": false,
             "stacking": {
               "group": "A",
               "mode": "none"
             },
             "thresholdsStyle": {
-              "mode": "off"
+              "mode": "line"
             }
           },
           "mappings": [],
+          "max": 100,
+          "min": 0,
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -97,8 +73,12 @@
                 "value": null
               },
               {
+                "color": "yellow",
+                "value": 70
+              },
+              {
                 "color": "red",
-                "value": 80
+                "value": 85
               }
             ]
           },
@@ -115,13 +95,13 @@
       "id": 1,
       "options": {
         "legend": {
-          "calcs": [],
-          "displayMode": "list",
+          "calcs": ["mean", "max", "last"],
+          "displayMode": "table",
           "placement": "bottom",
           "showLegend": true
         },
         "tooltip": {
-          "mode": "single",
+          "mode": "multi",
           "sort": "none"
         }
       },
@@ -131,14 +111,15 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
+          "editorMode": "code",
           "expr": "100 - (avg by (cpu) (rate(node_cpu_seconds_total{mode=\"idle\"}[5m])) * 100)",
           "legendFormat": "CPU {{cpu}}",
+          "range": true,
           "refId": "A"
         }
       ],
       "title": "CPU Usage by Core",
-      "type": "timeseries",
-      "description": "Individual CPU core utilization over time. Helps identify single-threaded bottlenecks."
+      "type": "timeseries"
     },
     {
       "datasource": {
@@ -151,28 +132,26 @@
             "mode": "palette-classic"
           },
           "custom": {
-            "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
             "drawStyle": "line",
-            "fillOpacity": 10,
-            "gradientMode": "none",
+            "fillOpacity": 20,
+            "gradientMode": "opacity",
             "hideFrom": {
               "tooltip": false,
               "viz": false,
               "legend": false
             },
-            "insertNulls": false,
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
             "pointSize": 5,
             "scaleDistribution": {
               "type": "linear"
             },
-            "showPoints": "auto",
+            "showPoints": "never",
             "spanNulls": false,
             "stacking": {
               "group": "A",
@@ -189,14 +168,10 @@
               {
                 "color": "green",
                 "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
               }
             ]
           },
-          "unit": "bytes"
+          "unit": "decbytes"
         },
         "overrides": []
       },
@@ -209,13 +184,13 @@
       "id": 2,
       "options": {
         "legend": {
-          "calcs": [],
-          "displayMode": "list",
+          "calcs": ["mean", "max", "last"],
+          "displayMode": "table",
           "placement": "bottom",
           "showLegend": true
         },
         "tooltip": {
-          "mode": "single",
+          "mode": "multi",
           "sort": "none"
         }
       },
@@ -225,8 +200,10 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
+          "editorMode": "code",
           "expr": "node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes",
           "legendFormat": "Used",
+          "range": true,
           "refId": "A"
         },
         {
@@ -234,8 +211,10 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "node_memory_Buffers_bytes",
-          "legendFormat": "Buffers",
+          "editorMode": "code",
+          "expr": "node_memory_Cached_bytes",
+          "legendFormat": "Cached",
+          "range": true,
           "refId": "B"
         },
         {
@@ -243,23 +222,15 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "node_memory_Cached_bytes",
-          "legendFormat": "Cached",
+          "editorMode": "code",
+          "expr": "node_memory_Buffers_bytes",
+          "legendFormat": "Buffers",
+          "range": true,
           "refId": "C"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "node_memory_MemAvailable_bytes",
-          "legendFormat": "Available",
-          "refId": "D"
         }
       ],
       "title": "Memory Usage Trends",
-      "type": "timeseries",
-      "description": "Historical memory consumption breakdown showing used, buffers, cached, and available memory."
+      "type": "timeseries"
     },
     {
       "datasource": {
@@ -272,7 +243,6 @@
             "mode": "palette-classic"
           },
           "custom": {
-            "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
             "axisLabel": "",
@@ -286,14 +256,13 @@
               "viz": false,
               "legend": false
             },
-            "insertNulls": false,
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
             "pointSize": 5,
             "scaleDistribution": {
               "type": "linear"
             },
-            "showPoints": "auto",
+            "showPoints": "never",
             "spanNulls": false,
             "stacking": {
               "group": "A",
@@ -313,13 +282,13 @@
               }
             ]
           },
-          "unit": "Bps"
+          "unit": "iops"
         },
         "overrides": [
           {
             "matcher": {
               "id": "byRegexp",
-              "options": ".*Write.*"
+              "options": ".*Read"
             },
             "properties": [
               {
@@ -339,13 +308,13 @@
       "id": 3,
       "options": {
         "legend": {
-          "calcs": [],
-          "displayMode": "list",
+          "calcs": ["mean", "max"],
+          "displayMode": "table",
           "placement": "bottom",
           "showLegend": true
         },
         "tooltip": {
-          "mode": "single",
+          "mode": "multi",
           "sort": "none"
         }
       },
@@ -355,8 +324,10 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "rate(node_disk_read_bytes_total[5m])",
-          "legendFormat": "Read - {{device}}",
+          "editorMode": "code",
+          "expr": "rate(node_disk_reads_completed_total{device!~\"loop.*|dm-.*\"}[5m])",
+          "legendFormat": "{{device}} Read",
+          "range": true,
           "refId": "A"
         },
         {
@@ -364,14 +335,15 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "rate(node_disk_written_bytes_total[5m])",
-          "legendFormat": "Write - {{device}}",
+          "editorMode": "code",
+          "expr": "rate(node_disk_writes_completed_total{device!~\"loop.*|dm-.*\"}[5m])",
+          "legendFormat": "{{device}} Write",
+          "range": true,
           "refId": "B"
         }
       ],
       "title": "Disk I/O Trends",
-      "type": "timeseries",
-      "description": "Disk read and write throughput over time. Negative values show write operations."
+      "type": "timeseries"
     },
     {
       "datasource": {
@@ -384,7 +356,6 @@
             "mode": "palette-classic"
           },
           "custom": {
-            "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
             "axisLabel": "",
@@ -398,14 +369,13 @@
               "viz": false,
               "legend": false
             },
-            "insertNulls": false,
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
             "pointSize": 5,
             "scaleDistribution": {
               "type": "linear"
             },
-            "showPoints": "auto",
+            "showPoints": "never",
             "spanNulls": false,
             "stacking": {
               "group": "A",
@@ -431,7 +401,7 @@
           {
             "matcher": {
               "id": "byRegexp",
-              "options": ".*Transmit.*"
+              "options": ".*RX"
             },
             "properties": [
               {
@@ -451,13 +421,13 @@
       "id": 4,
       "options": {
         "legend": {
-          "calcs": [],
-          "displayMode": "list",
+          "calcs": ["mean", "max"],
+          "displayMode": "table",
           "placement": "bottom",
           "showLegend": true
         },
         "tooltip": {
-          "mode": "single",
+          "mode": "multi",
           "sort": "none"
         }
       },
@@ -467,8 +437,10 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "rate(node_network_receive_bytes_total{device!=\"lo\"}[5m])",
-          "legendFormat": "Receive - {{device}}",
+          "editorMode": "code",
+          "expr": "rate(node_network_receive_bytes_total{device!~\"lo|veth.*\"}[5m])",
+          "legendFormat": "{{device}} RX",
+          "range": true,
           "refId": "A"
         },
         {
@@ -476,14 +448,15 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "rate(node_network_transmit_bytes_total{device!=\"lo\"}[5m])",
-          "legendFormat": "Transmit - {{device}}",
+          "editorMode": "code",
+          "expr": "rate(node_network_transmit_bytes_total{device!~\"lo|veth.*\"}[5m])",
+          "legendFormat": "{{device}} TX",
+          "range": true,
           "refId": "B"
         }
       ],
       "title": "Network Traffic Patterns",
-      "type": "timeseries",
-      "description": "Network bandwidth utilization trends for all interfaces. Negative values show transmit."
+      "type": "timeseries"
     },
     {
       "datasource": {
@@ -496,7 +469,6 @@
             "mode": "palette-classic"
           },
           "custom": {
-            "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
             "axisLabel": "",
@@ -510,14 +482,13 @@
               "viz": false,
               "legend": false
             },
-            "insertNulls": false,
-            "lineInterpolation": "linear",
-            "lineWidth": 1,
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
             "pointSize": 5,
             "scaleDistribution": {
               "type": "linear"
             },
-            "showPoints": "auto",
+            "showPoints": "never",
             "spanNulls": false,
             "stacking": {
               "group": "A",
@@ -550,14 +521,16 @@
       "id": 5,
       "options": {
         "legend": {
-          "calcs": [],
-          "displayMode": "list",
+          "calcs": ["mean", "max"],
+          "displayMode": "table",
           "placement": "bottom",
-          "showLegend": true
+          "showLegend": true,
+          "sortBy": "Max",
+          "sortDesc": true
         },
         "tooltip": {
-          "mode": "single",
-          "sort": "none"
+          "mode": "multi",
+          "sort": "desc"
         }
       },
       "targets": [
@@ -566,14 +539,106 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "rate(container_cpu_usage_seconds_total{name=~\".+\"}[5m]) * 100",
+          "editorMode": "code",
+          "expr": "rate(container_cpu_usage_seconds_total{name=~\".+\",name!~\".*POD.*\"}[5m]) * 100",
           "legendFormat": "{{name}}",
+          "range": true,
           "refId": "A"
         }
       ],
       "title": "Container CPU Allocation",
-      "type": "timeseries",
-      "description": "Stacked view of CPU usage by container showing relative resource consumption."
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": {
+              "tooltip": false,
+              "viz": false,
+              "legend": false
+            },
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "normal"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "decbytes"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 16
+      },
+      "id": 6,
+      "options": {
+        "legend": {
+          "calcs": ["mean", "max"],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true,
+          "sortBy": "Max",
+          "sortDesc": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "container_memory_usage_bytes{name=~\".+\",name!~\".*POD.*\"}",
+          "legendFormat": "{{name}}",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Container Memory Allocation",
+      "type": "timeseries"
     },
     {
       "datasource": {
@@ -599,20 +664,49 @@
               {
                 "color": "green",
                 "value": null
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "CPU %"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percent"
               },
               {
-                "color": "yellow",
-                "value": 50
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-background"
+                }
               },
               {
-                "color": "red",
-                "value": 80
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "green",
+                      "value": null
+                    },
+                    {
+                      "color": "yellow",
+                      "value": 50
+                    },
+                    {
+                      "color": "red",
+                      "value": 80
+                    }
+                  ]
+                }
               }
             ]
           },
-          "unit": "percent"
-        },
-        "overrides": [
           {
             "matcher": {
               "id": "byName",
@@ -621,12 +715,12 @@
             "properties": [
               {
                 "id": "unit",
-                "value": "bytes"
+                "value": "decbytes"
               },
               {
                 "id": "custom.cellOptions",
                 "value": {
-                  "type": "color-text"
+                  "type": "color-background"
                 }
               }
             ]
@@ -634,14 +728,12 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "CPU"
+              "options": "Network (RX+TX)"
             },
             "properties": [
               {
-                "id": "custom.cellOptions",
-                "value": {
-                  "type": "color-text"
-                }
+                "id": "unit",
+                "value": "Bps"
               }
             ]
           }
@@ -649,39 +741,39 @@
       },
       "gridPos": {
         "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 16
+        "w": 24,
+        "x": 0,
+        "y": 24
       },
-      "id": 6,
+      "id": 7,
       "options": {
         "cellHeight": "sm",
         "footer": {
           "countRows": false,
           "fields": "",
-          "reducer": [
-            "sum"
-          ],
+          "reducer": ["sum"],
           "show": false
         },
         "showHeader": true,
         "sortBy": [
           {
             "desc": true,
-            "displayName": "CPU"
+            "displayName": "CPU %"
           }
         ]
       },
-      "pluginVersion": "11.0.0",
+      "pluginVersion": "10.0.0",
       "targets": [
         {
           "datasource": {
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "topk(10, rate(container_cpu_usage_seconds_total{name=~\".+\"}[5m]) * 100)",
+          "editorMode": "code",
+          "expr": "rate(container_cpu_usage_seconds_total{name=~\".+\",name!~\".*POD.*\"}[5m]) * 100",
           "format": "table",
-          "instant": true,
+          "legendFormat": "{{name}}",
+          "range": true,
           "refId": "A"
         },
         {
@@ -689,64 +781,77 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "topk(10, container_memory_usage_bytes{name=~\".+\"})",
+          "editorMode": "code",
+          "expr": "container_memory_usage_bytes{name=~\".+\",name!~\".*POD.*\"}",
           "format": "table",
-          "instant": true,
+          "hide": false,
+          "legendFormat": "{{name}}",
+          "range": true,
           "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "rate(container_network_receive_bytes_total{name=~\".+\",name!~\".*POD.*\"}[5m]) + rate(container_network_transmit_bytes_total{name=~\".+\",name!~\".*POD.*\"}[5m])",
+          "format": "table",
+          "hide": false,
+          "legendFormat": "{{name}}",
+          "range": true,
+          "refId": "C"
         }
       ],
-      "title": "Top Resource Consumers",
+      "title": "Top Resource Consumers (Detailed)",
       "transformations": [
         {
-          "id": "merge",
-          "options": {}
+          "id": "seriesToColumns",
+          "options": {
+            "byField": "name"
+          }
         },
         {
           "id": "organize",
           "options": {
             "excludeByName": {
               "Time": true,
-              "__name__": true,
               "id": true,
-              "image": false,
               "instance": true,
-              "job": true
+              "job": true,
+              "image": true,
+              "interface": true
             },
             "indexByName": {},
             "renameByName": {
-              "Value #A": "CPU",
+              "name": "Container",
+              "Value #A": "CPU %",
               "Value #B": "Memory",
-              "name": "Container"
+              "Value #C": "Network (RX+TX)"
             }
           }
         }
       ],
-      "type": "table",
-      "description": "Ranking of containers by CPU and memory usage. Useful for identifying resource-intensive workloads."
+      "type": "table"
     }
   ],
-  "refresh": "30s",
-  "schemaVersion": 39,
-  "tags": [],
+  "refresh": "1m",
+  "schemaVersion": 38,
+  "style": "dark",
+  "tags": ["resources", "trends", "utilization"],
   "templating": {
     "list": []
   },
   "time": {
-    "from": "now-6h",
+    "from": "now-24h",
     "to": "now"
   },
   "timepicker": {
-    "refresh_intervals": [
-      "5s",
-      "30s",
-      "1m",
-      "5m",
-      "15m"
-    ]
+    "refresh_intervals": ["5s", "30s", "1m", "5m", "15m", "30m", "1h"]
   },
-  "timezone": "browser",
+  "timezone": "",
   "title": "Resource Utilization",
   "uid": "resource-utilization",
-  "version": 1,
+  "version": 0,
   "weekStart": ""
 }
