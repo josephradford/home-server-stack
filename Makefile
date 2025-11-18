@@ -4,7 +4,7 @@
 .PHONY: help setup update start stop restart logs build pull status clean purge validate env-check
 .PHONY: logs-n8n logs-homepage logs-homeassistant logs-actualbudget
 .PHONY: adguard-setup homeassistant-setup setup-certs test-domain-access traefik-password
-.PHONY: wireguard-status wireguard-install wireguard-check
+.PHONY: wireguard-status wireguard-install wireguard-setup wireguard-check
 .PHONY: ssl-setup ssl-copy-certs ssl-configure-traefik ssl-setup-renewal ssl-renew-test
 .PHONY: dashboard-setup dashboard-start dashboard-stop dashboard-restart dashboard-logs dashboard-status
 
@@ -66,8 +66,9 @@ help:
 	@echo "  make traefik-password         - Generate Traefik dashboard password from .env"
 	@echo ""
 	@echo "WireGuard VPN Management:"
+	@echo "  make wireguard-install        - Install WireGuard packages (one-time, requires sudo)"
+	@echo "  make wireguard-setup          - Create config and start service (requires sudo)"
 	@echo "  make wireguard-status         - Check WireGuard service status"
-	@echo "  make wireguard-install        - Install WireGuard as system service (requires sudo)"
 	@echo ""
 	@echo "SSL/TLS Certificate Management:"
 	@echo "  make ssl-setup          - Complete Let's Encrypt SSL setup (certbot + renewal)"
@@ -378,6 +379,23 @@ wireguard-install:
 	@echo ""
 	@echo "This script requires sudo. You will be prompted for your password."
 	@sudo ./scripts/install-wireguard.sh
+
+wireguard-setup: env-check
+	@echo "Setting up WireGuard VPN server..."
+	@echo ""
+	@echo "This script requires sudo. You will be prompted for your password."
+	@echo ""
+	@sudo ./scripts/setup-wireguard-server.sh
+	@echo ""
+	@echo "Enabling and starting WireGuard service..."
+	@sudo systemctl enable --now wg-quick@wg0
+	@echo ""
+	@echo "✓ WireGuard setup complete!"
+	@echo ""
+	@make wireguard-status
+	@echo ""
+	@echo "Next: Add VPN peers"
+	@echo "  sudo ./scripts/wireguard-add-peer.sh <peer-name>"
 
 # Setup SSL certificate storage (for certbot-generated certs)
 setup-certs:

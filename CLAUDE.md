@@ -109,19 +109,20 @@ sudo tail -f /var/log/certbot-traefik-reload.log  # View renewal logs
 
 ### WireGuard VPN Management
 ```bash
+# Install WireGuard package (one-time)
+make wireguard-install
+
+# Create server config and start service
+make wireguard-setup
+
 # Check WireGuard status
 make wireguard-status
 
-# Install WireGuard as system service (one-time on new server)
-make wireguard-install
+# Add VPN peers (clients) one at a time
+sudo ./scripts/wireguard-add-peer.sh mydevice
+sudo ./scripts/wireguard-add-peer.sh phone
 
-# Set up WireGuard server configuration
-sudo ./scripts/setup-wireguard-server.sh
-
-# Add a VPN peer (client)
-sudo ./scripts/wireguard-add-peer.sh <peer-name>
-
-# Check WireGuard details
+# View detailed status
 sudo wg show
 sudo systemctl status wg-quick@wg0
 ```
@@ -297,6 +298,7 @@ Required variables in `.env`:
 - `GANDIV5_PERSONAL_ACCESS_TOKEN` - Gandi API token for DNS-01 challenge
 - `ACME_EMAIL` - Email for Let's Encrypt certificate notifications
 - `N8N_PASSWORD`, `ADGUARD_PASSWORD`, `GRAFANA_PASSWORD` - Service credentials
+- `WIREGUARD_PORT`, `WIREGUARD_SUBNET`, `WIREGUARD_ALLOWEDIPS` - VPN configuration
 
 **Password Escaping**: Dollar signs in passwords must be escaped as `$$` for Docker Compose (e.g., `P@$$word123` → `P@$$$$word123`)
 
