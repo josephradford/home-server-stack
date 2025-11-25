@@ -17,34 +17,10 @@
   },
   "editable": true,
   "fiscalYearStartMonth": 0,
-  "graphTooltip": 0,
+  "graphTooltip": 1,
   "id": null,
-  "links": [
-    {
-      "asDropdown": false,
-      "icon": "external link",
-      "includeVars": false,
-      "keepTime": true,
-      "tags": [],
-      "targetBlank": false,
-      "title": "Container Health",
-      "tooltip": "View detailed container metrics",
-      "type": "link",
-      "url": "/d/container-health"
-    },
-    {
-      "asDropdown": false,
-      "icon": "external link",
-      "includeVars": false,
-      "keepTime": true,
-      "tags": [],
-      "targetBlank": false,
-      "title": "Resource Utilization",
-      "tooltip": "View historical resource trends",
-      "type": "link",
-      "url": "/d/resource-utilization"
-    }
-  ],
+  "links": [],
+  "liveNow": false,
   "panels": [
     {
       "datasource": {
@@ -57,6 +33,8 @@
             "mode": "thresholds"
           },
           "mappings": [],
+          "max": 100,
+          "min": 0,
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -86,8 +64,6 @@
       },
       "id": 1,
       "options": {
-        "minVizHeight": 75,
-        "minVizWidth": 75,
         "orientation": "auto",
         "reduceOptions": {
           "values": false,
@@ -97,23 +73,24 @@
           "fields": ""
         },
         "showThresholdLabels": false,
-        "showThresholdMarkers": true,
-        "sizing": "auto"
+        "showThresholdMarkers": true
       },
-      "pluginVersion": "11.0.0",
+      "pluginVersion": "10.0.0",
       "targets": [
         {
           "datasource": {
             "type": "prometheus",
             "uid": "prometheus"
           },
+          "editorMode": "code",
           "expr": "100 - (avg(rate(node_cpu_seconds_total{mode=\"idle\"}[5m])) * 100)",
+          "legendFormat": "CPU Usage",
+          "range": true,
           "refId": "A"
         }
       ],
       "title": "CPU Usage",
-      "type": "gauge",
-      "description": "Overall CPU utilization across all cores. Yellow at 70%, red at 85%."
+      "type": "gauge"
     },
     {
       "datasource": {
@@ -126,6 +103,8 @@
             "mode": "thresholds"
           },
           "mappings": [],
+          "max": 100,
+          "min": 0,
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -155,8 +134,6 @@
       },
       "id": 2,
       "options": {
-        "minVizHeight": 75,
-        "minVizWidth": 75,
         "orientation": "auto",
         "reduceOptions": {
           "values": false,
@@ -166,23 +143,24 @@
           "fields": ""
         },
         "showThresholdLabels": false,
-        "showThresholdMarkers": true,
-        "sizing": "auto"
+        "showThresholdMarkers": true
       },
-      "pluginVersion": "11.0.0",
+      "pluginVersion": "10.0.0",
       "targets": [
         {
           "datasource": {
             "type": "prometheus",
             "uid": "prometheus"
           },
+          "editorMode": "code",
           "expr": "(1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100",
+          "legendFormat": "Memory Usage",
+          "range": true,
           "refId": "A"
         }
       ],
       "title": "Memory Usage",
-      "type": "gauge",
-      "description": "System memory usage including cache and buffers. Yellow at 80%, red at 90%."
+      "type": "gauge"
     },
     {
       "datasource": {
@@ -195,6 +173,8 @@
             "mode": "thresholds"
           },
           "mappings": [],
+          "max": 100,
+          "min": 0,
           "thresholds": {
             "mode": "absolute",
             "steps": [
@@ -224,8 +204,6 @@
       },
       "id": 3,
       "options": {
-        "minVizHeight": 75,
-        "minVizWidth": 75,
         "orientation": "auto",
         "reduceOptions": {
           "values": false,
@@ -235,23 +213,24 @@
           "fields": ""
         },
         "showThresholdLabels": false,
-        "showThresholdMarkers": true,
-        "sizing": "auto"
+        "showThresholdMarkers": true
       },
-      "pluginVersion": "11.0.0",
+      "pluginVersion": "10.0.0",
       "targets": [
         {
           "datasource": {
             "type": "prometheus",
             "uid": "prometheus"
           },
+          "editorMode": "code",
           "expr": "100 - ((node_filesystem_avail_bytes{mountpoint=\"/\"} / node_filesystem_size_bytes{mountpoint=\"/\"}) * 100)",
+          "legendFormat": "Disk Usage",
+          "range": true,
           "refId": "A"
         }
       ],
       "title": "Disk Usage",
-      "type": "gauge",
-      "description": "Root filesystem usage. Yellow at 80%, red at 90%.\n\n⚠️ KNOWN ISSUE: Currently showing 0% due to node-exporter seeing container overlay filesystem instead of host filesystem. Actual disk usage can be checked with: df -h /"
+      "type": "gauge"
     },
     {
       "datasource": {
@@ -264,28 +243,26 @@
             "mode": "palette-classic"
           },
           "custom": {
-            "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
             "axisLabel": "",
             "axisPlacement": "auto",
             "barAlignment": 0,
             "drawStyle": "line",
-            "fillOpacity": 0,
+            "fillOpacity": 10,
             "gradientMode": "none",
             "hideFrom": {
               "tooltip": false,
               "viz": false,
               "legend": false
             },
-            "insertNulls": false,
             "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
             "scaleDistribution": {
               "type": "linear"
             },
-            "showPoints": "auto",
+            "showPoints": "never",
             "spanNulls": false,
             "stacking": {
               "group": "A",
@@ -305,7 +282,7 @@
               }
             ]
           },
-          "unit": "short"
+          "unit": "decbytes"
         },
         "overrides": []
       },
@@ -334,8 +311,10 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "node_load1",
-          "legendFormat": "1m",
+          "editorMode": "code",
+          "expr": "node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes",
+          "legendFormat": "Used",
+          "range": true,
           "refId": "A"
         },
         {
@@ -343,23 +322,15 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "node_load5",
-          "legendFormat": "5m",
+          "editorMode": "code",
+          "expr": "node_memory_MemAvailable_bytes",
+          "legendFormat": "Available",
+          "range": true,
           "refId": "B"
-        },
-        {
-          "datasource": {
-            "type": "prometheus",
-            "uid": "prometheus"
-          },
-          "expr": "node_load15",
-          "legendFormat": "15m",
-          "refId": "C"
         }
       ],
-      "title": "Load Average",
-      "type": "timeseries",
-      "description": "System load averages over 1, 5, and 15 minutes. Compare to CPU core count."
+      "title": "Memory Details",
+      "type": "timeseries"
     },
     {
       "datasource": {
@@ -372,7 +343,6 @@
             "mode": "palette-classic"
           },
           "custom": {
-            "axisBorderShow": false,
             "axisCenteredZero": false,
             "axisColorMode": "text",
             "axisLabel": "",
@@ -386,14 +356,13 @@
               "viz": false,
               "legend": false
             },
-            "insertNulls": false,
             "lineInterpolation": "linear",
             "lineWidth": 1,
             "pointSize": 5,
             "scaleDistribution": {
               "type": "linear"
             },
-            "showPoints": "auto",
+            "showPoints": "never",
             "spanNulls": false,
             "stacking": {
               "group": "A",
@@ -415,20 +384,7 @@
           },
           "unit": "Bps"
         },
-        "overrides": [
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Transmit"
-            },
-            "properties": [
-              {
-                "id": "custom.transform",
-                "value": "negative-Y"
-              }
-            ]
-          }
-        ]
+        "overrides": []
       },
       "gridPos": {
         "h": 8,
@@ -455,8 +411,10 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "rate(node_network_receive_bytes_total{device!=\"lo\"}[5m])",
-          "legendFormat": "Receive - {{device}}",
+          "editorMode": "code",
+          "expr": "rate(node_network_receive_bytes_total{device!~\"lo|veth.*\"}[5m])",
+          "legendFormat": "{{device}} RX",
+          "range": true,
           "refId": "A"
         },
         {
@@ -464,14 +422,126 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "rate(node_network_transmit_bytes_total{device!=\"lo\"}[5m])",
-          "legendFormat": "Transmit - {{device}}",
+          "editorMode": "code",
+          "expr": "rate(node_network_transmit_bytes_total{device!~\"lo|veth.*\"}[5m])",
+          "legendFormat": "{{device}} TX",
+          "range": true,
           "refId": "B"
         }
       ],
       "title": "Network I/O",
-      "type": "timeseries",
-      "description": "Network traffic rates for all interfaces excluding loopback. Negative values show transmit."
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": {
+              "tooltip": false,
+              "viz": false,
+              "legend": false
+            },
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 8
+      },
+      "id": 6,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "node_load1",
+          "legendFormat": "1m",
+          "range": true,
+          "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "node_load5",
+          "legendFormat": "5m",
+          "range": true,
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "node_load15",
+          "legendFormat": "15m",
+          "range": true,
+          "refId": "C"
+        }
+      ],
+      "title": "Load Average",
+      "type": "timeseries"
     },
     {
       "datasource": {
@@ -498,12 +568,12 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 8,
-        "w": 12,
-        "x": 12,
-        "y": 8
+        "h": 4,
+        "w": 6,
+        "x": 0,
+        "y": 16
       },
-      "id": 6,
+      "id": 7,
       "options": {
         "colorMode": "value",
         "graphMode": "none",
@@ -516,48 +586,229 @@
           ],
           "fields": ""
         },
-        "showPercentChange": false,
-        "textMode": "auto",
-        "wideLayout": true
+        "textMode": "auto"
       },
-      "pluginVersion": "11.0.0",
+      "pluginVersion": "10.0.0",
       "targets": [
         {
           "datasource": {
             "type": "prometheus",
             "uid": "prometheus"
           },
+          "editorMode": "code",
           "expr": "time() - node_boot_time_seconds",
+          "legendFormat": "Uptime",
+          "range": true,
           "refId": "A"
         }
       ],
       "title": "System Uptime",
-      "type": "stat",
-      "description": "Time elapsed since last system boot."
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 6,
+        "y": 16
+      },
+      "id": 8,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        },
+        "textMode": "auto"
+      },
+      "pluginVersion": "10.0.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "count(node_cpu_seconds_total{mode=\"idle\"})",
+          "legendFormat": "CPU Cores",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "CPU Cores",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "decbytes"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 12,
+        "y": 16
+      },
+      "id": 9,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        },
+        "textMode": "auto"
+      },
+      "pluginVersion": "10.0.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "node_memory_MemTotal_bytes",
+          "legendFormat": "Total Memory",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Total Memory",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "decbytes"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 18,
+        "y": 16
+      },
+      "id": 10,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        },
+        "textMode": "auto"
+      },
+      "pluginVersion": "10.0.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "node_filesystem_size_bytes{mountpoint=\"/\"}",
+          "legendFormat": "Total Disk",
+          "range": true,
+          "refId": "A"
+        }
+      ],
+      "title": "Total Disk Space",
+      "type": "stat"
     }
   ],
   "refresh": "30s",
-  "schemaVersion": 39,
-  "tags": [],
+  "schemaVersion": 38,
+  "style": "dark",
+  "tags": ["system", "overview"],
   "templating": {
     "list": []
   },
   "time": {
-    "from": "now-1h",
+    "from": "now-6h",
     "to": "now"
   },
   "timepicker": {
-    "refresh_intervals": [
-      "5s",
-      "30s",
-      "1m",
-      "5m",
-      "15m"
-    ]
+    "refresh_intervals": ["5s", "30s", "1m", "5m", "15m"]
   },
-  "timezone": "browser",
+  "timezone": "",
   "title": "System Overview",
   "uid": "system-overview",
-  "version": 1,
+  "version": 0,
   "weekStart": ""
 }

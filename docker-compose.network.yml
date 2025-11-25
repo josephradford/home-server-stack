@@ -10,8 +10,11 @@
 
 services:
   # Traefik - Reverse proxy for domain-based service access
+  # Note: Using v3.6.2+ which includes Docker API compatibility fix for Docker 29.x+
+  # Previous versions (v3.2-v3.6.1) had embedded Docker client API v1.24 incompatibility
+  # Fixed in v3.6.2 via auto-negotiation (GitHub issue #12253, PR #12256)
   traefik:
-    image: traefik:v3.2
+    image: traefik:v3.6.2
     container_name: traefik
     restart: unless-stopped
     command:
@@ -105,8 +108,9 @@ services:
       - "traefik.http.middlewares.admin-ratelimit.ratelimit.period=1m"
       - "traefik.http.middlewares.admin-ratelimit.ratelimit.burst=50"
 
-      # IP Whitelist for Internal Services (RFC1918 + VPN)
-      - "traefik.http.middlewares.internal-only.ipwhitelist.sourcerange=192.168.0.0/16,172.16.0.0/12,10.0.0.0/8"
+      # IP Allow List for Internal Services (RFC1918 + VPN)
+      # Note: v3.x uses ipallowlist (ipwhitelist deprecated but still works for compatibility)
+      - "traefik.http.middlewares.internal-only.ipallowlist.sourcerange=192.168.0.0/16,172.16.0.0/12,10.0.0.0/8"
 
       # Webhook Security Chain
       - "traefik.http.middlewares.webhook-secure.chain.middlewares=security-headers,webhook-ratelimit"
