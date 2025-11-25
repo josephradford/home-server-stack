@@ -1,0 +1,106 @@
+---
+# Local Development Override
+# Use this file to run services locally for testing without DNS/SSL setup
+# Usage: docker compose -f docker-compose.yml -f docker-compose.local.yml up -d
+
+services:
+  # Remove AdGuard locally - not needed for testing core services
+  adguard:
+    profiles:
+      - disabled
+
+  # Traefik - simplified for local development
+  traefik:
+    command:
+      - "--api.dashboard=true"
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+      - "--log.level=DEBUG"
+    ports:
+      - "80:80"       # HTTP
+      - "8080:8080"   # Traefik dashboard
+    labels: []  # Clear Traefik's own routing labels for simplicity
+
+  # n8n - expose port and use HTTP for local testing
+  n8n:
+    ports:
+      - "5678:5678"
+    environment:
+      - N8N_PROTOCOL=http
+      - N8N_HOST=localhost
+      - WEBHOOK_URL=http://localhost:5678/
+      - N8N_EDITOR_BASE_URL=http://localhost:5678
+      - N8N_SECURE_COOKIE=false
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.n8n.rule=Host(`localhost`) || PathPrefix(`/n8n`)"
+      - "traefik.http.routers.n8n.entrypoints=web"
+      - "traefik.http.services.n8n.loadbalancer.server.port=5678"
+      # Remove security middlewares for local testing
+      - "traefik.http.routers.n8n.middlewares="
+
+  # Home Assistant - expose port
+  homeassistant:
+    ports:
+      - "8123:8123"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.homeassistant.rule=Host(`localhost`) && PathPrefix(`/home`)"
+      - "traefik.http.routers.homeassistant.entrypoints=web"
+      - "traefik.http.services.homeassistant.loadbalancer.server.port=8123"
+      - "traefik.http.routers.homeassistant.middlewares="
+
+  # Actual Budget - expose port
+  actualbudget:
+    ports:
+      - "5006:5006"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.actualbudget.rule=Host(`localhost`) && PathPrefix(`/actual`)"
+      - "traefik.http.routers.actualbudget.entrypoints=web"
+      - "traefik.http.services.actualbudget.loadbalancer.server.port=5006"
+      - "traefik.http.routers.actualbudget.middlewares="
+
+  # Grafana - expose port
+  grafana:
+    ports:
+      - "3001:3000"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.grafana.rule=Host(`localhost`) && PathPrefix(`/grafana`)"
+      - "traefik.http.routers.grafana.entrypoints=web"
+      - "traefik.http.services.grafana.loadbalancer.server.port=3000"
+      - "traefik.http.routers.grafana.middlewares="
+
+  # Prometheus - expose port
+  prometheus:
+    ports:
+      - "9090:9090"
+
+  # Alertmanager - expose port
+  alertmanager:
+    ports:
+      - "9093:9093"
+
+  # Homepage - expose port
+  homepage:
+    ports:
+      - "3000:3000"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.homepage.rule=Host(`localhost`)"
+      - "traefik.http.routers.homepage.entrypoints=web"
+      - "traefik.http.services.homepage.loadbalancer.server.port=3000"
+      - "traefik.http.routers.homepage.middlewares="
+
+  # Disable WireGuard locally (requires kernel modules)
+  wireguard:
+    profiles:
+      - disabled
+
+  # Disable Fail2ban locally
+  fail2ban:
+    profiles:
+      - disabled
