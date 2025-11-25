@@ -1,7 +1,7 @@
 # Home Server Stack Makefile
 # Simplifies deployment and maintenance operations
 
-.PHONY: help setup update start stop restart logs build pull status clean purge validate env-check
+.PHONY: help setup update start stop restart logs build build-custom pull status clean purge validate env-check
 .PHONY: logs-n8n logs-homepage logs-homeassistant logs-actualbudget logs-mealie
 .PHONY: adguard-setup homeassistant-setup setup-certs test-domain-access traefik-password
 .PHONY: wireguard-status wireguard-install wireguard-setup wireguard-check
@@ -44,6 +44,7 @@ help:
 	@echo "  make update             - Update all services (pull latest images)"
 	@echo "  make pull               - Pull latest images"
 	@echo "  make build              - Build all services that require building"
+	@echo "  make build-custom       - Build only custom services (faster for development)"
 	@echo ""
 	@echo "Logs & Debugging:"
 	@echo "  make logs               - Show logs from all services"
@@ -109,6 +110,12 @@ build: validate
 	@$(COMPOSE) build
 	@echo "✓ Build complete"
 
+# Build only custom services (faster rebuild during development)
+build-custom: validate
+	@echo "Building custom services from source..."
+	@$(COMPOSE) build homepage-api
+	@echo "✓ Custom services built"
+
 # Pull latest images for services using pre-built images
 pull: validate
 	@echo "Pulling latest Docker images..."
@@ -134,10 +141,13 @@ setup: env-check validate wireguard-check
 	@echo "Step 5/8: Pulling pre-built images..."
 	@$(COMPOSE) pull --ignore-pull-failures
 	@echo ""
-	@echo "Step 6/8: Starting services (Docker Compose will create networks)..."
+	@echo "Step 6/8: Building custom services from source..."
+	@$(COMPOSE) build homepage-api
+	@echo ""
+	@echo "Step 7/8: Starting services (Docker Compose will create networks)..."
 	@$(COMPOSE) up -d
 	@echo ""
-	@echo "Step 7/8: Fixing data directory permissions..."
+	@echo "Step 8/8: Fixing data directory permissions..."
 	@echo "Containers create directories as root, fixing ownership for user access..."
 	@if [ -d "data" ]; then \
 		sudo chown -R $(shell id -u):$(shell getent group docker | cut -d: -f3) data/ && \
@@ -232,10 +242,13 @@ wireguard-check:
 update: env-check validate wireguard-check
 	@echo "Updating all services..."
 	@echo ""
-	@echo "Step 1/2: Pulling latest images..."
+	@echo "Step 1/3: Pulling latest images..."
 	@$(COMPOSE) pull --ignore-pull-failures
 	@echo ""
-	@echo "Step 2/2: Restarting services with new images..."
+	@echo "Step 2/3: Building custom services from source..."
+	@$(COMPOSE) build homepage-api
+	@echo ""
+	@echo "Step 3/3: Restarting services with new images..."
 	@$(COMPOSE) up -d
 	@echo ""
 	@echo "✓ Update complete! All services restarted with latest versions."
