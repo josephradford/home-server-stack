@@ -15,6 +15,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy application code
 COPY app.py .
+COPY traffic_scheduler.py .
 
 # Create non-root user
 RUN useradd -m -u 1000 apiuser && chown -R apiuser:apiuser /app
