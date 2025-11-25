@@ -118,7 +118,7 @@ cat > "$PEERS_DIR/$PEER_NAME.conf" << CLIENTEOF
 [Interface]
 Address = $PEER_IP/24
 PrivateKey = $PEER_PRIVATE_KEY
-DNS = $(echo $SERVER_IP | sed 's/[0-9]*$/53/'), 1.1.1.1, 1.0.0.1
+DNS = $SERVER_IP, 1.1.1.1, 1.0.0.1
 
 [Peer]
 PublicKey = $(grep "PrivateKey = " "$WG_CONF" | head -1 | sed 's/.*PrivateKey = //' | wg pubkey)
