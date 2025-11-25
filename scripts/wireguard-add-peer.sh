@@ -128,6 +128,20 @@ chmod 600 "$PEERS_DIR/$PEER_NAME.conf"
 echo "✓ Client configuration created"
 echo ""
 
+# Generate QR code for mobile devices
+echo "Generating QR code for mobile setup..."
+if command -v qrencode >/dev/null 2>&1; then
+    echo "✓ QR code (scan with WireGuard mobile app):"
+    echo ""
+    qrencode -t ansiutf8 < "$PEERS_DIR/$PEER_NAME.conf"
+    echo ""
+else
+    echo "⚠️  qrencode not installed - no QR code generated"
+    echo "   Install with: apt install qrencode"
+    echo "   Then generate QR: qrencode -t ansiutf8 < $PEERS_DIR/$PEER_NAME.conf"
+    echo ""
+fi
+
 # Reload WireGuard if it's running
 if systemctl is-active --quiet wg-quick@wg0; then
     echo "Reloading WireGuard service..."
@@ -147,13 +161,18 @@ echo "  • VPN IP: $PEER_IP"
 echo "  • Config file: $PEERS_DIR/$PEER_NAME.conf"
 echo ""
 echo "To use this peer:"
+echo ""
+echo "Mobile devices (iOS/Android):"
+echo "  1. Scan the QR code above with the WireGuard app"
+echo "  2. Connect and test"
+echo ""
+echo "Desktop/Manual setup:"
 echo "  1. Copy the configuration file to your device:"
 echo "     $PEERS_DIR/$PEER_NAME.conf"
+echo "  2. Import into WireGuard app"
 echo ""
-echo "  2. Import into WireGuard app on your device"
-echo ""
-echo "  3. Test connection:"
-echo "     ping $PEER_IP"
+echo "Test connection:"
+echo "  ping $PEER_IP"
 echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
