@@ -2,17 +2,22 @@
 # Simplifies deployment and maintenance operations
 
 .PHONY: help setup update start stop restart logs build pull status clean purge validate env-check
-.PHONY: logs-n8n logs-wireguard logs-homepage logs-homeassistant logs-actualbudget logs-mealie
-.PHONY: adguard-setup homeassistant-setup wireguard-routing-setup setup-certs test-domain-access traefik-password
+.PHONY: logs-n8n logs-homepage logs-homeassistant logs-actualbudget logs-mealie
+.PHONY: adguard-setup homeassistant-setup setup-certs test-domain-access traefik-password
+.PHONY: wireguard-status wireguard-install wireguard-setup wireguard-check
 .PHONY: ssl-setup ssl-copy-certs ssl-configure-traefik ssl-setup-renewal ssl-renew-test
 .PHONY: dashboard-setup dashboard-start dashboard-stop dashboard-restart dashboard-logs dashboard-status
 
 # Compose file flags
 # Services are organized into logical groups:
 # - docker-compose.yml: Core services (AdGuard, n8n, Home Assistant, Actual Budget, Mealie)
-# - docker-compose.network.yml: Network & Security (Traefik, Wireguard, Fail2ban)
+# - docker-compose.network.yml: Network & Security (Traefik, Fail2ban)
 # - docker-compose.monitoring.yml: Monitoring stack (Prometheus, Grafana, Alertmanager, exporters)
 # - docker-compose.dashboard.yml: Dashboard (Homepage, Homepage API)
+#
+# NOTE: WireGuard is now a system service, not Docker service
+# Install with: sudo ./scripts/install-wireguard.sh
+# Check status: make wireguard-status
 #
 # COMPOSE_CORE: Core + Network + Monitoring (everything except dashboard)
 # COMPOSE_DASHBOARD: Dashboard only (for dashboard-specific operations)
@@ -46,7 +51,6 @@ help:
 	@echo "  make logs-homeassistant - Show Home Assistant logs only"
 	@echo "  make logs-actualbudget  - Show Actual Budget logs only"
 	@echo "  make logs-mealie        - Show Mealie logs only"
-	@echo "  make logs-wireguard     - Show WireGuard logs only"
 	@echo "  make logs-homepage      - Show Homepage logs only"
 	@echo ""
 	@echo "Dashboard Management:"
@@ -60,8 +64,12 @@ help:
 	@echo "Service Configuration:"
 	@echo "  make adguard-setup            - Configure DNS rewrites for domain-based access"
 	@echo "  make homeassistant-setup      - Setup Home Assistant configuration files"
-	@echo "  make wireguard-routing-setup  - Setup iptables routing for WireGuard VPN"
 	@echo "  make traefik-password         - Generate Traefik dashboard password from .env"
+	@echo ""
+	@echo "WireGuard VPN Management:"
+	@echo "  make wireguard-install        - Install WireGuard packages (one-time, requires sudo)"
+	@echo "  make wireguard-setup          - Create config and start service (requires sudo)"
+	@echo "  make wireguard-status         - Check WireGuard service status"
 	@echo ""
 	@echo "SSL/TLS Certificate Management:"
 	@echo "  make ssl-setup          - Complete Let's Encrypt SSL setup (certbot + renewal)"
@@ -108,7 +116,7 @@ pull: validate
 	@echo "✓ Images pulled"
 
 # First time setup
-setup: env-check validate
+setup: env-check validate wireguard-check
 	@echo "Starting first-time setup..."
 	@echo ""
 	@echo "Step 1/8: Setting up Traefik dashboard password..."
@@ -129,17 +137,14 @@ setup: env-check validate
 	@echo "Step 6/8: Starting services (Docker Compose will create networks)..."
 	@$(COMPOSE) up -d
 	@echo ""
-	@echo "Step 7/9: Fixing data directory permissions..."
+	@echo "Step 7/8: Fixing data directory permissions..."
 	@echo "Containers create directories as root, fixing ownership for user access..."
 	@if [ -d "data" ]; then \
 		sudo chown -R $(shell id -u):$(shell getent group docker | cut -d: -f3) data/ && \
 		echo "✓ Data directory permissions fixed"; \
 	fi
 	@echo ""
-	@echo "Step 8/9: Setting up WireGuard VPN routing..."
-	@./scripts/setup-wireguard-routing.sh
-	@echo ""
-	@echo "Step 9/9: Configuring AdGuard DNS rewrites..."
+	@echo "Step 8/8: Configuring AdGuard DNS rewrites..."
 	@$(MAKE) adguard-setup
 	@echo ""
 	@$(COMPOSE) ps
@@ -198,8 +203,33 @@ setup: env-check validate
 	@echo ""
 	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
+# Check WireGuard is running (required for all Docker operations)
+wireguard-check:
+	@if ! systemctl is-active --quiet wg-quick@wg0; then \
+		echo "❌ ERROR: WireGuard VPN is not running!"; \
+		echo ""; \
+		echo "WireGuard must be running before starting Docker services."; \
+		echo "This ensures your remote VPN access survives Docker restarts."; \
+		echo ""; \
+		echo "To set up WireGuard:"; \
+		echo ""; \
+		echo "1. Install WireGuard (one-time):"; \
+		echo "   make wireguard-install"; \
+		echo ""; \
+		echo "2. Create server configuration:"; \
+		echo "   sudo ./scripts/setup-wireguard-server.sh"; \
+		echo ""; \
+		echo "3. Enable and start the service:"; \
+		echo "   sudo systemctl enable --now wg-quick@wg0"; \
+		echo ""; \
+		echo "4. Verify it's running:"; \
+		echo "   make wireguard-status"; \
+		echo ""; \
+		exit 1; \
+	fi
+
 # Update all services
-update: env-check validate
+update: env-check validate wireguard-check
 	@echo "Updating all services..."
 	@echo ""
 	@echo "Step 1/2: Pulling latest images..."
@@ -213,7 +243,7 @@ update: env-check validate
 	@echo "Check status with: make status"
 
 # Start all services
-start: env-check
+start: env-check wireguard-check
 	@echo "Starting all services..."
 	@$(COMPOSE) up -d
 	@echo "✓ All services started"
@@ -225,7 +255,7 @@ stop:
 	@echo "✓ All services stopped"
 
 # Restart all services
-restart: env-check
+restart: env-check wireguard-check
 	@echo "Restarting all services..."
 	@$(COMPOSE) restart
 	@echo "✓ All services restarted"
@@ -250,9 +280,6 @@ logs-actualbudget:
 
 logs-mealie:
 	@$(COMPOSE) logs -f mealie
-
-logs-wireguard:
-	@$(COMPOSE) logs -f wireguard
 
 logs-homepage:
 	@$(COMPOSE_DASHBOARD) logs -f homepage
@@ -341,10 +368,38 @@ homeassistant-setup: env-check
 	@echo ""
 	@echo "✓ Home Assistant configuration setup complete!"
 
-# WireGuard VPN routing setup
-wireguard-routing-setup: env-check
-	@echo "Setting up WireGuard VPN routing (iptables forwarding rules)..."
-	@./scripts/setup-wireguard-routing.sh
+# WireGuard VPN Management (System Service)
+wireguard-status:
+	@echo "Checking WireGuard service status..."
+	@systemctl is-active wg-quick@wg0 > /dev/null 2>&1 && echo "✓ WireGuard is running" || echo "✗ WireGuard is not running"
+	@systemctl is-enabled wg-quick@wg0 > /dev/null 2>&1 && echo "✓ WireGuard is enabled" || echo "✗ WireGuard is not enabled"
+	@echo ""
+	@echo "For detailed status:"
+	@echo "  sudo wg show"
+	@echo "  sudo systemctl status wg-quick@wg0"
+
+wireguard-install:
+	@echo "Installing WireGuard as a system service..."
+	@echo ""
+	@echo "This script requires sudo. You will be prompted for your password."
+	@sudo ./scripts/install-wireguard.sh
+
+wireguard-setup: env-check
+	@echo "Setting up WireGuard VPN server..."
+	@echo ""
+	@echo "This script requires sudo. You will be prompted for your password."
+	@echo ""
+	@sudo ./scripts/setup-wireguard-server.sh
+	@echo ""
+	@echo "Enabling and starting WireGuard service..."
+	@sudo systemctl enable --now wg-quick@wg0
+	@echo ""
+	@echo "✓ WireGuard setup complete!"
+	@echo ""
+	@make wireguard-status
+	@echo ""
+	@echo "Next: Add VPN peers"
+	@echo "  sudo ./scripts/wireguard-add-peer.sh <peer-name>"
 
 # Setup SSL certificate storage (for certbot-generated certs)
 setup-certs:

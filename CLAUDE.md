@@ -83,7 +83,7 @@ make logs
 
 # View specific service logs
 make logs-n8n
-make logs-wireguard
+make logs-homeassistant
 
 # View logs directly (useful for other services)
 docker compose -f docker-compose.yml -f docker-compose.monitoring.yml logs -f [service-name]
@@ -107,6 +107,26 @@ sudo certbot renew --force-renewal          # Force renewal
 sudo tail -f /var/log/certbot-traefik-reload.log  # View renewal logs
 ```
 
+### WireGuard VPN Management
+```bash
+# Install WireGuard package (one-time)
+make wireguard-install
+
+# Create server config and start service
+make wireguard-setup
+
+# Check WireGuard status
+make wireguard-status
+
+# Add VPN peers (clients) one at a time
+sudo ./scripts/wireguard-add-peer.sh mydevice
+sudo ./scripts/wireguard-add-peer.sh phone
+
+# View detailed status
+sudo wg show
+sudo systemctl status wg-quick@wg0
+```
+
 ### Testing & Validation
 ```bash
 # Test domain-based access for all services
@@ -128,23 +148,16 @@ make clean
 make purge
 ```
 
-### Running Tests
-```bash
-# Test WireGuard routing configuration
-./scripts/test-wireguard-routing.sh
-
-# Test domain access
-./scripts/test-domain-access.sh
-```
-
 ## Architecture & Key Concepts
 
 ### Multi-File Docker Compose
 The stack uses **four compose files** organized by logical function:
 - `docker-compose.yml` - Core services (AdGuard, n8n) - user-facing services that "do stuff"
-- `docker-compose.network.yml` - Network & Security (Traefik, Wireguard, Fail2ban) - infrastructure layer
+- `docker-compose.network.yml` - Network & Security (Traefik, Fail2ban) - infrastructure layer
 - `docker-compose.monitoring.yml` - Monitoring stack (Prometheus, Grafana, Alertmanager, exporters)
 - `docker-compose.dashboard.yml` - Dashboard (Homepage, Homepage API)
+
+**Note on WireGuard VPN**: WireGuard is installed as a **system service** (not Docker) to ensure VPN access remains available when Docker services are restarted or stopped. See "WireGuard VPN Management" section above.
 
 The Makefile combines all files by default: `docker compose -f docker-compose.yml -f docker-compose.network.yml -f docker-compose.monitoring.yml -f docker-compose.dashboard.yml`
 
@@ -285,6 +298,7 @@ Required variables in `.env`:
 - `GANDIV5_PERSONAL_ACCESS_TOKEN` - Gandi API token for DNS-01 challenge
 - `ACME_EMAIL` - Email for Let's Encrypt certificate notifications
 - `N8N_PASSWORD`, `ADGUARD_PASSWORD`, `GRAFANA_PASSWORD` - Service credentials
+- `WIREGUARD_PORT`, `WIREGUARD_SUBNET`, `WIREGUARD_ALLOWEDIPS` - VPN configuration
 
 **Password Escaping**: Dollar signs in passwords must be escaped as `$$` for Docker Compose (e.g., `P@$$word123` → `P@$$$$word123`)
 
@@ -354,10 +368,10 @@ For wildcard certificate (only on dashboard router):
   - Creates log file: `/var/log/certbot-traefik-reload.log`
   - Tests renewal with dry run
 
-### VPN Management
-- `scripts/test-wireguard-routing.sh` - Validates WireGuard routing configuration
-
-- `scripts/wireguard-peer-management.sh` - Manages WireGuard VPN peer configurations
+### VPN Management (System Service)
+- `scripts/install-wireguard.sh` - Installs WireGuard as system service (one-time setup)
+- `scripts/setup-wireguard-server.sh` - Creates WireGuard server configuration
+- `scripts/wireguard-add-peer.sh` - Adds VPN peers (clients) and generates client configs
 
 ## Monitoring Stack
 
@@ -402,11 +416,14 @@ For wildcard certificate (only on dashboard router):
   - Dynamic config: `./config/traefik/dynamic-certs.yml`
   - Certificates loaded from `/certs/` (mapped to `./data/traefik/certs/`)
 
-### WireGuard
-- LinuxServer.io container with s6-overlay init system
-- Requires `NET_ADMIN` and `SYS_MODULE` capabilities (cannot drop or use no-new-privileges)
-- Peer DNS points to AdGuard: `PEERDNS=${SERVER_IP}`
-- Split tunneling via `WIREGUARD_ALLOWEDIPS`
+### WireGuard (System Service)
+- **System-level service** (not Docker) for VPN access
+- Ensures VPN remains available when Docker services are restarted
+- Configuration: `/etc/wireguard/wg0.conf`
+- Peer configs: `./data/wireguard/peers/`
+- Split tunneling configured to route only home network and VPN subnet traffic
+- Auto-start enabled via systemd: `wg-quick@wg0`
+- Status check: `sudo wg show` or `make wireguard-status`
 
 ## Documentation Structure
 
