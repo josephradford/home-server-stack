@@ -40,9 +40,12 @@ fi
 source "$ENV_FILE"
 
 # Validate required variables
-if [ -z "$SERVER_IP" ] || [ -z "$WIREGUARD_PORT" ] || [ -z "$WIREGUARD_SUBNET" ]; then
+if [ -z "$SERVER_IP" ] || [ -z "$WIREGUARD_PORT" ] || [ -z "$WIREGUARD_SUBNET" ] || [ -z "$WIREGUARD_SERVERURL" ]; then
     echo "❌ Error: Required variables missing in $ENV_FILE"
-    echo "   Required: SERVER_IP, WIREGUARD_PORT, WIREGUARD_SUBNET"
+    echo "   Required: SERVER_IP, WIREGUARD_PORT, WIREGUARD_SUBNET, WIREGUARD_SERVERURL"
+    echo ""
+    echo "To get your public IP: curl ifconfig.me"
+    echo "Then set WIREGUARD_SERVERURL=your.public.ip in $ENV_FILE"
     exit 1
 fi
 
@@ -120,7 +123,7 @@ DNS = $(echo $SERVER_IP | sed 's/[0-9]*$/53/'), 1.1.1.1, 1.0.0.1
 [Peer]
 PublicKey = $(grep "PrivateKey = " "$WG_CONF" | head -1 | sed 's/.*PrivateKey = //' | wg pubkey)
 AllowedIPs = 192.168.1.0/24, 10.13.13.0/24
-Endpoint = $SERVER_IP:$WIREGUARD_PORT
+Endpoint = $WIREGUARD_SERVERURL:$WIREGUARD_PORT
 PersistentKeepalive = 25
 CLIENTEOF
 
