@@ -262,3 +262,20 @@
           container: fail2ban
           server: my-docker
           showStats: true
+
+      - Docker Daemon:
+          icon: mdi-docker
+          description: Container runtime (system service)
+          widget:
+            type: customapi
+            url: http://homepage-api:5000/api/docker/status
+            refreshInterval: 30000  # 30 seconds
+            mappings:
+              - field: status
+                label: Status
+              - field: containers
+                label: Containers
+              - field: version
+                label: Version
+              - field: disk_usage
+                label: Disk Usage

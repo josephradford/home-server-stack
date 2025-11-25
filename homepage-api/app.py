@@ -41,7 +41,8 @@ def health_check():
             'transport_nsw': 'configured' if TRANSPORT_NSW_API_KEY else 'not configured',
             'home_assistant': 'configured' if HOMEASSISTANT_TOKEN else 'not configured',
             'tomtom': 'configured' if TOMTOM_API_KEY else 'not configured',
-            'wireguard': 'system service'
+            'wireguard': 'system service',
+            'docker': 'system service'
         }
     })
 
@@ -540,6 +541,123 @@ def wireguard_status():
                 'peers': 0,
                 'interface': 'wg0 (error)',
                 'error': f'Failed to query WireGuard: {str(e)}',
+                'updated': datetime.now().isoformat()
+            })
+    
+    except Exception as e:
+        return jsonify({'error': f'Unexpected error: {str(e)}'}), 500
+
+
+# =============================================================================
+# DOCKER DAEMON STATUS
+# =============================================================================
+
+@app.route('/api/docker/status')
+def docker_status():
+    """
+    Get Docker daemon status and basic system information
+    Returns service status, container counts, and resource info
+    """
+    try:
+        import subprocess
+        
+        # Check if Docker service is running
+        try:
+            service_result = subprocess.run(
+                ['systemctl', 'is-active', 'docker'],
+                capture_output=True,
+                text=True,
+                timeout=5
+            )
+            service_status = service_result.stdout.strip()
+            service_running = service_status == 'active'
+        except subprocess.TimeoutExpired:
+            return jsonify({'error': 'Service check timed out'}), 500
+        except Exception:
+            service_running = False
+            service_status = 'unknown'
+        
+        if not service_running:
+            return jsonify({
+                'status': f'Inactive ({service_status})',
+                'containers': 'N/A',
+                'version': 'N/A',
+                'service_status': service_status,
+                'updated': datetime.now().isoformat()
+            })
+        
+        # Get Docker info
+        try:
+            # Get container counts
+            containers_result = subprocess.run(
+                ['docker', 'ps', '-q'],
+                capture_output=True,
+                text=True,
+                timeout=10
+            )
+            running_containers = len([line for line in containers_result.stdout.strip().split('\n') if line])
+            
+            containers_all_result = subprocess.run(
+                ['docker', 'ps', '-aq'],
+                capture_output=True,
+                text=True,
+                timeout=10
+            )
+            total_containers = len([line for line in containers_all_result.stdout.strip().split('\n') if line])
+            
+            # Get Docker version
+            version_result = subprocess.run(
+                ['docker', 'version', '--format', '{{.Server.Version}}'],
+                capture_output=True,
+                text=True,
+                timeout=5
+            )
+            docker_version = version_result.stdout.strip() if version_result.returncode == 0 else 'Unknown'
+            
+            # Get basic system stats
+            info_result = subprocess.run(
+                ['docker', 'system', 'df', '--format', 'table'],
+                capture_output=True,
+                text=True,
+                timeout=10
+            )
+            
+            # Parse docker system df output for basic disk usage
+            disk_usage = 'Unknown'
+            if info_result.returncode == 0:
+                lines = info_result.stdout.strip().split('\n')
+                if len(lines) > 1:  # Skip header
+                    # Look for "Images" line which contains total space used
+                    for line in lines[1:]:
+                        if 'Images' in line:
+                            # Extract size (usually 3rd or 4th column)
+                            parts = line.split()
+                            if len(parts) >= 3:
+                                disk_usage = parts[2] if parts[2] != '0B' else parts[3] if len(parts) > 3 else 'Unknown'
+                            break
+            
+            status_text = f'Active ({running_containers} running)'
+            if total_containers > running_containers:
+                status_text = f'Active ({running_containers}/{total_containers} running)'
+            
+            return jsonify({
+                'status': status_text,
+                'containers': f'{running_containers}/{total_containers}',
+                'version': f'v{docker_version}',
+                'disk_usage': disk_usage,
+                'service_status': 'active',
+                'updated': datetime.now().isoformat()
+            })
+            
+        except subprocess.TimeoutExpired:
+            return jsonify({'error': 'Docker query timed out'}), 500
+        except Exception as e:
+            return jsonify({
+                'status': 'Error',
+                'containers': 'N/A',
+                'version': 'N/A', 
+                'disk_usage': 'N/A',
+                'error': f'Failed to query Docker: {str(e)}',
                 'updated': datetime.now().isoformat()
             })
     
