@@ -40,7 +40,8 @@ def health_check():
         'services': {
             'transport_nsw': 'configured' if TRANSPORT_NSW_API_KEY else 'not configured',
             'home_assistant': 'configured' if HOMEASSISTANT_TOKEN else 'not configured',
-            'tomtom': 'configured' if TOMTOM_API_KEY else 'not configured'
+            'tomtom': 'configured' if TOMTOM_API_KEY else 'not configured',
+            'wireguard': 'system service'
         }
     })
 
@@ -442,6 +443,108 @@ def active_routes():
         })
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+
+# =============================================================================
+# WIREGUARD VPN STATUS
+# =============================================================================
+
+@app.route('/api/wireguard/status')
+def wireguard_status():
+    """
+    Get WireGuard VPN status from system service
+    Returns interface status, connected peers, and basic stats
+    """
+    try:
+        import subprocess
+        
+        # Check if WireGuard service is running
+        try:
+            service_result = subprocess.run(
+                ['systemctl', 'is-active', 'wg-quick@wg0'],
+                capture_output=True,
+                text=True,
+                timeout=5
+            )
+            service_status = service_result.stdout.strip()
+            service_running = service_status == 'active'
+        except subprocess.TimeoutExpired:
+            return jsonify({'error': 'Service check timed out'}), 500
+        except Exception:
+            service_running = False
+            service_status = 'unknown'
+        
+        if not service_running:
+            return jsonify({
+                'status': f'Inactive ({service_status})',
+                'peers': 0,
+                'interface': 'wg0 (down)',
+                'service_status': service_status,
+                'updated': datetime.now().isoformat()
+            })
+        
+        # Get WireGuard interface details
+        try:
+            wg_result = subprocess.run(
+                ['wg', 'show', 'wg0'],
+                capture_output=True,
+                text=True,
+                timeout=5
+            )
+            
+            if wg_result.returncode != 0:
+                return jsonify({
+                    'status': 'Error',
+                    'peers': 0,
+                    'interface': 'wg0 (error)',
+                    'error': 'Failed to query WireGuard interface',
+                    'updated': datetime.now().isoformat()
+                })
+            
+            wg_output = wg_result.stdout
+            
+            # Parse output to count peers
+            peer_count = 0
+            active_peers = 0
+            
+            lines = wg_output.split('\n')
+            for line in lines:
+                if line.strip().startswith('peer:'):
+                    peer_count += 1
+                elif 'latest handshake:' in line.lower():
+                    # Check if handshake is recent (within last 5 minutes)
+                    if 'minute' in line or 'second' in line:
+                        active_peers += 1
+            
+            status_text = 'Active'
+            if peer_count == 0:
+                status_text = 'Active (no peers)'
+            elif active_peers > 0:
+                status_text = f'Active ({active_peers}/{peer_count} connected)'
+            else:
+                status_text = f'Active ({peer_count} peers configured)'
+            
+            return jsonify({
+                'status': status_text,
+                'peers': f'{active_peers}/{peer_count}' if peer_count > 0 else '0',
+                'interface': 'wg0 (up)',
+                'service_status': 'active',
+                'updated': datetime.now().isoformat()
+            })
+            
+        except subprocess.TimeoutExpired:
+            return jsonify({'error': 'WireGuard query timed out'}), 500
+        except Exception as e:
+            return jsonify({
+                'status': 'Error',
+                'peers': 0,
+                'interface': 'wg0 (error)',
+                'error': f'Failed to query WireGuard: {str(e)}',
+                'updated': datetime.now().isoformat()
+            })
+    
+    except Exception as e:
+        return jsonify({'error': f'Unexpected error: {str(e)}'}), 500
 
 
 # =============================================================================

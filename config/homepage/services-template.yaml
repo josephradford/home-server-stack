@@ -243,11 +243,18 @@
 
       - Wireguard VPN:
           icon: wireguard.png
-          href: https://wireguard.{{HOMEPAGE_VAR_DOMAIN}}
-          description: VPN server management
-          container: wireguard
-          server: my-docker
-          showStats: true
+          description: VPN server (system service)
+          widget:
+            type: customapi
+            url: http://homepage-api:5000/api/wireguard/status
+            refreshInterval: 30000  # 30 seconds
+            mappings:
+              - field: status
+                label: Status
+              - field: peers
+                label: Connected Peers
+              - field: interface
+                label: Interface
 
       - Fail2ban:
           icon: mdi-shield-lock
