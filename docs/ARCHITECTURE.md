@@ -351,7 +351,7 @@ graph TD
 
     %% Health checks
     Traefik -.->|Health Check| TraefikPing[Ping Endpoint]
-    Prometheus -.->|Health Check| PromHealth[/-/healthy]
+    Prometheus -.->|Health Check| PromHealth[Healthy Endpoint]
 
     classDef system fill:#ff922b,stroke:#e67700,stroke-width:2px,color:#fff
     classDef network fill:#4dabf7,stroke:#1971c2,stroke-width:2px,color:#fff
