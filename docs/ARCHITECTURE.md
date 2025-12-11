@@ -439,21 +439,21 @@ graph LR
     end
 
     %% Data mounts
-    AdGuardDir -.->|Mount /opt/adguardhome/conf| AdGuard
-    AdGuardDir -.->|Mount /opt/adguardhome/work| AdGuard
-    N8NDir -.->|Mount /home/node/.n8n| N8N
-    TraefikDir -.->|Mount /certs| Traefik
-    TraefikDir -.->|Mount /logs| Traefik
-    PrometheusDir -.->|Mount /prometheus| Prometheus
-    GrafanaDir -.->|Mount /var/lib/grafana| Grafana
-    AlertmanagerDir -.->|Mount /alertmanager| Alertmanager
+    AdGuardDir -.->|Mount to container| AdGuard
+    AdGuardDir -.->|Mount to container| AdGuard
+    N8NDir -.->|Mount to container| N8N
+    TraefikDir -.->|Mount certs| Traefik
+    TraefikDir -.->|Mount logs| Traefik
+    PrometheusDir -.->|Mount to container| Prometheus
+    GrafanaDir -.->|Mount to container| Grafana
+    AlertmanagerDir -.->|Mount to container| Alertmanager
 
     %% Config mounts (read-only)
-    TraefikConfig -.->|Mount /etc/traefik (ro)| Traefik
-    Fail2banConfig -.->|Mount /config (ro)| Fail2ban
-    PromConfig -.->|Mount /etc/prometheus (ro)| Prometheus
-    AlertConfig -.->|Mount /etc/alertmanager (ro)| Alertmanager
-    HomepageConfig -.->|Mount /app/config (ro)| Homepage
+    TraefikConfig -.->|Mount config ro| Traefik
+    Fail2banConfig -.->|Mount config ro| Fail2ban
+    PromConfig -.->|Mount config ro| Prometheus
+    AlertConfig -.->|Mount config ro| Alertmanager
+    HomepageConfig -.->|Mount config ro| Homepage
 
     %% Environment variables
     EnvFile -.->|Injected at runtime| Containers
