@@ -16,41 +16,71 @@ This diagram shows all services organized by their Docker Compose files and syst
 
 ```mermaid
 graph TB
-    subgraph Internet["🌐 Internet"]
+    subgraph Internet["Internet"]
         Users[Users/Clients]
         LetsEncrypt[Let's Encrypt CA]
     end
 
     subgraph External["External Access Points"]
-        VPN[WireGuard VPN<br/>UDP :51820<br/>System Service]
-        HTTP[HTTP/HTTPS<br/>:80/:443]
+        VPN["WireGuard VPN
+        UDP :51820
+        System Service"]
+        HTTP["HTTP/HTTPS
+        :80/:443"]
     end
 
-    subgraph Network["Network & Security Layer<br/>(docker-compose.network.yml)"]
-        Traefik[Traefik<br/>Reverse Proxy<br/>:80, :443, :8080]
-        Fail2ban[Fail2ban<br/>IDS/IPS]
-        UFW[UFW Firewall<br/>Host Level]
+    subgraph Network["Network & Security Layer
+    docker-compose.network.yml"]
+        Traefik["Traefik
+        Reverse Proxy
+        :80, :443, :8080"]
+        Fail2ban["Fail2ban
+        IDS/IPS"]
+        UFW["UFW Firewall
+        Host Level"]
     end
 
-    subgraph Core["Core Services<br/>(docker-compose.yml)"]
-        AdGuard[AdGuard Home<br/>DNS Server<br/>:53, :8888]
-        N8N[n8n<br/>Workflow Automation<br/>:5678]
+    subgraph Core["Core Services
+    docker-compose.yml"]
+        AdGuard["AdGuard Home
+        DNS Server
+        :53, :8888"]
+        N8N["n8n
+        Workflow Automation
+        :5678"]
     end
 
-    subgraph Monitoring["Monitoring Stack<br/>(docker-compose.monitoring.yml)"]
-        Prometheus[Prometheus<br/>Metrics DB<br/>:9090]
-        Grafana[Grafana<br/>Dashboards<br/>:3000]
-        Alertmanager[Alertmanager<br/>Alert Routing<br/>:9093]
-        NodeExporter[Node Exporter<br/>Host Metrics<br/>:9100]
-        CAdvisor[cAdvisor<br/>Container Metrics<br/>:8080]
+    subgraph Monitoring["Monitoring Stack
+    docker-compose.monitoring.yml"]
+        Prometheus["Prometheus
+        Metrics DB
+        :9090"]
+        Grafana["Grafana
+        Dashboards
+        :3000"]
+        Alertmanager["Alertmanager
+        Alert Routing
+        :9093"]
+        NodeExporter["Node Exporter
+        Host Metrics
+        :9100"]
+        CAdvisor["cAdvisor
+        Container Metrics
+        :8080"]
     end
 
-    subgraph Dashboard["Dashboard<br/>(docker-compose.dashboard.yml)"]
-        Homepage[Homepage<br/>Dashboard UI<br/>:3000]
-        HomepageAPI[Homepage API<br/>Backend<br/>:3001]
+    subgraph Dashboard["Dashboard
+    docker-compose.dashboard.yml"]
+        Homepage["Homepage
+        Dashboard UI
+        :3000"]
+        HomepageAPI["Homepage API
+        Backend
+        :3001"]
     end
 
-    subgraph Data["Data Persistence<br/>(./data/ bind mounts)"]
+    subgraph Data["Data Persistence
+    ./data/ bind mounts"]
         AdGuardData[(AdGuard Data)]
         N8NData[(n8n Database)]
         TraefikData[(Traefik Certs/Logs)]
@@ -62,7 +92,8 @@ graph TB
     %% External connections
     Users -->|HTTPS| HTTP
     Users -->|VPN Client| VPN
-    LetsEncrypt -->|DNS-01 Challenge| Certbot[certbot<br/>System Service]
+    LetsEncrypt -->|DNS-01 Challenge| Certbot["certbot
+    System Service"]
 
     %% Network layer
     HTTP --> UFW
@@ -80,7 +111,7 @@ graph TB
     Traefik -->|*.domain routing| Homepage
 
     %% DNS resolution
-    AdGuard -.->|DNS Rewrites<br/>*.domain → SERVER_IP| Traefik
+    AdGuard -.->|DNS Rewrites| Traefik
 
     %% Monitoring flows
     Prometheus -->|Scrape| NodeExporter
@@ -97,7 +128,7 @@ graph TB
 
     %% Certificate management
     Certbot -->|Copies Certs| TraefikData
-    Certbot -.->|Renewal Hook<br/>Restart| Traefik
+    Certbot -.->|Renewal Hook| Traefik
 
     %% Data persistence
     AdGuard -.->|Stores| AdGuardData
@@ -132,42 +163,66 @@ This diagram focuses on the defense-in-depth security architecture and request f
 
 ```mermaid
 graph TB
-    subgraph Internet["🌐 Internet"]
+    subgraph Internet["Internet"]
         Remote[Remote Users]
-        Local[Local Network<br/>192.168.1.0/24]
+        Local["Local Network
+        192.168.1.0/24"]
     end
 
-    subgraph L1["Layer 1: Network Firewall (UFW)"]
-        UFW[UFW Rules<br/>• SSH :22 (rate-limited)<br/>• WireGuard :51820<br/>• HTTP/HTTPS :80/:443<br/>• Allow 192.168.1.0/24<br/>• Allow 10.13.13.0/24]
+    subgraph L1["Layer 1: Network Firewall"]
+        UFW["UFW Rules
+        SSH, WireGuard
+        HTTP/HTTPS
+        LAN + VPN allowed"]
     end
 
     subgraph L2["Layer 2: VPN Access"]
-        WG[WireGuard Server<br/>10.13.13.1<br/>Split Tunneling]
-        VPNSubnet[VPN Subnet<br/>10.13.13.0/24]
+        WG["WireGuard Server
+        10.13.13.1
+        Split Tunneling"]
+        VPNSubnet["VPN Subnet
+        10.13.13.0/24"]
     end
 
     subgraph L3["Layer 3: Reverse Proxy & Middleware"]
         Traefik[Traefik Reverse Proxy]
 
         subgraph Middleware["Security Middleware"]
-            AdminSecure["admin-secure<br/>• IP Whitelist: RFC1918<br/>• Rate Limit: 10/min<br/>• Security Headers"]
-            WebhookSecure["webhook-secure<br/>• Public Access<br/>• Rate Limit: 100/min<br/>• Security Headers"]
+            AdminSecure["admin-secure
+            IP Whitelist: RFC1918
+            Rate Limit: 10/min
+            Security Headers"]
+            WebhookSecure["webhook-secure
+            Public Access
+            Rate Limit: 100/min
+            Security Headers"]
         end
     end
 
     subgraph L4["Layer 4: Intrusion Detection"]
-        Fail2ban["Fail2ban Jails<br/>• traefik-auth (401)<br/>• traefik-webhook (429)<br/>• traefik-scanner (404)"]
+        Fail2ban["Fail2ban Jails
+        Auth failures
+        Rate limit abuse
+        Scanner detection"]
     end
 
     subgraph L5["Layer 5: Application Services"]
         direction LR
-        Admin["Admin Interfaces<br/>n8n, AdGuard,<br/>Grafana, Prometheus"]
-        Webhooks["Public Webhooks<br/>(Future)"]
+        Admin["Admin Interfaces
+        n8n, AdGuard
+        Grafana, Prometheus"]
+        Webhooks["Public Webhooks
+        Future"]
     end
 
     subgraph L6["Layer 6: Security Monitoring"]
-        PromAlerts["Prometheus Alerts<br/>• High webhook rate<br/>• Auth failures<br/>• Scanning activity<br/>• Rate limit hits"]
-        Alertmanager["Alertmanager<br/>Alert Routing"]
+        PromAlerts["Prometheus Alerts
+        Webhook rate
+        Auth failures
+        Scanning activity
+        Rate limits"]
+        Alertmanager["Alertmanager
+        Alert Routing"]
     end
 
     %% Request flow - Remote via VPN
@@ -222,29 +277,46 @@ This diagram shows the startup dependencies and service relationships.
 ```mermaid
 graph TD
     %% System services
-    Docker[Docker Engine<br/>System Service]
-    WireGuard[WireGuard<br/>System Service<br/>wg-quick@wg0]
-    Certbot[certbot<br/>System Service<br/>Snap Timer]
+    Docker["Docker Engine
+    System Service"]
+    WireGuard["WireGuard
+    System Service
+    wg-quick@wg0"]
+    Certbot["certbot
+    System Service
+    Snap Timer"]
 
     %% Network layer - must start first
-    Traefik[Traefik<br/>Reverse Proxy]
-    Fail2ban[Fail2ban<br/>IDS/IPS]
+    Traefik["Traefik
+    Reverse Proxy"]
+    Fail2ban["Fail2ban
+    IDS/IPS"]
 
     %% Core services - depend on network
-    AdGuard[AdGuard Home<br/>DNS Server]
-    N8NInit[n8n-init<br/>Init Container]
-    N8N[n8n<br/>Workflow Engine]
+    AdGuard["AdGuard Home
+    DNS Server"]
+    N8NInit["n8n-init
+    Init Container"]
+    N8N["n8n
+    Workflow Engine"]
 
     %% Monitoring - depends on core services
-    Prometheus[Prometheus<br/>Metrics Collection]
-    NodeExporter[Node Exporter<br/>Host Metrics]
-    CAdvisor[cAdvisor<br/>Container Metrics]
-    Grafana[Grafana<br/>Visualization]
-    Alertmanager[Alertmanager<br/>Alert Routing]
+    Prometheus["Prometheus
+    Metrics Collection"]
+    NodeExporter["Node Exporter
+    Host Metrics"]
+    CAdvisor["cAdvisor
+    Container Metrics"]
+    Grafana["Grafana
+    Visualization"]
+    Alertmanager["Alertmanager
+    Alert Routing"]
 
     %% Dashboard - depends on monitoring
-    HomepageAPI[Homepage API<br/>Backend]
-    Homepage[Homepage<br/>Dashboard UI]
+    HomepageAPI["Homepage API
+    Backend"]
+    Homepage["Homepage
+    Dashboard UI"]
 
     %% Dependencies
     Docker --> Traefik
@@ -302,35 +374,56 @@ This diagram shows how data is persisted across container restarts.
 
 ```mermaid
 graph LR
-    subgraph Host["Host Filesystem<br/>/home/user/home-server-stack"]
+    subgraph Host["Host Filesystem
+    /home/user/home-server-stack"]
         direction TB
 
-        subgraph DataDir["./data/ Directory<br/>(Bind Mounts)"]
+        subgraph DataDir["./data/ Directory
+        Bind Mounts"]
             direction TB
-            AdGuardDir[./data/adguard/<br/>• conf/<br/>• work/]
-            N8NDir[./data/n8n/<br/>• database.sqlite<br/>• .n8n/]
-            TraefikDir[./data/traefik/<br/>• certs/<br/>• logs/]
-            PrometheusDir[./data/prometheus/<br/>• TSDB]
-            GrafanaDir[./data/grafana/<br/>• grafana.db<br/>• dashboards/]
-            AlertmanagerDir[./data/alertmanager/<br/>• notifications/]
-            WireGuardDir[./data/wireguard/<br/>• peers/]
+            AdGuardDir["./data/adguard/
+            conf/, work/"]
+            N8NDir["./data/n8n/
+            database.sqlite, .n8n/"]
+            TraefikDir["./data/traefik/
+            certs/, logs/"]
+            PrometheusDir["./data/prometheus/
+            TSDB"]
+            GrafanaDir["./data/grafana/
+            grafana.db, dashboards/"]
+            AlertmanagerDir["./data/alertmanager/
+            notifications/"]
+            WireGuardDir["./data/wireguard/
+            peers/"]
         end
 
-        subgraph ConfigDir["./config/ Directory<br/>(Read-Only Configs)"]
+        subgraph ConfigDir["./config/ Directory
+        Read-Only Configs"]
             direction TB
-            TraefikConfig[./config/traefik/<br/>• traefik.yml<br/>• dynamic-certs.yml]
-            Fail2banConfig[./config/fail2ban/<br/>• jail.local<br/>• filter.d/]
-            PromConfig[./config/prometheus/<br/>• prometheus.yml<br/>• alert_rules.yml]
-            AlertConfig[./config/alertmanager/<br/>• alertmanager.yml]
-            HomepageConfig[./config/homepage/<br/>• services.yaml<br/>• docker.yaml]
+            TraefikConfig["./config/traefik/
+            traefik.yml, dynamic-certs.yml"]
+            Fail2banConfig["./config/fail2ban/
+            jail.local, filter.d/"]
+            PromConfig["./config/prometheus/
+            prometheus.yml, alert_rules.yml"]
+            AlertConfig["./config/alertmanager/
+            alertmanager.yml"]
+            HomepageConfig["./config/homepage/
+            services.yaml, docker.yaml"]
         end
 
-        EnvFile[.env<br/>Environment Variables<br/>Passwords, Tokens]
+        EnvFile[".env
+        Environment Variables
+        Passwords, Tokens"]
     end
 
-    subgraph SystemPaths["System Paths<br/>(Outside Docker)"]
-        LetsEncrypt[/etc/letsencrypt/<br/>live/DOMAIN/<br/>• fullchain.pem<br/>• privkey.pem]
-        WGSystem[/etc/wireguard/<br/>• wg0.conf]
+    subgraph SystemPaths["System Paths
+    Outside Docker"]
+        LetsEncrypt["/etc/letsencrypt/
+        live/DOMAIN/
+        fullchain.pem, privkey.pem"]
+        WGSystem["/etc/wireguard/
+        wg0.conf"]
     end
 
     subgraph Containers["Docker Containers"]
@@ -367,11 +460,13 @@ graph LR
 
     %% System paths
     LetsEncrypt -.->|Copied by certbot hook| TraefikDir
-    WGSystem -.->|Used by wg-quick| WireGuard[WireGuard<br/>System Service]
+    WGSystem -.->|Used by wg-quick| WireGuard["WireGuard
+    System Service"]
     WireGuardDir -.->|Peer configs| WGSystem
 
     %% Backup scope
-    DataDir -.->|Backup Target| Backup[Backup Strategy<br/>tar -czf backup.tar.gz data/ .env]
+    DataDir -.->|Backup Target| Backup["Backup Strategy
+    tar -czf backup.tar.gz data/ .env"]
     EnvFile -.->|Backup Target| Backup
 
     classDef data fill:#868e96,stroke:#495057,stroke-width:2px,color:#fff
@@ -462,12 +557,15 @@ tar -czf backup.tar.gz data/ .env
 
 ```mermaid
 graph LR
-    Dev[Development Machine<br/>MacBook] -->|1. Edit Code| Git[Git Repository]
+    Dev["Development Machine
+    MacBook"] -->|1. Edit Code| Git[Git Repository]
     Dev -->|2. Test locally| Validate[make validate]
     Validate -->|3. Commit & Push| Git
-    Git -->|4. SSH & Pull| Server[Home Server<br/>192.168.1.100]
+    Git -->|4. SSH & Pull| Server["Home Server
+    192.168.1.100"]
     Server -->|5. Deploy| Deploy[make update]
-    Deploy -->|6. Verify| Logs[make logs<br/>make status]
+    Deploy -->|6. Verify| Logs["make logs
+    make status"]
 
     classDef dev fill:#4dabf7,stroke:#1971c2,stroke-width:2px,color:#fff
     classDef server fill:#51cf66,stroke:#2b8a3e,stroke-width:2px,color:#fff
