@@ -1,518 +1,480 @@
-# Architecture Overview
+# Infrastructure Architecture
 
-System design and technical architecture of the Home Server Stack.
+This document provides visual diagrams of the home server stack architecture, showing service organization, network flows, and data persistence.
 
-## System Overview
+## Table of Contents
+- [High-Level Architecture](#high-level-architecture)
+- [Network Flow & Security Layers](#network-flow--security-layers)
+- [Service Dependencies](#service-dependencies)
+- [Data Persistence](#data-persistence)
 
-```
-┌─────────────────────────────────────────────────────────┐
-│                    Local Network                        │
-│                                                         │
-│  ┌──────────┐         ┌──────────────────┐            │
-│  │  Client  │────────>│  AdGuard Home    │            │
-│  │  Device  │  DNS    │  (Port 53)       │            │
-│  └──────────┘  Query  └──────────────────┘            │
-│       │                        │                       │
-│       │                   DNS Response                 │
-│       │                   (SERVER_IP)                  │
-│       │                        │                       │
-│       v                        v                       │
-│  ┌──────────────────────────────────────┐             │
-│  │         Traefik Reverse Proxy        │             │
-│  │         (Ports 80, 443)              │             │
-│  │  ┌────────────────────────────────┐  │             │
-│  │  │  Domain-based Router           │  │             │
-│  │  │  - *.home.local → Services     │  │             │
-│  │  │  - TLS Termination             │  │             │
-│  │  │  - Automatic Service Discovery │  │             │
-│  │  └────────────────────────────────┘  │             │
-│  └──────────────────────────────────────┘             │
-│                     │                                  │
-│      ┌──────────────┼──────────────┬─────────────┐   │
-│      │              │              │             │   │
-│      v              v              v             v   │
-│  ┌────────┐
-│  │  n8n   │
-│  │  5678  │
-│  └────────┘
-│                                                      │
-│  ┌────────────────────────────────────────────────┐ │
-│  │         Docker Network: homeserver             │ │
-│  └────────────────────────────────────────────────┘ │
-└─────────────────────────────────────────────────────┘
-         │                                        ▲
-         │ Port 51820/UDP (WireGuard)            │
-         │ Optional: 5678/TCP (n8n webhooks)     │
-         ▼                                        │
-    Internet ◄──────────────────────────────────►
+---
 
-**Request Flow:**
+## High-Level Architecture
 
-1. Client requests `https://n8n.home.local`
-2. AdGuard Home resolves to `SERVER_IP`
-3. Request reaches Traefik on port 443
-4. Traefik routes based on `Host` header to n8n container
-5. n8n processes request and returns response
-6. Traefik returns response to client over HTTPS
+This diagram shows all services organized by their Docker Compose files and system services.
 
-**Benefits:**
-- Clean URLs (no ports to remember)
-- Centralized SSL/TLS
-- Easy to add new services
-- Automatic service discovery
-```
+```mermaid
+graph TB
+    subgraph Internet["🌐 Internet"]
+        Users[Users/Clients]
+        LetsEncrypt[Let's Encrypt CA]
+    end
 
-## Core Components
+    subgraph External["External Access Points"]
+        VPN[WireGuard VPN<br/>UDP :51820<br/>System Service]
+        HTTP[HTTP/HTTPS<br/>:80/:443]
+    end
 
-### Traefik
-**Purpose:** Reverse proxy and ingress controller
+    subgraph Network["Network & Security Layer<br/>(docker-compose.network.yml)"]
+        Traefik[Traefik<br/>Reverse Proxy<br/>:80, :443, :8080]
+        Fail2ban[Fail2ban<br/>IDS/IPS]
+        UFW[UFW Firewall<br/>Host Level]
+    end
 
-**Architecture:**
-- HTTP/HTTPS reverse proxy
-- Automatic service discovery via Docker labels
-- Self-signed TLS certificate generation
-- Domain-based routing
+    subgraph Core["Core Services<br/>(docker-compose.yml)"]
+        AdGuard[AdGuard Home<br/>DNS Server<br/>:53, :8888]
+        N8N[n8n<br/>Workflow Automation<br/>:5678]
+    end
 
-**Data Flow:**
-```
-Client Request (https://service.home.local)
-    ↓
-Traefik (port 443) - Check Host header
-    ↓
-Route to matching service (via Docker labels)
-    ↓
-Service processes request
-    ↓
-Traefik returns response with TLS
-```
+    subgraph Monitoring["Monitoring Stack<br/>(docker-compose.monitoring.yml)"]
+        Prometheus[Prometheus<br/>Metrics DB<br/>:9090]
+        Grafana[Grafana<br/>Dashboards<br/>:3000]
+        Alertmanager[Alertmanager<br/>Alert Routing<br/>:9093]
+        NodeExporter[Node Exporter<br/>Host Metrics<br/>:9100]
+        CAdvisor[cAdvisor<br/>Container Metrics<br/>:8080]
+    end
 
-**Integration Points:**
-- All services via Docker labels
-- AdGuard Home for DNS resolution
-- Self-signed certificates for HTTPS
+    subgraph Dashboard["Dashboard<br/>(docker-compose.dashboard.yml)"]
+        Homepage[Homepage<br/>Dashboard UI<br/>:3000]
+        HomepageAPI[Homepage API<br/>Backend<br/>:3001]
+    end
 
-**Storage:**
-- Config: Docker labels in compose files
-- Certificates: `./data/traefik/certs/`
-- Logs: `./data/traefik/logs/`
+    subgraph Data["Data Persistence<br/>(./data/ bind mounts)"]
+        AdGuardData[(AdGuard Data)]
+        N8NData[(n8n Database)]
+        TraefikData[(Traefik Certs/Logs)]
+        GrafanaData[(Grafana Config)]
+        PrometheusData[(Prometheus TSDB)]
+        WireGuardData[(WireGuard Configs)]
+    end
 
-### AdGuard Home
-**Purpose:** Network-wide ad blocking and DNS server
+    %% External connections
+    Users -->|HTTPS| HTTP
+    Users -->|VPN Client| VPN
+    LetsEncrypt -->|DNS-01 Challenge| Certbot[certbot<br/>System Service]
 
-**Architecture:**
-- Acts as DNS resolver for all network devices
-- Filters DNS queries against blocklists
-- Provides DHCP server (optional)
-- Web UI for management
+    %% Network layer
+    HTTP --> UFW
+    VPN --> UFW
+    UFW --> Traefik
+    Fail2ban -.->|Monitors| Traefik
+    Fail2ban -.->|IP Bans| UFW
 
-**Data Flow:**
-```
-Device DNS Query → AdGuard (port 53)
-                ↓
-         Check Blocklists
-                ↓
-         Allowed? → Upstream DNS (1.1.1.1, 8.8.8.8)
-         Blocked? → Return NXDOMAIN
-```
+    %% Traefik routing
+    Traefik -->|*.domain routing| AdGuard
+    Traefik -->|*.domain routing| N8N
+    Traefik -->|*.domain routing| Grafana
+    Traefik -->|*.domain routing| Prometheus
+    Traefik -->|*.domain routing| Alertmanager
+    Traefik -->|*.domain routing| Homepage
 
-**Storage:**
-- Config: `./data/adguard/conf/`
-- Logs: `./data/adguard/work/`
-- Database: SQLite
+    %% DNS resolution
+    AdGuard -.->|DNS Rewrites<br/>*.domain → SERVER_IP| Traefik
 
-### n8n
-**Purpose:** Workflow automation platform
+    %% Monitoring flows
+    Prometheus -->|Scrape| NodeExporter
+    Prometheus -->|Scrape| CAdvisor
+    Prometheus -->|Scrape| Traefik
+    Prometheus -->|Scrape| AdGuard
+    Grafana -->|Query| Prometheus
+    Prometheus -->|Alerts| Alertmanager
 
-**Architecture:**
-- Node.js application
-- SQLite database (default)
-- Webhook server
-- HTTP/HTTPS API
+    %% Dashboard flows
+    Homepage -->|API Calls| HomepageAPI
+    HomepageAPI -->|Docker Stats| Core
+    HomepageAPI -->|Docker Stats| Monitoring
 
-**Data Flow:**
-```
-Trigger (Webhook/Schedule/Event)
-    ↓
-n8n Workflow Execution Engine
-    ↓
-Node Processing (HTTP, Transform, AI, etc.)
-    ↓
-Output Actions (Email, Slack, Database, etc.)
+    %% Certificate management
+    Certbot -->|Copies Certs| TraefikData
+    Certbot -.->|Renewal Hook<br/>Restart| Traefik
+
+    %% Data persistence
+    AdGuard -.->|Stores| AdGuardData
+    N8N -.->|Stores| N8NData
+    Traefik -.->|Stores| TraefikData
+    Grafana -.->|Stores| GrafanaData
+    Prometheus -.->|Stores| PrometheusData
+    VPN -.->|Stores| WireGuardData
+
+    classDef external fill:#ff6b6b,stroke:#c92a2a,stroke-width:2px,color:#fff
+    classDef network fill:#4dabf7,stroke:#1971c2,stroke-width:2px,color:#fff
+    classDef core fill:#51cf66,stroke:#2b8a3e,stroke-width:2px,color:#fff
+    classDef monitoring fill:#ffd43b,stroke:#f08c00,stroke-width:2px,color:#000
+    classDef dashboard fill:#da77f2,stroke:#9c36b5,stroke-width:2px,color:#fff
+    classDef data fill:#868e96,stroke:#495057,stroke-width:2px,color:#fff
+    classDef system fill:#ff922b,stroke:#e67700,stroke-width:2px,color:#fff
+
+    class VPN,HTTP external
+    class Traefik,Fail2ban,UFW network
+    class AdGuard,N8N core
+    class Prometheus,Grafana,Alertmanager,NodeExporter,CAdvisor monitoring
+    class Homepage,HomepageAPI dashboard
+    class AdGuardData,N8NData,TraefikData,GrafanaData,PrometheusData,WireGuardData data
+    class Certbot system
 ```
 
-**Integration Points:**
-- External APIs via HTTP nodes
-- Webhooks: `https://SERVER_IP:5678/webhook/*`
+---
 
-**Storage:**
-- Workflows: `./data/n8n/database.sqlite`
-- Files: `./data/n8n/files/`
-- Logs: Container stdout
+## Network Flow & Security Layers
 
-### WireGuard
-**Purpose:** Secure VPN access to home network
+This diagram focuses on the defense-in-depth security architecture and request flow.
 
-**Architecture:**
-- Kernel-level VPN (very fast)
-- UDP-based protocol
-- Peer-to-peer encryption
-- Automatic key management
+```mermaid
+graph TB
+    subgraph Internet["🌐 Internet"]
+        Remote[Remote Users]
+        Local[Local Network<br/>192.168.1.0/24]
+    end
 
-**Data Flow:**
+    subgraph L1["Layer 1: Network Firewall (UFW)"]
+        UFW[UFW Rules<br/>• SSH :22 (rate-limited)<br/>• WireGuard :51820<br/>• HTTP/HTTPS :80/:443<br/>• Allow 192.168.1.0/24<br/>• Allow 10.13.13.0/24]
+    end
+
+    subgraph L2["Layer 2: VPN Access"]
+        WG[WireGuard Server<br/>10.13.13.1<br/>Split Tunneling]
+        VPNSubnet[VPN Subnet<br/>10.13.13.0/24]
+    end
+
+    subgraph L3["Layer 3: Reverse Proxy & Middleware"]
+        Traefik[Traefik Reverse Proxy]
+
+        subgraph Middleware["Security Middleware"]
+            AdminSecure["admin-secure<br/>• IP Whitelist: RFC1918<br/>• Rate Limit: 10/min<br/>• Security Headers"]
+            WebhookSecure["webhook-secure<br/>• Public Access<br/>• Rate Limit: 100/min<br/>• Security Headers"]
+        end
+    end
+
+    subgraph L4["Layer 4: Intrusion Detection"]
+        Fail2ban["Fail2ban Jails<br/>• traefik-auth (401)<br/>• traefik-webhook (429)<br/>• traefik-scanner (404)"]
+    end
+
+    subgraph L5["Layer 5: Application Services"]
+        direction LR
+        Admin["Admin Interfaces<br/>n8n, AdGuard,<br/>Grafana, Prometheus"]
+        Webhooks["Public Webhooks<br/>(Future)"]
+    end
+
+    subgraph L6["Layer 6: Security Monitoring"]
+        PromAlerts["Prometheus Alerts<br/>• High webhook rate<br/>• Auth failures<br/>• Scanning activity<br/>• Rate limit hits"]
+        Alertmanager["Alertmanager<br/>Alert Routing"]
+    end
+
+    %% Request flow - Remote via VPN
+    Remote -->|1. VPN Connection| UFW
+    UFW -->|2. Allow :51820| WG
+    WG -->|3. Tunnel to VPN Subnet| VPNSubnet
+    VPNSubnet -->|4. HTTPS Request| UFW
+    UFW -->|5. Allow :443 from VPN| Traefik
+
+    %% Request flow - Local network
+    Local -->|1. HTTPS Request| UFW
+    UFW -->|2. Allow :443 from LAN| Traefik
+
+    %% Traefik routing
+    Traefik -->|Apply Middleware| AdminSecure
+    Traefik -->|Apply Middleware| WebhookSecure
+    AdminSecure -->|IP Check Pass| Admin
+    WebhookSecure -->|No IP Restriction| Webhooks
+
+    %% Security monitoring
+    Traefik -.->|Access Logs| Fail2ban
+    Fail2ban -.->|Ban IPs| UFW
+    Traefik -.->|Metrics| PromAlerts
+    PromAlerts -.->|Fire Alerts| Alertmanager
+
+    %% DNS flow
+    Local -->|DNS Query :53| DNS[AdGuard DNS]
+    VPNSubnet -->|DNS Query :53| DNS
+    DNS -.->|Rewrite *.domain| Traefik
+
+    classDef layer1 fill:#ff6b6b,stroke:#c92a2a,stroke-width:3px,color:#fff
+    classDef layer2 fill:#ff922b,stroke:#e67700,stroke-width:3px,color:#fff
+    classDef layer3 fill:#ffd43b,stroke:#f08c00,stroke-width:3px,color:#000
+    classDef layer4 fill:#51cf66,stroke:#2b8a3e,stroke-width:3px,color:#fff
+    classDef layer5 fill:#4dabf7,stroke:#1971c2,stroke-width:3px,color:#fff
+    classDef layer6 fill:#da77f2,stroke:#9c36b5,stroke-width:3px,color:#fff
+
+    class UFW layer1
+    class WG,VPNSubnet layer2
+    class Traefik,AdminSecure,WebhookSecure layer3
+    class Fail2ban layer4
+    class Admin,Webhooks layer5
+    class PromAlerts,Alertmanager layer6
 ```
-VPN Client (peer) → WireGuard (port 51820/UDP)
-    ↓
-Decrypt & Route to home network (192.168.1.0/24)
-    ↓
-Access Internal Services
-    ↓
-Encrypt & Route back to peer
+
+---
+
+## Service Dependencies
+
+This diagram shows the startup dependencies and service relationships.
+
+```mermaid
+graph TD
+    %% System services
+    Docker[Docker Engine<br/>System Service]
+    WireGuard[WireGuard<br/>System Service<br/>wg-quick@wg0]
+    Certbot[certbot<br/>System Service<br/>Snap Timer]
+
+    %% Network layer - must start first
+    Traefik[Traefik<br/>Reverse Proxy]
+    Fail2ban[Fail2ban<br/>IDS/IPS]
+
+    %% Core services - depend on network
+    AdGuard[AdGuard Home<br/>DNS Server]
+    N8NInit[n8n-init<br/>Init Container]
+    N8N[n8n<br/>Workflow Engine]
+
+    %% Monitoring - depends on core services
+    Prometheus[Prometheus<br/>Metrics Collection]
+    NodeExporter[Node Exporter<br/>Host Metrics]
+    CAdvisor[cAdvisor<br/>Container Metrics]
+    Grafana[Grafana<br/>Visualization]
+    Alertmanager[Alertmanager<br/>Alert Routing]
+
+    %% Dashboard - depends on monitoring
+    HomepageAPI[Homepage API<br/>Backend]
+    Homepage[Homepage<br/>Dashboard UI]
+
+    %% Dependencies
+    Docker --> Traefik
+    Docker --> Fail2ban
+    Docker --> AdGuard
+    Docker --> N8NInit
+    Docker --> NodeExporter
+    Docker --> CAdvisor
+    Docker --> Prometheus
+    Docker --> Grafana
+    Docker --> Alertmanager
+    Docker --> HomepageAPI
+    Docker --> Homepage
+
+    Traefik --> N8N
+    Traefik --> Grafana
+    Traefik --> Prometheus
+    Traefik --> Alertmanager
+    Traefik --> Homepage
+
+    N8NInit --> N8N
+
+    NodeExporter --> Prometheus
+    CAdvisor --> Prometheus
+    Prometheus --> Grafana
+    Prometheus --> Alertmanager
+
+    HomepageAPI --> Homepage
+
+    Certbot -.->|Provides Certs| Traefik
+    AdGuard -.->|DNS Resolution| Traefik
+
+    %% Health checks
+    Traefik -.->|Health Check| TraefikPing[Ping Endpoint]
+    Prometheus -.->|Health Check| PromHealth[/-/healthy]
+
+    classDef system fill:#ff922b,stroke:#e67700,stroke-width:2px,color:#fff
+    classDef network fill:#4dabf7,stroke:#1971c2,stroke-width:2px,color:#fff
+    classDef core fill:#51cf66,stroke:#2b8a3e,stroke-width:2px,color:#fff
+    classDef monitoring fill:#ffd43b,stroke:#f08c00,stroke-width:2px,color:#000
+    classDef dashboard fill:#da77f2,stroke:#9c36b5,stroke-width:2px,color:#fff
+
+    class Docker,WireGuard,Certbot system
+    class Traefik,Fail2ban network
+    class AdGuard,N8NInit,N8N core
+    class Prometheus,NodeExporter,CAdvisor,Grafana,Alertmanager monitoring
+    class HomepageAPI,Homepage dashboard
 ```
 
-**Storage:**
-- Config: `./data/wireguard/wg0.conf`
-- Peer configs: `./data/wireguard/peer*/`
-- Keys: `./data/wireguard/server/`
-
-## Docker Compose Architecture
-
-**Modular Compose Files:**
-
-The stack uses multiple compose files for better organization:
-
-```yaml
-docker-compose.yml              # Core services (AdGuard, n8n, WireGuard, Traefik)
-docker-compose.monitoring.yml   # Monitoring stack (Grafana, Prometheus, etc.)
-```
-
-**Composition:**
-```bash
-# All files are automatically included via Makefile
-COMPOSE := docker compose -f docker-compose.yml \
-                          -f docker-compose.monitoring.yml
-```
-
-**Benefits:**
-- **Modularity:** Each service group in its own file
-- **Maintainability:** Easier to manage individual service configurations
-- **Flexibility:** Can deploy subsets by excluding compose files
-- **Clarity:** Clear separation of concerns
-
-**Shared Resources:**
-- All services use the `homeserver` bridge network (external reference in modular files)
-- Environment variables defined in `.env` are accessible to all compose files
-
-## Network Architecture
-
-### Docker Network
-
-**homeserver bridge network:**
-- All services connected
-- Internal DNS resolution (service names)
-- Isolated from host network (except exposed ports)
-
-**Service Communication:**
-```yaml
-grafana → prometheus:9090 (metrics)
-prometheus → node-exporter:9100 (system metrics)
-prometheus → cadvisor:8080 (container metrics)
-```
-
-### Port Bindings
-
-**Bound to SERVER_IP (internal only):**
-- 53/TCP+UDP: AdGuard DNS
-- 80/TCP: Traefik HTTP (redirects to HTTPS)
-- 443/TCP: Traefik HTTPS (all service access)
-- 8080/TCP: Traefik Dashboard
-- 8888/TCP: AdGuard UI (legacy direct access)
-- 5678/TCP: n8n (legacy direct access)
-
-**Bound to 0.0.0.0 (external via router):**
-- 51820/UDP: WireGuard VPN
-
-**VPN-First Security Model:**
-```
-Internet
-    │
-    ├── 51820/UDP (WireGuard) ─────► VPN Connected
-    │                                    │
-    │                                    ▼
-    └── 5678/TCP (n8n webhooks) ───► Path: /webhook/* → Public
-        (optional)                    Path: /* → VPN/LAN Only
-```
+---
 
 ## Data Persistence
 
-### Storage Structure
+This diagram shows how data is persisted across container restarts.
 
+```mermaid
+graph LR
+    subgraph Host["Host Filesystem<br/>/home/user/home-server-stack"]
+        direction TB
+
+        subgraph DataDir["./data/ Directory<br/>(Bind Mounts)"]
+            direction TB
+            AdGuardDir[./data/adguard/<br/>• conf/<br/>• work/]
+            N8NDir[./data/n8n/<br/>• database.sqlite<br/>• .n8n/]
+            TraefikDir[./data/traefik/<br/>• certs/<br/>• logs/]
+            PrometheusDir[./data/prometheus/<br/>• TSDB]
+            GrafanaDir[./data/grafana/<br/>• grafana.db<br/>• dashboards/]
+            AlertmanagerDir[./data/alertmanager/<br/>• notifications/]
+            WireGuardDir[./data/wireguard/<br/>• peers/]
+        end
+
+        subgraph ConfigDir["./config/ Directory<br/>(Read-Only Configs)"]
+            direction TB
+            TraefikConfig[./config/traefik/<br/>• traefik.yml<br/>• dynamic-certs.yml]
+            Fail2banConfig[./config/fail2ban/<br/>• jail.local<br/>• filter.d/]
+            PromConfig[./config/prometheus/<br/>• prometheus.yml<br/>• alert_rules.yml]
+            AlertConfig[./config/alertmanager/<br/>• alertmanager.yml]
+            HomepageConfig[./config/homepage/<br/>• services.yaml<br/>• docker.yaml]
+        end
+
+        EnvFile[.env<br/>Environment Variables<br/>Passwords, Tokens]
+    end
+
+    subgraph SystemPaths["System Paths<br/>(Outside Docker)"]
+        LetsEncrypt[/etc/letsencrypt/<br/>live/DOMAIN/<br/>• fullchain.pem<br/>• privkey.pem]
+        WGSystem[/etc/wireguard/<br/>• wg0.conf]
+    end
+
+    subgraph Containers["Docker Containers"]
+        direction TB
+        AdGuard[AdGuard Home]
+        N8N[n8n]
+        Traefik[Traefik]
+        Prometheus[Prometheus]
+        Grafana[Grafana]
+        Alertmanager[Alertmanager]
+        Fail2ban[Fail2ban]
+        Homepage[Homepage]
+    end
+
+    %% Data mounts
+    AdGuardDir -.->|Mount /opt/adguardhome/conf| AdGuard
+    AdGuardDir -.->|Mount /opt/adguardhome/work| AdGuard
+    N8NDir -.->|Mount /home/node/.n8n| N8N
+    TraefikDir -.->|Mount /certs| Traefik
+    TraefikDir -.->|Mount /logs| Traefik
+    PrometheusDir -.->|Mount /prometheus| Prometheus
+    GrafanaDir -.->|Mount /var/lib/grafana| Grafana
+    AlertmanagerDir -.->|Mount /alertmanager| Alertmanager
+
+    %% Config mounts (read-only)
+    TraefikConfig -.->|Mount /etc/traefik (ro)| Traefik
+    Fail2banConfig -.->|Mount /config (ro)| Fail2ban
+    PromConfig -.->|Mount /etc/prometheus (ro)| Prometheus
+    AlertConfig -.->|Mount /etc/alertmanager (ro)| Alertmanager
+    HomepageConfig -.->|Mount /app/config (ro)| Homepage
+
+    %% Environment variables
+    EnvFile -.->|Injected at runtime| Containers
+
+    %% System paths
+    LetsEncrypt -.->|Copied by certbot hook| TraefikDir
+    WGSystem -.->|Used by wg-quick| WireGuard[WireGuard<br/>System Service]
+    WireGuardDir -.->|Peer configs| WGSystem
+
+    %% Backup scope
+    DataDir -.->|Backup Target| Backup[Backup Strategy<br/>tar -czf backup.tar.gz data/ .env]
+    EnvFile -.->|Backup Target| Backup
+
+    classDef data fill:#868e96,stroke:#495057,stroke-width:2px,color:#fff
+    classDef config fill:#4dabf7,stroke:#1971c2,stroke-width:2px,color:#fff
+    classDef container fill:#51cf66,stroke:#2b8a3e,stroke-width:2px,color:#fff
+    classDef system fill:#ff922b,stroke:#e67700,stroke-width:2px,color:#fff
+    classDef backup fill:#ffd43b,stroke:#f08c00,stroke-width:2px,color:#000
+
+    class AdGuardDir,N8NDir,TraefikDir,PrometheusDir,GrafanaDir,AlertmanagerDir,WireGuardDir data
+    class TraefikConfig,Fail2banConfig,PromConfig,AlertConfig,HomepageConfig,EnvFile config
+    class AdGuard,N8N,Traefik,Prometheus,Grafana,Alertmanager,Fail2ban,Homepage container
+    class LetsEncrypt,WGSystem,WireGuard system
+    class Backup backup
 ```
-home-server-stack/
-├── data/                           # Persistent data (mounted volumes)
-│   ├── adguard/
-│   │   ├── conf/                  # Configuration files
-│   │   └── work/                  # Logs and database
-│   ├── n8n/
-│   │   ├── database.sqlite        # Workflows and executions
-│   │   └── files/                 # Uploaded files
-│   ├── ollama/
-│   │   ├── models/                # AI models (20-50 GB)
-│   │   └── manifests/             # Model metadata
-│   ├── wireguard/
-│   │   ├── wg0.conf              # Server config
-│   │   └── peer*/                # Client configs
-│   ├── habitica/
-│   │   ├── db/                    # MongoDB database
-│   │   └── dbconf/                # MongoDB config
-│   ├── bookwyrm/                  # Bookwyrm data (via wrapper)
-│   ├── grafana/                   # Dashboards and datasources
-│   ├── prometheus/                # Metrics database
-│   └── alertmanager/              # Alert state
-├── ssl/                           # SSL certificates
-│   ├── server.key                 # Private key
-│   └── server.crt                 # Certificate
-├── monitoring/                     # Monitoring configs
-│   ├── prometheus/
-│   ├── grafana/
-│   └── alertmanager/
-├── docker-compose.yml             # Core services
-├── docker-compose.monitoring.yml  # Monitoring stack
-└── .env                           # Environment configuration
-```
 
-### Data Volumes
+---
 
-All services use bind mounts (not Docker volumes) for easier backup and access.
+## Key Architecture Patterns
 
-**Backup Strategy:**
+### Multi-File Compose Organization
+The stack uses four compose files for logical separation:
+- **docker-compose.yml**: Core services (AdGuard, n8n)
+- **docker-compose.network.yml**: Network & Security (Traefik, Fail2ban)
+- **docker-compose.monitoring.yml**: Monitoring stack (Prometheus, Grafana, Alertmanager, exporters)
+- **docker-compose.dashboard.yml**: Dashboard (Homepage, Homepage API)
+
+### Domain-Based Routing
+All services accessible via `https://<service>.${DOMAIN}`:
+1. **AdGuard Home** (DNS :53) resolves `*.DOMAIN` → `SERVER_IP`
+2. **Traefik** (reverse proxy :80/:443) routes based on Host header
+3. Services discovered via Docker labels: `traefik.http.routers.<service>.rule=Host(\`<service>.${DOMAIN}\`)`
+
+### Defense-in-Depth Security
+Six security layers protect the stack:
+1. **Network Firewall (UFW)**: Default deny, rate-limited SSH, WireGuard + HTTP/HTTPS only
+2. **VPN Access (WireGuard)**: Primary remote access, split tunneling to home network only
+3. **Reverse Proxy Middleware (Traefik)**: IP whitelisting, rate limiting, security headers
+4. **Intrusion Detection (Fail2ban)**: Monitors auth failures, scanning, rate limit abuse
+5. **Application Services**: Admin interfaces require VPN/LAN, future webhooks separated
+6. **Security Monitoring (Prometheus)**: Alerts on suspicious patterns
+
+### SSL Certificate Management
+Uses **certbot with Gandi DNS plugin** for Let's Encrypt wildcard certificates:
+- certbot generates `*.DOMAIN` cert via DNS-01 challenge
+- Certificates copied from `/etc/letsencrypt/` to `./data/traefik/certs/`
+- Traefik loads via file provider (`./config/traefik/dynamic-certs.yml`)
+- Auto-renewal via certbot snap timer + post-renewal hook
+- Hook copies renewed certs and restarts Traefik container
+
+### System-Level Services
+**WireGuard VPN** runs as system service (not Docker) to ensure VPN access remains available when Docker services restart. certbot also runs as system service via snap timer for reliable certificate renewal.
+
+### Data Persistence Strategy
+All persistent data uses **bind mounts** (not Docker volumes) in `./data/` for easy backups:
 ```bash
-# Full backup
-tar -czf backup.tar.gz data/ .env ssl/
-
-# Restore
-tar -xzf backup.tar.gz
-docker compose up -d
+tar -czf backup.tar.gz data/ .env
 ```
 
-## Security Architecture
+---
 
-### VPN-First Model
+## Network Ports
 
-**Primary Security Boundary:** WireGuard VPN
+### External Access
+- **22** - SSH (rate-limited via UFW)
+- **51820** - WireGuard VPN (UDP)
+- **80** - HTTP (redirects to HTTPS)
+- **443** - HTTPS (Traefik reverse proxy)
 
-```
-┌─────────────────────────────────────┐
-│         Internet (Untrusted)        │
-└─────────────────┬───────────────────┘
-                  │
-          Port 51820/UDP Only
-                  │
-        ┌─────────▼────────┐
-        │   WireGuard VPN   │ ◄── Authentication & Encryption
-        └─────────┬────────┘
-                  │
-    ┌─────────────▼─────────────┐
-    │   Home Network (Trusted)   │
-    │  ┌──────────────────────┐  │
-    │  │ All Services (VPN)   │  │
-    │  │ - AdGuard, Grafana   │  │
-    │  │ - n8n UI, Prometheus │  │
-    │  └──────────────────────┘  │
-    └───────────────────────────┘
-```
+### Internal Services (via Traefik domain routing)
+- **n8n** - https://n8n.${DOMAIN}
+- **AdGuard** - https://adguard.${DOMAIN} (also http://${SERVER_IP}:8888)
+- **Grafana** - https://grafana.${DOMAIN}
+- **Prometheus** - https://prometheus.${DOMAIN}
+- **Alertmanager** - https://alerts.${DOMAIN}
+- **Homepage** - https://home.${DOMAIN}
+- **Traefik Dashboard** - https://traefik.${DOMAIN}
 
-**Optional: Hybrid Exposure (n8n webhooks only):**
-```
-Internet → Port 5678 → Reverse Proxy
-                          │
-                          ├── /webhook/* → n8n (Public)
-                          └── /* → Reject (VPN only)
-```
+### Direct Access (monitoring, not exposed externally)
+- **9090** - Prometheus (metrics)
+- **9093** - Alertmanager (alerts)
+- **9100** - Node Exporter (host metrics)
+- **9323** - Docker daemon metrics
+- **8080** - cAdvisor (container metrics)
 
-### Authentication Layers
+---
 
-**Layer 1 - VPN (Primary):**
-- WireGuard peer authentication
-- Public/private key cryptography
-- No VPN = No access
+## Deployment Workflow
 
-**Layer 2 - Service (Secondary):**
-- n8n: Basic auth (username/password)
-- AdGuard: Admin login
-- Grafana: Admin login
-- Prometheus/Alertmanager: No auth (VPN-protected)
+```mermaid
+graph LR
+    Dev[Development Machine<br/>MacBook] -->|1. Edit Code| Git[Git Repository]
+    Dev -->|2. Test locally| Validate[make validate]
+    Validate -->|3. Commit & Push| Git
+    Git -->|4. SSH & Pull| Server[Home Server<br/>192.168.1.100]
+    Server -->|5. Deploy| Deploy[make update]
+    Deploy -->|6. Verify| Logs[make logs<br/>make status]
 
-**Future: Layer 3 - SSO (Optional):**
-- Authentik for centralized auth (see security-tickets/08)
-- MFA support
-- LDAP/OAuth integration
+    classDef dev fill:#4dabf7,stroke:#1971c2,stroke-width:2px,color:#fff
+    classDef server fill:#51cf66,stroke:#2b8a3e,stroke-width:2px,color:#fff
 
-## Monitoring Architecture
-
-### Metrics Flow
-
-```
-┌─────────────────────────────────────────────────────┐
-│                    Data Sources                      │
-├─────────────────────────────────────────────────────┤
-│ Node Exporter → System metrics (CPU, RAM, Disk)    │
-│ cAdvisor → Container metrics (Docker)               │
-└───────────────┬─────────────────────────────────────┘
-                │
-                ▼ Scrape (every 15s)
-        ┌──────────────┐
-        │  Prometheus   │ ◄── Time-series database
-        └───────┬──────┘
-                │
-                ├─► Alertmanager (alerts)
-                └─► Grafana (dashboards)
+    class Dev,Validate dev
+    class Server,Deploy,Logs server
 ```
 
-### Alert Flow
+**Important**: This stack runs on a dedicated home server, not the development machine. Local `docker compose up` will not replicate the production environment without proper DNS setup. Always deploy and troubleshoot on the actual server via SSH.
 
-```
-Prometheus Evaluates Rules (every 15s)
-    ↓
-Alert Triggered? → Alertmanager
-    ↓
-Grouping & Deduplication
-    ↓
-Route to Receivers:
-    ├── Webhook (http://127.0.0.1:5001/)
-    ├── Email (optional)
-    └── Slack (optional)
-```
-
-## Deployment Architecture
-
-### Single Server (Current)
-
-```
-Physical Server
-    │
-    ├── Ubuntu Server 24.04 LTS
-    │   ├── Docker Engine
-    │   │   ├── homeserver network
-    │   │   │   ├── adguard container
-    │   │   │   ├── n8n container
-    │   │   │   ├── traefik container
-    │   │   │   └── wireguard container
-    │   │   └── monitoring network (optional)
-    │   │       ├── grafana
-    │   │       ├── prometheus
-    │   │       └── exporters
-    │   └── Host Storage
-    │       └── /home/user/home-server-stack/data/
-    └── Network Interface (192.168.1.100)
-```
-
-### Future: Multi-Server (k3s)
-
-See [K3S_MIGRATION_PLAN.md](K3S_MIGRATION_PLAN.md) for detailed architecture.
-
-```
-Server 1 (Control Plane)            Server 2 (Worker)
-    │                                   │
-    ├── k3s control-plane               ├── k3s agent
-    ├── adguard (DaemonSet)            ├── n8n
-    ├── wireguard (DaemonSet)          └── monitoring agents
-    └── monitoring stack
-```
-
-## Technology Stack
-
-| Layer | Technology | Purpose |
-|-------|-----------|---------|
-| **Orchestration** | Docker Compose | Container management |
-| **Containerization** | Docker | Application isolation |
-| **OS** | Ubuntu Server 24.04 | Host operating system |
-| **Networking** | Bridge Network | Container networking |
-| **Storage** | Bind Mounts | Data persistence |
-| **Reverse Proxy** | Traefik | Domain-based routing + TLS |
-| **DNS** | AdGuard Home | Network DNS + ad blocking |
-| **VPN** | WireGuard | Secure remote access |
-| **Automation** | n8n | Workflow automation |
-| **Monitoring** | Prometheus | Metrics collection |
-| **Visualization** | Grafana | Dashboards |
-| **Alerting** | Alertmanager | Alert management |
-
-## Performance Considerations
-
-### Resource Allocation
-
-**Typical Resource Usage:**
-```
-Service          CPU (Idle)  CPU (Active)  RAM (Idle)  RAM (Active)
-────────────────────────────────────────────────────────────────────
-AdGuard Home     1%          5%            100 MB      200 MB
-n8n              1%          10%           200 MB      500 MB
-WireGuard        1%          5%            50 MB       100 MB
-Traefik          1%          3%            50 MB       100 MB
-Monitoring       5%          15%           800 MB      1.5 GB
-────────────────────────────────────────────────────────────────────
-Total            9%          38%           1.2 GB      2.4 GB
-```
-
-**Bottlenecks:**
-- **Disk I/O:** Prometheus writes
-- **Network:** VPN throughput (usually not an issue on LAN)
-
-### Scaling Strategies
-
-**Vertical Scaling (current):**
-- Add more RAM for workflow processing
-- Faster CPU for better performance
-- SSD for better I/O
-
-**Horizontal Scaling (future):**
-- k3s cluster (see K3S_MIGRATION_PLAN.md)
-- Distribute services across servers
-- Load balancing with MetalLB
-- High availability with replicas
-
-## Failure Modes & Recovery
-
-### Service Failures
-
-**Container crash:**
-- Docker restart policy: `unless-stopped`
-- Service automatically restarts
-- Check logs: `docker compose logs [service]`
-
-**Out of memory:**
-- Check n8n workflow memory usage
-- Reduce concurrent workflows
-- Add swap space
-
-**Disk full:**
-- Check: `df -h`
-- Clean: `docker system prune`
-- Increase storage or add retention policies
-
-### System Recovery
-
-**Full system failure:**
-1. Restore from backup
-2. Extract to `home-server-stack/`
-3. Run: `docker compose up -d`
-4. Verify services
-
-**Partial failure:**
-- Stop service: `docker compose stop [service]`
-- Check logs, fix issue
-- Restart: `docker compose up -d [service]`
-
-### Data Recovery
-
-All critical data in `./data/`:
-- Regular backups (daily recommended)
-- Test restore procedures
-- Keep backups offsite (cloud, external drive)
-
-## References
-
-- [Setup Guide](SETUP.md) - Installation instructions
-- [Operations Guide](OPERATIONS.md) - Day-to-day management
-- [Requirements](REQUIREMENTS.md) - Hardware/software needs
-- [K3S Migration Plan](K3S_MIGRATION_PLAN.md) - Future architecture
-- [Security Roadmap](../security-tickets/README.md) - Security implementation
