@@ -11,7 +11,7 @@ Deploy Traefik as the reverse proxy to enable domain-based access to all service
 - [ ] Traefik service added to docker-compose.yml
 - [ ] Traefik configured with web (80) and websecure (443) entrypoints
 - [ ] Docker provider enabled for automatic service discovery
-- [ ] Traefik dashboard accessible at traefik.home.local
+- [ ] Traefik dashboard accessible at traefik.${DOMAIN}
 - [ ] SSL/TLS configured with automatic certificate generation
 - [ ] HTTP to HTTPS redirect enabled
 - [ ] Traefik container running and healthy
@@ -77,7 +77,7 @@ Add to `docker-compose.yml`:
       - "traefik.enable=true"
 
       # Dashboard router
-      - "traefik.http.routers.dashboard.rule=Host(`traefik.home.local`)"
+      - "traefik.http.routers.dashboard.rule=Host(`traefik.${DOMAIN}`)"
       - "traefik.http.routers.dashboard.entrypoints=websecure"
       - "traefik.http.routers.dashboard.tls=true"
       - "traefik.http.routers.dashboard.service=api@internal"
@@ -124,7 +124,7 @@ docker inspect traefik | grep -A 10 Health
 curl http://localhost:80/api/http/routers
 
 # Add DNS rewrite in AdGuard first, then test dashboard
-curl -k https://traefik.home.local
+curl -k https://traefik.${DOMAIN}
 ```
 
 ### Directory Structure to Create
@@ -140,7 +140,7 @@ config/
 
 ## Success Metrics
 - Traefik container running and passing health checks
-- Traefik dashboard accessible at https://traefik.home.local (after DNS setup)
+- Traefik dashboard accessible at https://traefik.${DOMAIN} (after DNS setup)
 - No port conflicts with existing services
 - Docker provider discovering containers
 - Access logs being written to data/traefik/logs/

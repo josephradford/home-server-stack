@@ -123,9 +123,9 @@ docker compose logs
 ## Monitoring
 
 Access your monitoring dashboards:
-- **Grafana**: https://grafana.home.local (admin / GRAFANA_PASSWORD)
-- **Prometheus**: https://prometheus.home.local
-- **Alertmanager**: https://alerts.home.local
+- **Grafana**: https://grafana.${DOMAIN} (admin / GRAFANA_PASSWORD)
+- **Prometheus**: https://prometheus.${DOMAIN}
+- **Alertmanager**: https://alerts.${DOMAIN}
 
 ```bash
 # Quick resource check
@@ -186,7 +186,7 @@ docker compose up -d
 
 ## Traefik Management
 
-Access dashboard: https://traefik.home.local
+Access dashboard: https://traefik.${DOMAIN}
 
 ```bash
 # View logs
