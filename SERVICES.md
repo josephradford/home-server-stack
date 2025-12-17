@@ -6,7 +6,7 @@ A comprehensive catalog of all services in this homelab stack - running, planned
 
 All services are accessible via two methods:
 
-1. **Domain-based (Recommended):** `https://servicename.home.local`
+1. **Domain-based (Recommended):** `https://servicename.${DOMAIN}`
 2. **IP:port (Legacy):** `http://SERVER_IP:PORT`
 
 ---
@@ -19,7 +19,7 @@ Currently deployed and active services.
 
 #### Traefik Dashboard
 - **Purpose:** Reverse proxy management
-- **Access:** https://traefik.home.local
+- **Access:** https://traefik.${DOMAIN}
 - **Authentication:** Basic auth (admin / configured password)
 - **Features:**
   - View active routers
@@ -31,14 +31,14 @@ Currently deployed and active services.
 
 #### AdGuard Home
 - **Purpose:** Network-wide ad blocking and DNS server
-- **Access:** https://adguard.home.local
+- **Access:** https://adguard.${DOMAIN}
 - **Legacy:** http://SERVER_IP:8888
 - **Port:** 8888 (admin), 53 (DNS)
 - **Authentication:** Set during initial setup
 
 #### n8n
 - **Purpose:** Workflow automation with AI
-- **Access:** https://n8n.home.local
+- **Access:** https://n8n.${DOMAIN}
 - **Legacy:** https://SERVER_IP:5678
 - **Port:** 5678
 - **Authentication:** N8N_USER / N8N_PASSWORD from .env
@@ -87,21 +87,21 @@ Currently deployed and active services.
 
 #### Grafana
 - **Purpose:** Metrics visualization and dashboards
-- **Access:** https://grafana.home.local
+- **Access:** https://grafana.${DOMAIN}
 - **Legacy:** http://SERVER_IP:3001
 - **Port:** 3001
 - **Authentication:** admin / GRAFANA_PASSWORD
 
 #### Prometheus
 - **Purpose:** Metrics collection and alerting
-- **Access:** https://prometheus.home.local
+- **Access:** https://prometheus.${DOMAIN}
 - **Legacy:** http://SERVER_IP:9090
 - **Port:** 9090
 - **Authentication:** None (VPN-protected)
 
 #### Alertmanager
 - **Purpose:** Alert routing and management
-- **Access:** https://alerts.home.local
+- **Access:** https://alerts.${DOMAIN}
 - **Legacy:** http://SERVER_IP:9093
 - **Port:** 9093
 - **Authentication:** None (VPN-protected)
@@ -120,15 +120,15 @@ Currently deployed and active services.
 
 | Service | Domain | Legacy |
 |---------|--------|--------|
-| Traefik | https://traefik.home.local | N/A |
-| AdGuard | https://adguard.home.local | http://IP:8888 |
-| n8n | https://n8n.home.local | http://IP:5678 |
+| Traefik | https://traefik.${DOMAIN} | N/A |
+| AdGuard | https://adguard.${DOMAIN} | http://IP:8888 |
+| n8n | https://n8n.${DOMAIN} | http://IP:5678 |
 | Home Assistant | https://home.${DOMAIN} | http://IP:8123 |
 | Actual Budget | https://actual.${DOMAIN} | N/A |
 | Mealie | https://mealie.${DOMAIN} | N/A |
-| Grafana | https://grafana.home.local | http://IP:3001 |
-| Prometheus | https://prometheus.home.local | http://IP:9090 |
-| Alertmanager | https://alerts.home.local | http://IP:9093 |
+| Grafana | https://grafana.${DOMAIN} | http://IP:3001 |
+| Prometheus | https://prometheus.${DOMAIN} | http://IP:9090 |
+| Alertmanager | https://alerts.${DOMAIN} | http://IP:9093 |
 
 ---
 

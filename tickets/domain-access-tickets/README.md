@@ -2,7 +2,7 @@
 
 ## Overview
 
-This directory contains implementation tickets for migrating the home server stack from IP:port-based access (e.g., `192.168.1.100:8080`) to clean domain-based access (e.g., `https://habitica.home.local`).
+This directory contains implementation tickets for migrating the home server stack from IP:port-based access (e.g., `192.168.1.100:8080`) to clean domain-based access (e.g., `https://habitica.${DOMAIN}`).
 
 ## Goals
 
@@ -17,25 +17,25 @@ This directory contains implementation tickets for migrating the home server sta
 ### Components
 
 1. **Traefik** - Reverse proxy handling routing and SSL/TLS termination
-2. **AdGuard Home** - DNS server resolving `*.home.local` to SERVER_IP
+2. **AdGuard Home** - DNS server resolving `*.${DOMAIN}` to SERVER_IP
 3. **Docker Labels** - Service discovery and routing configuration
 4. **Self-Signed Certs** - Automatic SSL certificates for local network use
 
 ### Domain Naming Convention
 
-All services use the `.home.local` TLD with descriptive names:
+All services use the `.${DOMAIN}` TLD with descriptive names:
 
-- `traefik.home.local` - Traefik dashboard
-- `adguard.home.local` - AdGuard Home admin interface
-- `n8n.home.local` - n8n workflow automation
-- `glance.home.local` - Glance dashboard
-- `hortusfox.home.local` - HortusFox plant management
-- `habitica.home.local` - Habitica habit tracker
-- `bookwyrm.home.local` - Bookwyrm book tracking
-- `ollama.home.local` - Ollama API
-- `grafana.home.local` - Grafana monitoring
-- `prometheus.home.local` - Prometheus metrics
-- `alerts.home.local` - Alertmanager
+- `traefik.${DOMAIN}` - Traefik dashboard
+- `adguard.${DOMAIN}` - AdGuard Home admin interface
+- `n8n.${DOMAIN}` - n8n workflow automation
+- `glance.${DOMAIN}` - Glance dashboard
+- `hortusfox.${DOMAIN}` - HortusFox plant management
+- `habitica.${DOMAIN}` - Habitica habit tracker
+- `bookwyrm.${DOMAIN}` - Bookwyrm book tracking
+- `ollama.${DOMAIN}` - Ollama API
+- `grafana.${DOMAIN}` - Grafana monitoring
+- `prometheus.${DOMAIN}` - Prometheus metrics
+- `alerts.${DOMAIN}` - Alertmanager
 
 ## Implementation Tickets
 
@@ -157,7 +157,7 @@ Each ticket includes a rollback plan. If major issues occur:
 ## Success Criteria
 
 ### Technical Metrics
-- ✅ All services accessible via `https://*.home.local`
+- ✅ All services accessible via `https://*.${DOMAIN}`
 - ✅ All services maintain IP:port access (backward compatibility)
 - ✅ DNS resolution working for all domains
 - ✅ HTTPS working with self-signed certificates
@@ -234,7 +234,7 @@ After all tickets complete:
 
 ## Questions & Answers
 
-**Q: Why .home.local instead of .local?**
+**Q: Why .${DOMAIN} instead of .local?**
 A: The `.home` subdomain avoids conflicts with mDNS/Bonjour `.local` domains while remaining clearly local-only.
 
 **Q: Why self-signed certificates?**
@@ -246,7 +246,7 @@ A: Yes, but requires DNS challenge (since services are local-only). See Traefik 
 **Q: What if I add a new service later?**
 A: Just add Traefik labels to the service's docker-compose entry. The wildcard DNS rewrite handles the domain automatically.
 
-**Q: Can I use a different domain instead of .home.local?**
+**Q: Can I use a different domain instead of .${DOMAIN}?**
 A: Yes! Update the DNS rewrites in AdGuard and the Traefik labels. Avoid public TLDs to prevent DNS conflicts.
 
 **Q: Will this work from mobile devices?**

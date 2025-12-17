@@ -4,9 +4,9 @@ This document describes how to test and verify domain-based access for services 
 
 ## Overview
 
-Domain-based access allows you to access services using memorable domain names (e.g., `glance.home.local`) instead of IP addresses and ports (e.g., `192.168.1.100:8282`). This is accomplished through:
+Domain-based access allows you to access services using memorable domain names (e.g., `glance.${DOMAIN}`) instead of IP addresses and ports (e.g., `192.168.1.100:8282`). This is accomplished through:
 
-1. **AdGuard Home**: Provides DNS rewrites for `*.home.local` domains
+1. **AdGuard Home**: Provides DNS rewrites for `*.${DOMAIN}` domains
 2. **Traefik**: Reverse proxy that routes requests based on domain names
 3. **Self-signed SSL certificates**: Enable HTTPS access (with browser warnings)
 
@@ -16,12 +16,12 @@ The following services are configured for domain-based access:
 
 | Service | Domain | Direct Access (IP:Port) | Notes |
 |---------|--------|------------------------|-------|
-| Grafana | `https://grafana.home.local` | N/A (Traefik only) | - |
-| n8n Workflow Automation | `https://n8n.home.local` | `http://192.168.1.100:5678` | Legacy access |
-| AdGuard Home | `https://adguard.home.local` | `http://192.168.1.100:8888` | Emergency access |
-| Prometheus Monitoring | `https://prometheus.home.local` | N/A (Traefik only) | - |
-| Alertmanager | `https://alerts.home.local` | N/A (Traefik only) | - |
-| Traefik Dashboard | `https://traefik.home.local` | N/A (domain-only) | - |
+| Grafana | `https://grafana.${DOMAIN}` | N/A (Traefik only) | - |
+| n8n Workflow Automation | `https://n8n.${DOMAIN}` | `http://192.168.1.100:5678` | Legacy access |
+| AdGuard Home | `https://adguard.${DOMAIN}` | `http://192.168.1.100:8888` | Emergency access |
+| Prometheus Monitoring | `https://prometheus.${DOMAIN}` | N/A (Traefik only) | - |
+| Alertmanager | `https://alerts.${DOMAIN}` | N/A (Traefik only) | - |
+| Traefik Dashboard | `https://traefik.${DOMAIN}` | N/A (domain-only) | - |
 
 ## Prerequisites
 
@@ -42,7 +42,7 @@ make test-domain-access
 ```
 
 This test script verifies:
-- ✅ DNS resolution for `*.home.local` domains
+- ✅ DNS resolution for `*.${DOMAIN}` domains
 - ✅ HTTP to HTTPS redirect functionality
 - ✅ HTTPS endpoint accessibility
 - ✅ Traefik routing configuration
@@ -55,7 +55,7 @@ This test script verifies:
 From the server:
 ```bash
 # Test local DNS resolution
-dig @192.168.1.100 glance.home.local +short
+dig @192.168.1.100 glance.${DOMAIN} +short
 
 # Expected output: 192.168.1.100
 ```
@@ -63,10 +63,10 @@ dig @192.168.1.100 glance.home.local +short
 From a client device (configured to use AdGuard DNS):
 ```bash
 # Should resolve to server IP
-dig glance.home.local +short
+dig glance.${DOMAIN} +short
 
 # Or use nslookup
-nslookup glance.home.local
+nslookup glance.${DOMAIN}
 ```
 
 #### 2. Test HTTP Redirect
@@ -74,10 +74,10 @@ nslookup glance.home.local
 The HTTP endpoint should redirect to HTTPS:
 ```bash
 # Test redirect (should return 301/302/308)
-curl -I -H "Host: glance.home.local" http://192.168.1.100
+curl -I -H "Host: glance.${DOMAIN}" http://192.168.1.100
 
 # Expected: HTTP/1.1 301 Moved Permanently
-# Location: https://glance.home.local/
+# Location: https://glance.${DOMAIN}/
 ```
 
 #### 3. Test HTTPS Access
@@ -85,7 +85,7 @@ curl -I -H "Host: glance.home.local" http://192.168.1.100
 Access via HTTPS (allow self-signed cert):
 ```bash
 # Test HTTPS endpoint (should return 200)
-curl -I -k https://glance.home.local
+curl -I -k https://glance.${DOMAIN}
 
 # Expected: HTTP/2 200
 ```
@@ -93,13 +93,13 @@ curl -I -k https://glance.home.local
 #### 4. Test in Browser
 
 1. Open browser on a client device configured to use AdGuard DNS
-2. Navigate to `https://glance.home.local`
+2. Navigate to `https://glance.${DOMAIN}`
 3. Accept the self-signed certificate warning
 4. Verify the service loads correctly
 
 ### Expected Browser Behavior
 
-When accessing `https://glance.home.local` in a browser:
+When accessing `https://glance.${DOMAIN}` in a browser:
 
 1. **Certificate Warning**: You'll see a warning about an untrusted certificate
    - This is expected with self-signed certificates
@@ -114,7 +114,7 @@ When accessing `https://glance.home.local` in a browser:
 
 ### DNS Not Resolving
 
-**Symptom**: `dig @192.168.1.100 n8n.home.local` returns no results
+**Symptom**: `dig @192.168.1.100 n8n.${DOMAIN}` returns no results
 
 **Solutions**:
 1. Verify AdGuard is running: `docker ps | grep adguard`
@@ -159,7 +159,7 @@ When accessing `https://glance.home.local` in a browser:
 **Solutions**:
 1. Verify router DHCP is configured to use server IP as DNS
 2. Restart client device to get fresh DHCP lease with new DNS settings
-3. Test DNS from client: `dig glance.home.local` (should return server IP)
+3. Test DNS from client: `dig glance.${DOMAIN}` (should return server IP)
 4. Flush DNS cache:
    - macOS: `sudo dscacheutil -flushcache; sudo killall -HUP mDNSResponder`
    - Windows: `ipconfig /flushdns`
@@ -170,11 +170,11 @@ When accessing `https://glance.home.local` in a browser:
 
 ### Request Flow
 
-1. **Browser DNS Lookup**: Client requests IP for `glance.home.local`
+1. **Browser DNS Lookup**: Client requests IP for `glance.${DOMAIN}`
 2. **AdGuard DNS Response**: Returns server IP (`192.168.1.100`)
-3. **HTTP Request**: Browser sends HTTP request to `http://192.168.1.100` with `Host: glance.home.local`
+3. **HTTP Request**: Browser sends HTTP request to `http://192.168.1.100` with `Host: glance.${DOMAIN}`
 4. **Traefik Redirect**: Traefik intercepts, returns 301 redirect to HTTPS
-5. **HTTPS Request**: Browser sends HTTPS request to `https://192.168.1.100` with `Host: glance.home.local`
+5. **HTTPS Request**: Browser sends HTTPS request to `https://192.168.1.100` with `Host: glance.${DOMAIN}`
 6. **Traefik Routing**: Traefik matches the Host header and routes to the correct container
 7. **Service Response**: Container responds, Traefik forwards back to browser
 
@@ -185,7 +185,7 @@ When accessing `https://glance.home.local` in a browser:
 │   Browser   │
 │  (Client)   │
 └──────┬──────┘
-       │ 1. DNS Query: glance.home.local?
+       │ 1. DNS Query: glance.${DOMAIN}?
        │
        ▼
 ┌─────────────┐
@@ -198,20 +198,20 @@ When accessing `https://glance.home.local` in a browser:
 ┌─────────────┐
 │   Browser   │
 └──────┬──────┘
-       │ 3. HTTP: http://192.168.1.100 (Host: glance.home.local)
+       │ 3. HTTP: http://192.168.1.100 (Host: glance.${DOMAIN})
        │
        ▼
 ┌─────────────┐
 │   Traefik   │
 │ (:80, :443) │
 └──────┬──────┘
-       │ 4. 301 Redirect → https://glance.home.local
+       │ 4. 301 Redirect → https://glance.${DOMAIN}
        │
        ▼
 ┌─────────────┐
 │   Browser   │
 └──────┬──────┘
-       │ 5. HTTPS: https://192.168.1.100 (Host: glance.home.local)
+       │ 5. HTTPS: https://192.168.1.100 (Host: glance.${DOMAIN})
        │
        ▼
 ┌─────────────┐
@@ -263,7 +263,7 @@ See Traefik's [Let's Encrypt documentation](https://doc.traefik.io/traefik/https
 The current configuration is designed for internal network use only:
 
 - Self-signed certificates (untrusted by browsers)
-- `.home.local` domains (not routable on internet)
+- `.${DOMAIN}` domains (not routable on internet)
 - Services bound to `SERVER_IP` (not publicly accessible)
 
 ### VPN Access
@@ -273,7 +273,7 @@ For remote access, use WireGuard VPN:
 1. Connect to VPN
 2. VPN automatically routes home network traffic
 3. DNS queries go through AdGuard
-4. Access services via `*.home.local` domains
+4. Access services via `*.${DOMAIN}` domains
 
 See `docs/WIREGUARD.md` for VPN setup.
 
@@ -294,7 +294,7 @@ Before marking domain-based access as working:
 - [ ] All services have Traefik labels in docker-compose
 - [ ] Traefik is running and accessible
 - [ ] Router DHCP configured to use server IP as DNS
-- [ ] DNS resolution works: `dig @SERVER_IP glance.home.local`
+- [ ] DNS resolution works: `dig @SERVER_IP glance.${DOMAIN}`
 - [ ] HTTP redirects to HTTPS
 - [ ] HTTPS endpoints accessible
 - [ ] Browser can access all services via domain names

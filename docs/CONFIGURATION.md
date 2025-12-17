@@ -147,13 +147,13 @@ services:
       - homeserver
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.myservice.rule=Host(`myservice.home.local`)"
+      - "traefik.http.routers.myservice.rule=Host(`myservice.${DOMAIN}`)"
       - "traefik.http.routers.myservice.entrypoints=websecure"
       - "traefik.http.routers.myservice.tls=true"
       - "traefik.http.services.myservice.loadbalancer.server.port=8080"  # Internal port
 ```
 
-4. Add DNS rewrite to AdGuard (already covered by wildcard `*.home.local`)
+4. Add DNS rewrite to AdGuard (already covered by wildcard `*.${DOMAIN}`)
 5. Deploy: `docker compose up -d myservice`
 
 ### Traefik Dashboard

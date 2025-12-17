@@ -22,7 +22,7 @@ System design and technical architecture of the Home Server Stack.
 │  │         (Ports 80, 443)              │             │
 │  │  ┌────────────────────────────────┐  │             │
 │  │  │  Domain-based Router           │  │             │
-│  │  │  - *.home.local → Services     │  │             │
+│  │  │  - *.${DOMAIN} → Services      │  │             │
 │  │  │  - TLS Termination             │  │             │
 │  │  │  - Automatic Service Discovery │  │             │
 │  │  └────────────────────────────────┘  │             │
@@ -48,7 +48,7 @@ System design and technical architecture of the Home Server Stack.
 
 **Request Flow:**
 
-1. Client requests `https://n8n.home.local`
+1. Client requests `https://n8n.${DOMAIN}`
 2. AdGuard Home resolves to `SERVER_IP`
 3. Request reaches Traefik on port 443
 4. Traefik routes based on `Host` header to n8n container
@@ -75,7 +75,7 @@ System design and technical architecture of the Home Server Stack.
 
 **Data Flow:**
 ```
-Client Request (https://service.home.local)
+Client Request (https://service.${DOMAIN})
     ↓
 Traefik (port 443) - Check Host header
     ↓

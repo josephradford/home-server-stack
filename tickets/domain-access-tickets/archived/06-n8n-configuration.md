@@ -8,7 +8,7 @@
 Migrate n8n from its built-in SSL configuration to Traefik-managed routing. This requires updating n8n's environment variables, disabling built-in SSL, configuring Traefik labels, and updating webhook URLs.
 
 ## Acceptance Criteria
-- [ ] n8n accessible via https://n8n.home.local
+- [ ] n8n accessible via https://n8n.${DOMAIN}
 - [ ] Built-in n8n SSL disabled (Traefik handles SSL)
 - [ ] n8n running in HTTP mode internally
 - [ ] Traefik labels configured for n8n service
@@ -29,7 +29,7 @@ n8n currently has built-in SSL with self-signed certificates:
 
 ### Target Configuration
 After migration:
-- Accessible at: `https://n8n.home.local`
+- Accessible at: `https://n8n.${DOMAIN}`
 - n8n runs in HTTP mode internally
 - Traefik handles SSL termination
 - No direct port exposure needed (optional: keep for backward compatibility)
@@ -59,8 +59,8 @@ N8N_PROTOCOL=http
 # N8N_SSL_CERT=/ssl/server.crt
 
 # Update to new domain-based URLs
-N8N_EDITOR_BASE_URL=https://n8n.home.local
-WEBHOOK_URL=https://n8n.home.local/
+N8N_EDITOR_BASE_URL=https://n8n.${DOMAIN}
+WEBHOOK_URL=https://n8n.${DOMAIN}/
 
 # Keep other settings unchanged
 N8N_USER=admin
@@ -155,12 +155,12 @@ N8N_SECURE_COOKIE=true
       - "traefik.enable=true"
 
       # HTTP Router (redirect to HTTPS)
-      - "traefik.http.routers.n8n-http.rule=Host(`n8n.home.local`)"
+      - "traefik.http.routers.n8n-http.rule=Host(`n8n.${DOMAIN}`)"
       - "traefik.http.routers.n8n-http.entrypoints=web"
       - "traefik.http.routers.n8n-http.middlewares=redirect-to-https"
 
       # HTTPS Router
-      - "traefik.http.routers.n8n.rule=Host(`n8n.home.local`)"
+      - "traefik.http.routers.n8n.rule=Host(`n8n.${DOMAIN}`)"
       - "traefik.http.routers.n8n.entrypoints=websecure"
       - "traefik.http.routers.n8n.tls=true"
 
@@ -204,23 +204,23 @@ docker ps | grep n8n
 
 ```bash
 # Test DNS resolution
-nslookup n8n.home.local
+nslookup n8n.${DOMAIN}
 # Expected: resolves to SERVER_IP
 
 # Test HTTP redirect
-curl -I http://n8n.home.local
-# Expected: 301/302 redirect to https://n8n.home.local
+curl -I http://n8n.${DOMAIN}
+# Expected: 301/302 redirect to https://n8n.${DOMAIN}
 
 # Test HTTPS access (ignore cert warning)
-curl -Ik https://n8n.home.local
+curl -Ik https://n8n.${DOMAIN}
 # Expected: 200 OK
 
 # Test n8n API
-curl -Ik https://n8n.home.local/healthz
+curl -Ik https://n8n.${DOMAIN}/healthz
 # Expected: 200 OK, {"status":"ok"}
 
 # Test basic auth
-curl -Ik -u admin:your_password https://n8n.home.local/
+curl -Ik -u admin:your_password https://n8n.${DOMAIN}/
 # Expected: 200 OK
 
 # Check Traefik logs
@@ -233,10 +233,10 @@ docker logs n8n | grep -i error
 ### Testing Checklist
 
 #### Basic Access Tests
-- [ ] DNS resolves n8n.home.local to SERVER_IP
+- [ ] DNS resolves n8n.${DOMAIN} to SERVER_IP
 - [ ] HTTP redirects to HTTPS
 - [ ] HTTPS loads with self-signed cert
-- [ ] n8n editor loads at https://n8n.home.local
+- [ ] n8n editor loads at https://n8n.${DOMAIN}
 - [ ] Basic auth prompts for credentials
 - [ ] Login works with N8N_USER and N8N_PASSWORD
 - [ ] Backward compatibility: https://SERVER_IP:5678 still works (if port kept)
@@ -251,7 +251,7 @@ docker logs n8n | grep -i error
 - [ ] Settings page accessible
 
 #### Webhook Tests
-- [ ] Webhook URLs show new domain (https://n8n.home.local/webhook/...)
+- [ ] Webhook URLs show new domain (https://n8n.${DOMAIN}/webhook/...)
 - [ ] Test webhook node with new URL
 - [ ] Webhook receives POST request correctly
 - [ ] Webhook execution appears in logs
@@ -263,7 +263,7 @@ Example test workflow:
 // 1. Add Webhook node (GET method, path: /test)
 // 2. Add Set node to return data
 // 3. Activate workflow
-// 4. Test: curl https://n8n.home.local/webhook/test
+// 4. Test: curl https://n8n.${DOMAIN}/webhook/test
 // Expected: Returns data from Set node
 ```
 
@@ -289,12 +289,12 @@ docker logs n8n | grep -i webhook
 # Expected: Webhook registration successful
 
 # Verify n8n health
-curl https://n8n.home.local/healthz
+curl https://n8n.${DOMAIN}/healthz
 # Expected: {"status":"ok"}
 ```
 
 ## Success Metrics
-- n8n accessible via https://n8n.home.local
+- n8n accessible via https://n8n.${DOMAIN}
 - All existing workflows continue working
 - Webhook URLs updated to new domain
 - No SSL/TLS errors in logs
@@ -326,7 +326,7 @@ docker compose restart n8n
 ```bash
 # Verify WEBHOOK_URL is correct in .env
 grep WEBHOOK_URL .env
-# Should be: WEBHOOK_URL=https://n8n.home.local/
+# Should be: WEBHOOK_URL=https://n8n.${DOMAIN}/
 
 # Restart n8n to apply new webhook URL
 docker compose restart n8n

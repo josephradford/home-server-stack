@@ -8,11 +8,11 @@
 Add Traefik labels to all remaining services (AdGuard Home, Ollama, Habitica, Prometheus, Alertmanager) to complete the domain-based access migration. This completes the rollout to all services in the stack.
 
 ## Acceptance Criteria
-- [ ] AdGuard Home accessible via https://adguard.home.local
-- [ ] Ollama API accessible via https://ollama.home.local
-- [ ] Habitica accessible via https://habitica.home.local
-- [ ] Prometheus accessible via https://prometheus.home.local
-- [ ] Alertmanager accessible via https://alerts.home.local
+- [ ] AdGuard Home accessible via https://adguard.${DOMAIN}
+- [ ] Ollama API accessible via https://ollama.${DOMAIN}
+- [ ] Habitica accessible via https://habitica.${DOMAIN}
+- [ ] Prometheus accessible via https://prometheus.${DOMAIN}
+- [ ] Alertmanager accessible via https://alerts.${DOMAIN}
 - [ ] All services functional via domain names
 - [ ] Backward compatibility maintained (IP:port access)
 - [ ] No service disruptions during migration
@@ -20,11 +20,11 @@ Add Traefik labels to all remaining services (AdGuard Home, Ollama, Habitica, Pr
 
 ## Services to Configure
 
-1. **AdGuard Home** - adguard.home.local (port 8888)
-2. **Ollama** - ollama.home.local (port 11434)
-3. **Habitica** - habitica.home.local (port 8080)
-4. **Prometheus** - prometheus.home.local (port 9090)
-5. **Alertmanager** - alerts.home.local (port 9093)
+1. **AdGuard Home** - adguard.${DOMAIN} (port 8888)
+2. **Ollama** - ollama.${DOMAIN} (port 11434)
+3. **Habitica** - habitica.${DOMAIN} (port 8080)
+4. **Prometheus** - prometheus.${DOMAIN} (port 9090)
+5. **Alertmanager** - alerts.${DOMAIN} (port 9093)
 
 ## Technical Implementation Details
 
@@ -55,12 +55,12 @@ Add Traefik labels to all remaining services (AdGuard Home, Ollama, Habitica, Pr
       - "traefik.enable=true"
 
       # HTTP Router
-      - "traefik.http.routers.adguard-http.rule=Host(`adguard.home.local`)"
+      - "traefik.http.routers.adguard-http.rule=Host(`adguard.${DOMAIN}`)"
       - "traefik.http.routers.adguard-http.entrypoints=web"
       - "traefik.http.routers.adguard-http.middlewares=redirect-to-https"
 
       # HTTPS Router
-      - "traefik.http.routers.adguard.rule=Host(`adguard.home.local`)"
+      - "traefik.http.routers.adguard.rule=Host(`adguard.${DOMAIN}`)"
       - "traefik.http.routers.adguard.entrypoints=websecure"
       - "traefik.http.routers.adguard.tls=true"
 
@@ -97,12 +97,12 @@ Add Traefik labels to all remaining services (AdGuard Home, Ollama, Habitica, Pr
       - "traefik.enable=true"
 
       # HTTP Router
-      - "traefik.http.routers.ollama-http.rule=Host(`ollama.home.local`)"
+      - "traefik.http.routers.ollama-http.rule=Host(`ollama.${DOMAIN}`)"
       - "traefik.http.routers.ollama-http.entrypoints=web"
       - "traefik.http.routers.ollama-http.middlewares=redirect-to-https"
 
       # HTTPS Router
-      - "traefik.http.routers.ollama.rule=Host(`ollama.home.local`)"
+      - "traefik.http.routers.ollama.rule=Host(`ollama.${DOMAIN}`)"
       - "traefik.http.routers.ollama.entrypoints=websecure"
       - "traefik.http.routers.ollama.tls=true"
 
@@ -125,7 +125,7 @@ Find the habitica web service:
       - "${SERVER_IP}:8080:8080"  # Keep for backward compatibility
     environment:
       # ... existing environment ...
-      - BASE_URL=${HABITICA_BASE_URL}  # Update this in .env to https://habitica.home.local
+      - BASE_URL=${HABITICA_BASE_URL}  # Update this in .env to https://habitica.${DOMAIN}
       # ... rest of env vars ...
     volumes:
       # ... existing volumes ...
@@ -139,12 +139,12 @@ Find the habitica web service:
       - "traefik.enable=true"
 
       # HTTP Router
-      - "traefik.http.routers.habitica-http.rule=Host(`habitica.home.local`)"
+      - "traefik.http.routers.habitica-http.rule=Host(`habitica.${DOMAIN}`)"
       - "traefik.http.routers.habitica-http.entrypoints=web"
       - "traefik.http.routers.habitica-http.middlewares=redirect-to-https"
 
       # HTTPS Router
-      - "traefik.http.routers.habitica.rule=Host(`habitica.home.local`)"
+      - "traefik.http.routers.habitica.rule=Host(`habitica.${DOMAIN}`)"
       - "traefik.http.routers.habitica.entrypoints=websecure"
       - "traefik.http.routers.habitica.tls=true"
 
@@ -154,7 +154,7 @@ Find the habitica web service:
 
 **Also update .env:**
 ```bash
-HABITICA_BASE_URL=https://habitica.home.local
+HABITICA_BASE_URL=https://habitica.${DOMAIN}
 ```
 
 ### 4. Prometheus Configuration
@@ -186,12 +186,12 @@ HABITICA_BASE_URL=https://habitica.home.local
       - "traefik.enable=true"
 
       # HTTP Router
-      - "traefik.http.routers.prometheus-http.rule=Host(`prometheus.home.local`)"
+      - "traefik.http.routers.prometheus-http.rule=Host(`prometheus.${DOMAIN}`)"
       - "traefik.http.routers.prometheus-http.entrypoints=web"
       - "traefik.http.routers.prometheus-http.middlewares=redirect-to-https"
 
       # HTTPS Router
-      - "traefik.http.routers.prometheus.rule=Host(`prometheus.home.local`)"
+      - "traefik.http.routers.prometheus.rule=Host(`prometheus.${DOMAIN}`)"
       - "traefik.http.routers.prometheus.entrypoints=websecure"
       - "traefik.http.routers.prometheus.tls=true"
 
@@ -220,12 +220,12 @@ HABITICA_BASE_URL=https://habitica.home.local
       - "traefik.enable=true"
 
       # HTTP Router
-      - "traefik.http.routers.alertmanager-http.rule=Host(`alerts.home.local`)"
+      - "traefik.http.routers.alertmanager-http.rule=Host(`alerts.${DOMAIN}`)"
       - "traefik.http.routers.alertmanager-http.entrypoints=web"
       - "traefik.http.routers.alertmanager-http.middlewares=redirect-to-https"
 
       # HTTPS Router
-      - "traefik.http.routers.alertmanager.rule=Host(`alerts.home.local`)"
+      - "traefik.http.routers.alertmanager.rule=Host(`alerts.${DOMAIN}`)"
       - "traefik.http.routers.alertmanager.entrypoints=websecure"
       - "traefik.http.routers.alertmanager.tls=true"
 
@@ -238,7 +238,7 @@ HABITICA_BASE_URL=https://habitica.home.local
 ```bash
 # 1. Update .env file for Habitica BASE_URL
 nano .env
-# Change HABITICA_BASE_URL to https://habitica.home.local
+# Change HABITICA_BASE_URL to https://habitica.${DOMAIN}
 
 # 2. Add labels to docker-compose.yml (adguard, ollama)
 nano docker-compose.yml
@@ -271,13 +271,13 @@ curl http://localhost:8080/api/http/routers | jq
 ### AdGuard Home Tests
 ```bash
 # DNS resolution
-nslookup adguard.home.local
+nslookup adguard.${DOMAIN}
 
 # HTTP redirect
-curl -I http://adguard.home.local
+curl -I http://adguard.${DOMAIN}
 
 # HTTPS access
-curl -Ik https://adguard.home.local
+curl -Ik https://adguard.${DOMAIN}
 
 # Functionality
 - [ ] Can access admin interface
@@ -291,20 +291,20 @@ curl -Ik https://adguard.home.local
 ### Ollama API Tests
 ```bash
 # DNS resolution
-nslookup ollama.home.local
+nslookup ollama.${DOMAIN}
 
 # HTTP redirect
-curl -I http://ollama.home.local
+curl -I http://ollama.${DOMAIN}
 
 # HTTPS access
-curl -Ik https://ollama.home.local
+curl -Ik https://ollama.${DOMAIN}
 
 # API test
-curl -k https://ollama.home.local/api/version
+curl -k https://ollama.${DOMAIN}/api/version
 # Expected: {"version":"..."}
 
 # List models
-curl -k https://ollama.home.local/api/tags
+curl -k https://ollama.${DOMAIN}/api/tags
 # Expected: {"models":[...]}
 
 # Test from n8n (update Ollama host if hardcoded)
@@ -315,13 +315,13 @@ curl -k https://ollama.home.local/api/tags
 ### Habitica Tests
 ```bash
 # DNS resolution
-nslookup habitica.home.local
+nslookup habitica.${DOMAIN}
 
 # HTTP redirect
-curl -I http://habitica.home.local
+curl -I http://habitica.${DOMAIN}
 
 # HTTPS access
-curl -Ik https://habitica.home.local
+curl -Ik https://habitica.${DOMAIN}
 
 # Functionality
 - [ ] Homepage loads
@@ -336,16 +336,16 @@ curl -Ik https://habitica.home.local
 ### Prometheus Tests
 ```bash
 # DNS resolution
-nslookup prometheus.home.local
+nslookup prometheus.${DOMAIN}
 
 # HTTP redirect
-curl -I http://prometheus.home.local
+curl -I http://prometheus.${DOMAIN}
 
 # HTTPS access
-curl -Ik https://prometheus.home.local
+curl -Ik https://prometheus.${DOMAIN}
 
 # API test
-curl -k https://prometheus.home.local/api/v1/status/config
+curl -k https://prometheus.${DOMAIN}/api/v1/status/config
 
 # Functionality
 - [ ] Web UI loads
@@ -360,16 +360,16 @@ curl -k https://prometheus.home.local/api/v1/status/config
 ### Alertmanager Tests
 ```bash
 # DNS resolution
-nslookup alerts.home.local
+nslookup alerts.${DOMAIN}
 
 # HTTP redirect
-curl -I http://alerts.home.local
+curl -I http://alerts.${DOMAIN}
 
 # HTTPS access
-curl -Ik https://alerts.home.local
+curl -Ik https://alerts.${DOMAIN}
 
 # API test
-curl -k https://alerts.home.local/api/v1/status
+curl -k https://alerts.${DOMAIN}/api/v1/status
 
 # Functionality
 - [ ] Web UI loads
@@ -385,7 +385,7 @@ curl -k https://alerts.home.local/api/v1/status
 #### n8n → Ollama Integration
 ```bash
 # Update n8n workflows using Ollama
-# Change Ollama host from SERVER_IP:11434 to ollama.home.local
+# Change Ollama host from SERVER_IP:11434 to ollama.${DOMAIN}
 - [ ] n8n can connect to Ollama via domain
 - [ ] AI nodes execute successfully
 ```
@@ -411,7 +411,7 @@ curl -k https://alerts.home.local/api/v1/status
 ```
 
 ## Success Metrics
-- All 5 services accessible via .home.local domains
+- All 5 services accessible via .${DOMAIN} domains
 - 100% backward compatibility (IP:port still works)
 - All service functionality intact
 - No errors in service logs
@@ -475,11 +475,11 @@ docker exec prometheus wget -qO- http://node-exporter:9100/metrics
 Update `.env` file:
 ```bash
 # Habitica
-HABITICA_BASE_URL=https://habitica.home.local
+HABITICA_BASE_URL=https://habitica.${DOMAIN}
 
 # Consider updating these for consistency (optional):
-N8N_EDITOR_BASE_URL=https://n8n.home.local
-WEBHOOK_URL=https://n8n.home.local/
+N8N_EDITOR_BASE_URL=https://n8n.${DOMAIN}
+WEBHOOK_URL=https://n8n.${DOMAIN}/
 ```
 
 ## Dependencies
