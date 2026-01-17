@@ -158,8 +158,8 @@ Save and exit (Ctrl+X, Y, Enter)
 ### 4.3 Deploy Services
 
 ```bash
-# Use AWS-specific Makefile
-make -f Makefile.aws setup
+# Run setup
+make setup
 ```
 
 This will:
@@ -262,8 +262,8 @@ cd ~/home-server-stack-aws
 git pull
 
 # Rebuild and restart
-make -f Makefile.aws stop
-make -f Makefile.aws start
+make stop
+make start
 ```
 
 ## Cost Optimization Tips
@@ -286,7 +286,7 @@ make -f Makefile.aws start
 
 ```bash
 # Check logs
-make -f Makefile.aws logs
+make logs
 
 # Check specific service
 docker logs n8n

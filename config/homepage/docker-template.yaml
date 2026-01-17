@@ -1,4 +1,0 @@
----
-# Docker socket configuration for container monitoring
-my-docker:
-  socket: /var/run/docker.sock

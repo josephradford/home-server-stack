@@ -1,199 +1,210 @@
-# Home Server Stack
+# Home Server Stack - AWS Deployment
 
-A complete self-hosted infrastructure for home automation, AI, and network services using Docker Compose.
+**A lightweight, cost-effective self-hosted application stack optimized for AWS EC2**
 
-## 🚀 Services
+Deploy n8n workflow automation, Mealie recipe management, Actual Budget finance tracking, and a custom dashboard on AWS for **under $50 AUD/month**.
 
-**Core Services:**
-- **[AdGuard Home](https://github.com/AdguardTeam/AdGuardHome)** - Network-wide ad blocking and DNS server
-- **[n8n](https://github.com/n8n-io/n8n)** - Workflow automation platform
-- **[WireGuard](https://github.com/wireguard)** - VPN for secure remote access
-- **[Traefik](https://github.com/traefik/traefik)** - Reverse proxy for domain-based service access
+> **Note:** This repository is forked from [josephradford/home-server-stack](https://github.com/josephradford/home-server-stack), which is designed for local home server deployment. This AWS version has been streamlined to remove services that don't make sense in the cloud (VPN, DNS, local monitoring) and optimized for cost-effective cloud deployment.
 
-**Monitoring Stack:**
-- **[Grafana](https://github.com/grafana/grafana)** - Metrics visualization and dashboards
-  - **System Overview** - CPU, memory, disk, network metrics
-  - **Container Health** - Docker container status and resource usage
-  - **Resource Utilization** - Historical trends and capacity planning
-- **[Prometheus](https://github.com/prometheus/prometheus)** - Metrics collection and alerting
-- **[Alertmanager](https://github.com/prometheus/alertmanager)** - Alert routing and management
-- **[Node Exporter](https://github.com/prometheus/node_exporter)** - System metrics exporter
-- **[cAdvisor](https://github.com/google/cadvisor)** - Container metrics
+## 🚀 Services Included
 
-See [SERVICES.md](SERVICES.md) for the complete catalog including planned services.
+| Service | Purpose | URL |
+|---------|---------|-----|
+| **n8n** | Workflow automation platform | `https://n8n.${DOMAIN}` |
+| **Mealie** | Meal planning & recipe management | `https://mealie.${DOMAIN}` |
+| **Actual Budget** | Personal finance & budgeting | `https://actual.${DOMAIN}` |
+| **Homepage** | Unified dashboard | `https://${DOMAIN}` |
+| **Homepage API** | Custom backend integrations | `https://homepage-api.${DOMAIN}` |
+| **Traefik** | Reverse proxy & SSL management | `https://traefik.${DOMAIN}` |
 
-## 📋 Quick Start
+## 💰 Cost
+
+**~$35 AUD/month** (~$22 USD/month)
+
+- **EC2 t3.small:** 2 vCPU, 2 GB RAM - $23 AUD/month
+- **EBS 20GB:** SSD storage - $3 AUD/month
+- **Route53:** DNS hosting - $0.75 AUD/month
+- **Data transfer:** Estimated - $8 AUD/month
+
+## ⚡ Quick Start
+
+### Prerequisites
+
+- AWS Account
+- Domain name or subdomain
+- SSH key pair
+- 1 hour of time
+
+### Deployment Steps
+
+1. **Launch EC2 instance** (t3.small, Ubuntu 24.04)
+2. **Configure Route53 DNS** (point domain to EC2 Elastic IP)
+3. **SSH into instance and install Docker**
+4. **Clone this repo and configure `.env`**
+5. **Run `make setup`**
+6. **Access services via HTTPS** (automatic Let's Encrypt SSL)
+
+**Full deployment guide:** See [DEPLOYMENT.md](DEPLOYMENT.md)
+
+## 🏗️ Architecture
+
+```
+Internet
+    ↓
+Route53 DNS
+    ↓
+EC2 t3.small (Ubuntu 24.04)
+├── Traefik (reverse proxy + Let's Encrypt SSL)
+├── n8n (workflow automation)
+├── Mealie (recipe management)
+├── Actual Budget (finance tracking)
+└── Homepage + API (dashboard)
+    ↓
+CloudWatch (monitoring)
+```
+
+**Key Features:**
+- ✅ Automatic SSL via Let's Encrypt
+- ✅ Domain-based routing (n8n.yourdomain.com, etc.)
+- ✅ CloudWatch monitoring integration
+- ✅ Simple deployment with Docker Compose
+- ✅ One-command setup
+
+## 📋 Services Removed vs Home Server
+
+This AWS version removes services that don't make sense in the cloud:
+
+| Service | Why Removed |
+|---------|-------------|
+| **AdGuard Home** | Route53 provides DNS |
+| **WireGuard VPN** | AWS Security Groups handle access control |
+| **Home Assistant** | Requires local IoT devices |
+| **Prometheus/Grafana** | Replaced by AWS CloudWatch |
+| **Fail2ban** | AWS infrastructure handles DDoS/attacks |
+
+## 🔒 Security
+
+- **HTTPS:** Automatic via Let's Encrypt
+- **Authentication:** n8n and Traefik protected by basic auth
+- **Access Control:** AWS Security Groups restrict access
+- **SSL Certificates:** Auto-renewal every 90 days
+
+## 📊 Monitoring
+
+Uses **AWS CloudWatch** for:
+- CPU utilization
+- Memory usage
+- Disk space
+- Network traffic
+- Custom application metrics
+
+## 🔄 Common Commands
 
 ```bash
-# 1. Clone the repository
-git clone <your-repo-url>
-cd home-server-stack
-
-# 2. Configure environment
-cp .env.example .env
-nano .env  # Update SERVER_IP, TIMEZONE, passwords
-
-# 3. Run first-time setup (includes all services + monitoring)
+# First-time setup
 make setup
+
+# Start services
+make start
+
+# Stop services
+make stop
+
+# View logs
+make logs
+
+# Check service status
+make status
+
+# Cleanup (preserves data)
+make clean
 ```
 
-**Note:** `make setup` will optionally prompt you to configure Let's Encrypt SSL certificates if your `.env` includes `DOMAIN`, `ACME_EMAIL`, and `GANDIV5_PERSONAL_ACCESS_TOKEN`. Otherwise, services use self-signed certificates (browser warnings expected).
+## 📁 Project Structure
 
-**Using the Makefile:**
-- `make help` - Show all available commands
-- `make setup` - First time setup (all services + monitoring)
-- `make update` - Update all services to latest versions
-- `make start` - Start all services
-- `make stop` - Stop all services
-- `make logs` - View logs from all services
-- See `make help` for complete list of commands
+```
+.
+├── docker-compose.yml          # AWS-optimized service definitions
+├── .env.example               # Configuration template
+├── Makefile                   # Deployment commands
+├── DEPLOYMENT.md              # Full deployment guide
+├── homepage-api/              # Custom Flask backend
+│   ├── app.py                 # API endpoints
+│   ├── requirements.txt       # Python dependencies
+│   └── Dockerfile             # Container build
+└── data/                      # Persistent data (volumes)
+    ├── traefik/               # SSL certificates, logs
+    ├── n8n/                   # Workflows database
+    ├── mealie/                # Recipes database
+    ├── actualbudget/          # Finance data
+    └── homepage/              # Dashboard config
+```
 
-**Access Services:**
+## 🔧 Configuration
 
-All services are accessible via domain names on your local network:
-
-- **Traefik Dashboard:** `https://traefik.${DOMAIN}`
-- **AdGuard Home:** `https://adguard.${DOMAIN}` (DNS admin)
-- **n8n:** `https://n8n.${DOMAIN}` (Workflow automation)
-- **Grafana:** `https://grafana.${DOMAIN}` (Monitoring)
-- **Prometheus:** `https://prometheus.${DOMAIN}` (Metrics)
-- **Alertmanager:** `https://alerts.${DOMAIN}` (Alerts)
-
-**Note:** Services are accessible via domain names thanks to Traefik reverse proxy and AdGuard Home DNS. Your devices must use AdGuard Home as their DNS server (configured automatically if DHCP points to the server).
-
-**Direct IP Access:** Some services remain accessible via IP:port for specific operational needs:
-- AdGuard Home: `http://SERVER_IP:8888` (emergency access if Traefik fails)
-- Prometheus: `http://SERVER_IP:9090` (metrics scraping)
-- Alertmanager: `http://SERVER_IP:9093` (alert management)
-- See [SERVICES.md](SERVICES.md) for complete list
-
-See **[docs/SETUP.md](docs/SETUP.md)** for detailed installation instructions.
-
-## 🔒 SSL Certificates
-
-By default, services use **self-signed certificates** (browser warnings expected). For **trusted Let's Encrypt certificates**, see **[docs/CONFIGURATION.md#ssl-certificate-setup](docs/CONFIGURATION.md#ssl-certificate-setup)** for complete setup instructions using `make ssl-setup`.
-
-## 📚 Documentation
-
-### Getting Started
-- **[Setup Guide](docs/SETUP.md)** - Complete installation and initial setup
-- **[Configuration Guide](docs/CONFIGURATION.md)** - Service configuration and customization
-- **[Requirements](docs/REQUIREMENTS.md)** - System requirements and resource usage
-
-### Operations
-- **[Operations Guide](docs/OPERATIONS.md)** - Managing services, updates, backups
-- **[Troubleshooting](docs/TROUBLESHOOTING.md)** - Common issues and solutions
-- **[Monitoring Deployment](docs/MONITORING_DEPLOYMENT.md)** - Optional monitoring stack setup
-
-### Monitoring & Alerts
-- **[Alerts & Response Procedures](docs/ALERTS.md)** - Alert definitions, troubleshooting, and response procedures
-- **[Known Issues](docs/KNOWN_ISSUES.md)** - Known bugs and workarounds
-
-### Advanced
-- **[Remote Access Setup](docs/REMOTE_ACCESS.md)** - Port forwarding and VPN configuration
-- **[Architecture Overview](docs/ARCHITECTURE.md)** - System design and data persistence
-
-### Implementation Tickets
-- **[Monitoring Tickets](tickets/monitoring-tickets/README.md)** - Monitoring implementation roadmap
-- **[Security Tickets](tickets/security-tickets/README.md)** - Security hardening roadmap (VPN-first strategy)
-- **[Domain Access Tickets](tickets/domain-access-tickets/README.md)** - Domain-based routing implementation history
-- **[Dashboard Tickets](tickets/dashboard-tickets/tickets_index.md)** - Homepage dashboard with integrations
-
-## 🔐 Security
-
-This project implements **multi-layered defense-in-depth security** with four protection layers:
-
-### Security Layers
-
-**🔥 Layer 1: Network Firewall (UFW)**
-- Default deny incoming, SSH rate-limited
-- Only WireGuard VPN (51820/UDP) and HTTP/HTTPS (80/443) exposed
-- Local network and VPN clients have full access
-
-**🛡️ Layer 2: Traefik Middleware**
-- **IP Whitelisting**: Admin interfaces only accessible from local network/VPN
-- **Security Headers**: HSTS, XSS protection, frame deny
-- **Rate Limiting**: 10 req/min for admin, 100 req/min for webhooks
-
-**🚫 Layer 3: Fail2ban**
-- Auto-bans IPs after repeated auth failures (3 → 1h ban)
-- Detects scanning activity (10 x 404 → 24h ban)
-- Monitors webhook abuse (20 x rate limit → 10m ban)
-
-**📊 Layer 4: Prometheus Security Monitoring**
-- Real-time alerts for auth failures, scanning, DDoS attempts
-- Tracks rate limit enforcement and server errors
-- Monitors fail2ban and Traefik availability
-
-### Access Model
-
-- **Admin Interfaces** (n8n, Grafana, etc.): VPN or local network only
-- **Future Webhooks**: Public access with rate limiting (not yet configured)
-- **VPN Primary Boundary**: WireGuard for all remote admin access
-
-See **[SECURITY.md](SECURITY.md)** for security policy and **[security-tickets/README.md](security-tickets/README.md)** for the complete security roadmap.
-
-## 📊 Dashboard & Automation
-
-This stack includes a comprehensive dashboard with location tracking and integrations:
-
-- **Homepage**: Unified dashboard for all services
-- **Home Assistant**: Automation hub and location tracking
-- **Backend API**: Custom integrations for BOM weather, Transport NSW, traffic
-
-### Deploy Dashboard Services
+Copy `.env.example` to `.env` and configure:
 
 ```bash
-docker compose -f docker-compose.dashboard.yml up -d
+# Domain (should point to EC2 Elastic IP)
+DOMAIN=aws.example.com
+
+# Email for Let's Encrypt
+ACME_EMAIL=admin@example.com
+
+# Service credentials
+N8N_USER=admin
+N8N_PASSWORD=change_this_secure_password
+TRAEFIK_PASSWORD=change_this_secure_password
+
+# Timezone
+TIMEZONE=UTC
 ```
 
-See **[docs/DASHBOARD_SETUP.md](docs/DASHBOARD_SETUP.md)** for detailed instructions.
+## 🌐 AWS Services Used
 
-### Dashboard Features
+- **EC2:** Compute (t3.small instance)
+- **VPC & Security Groups:** Networking & access control
+- **Elastic IP:** Static IP addressing
+- **Route53:** DNS management (optional)
+- **CloudWatch:** Monitoring & logging
+- **EBS:** Block storage (20GB SSD)
 
-- 🌤️ Australian BOM weather for North Parramatta
-- 📅 Google Calendar integration
-- 🚊 Real-time Transport NSW departures
-- 🚗 Traffic conditions for configurable routes
-- 📍 Family location tracking via iOS/Android
-- 🐳 Docker container monitoring
+## 📈 Resume Talking Points
+
+> "Deployed a multi-service containerized application stack on AWS EC2 with automated SSL certificate management, CloudWatch monitoring, and Route53 DNS routing. Implemented cost-effective architecture under $50/month using Docker Compose, Traefik reverse proxy, and Let's Encrypt. Services include n8n workflow automation, personal finance tracking, and a custom Flask API backend."
+
+## 🚀 Next Steps
+
+Want to expand your AWS knowledge?
+
+1. **Add RDS** - Replace SQLite with PostgreSQL (~$15/month)
+2. **Add S3** - Store files in S3 instead of local disk (~$1/month)
+3. **Add ALB** - Application Load Balancer for scaling (~$25/month)
+4. **Add ECS Fargate** - Serverless containers (~$30/month)
+5. **Add Terraform** - Infrastructure as Code
+
+Start simple, add complexity as you learn!
+
+## 📝 License
+
+MIT License - See [LICENSE](LICENSE)
+
+## 🔗 Links
+
+- **Original Home Server Repo:** [josephradford/home-server-stack](https://github.com/josephradford/home-server-stack)
+- **n8n Documentation:** https://docs.n8n.io/
+- **Mealie Documentation:** https://docs.mealie.io/
+- **Actual Budget Documentation:** https://actualbudget.org/docs/
+- **Traefik Documentation:** https://doc.traefik.io/traefik/
 
 ## 🤝 Contributing
 
-Contributions are welcome! See **[CONTRIBUTING.md](CONTRIBUTING.md)** for guidelines on:
-- Submitting bug reports and feature requests
-- Development workflow and branching strategy
-- Pull request process
+This is a personal project forked for AWS deployment. For the original home server stack, see the [main repository](https://github.com/josephradford/home-server-stack).
 
-## 📊 System Requirements
+## 📧 Questions?
 
-**Minimum:**
-- 8 GB RAM (16 GB recommended)
-- 500 GB storage (1 TB recommended)
-- Linux-based OS (tested on Ubuntu Server 24.04 LTS)
-- Docker and Docker Compose installed
-
-See **[docs/REQUIREMENTS.md](docs/REQUIREMENTS.md)** for detailed requirements.
-
-## 📄 License
-
-This project is open source. Individual services maintain their own licenses:
-- AdGuard Home: GPL-3.0
-- n8n: Fair-code (Sustainable Use License)
-- Traefik: MIT
-- Grafana: AGPL-3.0
-- Prometheus: Apache-2.0
-
-## 💬 Support
-
-- **Documentation**: Check the [docs/](docs/) directory
-- **Issues**: [GitHub Issues](https://github.com/josephradford/home-server-stack/issues)
-- **Service-specific docs**:
-  - [AdGuard Home](https://adguard.com/kb/)
-  - [n8n](https://docs.n8n.io/)
-  - [Traefik](https://doc.traefik.io/traefik/)
+Open an issue or check the [deployment guide](DEPLOYMENT.md) for troubleshooting tips.
 
 ---
 
-**Project Status:** Active Development
-**Latest Update:** 2025-10-16
+**Happy deploying! 🎉**

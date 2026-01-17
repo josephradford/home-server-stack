@@ -1,37 +1,116 @@
 ---
-# Core Services
-# This file contains the primary user-facing services
-# - AdGuard Home: Network-wide ad blocking and DNS server
-# - n8n: Workflow automation platform
-# - Home Assistant: Location tracking and home automation
-# - Actual Budget: Personal finance and budgeting
+# AWS Deployment Configuration
+# Simplified stack for AWS EC2 deployment under $50 AUD/month
+#
+# Services included:
+# - Traefik: Reverse proxy with automatic Let's Encrypt SSL
+# - n8n: Workflow automation platform (main showcase service)
 # - Mealie: Meal planning and recipe management
+# - Actual Budget: Personal finance and budgeting
+# - Homepage + Homepage API: Dashboard (simplified - no local integrations)
+#
+# Services removed (not needed in AWS):
+# - AdGuard Home: DNS handled by Route53
+# - Home Assistant: Requires local devices
+# - WireGuard VPN: Security Groups handle access
+# - Prometheus/Grafana: Replaced by CloudWatch
+# - Fail2ban: Security Groups + CloudWatch handle threats
+#
+# Monitoring: Use AWS CloudWatch for metrics and logs
 
 services:
-  adguard:
-    image: adguard/adguardhome:latest
-    container_name: adguard-home
+  # =============================================================================
+  # NETWORK LAYER
+  # =============================================================================
+
+  traefik:
+    image: traefik:v3.6.2
+    container_name: traefik
     restart: unless-stopped
+    command:
+      # API and Dashboard
+      - "--api.dashboard=true"
+      - "--api.insecure=true"
+
+      # Docker provider
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+
+      # File provider for TLS certificates (Let's Encrypt)
+      - "--providers.file.directory=/etc/traefik"
+      - "--providers.file.watch=true"
+
+      # Entrypoints
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+
+      # HTTP to HTTPS redirect
+      - "--entrypoints.web.http.redirections.entrypoint.to=websecure"
+      - "--entrypoints.web.http.redirections.entrypoint.scheme=https"
+
+      # TLS
+      - "--entrypoints.websecure.http.tls=true"
+
+      # ACME (Let's Encrypt)
+      - "--certificatesresolvers.letsencrypt.acme.email=${ACME_EMAIL}"
+      - "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json"
+      - "--certificatesresolvers.letsencrypt.acme.httpchallenge=true"
+      - "--certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web"
+
+      # Ping endpoint for health checks
+      - "--ping=true"
+
+      # Logging
+      - "--accesslog=true"
+      - "--accesslog.filepath=/var/log/traefik/access.log"
+      - "--log.level=INFO"
+
     ports:
-      - "${SERVER_IP}:53:53/tcp"
-      - "${SERVER_IP}:53:53/udp"
-      - "${SERVER_IP}:3000:3000/tcp"
-      - "${SERVER_IP}:8888:80/tcp"
+      - "80:80"
+      - "443:443"
+
+    environment:
+      - TRAEFIK_DASHBOARD_USERS=${TRAEFIK_DASHBOARD_USERS}
+
     volumes:
-      - ./data/adguard/work:/opt/adguardhome/work
-      - ./data/adguard/conf:/opt/adguardhome/conf
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./data/traefik/letsencrypt:/letsencrypt
+      - ./data/traefik/logs:/var/log/traefik
+      - ./config/traefik:/etc/traefik:ro
+
     networks:
-      - homeserver
+      - aws-stack
+
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.adguard.rule=Host(`adguard.${DOMAIN}`)"
-      - "traefik.http.routers.adguard.entrypoints=websecure"
-      - "traefik.http.routers.adguard.tls=true"
-      # Using file provider certificate (wildcard from certbot)
-      - "traefik.http.services.adguard.loadbalancer.server.port=80"
-      # Security: VPN/Local access only - DNS admin interface should never be public
-      # Note: Using admin-secure-no-ratelimit because AdGuard UI makes 10-15 API calls per page load
-      - "traefik.http.routers.adguard.middlewares=admin-secure-no-ratelimit"
+      - "traefik.http.routers.dashboard.rule=Host(`traefik.${DOMAIN}`)"
+      - "traefik.http.routers.dashboard.entrypoints=websecure"
+      - "traefik.http.routers.dashboard.tls=true"
+      - "traefik.http.routers.dashboard.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.dashboard.service=api@internal"
+
+      # Basic auth for dashboard (no IP whitelist - Security Groups handle access)
+      - "traefik.http.middlewares.dashboard-auth.basicauth.users=${TRAEFIK_DASHBOARD_USERS}"
+      - "traefik.http.routers.dashboard.middlewares=dashboard-auth,security-headers"
+
+      # Security Headers Middleware
+      - "traefik.http.middlewares.security-headers.headers.frameDeny=true"
+      - "traefik.http.middlewares.security-headers.headers.browserXssFilter=true"
+      - "traefik.http.middlewares.security-headers.headers.contentTypeNosniff=true"
+      - "traefik.http.middlewares.security-headers.headers.stsSeconds=31536000"
+      - "traefik.http.middlewares.security-headers.headers.stsIncludeSubdomains=true"
+      - "traefik.http.middlewares.security-headers.headers.stsPreload=true"
+
+    healthcheck:
+      test: ["CMD", "traefik", "healthcheck", "--ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  # =============================================================================
+  # CORE SERVICES
+  # =============================================================================
 
   n8n-init:
     image: alpine:latest
@@ -64,13 +143,13 @@ services:
       - N8N_EDITOR_BASE_URL=https://n8n.${DOMAIN}
       - GENERIC_TIMEZONE=${TIMEZONE}
       - N8N_SECURE_COOKIE=true
-      - N8N_RUNNERS_TASK_TIMEOUT=${N8N_RUNNERS_TASK_TIMEOUT}
-      - EXECUTIONS_TIMEOUT=${EXECUTIONS_TIMEOUT}
-      - EXECUTIONS_TIMEOUT_MAX=${EXECUTIONS_TIMEOUT_MAX}
+      - N8N_RUNNERS_TASK_TIMEOUT=${N8N_RUNNERS_TASK_TIMEOUT:-1800}
+      - EXECUTIONS_TIMEOUT=${EXECUTIONS_TIMEOUT:-1800}
+      - EXECUTIONS_TIMEOUT_MAX=${EXECUTIONS_TIMEOUT_MAX:-3600}
     volumes:
       - ./data/n8n:/home/node/.n8n
     networks:
-      - homeserver
+      - aws-stack
     depends_on:
       - n8n-init
     labels:
@@ -78,48 +157,10 @@ services:
       - "traefik.http.routers.n8n.rule=Host(`n8n.${DOMAIN}`)"
       - "traefik.http.routers.n8n.entrypoints=websecure"
       - "traefik.http.routers.n8n.tls=true"
-      # Using file provider certificate (wildcard from certbot)
+      - "traefik.http.routers.n8n.tls.certresolver=letsencrypt"
       - "traefik.http.services.n8n.loadbalancer.server.port=5678"
-
-      # Security: VPN/Local access only (admin-secure = internal-only + security-headers + rate-limit)
-      # TODO: This blocks ALL external access including webhooks!
-      # When exposing webhooks publicly, you'll need to:
-      #   1. Create a separate router for webhooks: n8n-webhook.rule=Host(`n8n.${DOMAIN}`) && PathPrefix(`/webhook`)
-      #   2. Apply webhook-secure middleware to n8n-webhook router (allows public with rate limiting)
-      #   3. Keep n8n router with admin-secure for editor/UI access (VPN/local only)
-      # See ticket-13 for webhook architecture implementation
-      - "traefik.http.routers.n8n.middlewares=admin-secure"
-
-  homeassistant:
-    container_name: homeassistant
-    image: ghcr.io/home-assistant/home-assistant:stable
-    restart: unless-stopped
-    volumes:
-      - ./data/homeassistant:/config
-      - /etc/localtime:/etc/localtime:ro
-      - /run/dbus:/run/dbus:ro
-    environment:
-      - TZ=${TIMEZONE}
-    ports:
-      - "8123:8123"
-    privileged: true
-    networks:
-      - homeserver
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8123"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 120s
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.homeassistant.rule=Host(`home.${DOMAIN}`)"
-      - "traefik.http.routers.homeassistant.entrypoints=websecure"
-      - "traefik.http.routers.homeassistant.tls=true"
-      # Using file provider certificate (wildcard from certbot)
-      - "traefik.http.services.homeassistant.loadbalancer.server.port=8123"
-      # Security: VPN/Local access only - location tracking and automation should be private
-      - "traefik.http.routers.homeassistant.middlewares=admin-secure-no-ratelimit"
+      # Security: Basic auth is enabled in n8n config
+      - "traefik.http.routers.n8n.middlewares=security-headers"
 
   actualbudget:
     image: actualbudget/actual-server:latest
@@ -130,16 +171,15 @@ services:
     volumes:
       - ./data/actualbudget:/data
     networks:
-      - homeserver
+      - aws-stack
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.actualbudget.rule=Host(`actual.${DOMAIN}`)"
       - "traefik.http.routers.actualbudget.entrypoints=websecure"
       - "traefik.http.routers.actualbudget.tls=true"
-      # Using file provider certificate (wildcard from certbot)
+      - "traefik.http.routers.actualbudget.tls.certresolver=letsencrypt"
       - "traefik.http.services.actualbudget.loadbalancer.server.port=5006"
-      # Security: VPN/Local access only - financial data should be private
-      - "traefik.http.routers.actualbudget.middlewares=admin-secure"
+      - "traefik.http.routers.actualbudget.middlewares=security-headers"
 
   mealie:
     image: ghcr.io/mealie-recipes/mealie:latest
@@ -148,26 +188,78 @@ services:
     expose:
       - 9000
     environment:
-      - BASE_URL=https://mealie.${DOMAIN}
       - ALLOW_SIGNUP=false
-      - TZ=${TIMEZONE}
+      - BASE_URL=https://mealie.${DOMAIN}
+      - DB_ENGINE=sqlite
       - MAX_WORKERS=1
       - WEB_CONCURRENCY=1
-      - DB_ENGINE=sqlite
+      - TZ=${TIMEZONE}
     volumes:
-      - ./data/mealie:/app/data/
+      - ./data/mealie:/app/data
     networks:
-      - homeserver
+      - aws-stack
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.mealie.rule=Host(`mealie.${DOMAIN}`)"
       - "traefik.http.routers.mealie.entrypoints=websecure"
       - "traefik.http.routers.mealie.tls=true"
-      # Using file provider certificate (wildcard from certbot)
+      - "traefik.http.routers.mealie.tls.certresolver=letsencrypt"
       - "traefik.http.services.mealie.loadbalancer.server.port=9000"
-      # Security: VPN/Local access only - meal planning and recipes should be private
-      - "traefik.http.routers.mealie.middlewares=admin-secure"
+      - "traefik.http.routers.mealie.middlewares=security-headers"
+
+  # =============================================================================
+  # DASHBOARD
+  # =============================================================================
+
+  homepage-api:
+    build: ./homepage-api
+    container_name: homepage-api
+    environment:
+      # Minimal config - no local integrations
+      # Can add external APIs if needed (weather, etc.)
+      AWS_DEPLOYMENT: "true"
+    restart: unless-stopped
+    networks:
+      - aws-stack
+    volumes:
+      - ./data/homepage-api:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.homepage-api.rule=Host(`homepage-api.${DOMAIN}`)"
+      - "traefik.http.routers.homepage-api.entrypoints=websecure"
+      - "traefik.http.routers.homepage-api.tls=true"
+      - "traefik.http.routers.homepage-api.tls.certresolver=letsencrypt"
+      - "traefik.http.services.homepage-api.loadbalancer.server.port=5000"
+      - "traefik.http.routers.homepage-api.middlewares=security-headers"
+
+  homepage:
+    image: ghcr.io/gethomepage/homepage:latest
+    container_name: homepage
+    environment:
+      PUID: ${PUID:-1000}
+      PGID: ${PGID:-1000}
+      HOMEPAGE_VAR_DOMAIN: ${DOMAIN}
+    volumes:
+      - ./data/homepage/config:/app/config
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    restart: unless-stopped
+    networks:
+      - aws-stack
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.homepage.rule=Host(`homepage.${DOMAIN}`) || Host(`${DOMAIN}`)"
+      - "traefik.http.routers.homepage.entrypoints=websecure"
+      - "traefik.http.routers.homepage.tls=true"
+      - "traefik.http.routers.homepage.tls.certresolver=letsencrypt"
+      - "traefik.http.services.homepage.loadbalancer.server.port=3000"
+      - "traefik.http.routers.homepage.middlewares=security-headers"
 
 networks:
-  homeserver:
+  aws-stack:
     driver: bridge
