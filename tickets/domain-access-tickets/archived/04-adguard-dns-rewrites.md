@@ -5,11 +5,11 @@
 ## Phase: Week 1 - Foundation
 
 ## Description
-Configure DNS rewrites in AdGuard Home configuration file to resolve *.home.local domains to the home server IP address. This enables clients on the local network to access services via domain names instead of IP:port combinations.
+Configure DNS rewrites in AdGuard Home configuration file to resolve *.${DOMAIN} domains to the home server IP address. This enables clients on the local network to access services via domain names instead of IP:port combinations.
 
 ## Acceptance Criteria
 - [ ] DNS rewrites added to AdGuard Home configuration file
-- [ ] Wildcard rewrite (*.home.local) configured to point to SERVER_IP
+- [ ] Wildcard rewrite (*.${DOMAIN}) configured to point to SERVER_IP
 - [ ] AdGuard Home configuration reloaded without service restart
 - [ ] DNS resolution tested from client device
 - [ ] All planned domains resolve correctly
@@ -42,8 +42,8 @@ filtering:
 ```yaml
 filtering:
   rewrites:
-    # Wildcard for all home.local domains
-    - domain: "*.home.local"
+    # Wildcard for all ${DOMAIN} domains
+    - domain: "*.${DOMAIN}"
       answer: "${SERVER_IP}"
 ```
 
@@ -52,27 +52,27 @@ filtering:
 filtering:
   rewrites:
     # Reverse proxy and services
-    - domain: traefik.home.local
+    - domain: traefik.${DOMAIN}
       answer: 192.168.1.100
-    - domain: adguard.home.local
+    - domain: adguard.${DOMAIN}
       answer: 192.168.1.100
-    - domain: n8n.home.local
+    - domain: n8n.${DOMAIN}
       answer: 192.168.1.100
-    - domain: ollama.home.local
+    - domain: ollama.${DOMAIN}
       answer: 192.168.1.100
-    - domain: glance.home.local
+    - domain: glance.${DOMAIN}
       answer: 192.168.1.100
-    - domain: hortusfox.home.local
+    - domain: hortusfox.${DOMAIN}
       answer: 192.168.1.100
-    - domain: grafana.home.local
+    - domain: grafana.${DOMAIN}
       answer: 192.168.1.100
-    - domain: prometheus.home.local
+    - domain: prometheus.${DOMAIN}
       answer: 192.168.1.100
-    - domain: alerts.home.local
+    - domain: alerts.${DOMAIN}
       answer: 192.168.1.100
-    - domain: habitica.home.local
+    - domain: habitica.${DOMAIN}
       answer: 192.168.1.100
-    - domain: bookwyrm.home.local
+    - domain: bookwyrm.${DOMAIN}
       answer: 192.168.1.100
 ```
 
@@ -91,7 +91,7 @@ nano data/adguard/conf/AdGuardHome.yaml
 # If filtering section doesn't exist, create it:
 # filtering:
 #   rewrites:
-#     - domain: "*.home.local"
+#     - domain: "*.${DOMAIN}"
 #       answer: "192.168.1.100"
 
 # 4. Validate YAML syntax
@@ -125,32 +125,32 @@ docker exec adguard-home /opt/adguardhome/AdGuardHome --config /opt/adguardhome/
 # From a client device on the network that uses AdGuard as DNS:
 
 # Test wildcard domain resolution
-nslookup glance.home.local
-nslookup grafana.home.local
-nslookup n8n.home.local
+nslookup glance.${DOMAIN}
+nslookup grafana.${DOMAIN}
+nslookup n8n.${DOMAIN}
 
 # Expected output for each:
 # Server:  192.168.1.100
 # Address: 192.168.1.100#53
 #
-# Name:    glance.home.local
+# Name:    glance.${DOMAIN}
 # Address: 192.168.1.100
 
 # Test from the server itself
-dig @${SERVER_IP} glance.home.local +short
+dig @${SERVER_IP} glance.${DOMAIN} +short
 # Should return: 192.168.1.100
 
-# Test non-home.local domains still work (internet DNS)
+# Test non-${DOMAIN} domains still work (internet DNS)
 nslookup google.com
 ```
 
 ### Testing Checklist
-- [ ] `nslookup glance.home.local` resolves to SERVER_IP
-- [ ] `nslookup hortusfox.home.local` resolves to SERVER_IP
-- [ ] `nslookup grafana.home.local` resolves to SERVER_IP
-- [ ] `nslookup n8n.home.local` resolves to SERVER_IP
-- [ ] `nslookup bookwyrm.home.local` resolves to SERVER_IP
-- [ ] `nslookup traefik.home.local` resolves to SERVER_IP
+- [ ] `nslookup glance.${DOMAIN}` resolves to SERVER_IP
+- [ ] `nslookup hortusfox.${DOMAIN}` resolves to SERVER_IP
+- [ ] `nslookup grafana.${DOMAIN}` resolves to SERVER_IP
+- [ ] `nslookup n8n.${DOMAIN}` resolves to SERVER_IP
+- [ ] `nslookup bookwyrm.${DOMAIN}` resolves to SERVER_IP
+- [ ] `nslookup traefik.${DOMAIN}` resolves to SERVER_IP
 - [ ] Regular internet DNS still works (google.com, etc.)
 - [ ] No errors in AdGuard logs
 
@@ -169,13 +169,13 @@ filtering:
   enabled: true
   rewrites:
     # Domain-based access for home server services
-    - domain: "*.home.local"
+    - domain: "*.${DOMAIN}"
       answer: "192.168.1.100"
   # ... other filtering settings ...
 ```
 
 ## Success Metrics
-- All *.home.local domains resolve to SERVER_IP
+- All *.${DOMAIN} domains resolve to SERVER_IP
 - DNS resolution time < 50ms for local domains
 - No impact on external DNS queries
 - No errors in AdGuard logs

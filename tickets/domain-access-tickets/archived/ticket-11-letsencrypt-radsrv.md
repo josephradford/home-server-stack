@@ -98,7 +98,7 @@ Add DNS rewrites in AdGuard Home:
 *.home.example.com → 192.168.1.101
 
 # Also keep existing for backward compatibility
-*.home.local → 192.168.1.101
+*.${DOMAIN} → 192.168.1.101
 ```
 
 ### Step 4: Update Environment Variables

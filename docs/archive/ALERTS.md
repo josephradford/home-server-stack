@@ -2,6 +2,8 @@
 
 This document provides comprehensive information about all configured alerts in the monitoring stack, including their meanings, thresholds, response procedures, and common issues.
 
+> **Note:** This document focuses on alert-specific response procedures. For general troubleshooting (services, DNS, SSL, network), see [TROUBLESHOOTING.md](TROUBLESHOOTING.md).
+
 ## Alert Severity Levels
 
 - **Critical**: Immediate attention required. Service outage or severe resource exhaustion that will cause failures.
