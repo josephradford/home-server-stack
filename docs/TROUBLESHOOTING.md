@@ -2,6 +2,8 @@
 
 Common issues and solutions for the Home Server Stack.
 
+> **Note:** For alert-specific response procedures (ServiceDown, HighCPU, DiskSpaceLow, etc.), see [ALERTS.md](ALERTS.md).
+
 ## Alert Reference
 
 Quick lookup for Prometheus/Alertmanager alerts. When an alert fires, find it below for immediate resolution steps.
@@ -616,7 +618,7 @@ sudo dmesg | grep -i error
 
 ### DNS Not Resolving
 
-**Symptom:** `nslookup servicename.home.local` fails or returns wrong IP
+**Symptom:** `nslookup servicename.${DOMAIN}` fails or returns wrong IP
 
 **Solutions:**
 ```bash
@@ -632,7 +634,7 @@ cat data/adguard/conf/AdGuardHome.yaml | grep -A 5 rewrites
 # Linux: sudo systemd-resolve --flush-caches
 
 # 4. Test DNS directly
-dig @SERVER_IP servicename.home.local +short
+dig @SERVER_IP servicename.${DOMAIN} +short
 # Should return: SERVER_IP
 ```
 
@@ -661,14 +663,14 @@ dig @SERVER_IP servicename.home.local +short
 mkcert -install
 
 # Generate certificates
-mkcert -cert-file ssl/server.crt -key-file ssl/server.key "*.home.local" localhost 127.0.0.1
+mkcert -cert-file ssl/server.crt -key-file ssl/server.key "*.${DOMAIN}" localhost 127.0.0.1
 
 # Configure Traefik to use these certificates (see CONFIGURATION.md)
 ```
 
 ### Service Not Accessible via Domain
 
-**Symptom:** `https://servicename.home.local` returns 404 or 502
+**Symptom:** `https://servicename.${DOMAIN}` returns 404 or 502
 
 **Solutions:**
 ```bash
