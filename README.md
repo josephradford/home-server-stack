@@ -52,12 +52,12 @@ make setup
 
 All services are accessible via domain names on your local network:
 
-- **Traefik Dashboard:** `https://traefik.home.local`
-- **AdGuard Home:** `https://adguard.home.local` (DNS admin)
-- **n8n:** `https://n8n.home.local` (Workflow automation)
-- **Grafana:** `https://grafana.home.local` (Monitoring)
-- **Prometheus:** `https://prometheus.home.local` (Metrics)
-- **Alertmanager:** `https://alerts.home.local` (Alerts)
+- **Traefik Dashboard:** `https://traefik.${DOMAIN}`
+- **AdGuard Home:** `https://adguard.${DOMAIN}` (DNS admin)
+- **n8n:** `https://n8n.${DOMAIN}` (Workflow automation)
+- **Grafana:** `https://grafana.${DOMAIN}` (Monitoring)
+- **Prometheus:** `https://prometheus.${DOMAIN}` (Metrics)
+- **Alertmanager:** `https://alerts.${DOMAIN}` (Alerts)
 
 **Note:** Services are accessible via domain names thanks to Traefik reverse proxy and AdGuard Home DNS. Your devices must use AdGuard Home as their DNS server (configured automatically if DHCP points to the server).
 
@@ -86,8 +86,7 @@ By default, services use **self-signed certificates** (browser warnings expected
 - **[Monitoring Deployment](docs/MONITORING_DEPLOYMENT.md)** - Optional monitoring stack setup
 
 ### Monitoring & Alerts
-- **[Alerts Reference](docs/ALERTS.md)** - Alert definitions and response procedures
-- **[Operations Runbook](docs/RUNBOOK.md)** - Detailed troubleshooting for all alerts
+- **[Alerts & Response Procedures](docs/ALERTS.md)** - Alert definitions, troubleshooting, and response procedures
 - **[Known Issues](docs/KNOWN_ISSUES.md)** - Known bugs and workarounds
 
 ### Advanced
@@ -95,8 +94,9 @@ By default, services use **self-signed certificates** (browser warnings expected
 - **[Architecture Overview](docs/ARCHITECTURE.md)** - System design and data persistence
 
 ### Implementation Tickets
-- **[Monitoring Tickets](monitoring-tickets/README.md)** - Monitoring implementation roadmap
-- **[Security Tickets](security-tickets/README.md)** - Security hardening roadmap (VPN-first strategy)
+- **[Monitoring Tickets](tickets/monitoring-tickets/README.md)** - Monitoring implementation roadmap
+- **[Security Tickets](tickets/security-tickets/README.md)** - Security hardening roadmap (VPN-first strategy)
+- **[Domain Access Tickets](tickets/domain-access-tickets/README.md)** - Domain-based routing implementation history
 - **[Dashboard Tickets](tickets/dashboard-tickets/tickets_index.md)** - Homepage dashboard with integrations
 
 ## 🔐 Security

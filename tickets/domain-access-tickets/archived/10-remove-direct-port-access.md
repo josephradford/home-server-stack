@@ -15,7 +15,7 @@ Remove direct IP:port access to services, forcing all traffic through Traefik re
 
 Services are currently accessible via **two methods**:
 
-1. ✅ **Domain-based (via Traefik):** `https://n8n.home.local`
+1. ✅ **Domain-based (via Traefik):** `https://n8n.${DOMAIN}`
 2. ⚠️ **Direct IP:port:** `http://192.168.1.101:5678`
 
 The direct IP:port bindings were kept for backward compatibility during the migration, but they:
@@ -29,7 +29,7 @@ The direct IP:port bindings were kept for backward compatibility during the migr
 Force all service access through Traefik by:
 1. Removing direct port bindings from `docker-compose.yml`
 2. Using Docker `expose` instead of `ports` for internal-only exposure
-3. Ensuring services are only accessible via `https://*.home.local`
+3. Ensuring services are only accessible via `https://*.${DOMAIN}`
 
 ## Services to Update
 
@@ -170,7 +170,7 @@ grafana:
 @echo "  - Glance:       http://$$SERVER_IP:8282"
 
 # After:
-@echo "  - Glance:       https://glance.home.local"
+@echo "  - Glance:       https://glance.${DOMAIN}"
 ```
 
 ### Step 4: Update .env.example
@@ -199,10 +199,10 @@ curl http://192.168.1.101:8282     # Should fail/refuse connection
 curl http://192.168.1.101:8181     # Should fail/refuse connection
 
 # Verify domain access works
-curl -k https://n8n.home.local      # Should work
-curl -k https://glance.home.local   # Should work
-curl -k https://hortusfox.home.local # Should work
-curl -k https://grafana.home.local  # Should work
+curl -k https://n8n.${DOMAIN}      # Should work
+curl -k https://glance.${DOMAIN}   # Should work
+curl -k https://hortusfox.${DOMAIN} # Should work
+curl -k https://grafana.${DOMAIN}  # Should work
 ```
 
 ## Testing Checklist
@@ -234,7 +234,7 @@ If issues occur:
 
 ## Success Criteria
 
-- ✅ All configured services accessible only via `https://*.home.local`
+- ✅ All configured services accessible only via `https://*.${DOMAIN}`
 - ✅ Direct IP:port access returns "connection refused" for migrated services
 - ✅ No service downtime during migration
 - ✅ No errors in service or Traefik logs
@@ -257,11 +257,11 @@ If issues occur:
 
 **Before:**
 - `http://192.168.1.101:5678` ✅ Works
-- `https://n8n.home.local` ✅ Works
+- `https://n8n.${DOMAIN}` ✅ Works
 
 **After:**
 - `http://192.168.1.101:5678` ❌ Connection refused
-- `https://n8n.home.local` ✅ Works
+- `https://n8n.${DOMAIN}` ✅ Works
 
 ### Migration Notice
 
@@ -271,10 +271,10 @@ Users should be notified:
 ⚠️ Important: Direct IP:port access has been disabled
 
 Services are now only accessible via domain names:
-- n8n:       https://n8n.home.local
-- Glance:    https://glance.home.local
-- HortusFox: https://hortusfox.home.local
-- Grafana:   https://grafana.home.local
+- n8n:       https://n8n.${DOMAIN}
+- Glance:    https://glance.${DOMAIN}
+- HortusFox: https://hortusfox.${DOMAIN}
+- Grafana:   https://grafana.${DOMAIN}
 
 Update your bookmarks and workflows accordingly.
 

@@ -152,7 +152,7 @@ make purge
 
 ### Multi-File Docker Compose
 The stack uses **four compose files** organized by logical function:
-- `docker-compose.yml` - Core services (AdGuard, n8n) - user-facing services that "do stuff"
+- `docker-compose.yml` - Core services (AdGuard, n8n, Home Assistant, Mealie, Actual Budget) - user-facing services that "do stuff"
 - `docker-compose.network.yml` - Network & Security (Traefik, Fail2ban) - infrastructure layer
 - `docker-compose.monitoring.yml` - Monitoring stack (Prometheus, Grafana, Alertmanager, exporters)
 - `docker-compose.dashboard.yml` - Dashboard (Homepage, Homepage API)
@@ -300,6 +300,19 @@ Required variables in `.env`:
 - `N8N_PASSWORD`, `ADGUARD_PASSWORD`, `GRAFANA_PASSWORD` - Service credentials
 - `WIREGUARD_PORT`, `WIREGUARD_SUBNET`, `WIREGUARD_ALLOWEDIPS` - VPN configuration
 
+**Dashboard & Integration Variables:**
+- `HOMEASSISTANT_TOKEN` - Home Assistant long-lived access token (required for location tracking and widgets)
+- `HOMEASSISTANT_URL` - Home Assistant URL (default: http://homeassistant:8123)
+- `TRANSPORT_NSW_API_KEY` - Transport NSW OpenData API key for real-time departures
+- `TRANSPORT_STOP_*` - Transit stop IDs and display names for dashboard widgets
+- `TOMTOM_API_KEY` - TomTom Traffic API key for traffic conditions
+- `TRAFFIC_ROUTE_*` - Traffic route configurations with origin/destination and schedules
+- `BOM_LOCATION` - Australian suburb name for Bureau of Meteorology weather
+- `GOOGLE_CALENDAR_ICAL_URL` - Google Calendar iCal URL for calendar widget
+- `MEALIE_EMAIL`, `MEALIE_PASSWORD` - Mealie initial credentials (change after first login)
+
+See `.env.example` for complete variable list with descriptions and defaults.
+
 **Password Escaping**: Dollar signs in passwords must be escaped as `$$` for Docker Compose (e.g., `P@$$word123` → `P@$$$$word123`)
 
 ## Docker Compose Labels Pattern
@@ -384,7 +397,7 @@ For wildcard certificate (only on dashboard router):
 - Rules defined in `monitoring/prometheus/alert_rules.yml`
 - Alertmanager config in `monitoring/alertmanager/alertmanager.yml`
 - Alerts routed to webhook (default: `http://127.0.0.1:5001/`)
-- See `docs/ALERTS.md` for alert definitions and `docs/RUNBOOK.md` for response procedures
+- See `docs/ALERTS.md` for alert definitions and response procedures
 
 **Accessing Monitoring**:
 - Grafana: `https://grafana.${DOMAIN}`
@@ -425,6 +438,93 @@ For wildcard certificate (only on dashboard router):
 - Auto-start enabled via systemd: `wg-quick@wg0`
 - Status check: `sudo wg show` or `make wireguard-status`
 
+### Homepage API (Custom Backend)
+- **Purpose:** Custom Flask backend providing integrations for Homepage dashboard
+- **Container:** `homepage-api` (built from `./homepage-api/`)
+- **Internal port:** 5000
+- **Domain access:** `https://homepage-api.${DOMAIN}`
+- **Security:** admin-secure middleware (IP whitelist + rate limiting)
+- **Features:**
+  - BOM (Bureau of Meteorology) weather data for Australian locations
+  - Transport NSW real-time departures API integration
+  - TomTom traffic conditions with schedule-based filtering
+  - Home Assistant helpers and state queries
+  - Health check endpoint at `/api/health`
+- **Configuration:**
+  - `BOM_LOCATION` - Australian suburb name for weather data
+  - `TRANSPORT_NSW_API_KEY` - Transport NSW API key
+  - `TRANSPORT_STOP_*` - Transit stop IDs and display names for dashboard widgets
+  - `TOMTOM_API_KEY` - TomTom API key for traffic data
+  - `TRAFFIC_ROUTE_*` - Multiple traffic routes with origin/destination/schedule
+  - `HOMEASSISTANT_URL` - Home Assistant instance URL
+  - `HOMEASSISTANT_TOKEN` - Long-lived access token
+  - `GOOGLE_CALENDAR_ICAL_URL` - Google Calendar iCal URL for calendar widget
+- **Why custom backend?**
+  - Homepage widget framework limited for complex API integrations
+  - Enables schedule-based filtering (e.g., show traffic only during commute hours)
+  - Centralizes API key management and rate limiting
+  - Provides caching layer to reduce external API calls
+- **Documentation:** See `docs/BACKEND_API.md` for API endpoints and `homepage-api/README.md` for development
+
+### Homepage Dashboard
+- **Purpose:** Unified dashboard with system monitoring, service widgets, and custom integrations
+- **Image:** `ghcr.io/gethomepage/homepage:latest`
+- **Container:** `homepage`
+- **Internal port:** 3000
+- **Domain access:** `https://homepage.${DOMAIN}`
+- **Security:** admin-secure-no-ratelimit middleware (IP whitelist without rate limiting)
+- **Configuration:**
+  - Service definitions: `./data/homepage/config/services.yaml` (from template `./config/homepage/services-template.yaml`)
+  - Docker integration: mounts `/var/run/docker.sock` for container stats
+  - Widget APIs: Integrates with AdGuard, Grafana, Home Assistant, Transport NSW, BOM, TomTom
+  - Environment templating: Uses `HOMEPAGE_VAR_*` env vars in configs
+- **Data persistence:** `./data/homepage/config/`
+- **Features:**
+  - System resource monitoring (CPU, RAM, network) for all containers
+  - Service health status and uptime
+  - Application-specific widgets (AdGuard stats, Grafana dashboards)
+  - Custom integrations via Homepage API backend
+  - Calendar integration (Google Calendar via iCal)
+- **Widget Architecture:**
+  - **Container stats** (showStats: true) - System resources from Docker
+  - **Application widgets** - App-specific metrics via APIs
+  - Both are complementary: container stats = infrastructure, widgets = application metrics
+- **Documentation:** See `docs/DASHBOARD_SETUP.md` and `config/homepage/services-template.yaml`
+
+### Mealie
+- Self-hosted meal planner and recipe manager
+- SQLite database for recipe storage
+- Image upload and management for recipe photos
+- Mobile-responsive web interface
+- Domain access: `https://mealie.${DOMAIN}`
+- Default credentials: `changeme@example.com` / `MyPassword` (change on first login)
+- Data persistence: `./data/mealie/`
+- **Features:**
+  - Recipe import from URLs (supports 1000+ websites)
+  - Meal planning calendar with drag-and-drop interface
+  - Automatic shopping list generation from meal plans
+  - Cooking mode with step-by-step instructions
+  - RESTful API for integrations
+  - Multi-user support with permissions
+  - Mobile apps for iOS and Android
+- See `SERVICES.md` for full feature list and `docs/CONFIGURATION.md` for setup
+
+### Actual Budget
+- Self-hosted personal finance and budgeting
+- Zero-based budgeting methodology
+- End-to-end encrypted sync
+- Bank sync support via SimpleFIN or GoCardless
+- Domain access: `https://actual.${DOMAIN}`
+- No authentication by default (relies on VPN/local network security via middleware)
+- Data persistence: `./data/actual/`
+- **Features:**
+  - Privacy-focused: all data stored locally
+  - Mobile apps available for iOS and Android
+  - Budgeting with rollover and goals
+  - Transaction categorization and rules
+  - Multi-month views and reports
+- See `SERVICES.md` for complete details
+
 ## Documentation Structure
 
 Comprehensive docs in `docs/` directory:
@@ -434,8 +534,7 @@ Comprehensive docs in `docs/` directory:
 - `TROUBLESHOOTING.md` - Common issues and solutions
 - `ARCHITECTURE.md` - Detailed system design
 - `MONITORING_DEPLOYMENT.md` - Monitoring setup guide
-- `ALERTS.md` - Alert definitions
-- `RUNBOOK.md` - Alert response procedures
+- `ALERTS.md` - Alert definitions and response procedures
 - `REMOTE_ACCESS.md` - VPN and port forwarding setup
 
 Implementation roadmaps:
@@ -489,21 +588,29 @@ Implementation roadmaps:
 ## Common Issues
 
 ### SSL Certificate Issues
-**Implementation (certbot + file provider)**:
-- Certificates: `./data/traefik/certs/DOMAIN.crt` (644) and `DOMAIN.key` (600)
-- Dynamic config: `./config/traefik/dynamic-certs.yml` must exist
-- Check if file provider loaded: `docker compose logs traefik | grep "file.Provider"`
-- Check if certs loaded: `docker compose logs traefik | grep "Adding certificate"`
-- Verify certs in container: `docker exec traefik ls -la /certs/` and `docker exec traefik ls -la /etc/traefik/`
-- After config changes, must recreate container: `docker compose stop traefik && docker compose rm -f traefik && docker compose up -d traefik`
-- Browser caching: Browsers may cache old certificates - clear cache or use Cmd+Shift+R (Safari especially prone to this)
 
-**Troubleshooting certbot**:
-- View certificates: `sudo certbot certificates`
-- Test renewal: `sudo certbot renew --dry-run`
-- Check Gandi credentials: `sudo cat /etc/letsencrypt/gandi/gandi.ini` (should have `dns_gandi_token`)
-- Renewal logs: `sudo tail -f /var/log/certbot-traefik-reload.log`
-- Verify DNS propagation: `dig @1.1.1.1 ${DOMAIN} +short`
+**Quick diagnostics:**
+```bash
+# Check certificates exist
+ls -la ./data/traefik/certs/
+
+# Verify Traefik loaded certs
+docker compose logs traefik | grep -i certificate
+
+# View Let's Encrypt certificate status
+sudo certbot certificates
+
+# Check renewal hook logs
+sudo tail -20 /var/log/certbot-traefik-reload.log
+```
+
+**Common fixes:**
+- Browser caching old cert: Clear cache or Cmd+Shift+R (Safari especially prone)
+- File provider not loaded: Check `./config/traefik/dynamic-certs.yml` exists
+- Permissions wrong: Cert should be 644, key should be 600
+- After config changes: Must recreate container with `docker compose up -d --force-recreate traefik`
+
+See **[docs/TROUBLESHOOTING.md#ssl-certificate-issues](docs/TROUBLESHOOTING.md)** for detailed troubleshooting.
 
 ### DNS Resolution
 - Ensure AdGuard is running: `docker compose ps adguard`
