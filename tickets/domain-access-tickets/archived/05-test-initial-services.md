@@ -8,7 +8,7 @@
 Thoroughly test the three initially configured services (Glance, HortusFox, Grafana) to ensure domain-based access is working correctly, services are fully functional, and both old and new access methods work.
 
 ## Acceptance Criteria
-- [ ] All 3 services accessible via https://*.home.local domains
+- [ ] All 3 services accessible via https://*.${DOMAIN} domains
 - [ ] All 3 services still accessible via IP:port (backward compatibility)
 - [ ] HTTP redirects to HTTPS correctly
 - [ ] SSL/TLS certificates accepted (self-signed warning expected)
@@ -19,9 +19,9 @@ Thoroughly test the three initially configured services (Glance, HortusFox, Graf
 
 ## Services to Test
 
-### 1. Glance (glance.home.local)
-### 2. HortusFox (hortusfox.home.local)
-### 3. Grafana (grafana.home.local)
+### 1. Glance (glance.${DOMAIN})
+### 2. HortusFox (hortusfox.${DOMAIN})
+### 3. Grafana (grafana.${DOMAIN})
 
 ## Testing Checklist
 
@@ -30,19 +30,19 @@ From a client device on the local network:
 
 ```bash
 # Test DNS resolution
-nslookup glance.home.local
+nslookup glance.${DOMAIN}
 # Expected: resolves to SERVER_IP (e.g., 192.168.1.100)
 
-nslookup hortusfox.home.local
+nslookup hortusfox.${DOMAIN}
 # Expected: resolves to SERVER_IP
 
-nslookup grafana.home.local
+nslookup grafana.${DOMAIN}
 # Expected: resolves to SERVER_IP
 
 # Verify from server
-dig @192.168.1.100 glance.home.local +short
-dig @192.168.1.100 hortusfox.home.local +short
-dig @192.168.1.100 grafana.home.local +short
+dig @192.168.1.100 glance.${DOMAIN} +short
+dig @192.168.1.100 hortusfox.${DOMAIN} +short
+dig @192.168.1.100 grafana.${DOMAIN} +short
 ```
 
 **Expected Results:**
@@ -55,14 +55,14 @@ dig @192.168.1.100 grafana.home.local +short
 #### Test 1: Glance Dashboard
 ```bash
 # From server
-curl -I http://glance.home.local
-# Expected: 301/302 redirect to https://glance.home.local
+curl -I http://glance.${DOMAIN}
+# Expected: 301/302 redirect to https://glance.${DOMAIN}
 
-curl -Ik https://glance.home.local
+curl -Ik https://glance.${DOMAIN}
 # Expected: 200 OK (k flag ignores cert warnings)
 
 # From browser (client device)
-# 1. Navigate to http://glance.home.local
+# 1. Navigate to http://glance.${DOMAIN}
 #    Expected: Automatic redirect to HTTPS
 # 2. Accept self-signed certificate warning
 #    Expected: Glance dashboard loads normally
@@ -83,14 +83,14 @@ curl -Ik https://glance.home.local
 #### Test 2: HortusFox Plant Management
 ```bash
 # From server
-curl -I http://hortusfox.home.local
-# Expected: 301/302 redirect to https://hortusfox.home.local
+curl -I http://hortusfox.${DOMAIN}
+# Expected: 301/302 redirect to https://hortusfox.${DOMAIN}
 
-curl -Ik https://hortusfox.home.local
+curl -Ik https://hortusfox.${DOMAIN}
 # Expected: 200 OK
 
 # From browser
-# 1. Navigate to https://hortusfox.home.local
+# 1. Navigate to https://hortusfox.${DOMAIN}
 # 2. Login with credentials from .env
 #    Username: HORTUSFOX_ADMIN_EMAIL
 #    Password: HORTUSFOX_ADMIN_PASSWORD
@@ -112,14 +112,14 @@ curl -Ik https://hortusfox.home.local
 #### Test 3: Grafana Monitoring
 ```bash
 # From server
-curl -I http://grafana.home.local
-# Expected: 301/302 redirect to https://grafana.home.local
+curl -I http://grafana.${DOMAIN}
+# Expected: 301/302 redirect to https://grafana.${DOMAIN}
 
-curl -Ik https://grafana.home.local/api/health
+curl -Ik https://grafana.${DOMAIN}/api/health
 # Expected: {"commit":"...","database":"ok","version":"..."}
 
 # From browser
-# 1. Navigate to https://grafana.home.local
+# 1. Navigate to https://grafana.${DOMAIN}
 # 2. Login with credentials
 #    Username: admin
 #    Password: GRAFANA_PASSWORD from .env
@@ -152,7 +152,7 @@ docker logs traefik --tail 100 | grep -i error
 tail -f data/traefik/logs/access.log
 
 # Check Traefik dashboard (if configured)
-curl -k https://traefik.home.local
+curl -k https://traefik.${DOMAIN}
 ```
 
 **Traefik Checklist:**
@@ -187,9 +187,9 @@ docker inspect grafana | grep -A 10 Health
 
 ```bash
 # Measure response times
-time curl -Ik https://glance.home.local
-time curl -Ik https://hortusfox.home.local
-time curl -Ik https://grafana.home.local
+time curl -Ik https://glance.${DOMAIN}
+time curl -Ik https://hortusfox.${DOMAIN}
+time curl -Ik https://grafana.${DOMAIN}
 
 # Compare with direct access
 time curl -Ik http://192.168.1.100:8282
@@ -297,7 +297,7 @@ Create a comprehensive test script:
 
 SERVER_IP="192.168.1.100"
 SERVICES=("glance" "hortusfox" "grafana")
-DOMAINS=("glance.home.local" "hortusfox.home.local" "grafana.home.local")
+DOMAINS=("glance.${DOMAIN}" "hortusfox.${DOMAIN}" "grafana.${DOMAIN}")
 
 echo "=== Domain Access Testing ==="
 

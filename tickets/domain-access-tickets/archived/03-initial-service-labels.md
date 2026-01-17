@@ -11,7 +11,7 @@ Configure Traefik labels for 3 straightforward services to validate the domain-b
 - [ ] Traefik labels added to Glance service
 - [ ] Traefik labels added to HortusFox service
 - [ ] Traefik labels added to Grafana service
-- [ ] All 3 services accessible via .home.local domains
+- [ ] All 3 services accessible via .${DOMAIN} domains
 - [ ] HTTPS working (self-signed certificates accepted)
 - [ ] Original IP:port access still functional (backward compatibility)
 - [ ] No service disruption during label addition
@@ -19,9 +19,9 @@ Configure Traefik labels for 3 straightforward services to validate the domain-b
 ## Technical Implementation Details
 
 ### Services to Configure
-1. **Glance** (glance.home.local) - Simple dashboard, no auth required by Traefik
-2. **HortusFox** (hortusfox.home.local) - Simple web app with own auth
-3. **Grafana** (grafana.home.local) - Monitoring dashboard with own auth
+1. **Glance** (glance.${DOMAIN}) - Simple dashboard, no auth required by Traefik
+2. **HortusFox** (hortusfox.${DOMAIN}) - Simple web app with own auth
+3. **Grafana** (grafana.${DOMAIN}) - Monitoring dashboard with own auth
 
 ### Files to Modify
 1. `docker-compose.yml` - Add labels to glance service
@@ -51,12 +51,12 @@ Add to glance service in `docker-compose.yml`:
       - "traefik.enable=true"
 
       # HTTP Router (redirect to HTTPS)
-      - "traefik.http.routers.glance-http.rule=Host(`glance.home.local`)"
+      - "traefik.http.routers.glance-http.rule=Host(`glance.${DOMAIN}`)"
       - "traefik.http.routers.glance-http.entrypoints=web"
       - "traefik.http.routers.glance-http.middlewares=redirect-to-https"
 
       # HTTPS Router
-      - "traefik.http.routers.glance.rule=Host(`glance.home.local`)"
+      - "traefik.http.routers.glance.rule=Host(`glance.${DOMAIN}`)"
       - "traefik.http.routers.glance.entrypoints=websecure"
       - "traefik.http.routers.glance.tls=true"
 
@@ -111,12 +111,12 @@ Add to hortusfox service in `docker-compose.yml`:
       - "traefik.enable=true"
 
       # HTTP Router
-      - "traefik.http.routers.hortusfox-http.rule=Host(`hortusfox.home.local`)"
+      - "traefik.http.routers.hortusfox-http.rule=Host(`hortusfox.${DOMAIN}`)"
       - "traefik.http.routers.hortusfox-http.entrypoints=web"
       - "traefik.http.routers.hortusfox-http.middlewares=redirect-to-https"
 
       # HTTPS Router
-      - "traefik.http.routers.hortusfox.rule=Host(`hortusfox.home.local`)"
+      - "traefik.http.routers.hortusfox.rule=Host(`hortusfox.${DOMAIN}`)"
       - "traefik.http.routers.hortusfox.entrypoints=websecure"
       - "traefik.http.routers.hortusfox.tls=true"
 
@@ -154,12 +154,12 @@ Add to grafana service in `docker-compose.monitoring.yml`:
       - "traefik.enable=true"
 
       # HTTP Router
-      - "traefik.http.routers.grafana-http.rule=Host(`grafana.home.local`)"
+      - "traefik.http.routers.grafana-http.rule=Host(`grafana.${DOMAIN}`)"
       - "traefik.http.routers.grafana-http.entrypoints=web"
       - "traefik.http.routers.grafana-http.middlewares=redirect-to-https"
 
       # HTTPS Router
-      - "traefik.http.routers.grafana.rule=Host(`grafana.home.local`)"
+      - "traefik.http.routers.grafana.rule=Host(`grafana.${DOMAIN}`)"
       - "traefik.http.routers.grafana.entrypoints=websecure"
       - "traefik.http.routers.grafana.tls=true"
 
@@ -193,15 +193,15 @@ curl http://localhost:8080/api/http/routers | jq
 SERVER_IP=192.168.1.100
 
 # Test Glance
-curl -k https://glance.home.local
+curl -k https://glance.${DOMAIN}
 curl -I http://${SERVER_IP}:8282  # Verify old access still works
 
 # Test HortusFox
-curl -k https://hortusfox.home.local
+curl -k https://hortusfox.${DOMAIN}
 curl -I http://${SERVER_IP}:8181  # Verify old access still works
 
 # Test Grafana
-curl -k https://grafana.home.local
+curl -k https://grafana.${DOMAIN}
 curl -I http://${SERVER_IP}:3001  # Verify old access still works
 
 # Check Traefik routers
@@ -209,18 +209,18 @@ docker exec traefik traefik healthcheck
 ```
 
 ### Testing Checklist
-- [ ] Glance accessible via https://glance.home.local (accept cert warning)
-- [ ] Glance accessible via http://glance.home.local (redirects to HTTPS)
+- [ ] Glance accessible via https://glance.${DOMAIN} (accept cert warning)
+- [ ] Glance accessible via http://glance.${DOMAIN} (redirects to HTTPS)
 - [ ] Glance still accessible via http://SERVER_IP:8282
-- [ ] HortusFox accessible via https://hortusfox.home.local
+- [ ] HortusFox accessible via https://hortusfox.${DOMAIN}
 - [ ] HortusFox still accessible via http://SERVER_IP:8181
-- [ ] Grafana accessible via https://grafana.home.local
+- [ ] Grafana accessible via https://grafana.${DOMAIN}
 - [ ] Grafana still accessible via http://SERVER_IP:3001
 - [ ] All services functional (can login, view data, etc.)
 - [ ] Traefik dashboard shows 3 new routers
 
 ## Success Metrics
-- 3 services accessible via .home.local domains
+- 3 services accessible via .${DOMAIN} domains
 - HTTPS working with self-signed certificates
 - HTTP automatically redirects to HTTPS
 - Backward compatibility maintained (IP:port still works)

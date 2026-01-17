@@ -5,7 +5,7 @@
 ## Phase: Week 1 - Foundation
 
 ## Description
-Move AdGuard Home from port 80 to an alternate port (8888) to free up port 80 for Traefik reverse proxy. AdGuard will then be accessed via Traefik at adguard.home.local instead of direct port access.
+Move AdGuard Home from port 80 to an alternate port (8888) to free up port 80 for Traefik reverse proxy. AdGuard will then be accessed via Traefik at adguard.${DOMAIN} instead of direct port access.
 
 ## Acceptance Criteria
 - [ ] AdGuard Home moved from port 80 to port 8888
@@ -133,6 +133,6 @@ After completion:
 ## Notes
 - Port 8888 chosen to avoid common port conflicts
 - Alternative ports: 8080 (might conflict with cAdvisor or other services), 8888, 9999
-- After Traefik setup, AdGuard will be accessed via adguard.home.local
+- After Traefik setup, AdGuard will be accessed via adguard.${DOMAIN}
 - This migration can be done independently of other changes
 - No configuration inside AdGuard needs to change
