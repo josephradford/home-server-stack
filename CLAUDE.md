@@ -74,6 +74,12 @@ make update
 
 # Pull images without restarting
 make pull
+
+# Build custom services from source (homepage-api)
+make build-custom
+
+# Build all services (includes custom services)
+make build
 ```
 
 ### Logs & Debugging
@@ -449,6 +455,8 @@ For wildcard certificate (only on dashboard router):
   - Transport NSW real-time departures API integration
   - TomTom traffic conditions with schedule-based filtering
   - Home Assistant helpers and state queries
+  - WireGuard VPN system service monitoring (status, connected peers)
+  - Docker daemon system service monitoring (status, container count, disk usage)
   - Health check endpoint at `/api/health`
 - **Configuration:**
   - `BOM_LOCATION` - Australian suburb name for weather data
@@ -464,6 +472,7 @@ For wildcard certificate (only on dashboard router):
   - Enables schedule-based filtering (e.g., show traffic only during commute hours)
   - Centralizes API key management and rate limiting
   - Provides caching layer to reduce external API calls
+  - Monitors system services (WireGuard, Docker) that aren't visible as containers
 - **Documentation:** See `docs/BACKEND_API.md` for API endpoints and `homepage-api/README.md` for development
 
 ### Homepage Dashboard
