@@ -20,15 +20,10 @@ jobs:
     - name: Create .env file for testing
       run: |
         cp .env.example .env
-        # Set test values
-        sed -i 's/192.168.1.100/127.0.0.1/g' .env
-        sed -i 's/your_secure_password_here/test-password/g' .env
-        sed -i 's/your_secure_grafana_password/test-grafana-password/g' .env
-        sed -i 's/your_secure_bookwyrm_db_password/test-bookwyrm-password/g' .env
-        sed -i 's/your_secure_redis_activity_password/test-redis-activity/g' .env
-        sed -i 's/your_secure_redis_broker_password/test-redis-broker/g' .env
-        sed -i 's/your_very_long_secret_key_here_at_least_50_characters/test-secret-key-for-bookwyrm-at-least-50-chars-long/g' .env
-        sed -i 's/your-public-ip-or-domain.com/localhost/g' .env
+        # Set test values for AWS deployment
+        sed -i 's/aws.example.com/test.example.com/g' .env
+        sed -i 's/admin@example.com/test@example.com/g' .env
+        sed -i 's/change_this_secure_password/test-password/g' .env
 
     - name: Validate Docker Compose syntax
       run: |
@@ -43,7 +38,7 @@ jobs:
       run: |
         # Check that all required environment variables are present
         echo "Checking .env.example contains all required variables..."
-        required_vars=("SERVER_IP" "TIMEZONE" "N8N_PASSWORD" "GRAFANA_PASSWORD")
+        required_vars=("DOMAIN" "ACME_EMAIL" "N8N_PASSWORD" "TRAEFIK_PASSWORD" "TIMEZONE")
         for var in "${required_vars[@]}"; do
           if ! grep -q "^${var}=" .env.example; then
             echo "ERROR: Required variable $var not found in .env.example"
