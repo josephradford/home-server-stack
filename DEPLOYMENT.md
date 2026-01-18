@@ -328,20 +328,6 @@ docker logs traefik
 - Actual Budget (finance tracking)
 - Homepage (dashboard)
 
-## Resume Talking Points
-
-You can now say:
-
-> "Deployed a multi-service containerized application stack on AWS EC2 with automated SSL certificate management, CloudWatch monitoring, and Route53 DNS routing. Implemented cost-effective architecture under $50/month using Docker Compose, Traefik reverse proxy, and Let's Encrypt. Services include n8n workflow automation, personal finance tracking, and a custom Flask API backend."
-
-**AWS Services Used:**
-- EC2 (compute)
-- VPC & Security Groups (networking)
-- Elastic IP (static IP addressing)
-- Route53 (DNS management)
-- CloudWatch (monitoring & logging)
-- EBS (block storage)
-
 ## Next Steps
 
 Want to add more AWS services?
