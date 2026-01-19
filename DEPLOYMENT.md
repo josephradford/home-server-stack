@@ -139,8 +139,8 @@ cd home-server-stack-aws
 ### 4.2 Configure Environment
 
 ```bash
-# Copy AWS environment template
-cp .env.example.aws .env
+# Copy environment template
+cp .env.example .env
 
 # Edit configuration
 nano .env
