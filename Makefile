@@ -2,7 +2,7 @@
 # Simplifies deployment and maintenance operations
 
 .PHONY: help setup update start stop restart logs build build-custom pull status clean purge validate env-check
-.PHONY: logs-n8n logs-homepage logs-homeassistant logs-actualbudget logs-mealie
+.PHONY: logs-n8n logs-homepage logs-homeassistant logs-actualbudget logs-mealie logs-moltbot
 .PHONY: adguard-setup homeassistant-setup setup-certs test-domain-access traefik-password
 .PHONY: wireguard-status wireguard-install wireguard-setup wireguard-check
 .PHONY: ssl-setup ssl-copy-certs ssl-configure-traefik ssl-setup-renewal ssl-renew-test
@@ -52,6 +52,7 @@ help:
 	@echo "  make logs-homeassistant - Show Home Assistant logs only"
 	@echo "  make logs-actualbudget  - Show Actual Budget logs only"
 	@echo "  make logs-mealie        - Show Mealie logs only"
+	@echo "  make logs-moltbot       - Show Moltbot logs only"
 	@echo "  make logs-homepage      - Show Homepage logs only"
 	@echo ""
 	@echo "Dashboard Management:"
@@ -293,6 +294,9 @@ logs-actualbudget:
 
 logs-mealie:
 	@$(COMPOSE) logs -f mealie
+
+logs-moltbot:
+	@$(COMPOSE) logs -f moltbot
 
 logs-homepage:
 	@$(COMPOSE_DASHBOARD) logs -f homepage
