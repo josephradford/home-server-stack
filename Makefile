@@ -128,35 +128,38 @@ pull: validate
 setup: env-check validate wireguard-check
 	@echo "Starting first-time setup..."
 	@echo ""
-	@echo "Step 1/8: Setting up Traefik dashboard password..."
+	@echo "Step 1/10: Setting up Traefik dashboard password..."
 	@./scripts/setup-traefik-password.sh
 	@echo ""
-	@echo "Step 2/8: Setting up SSL certificate storage..."
+	@echo "Step 2/10: Setting up SSL certificate storage..."
 	@$(MAKE) setup-certs
 	@echo ""
-	@echo "Step 3/8: Setting up Homepage dashboard config..."
+	@echo "Step 3/10: Setting up Homepage dashboard config..."
 	@./scripts/configure-homepage.sh
 	@echo ""
-	@echo "Step 4/8: Setting up Home Assistant config..."
+	@echo "Step 4/10: Setting up Home Assistant config..."
 	@./scripts/setup-homeassistant.sh
 	@echo ""
-	@echo "Step 5/8: Pulling pre-built images..."
+	@echo "Step 5/10: Pulling pre-built images..."
 	@$(COMPOSE) pull --ignore-pull-failures
 	@echo ""
-	@echo "Step 6/8: Building custom services from source..."
+	@echo "Step 6/10: Building custom services from source..."
 	@$(COMPOSE) build homepage-api
 	@echo ""
-	@echo "Step 7/8: Starting services (Docker Compose will create networks)..."
+	@echo "Step 7/10: Building Moltbot sandbox for code execution..."
+	@$(MAKE) moltbot-setup || echo "⚠️  Moltbot sandbox build failed (service will still start, rebuild with: make moltbot-setup)"
+	@echo ""
+	@echo "Step 8/10: Starting services (Docker Compose will create networks)..."
 	@$(COMPOSE) up -d
 	@echo ""
-	@echo "Step 8/8: Fixing data directory permissions..."
+	@echo "Step 9/10: Fixing data directory permissions..."
 	@echo "Containers create directories as root, fixing ownership for user access..."
 	@if [ -d "data" ]; then \
 		sudo chown -R $(shell id -u):$(shell getent group docker | cut -d: -f3) data/ && \
 		echo "✓ Data directory permissions fixed"; \
 	fi
 	@echo ""
-	@echo "Step 8/8: Configuring AdGuard DNS rewrites..."
+	@echo "Step 10/10: Configuring AdGuard DNS rewrites..."
 	@$(MAKE) adguard-setup
 	@echo ""
 	@$(COMPOSE) ps
@@ -173,6 +176,8 @@ setup: env-check validate wireguard-check
 		echo "    - n8n:                https://n8n.$$DOMAIN"; \
 		echo "    - Home Assistant:     https://home.$$DOMAIN"; \
 		echo "    - Actual Budget:      https://actual.$$DOMAIN"; \
+		echo "    - Mealie:             https://mealie.$$DOMAIN"; \
+		echo "    - Moltbot:            https://moltbot.$$DOMAIN (requires ANTHROPIC_API_KEY)"; \
 		echo "    - Grafana:            https://grafana.$$DOMAIN"; \
 		echo "    - Prometheus:         https://prometheus.$$DOMAIN"; \
 		echo "    - Alertmanager:       https://alerts.$$DOMAIN"; \
