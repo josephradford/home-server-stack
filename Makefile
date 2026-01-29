@@ -3,7 +3,7 @@
 
 .PHONY: help setup update start stop restart logs build build-custom pull status clean purge validate env-check
 .PHONY: logs-n8n logs-homepage logs-homeassistant logs-actualbudget logs-mealie logs-moltbot
-.PHONY: adguard-setup homeassistant-setup setup-certs test-domain-access traefik-password
+.PHONY: adguard-setup homeassistant-setup moltbot-setup setup-certs test-domain-access traefik-password
 .PHONY: wireguard-status wireguard-install wireguard-setup wireguard-check
 .PHONY: ssl-setup ssl-copy-certs ssl-configure-traefik ssl-setup-renewal ssl-renew-test
 .PHONY: dashboard-setup dashboard-start dashboard-stop dashboard-restart dashboard-logs dashboard-status
@@ -66,6 +66,7 @@ help:
 	@echo "Service Configuration:"
 	@echo "  make adguard-setup            - Configure DNS rewrites for domain-based access"
 	@echo "  make homeassistant-setup      - Setup Home Assistant configuration files"
+	@echo "  make moltbot-setup            - Build Moltbot sandbox image for code execution"
 	@echo "  make traefik-password         - Generate Traefik dashboard password from .env"
 	@echo ""
 	@echo "WireGuard VPN Management:"
@@ -321,6 +322,8 @@ purge:
 	@echo "  - n8n workflows and database"
 	@echo "  - Home Assistant configuration and database"
 	@echo "  - Actual Budget financial data and budgets"
+	@echo "  - Mealie recipes and meal plans"
+	@echo "  - Moltbot AI assistant data (Signal sessions, chat history)"
 	@echo "  - WireGuard VPN configs"
 	@echo "  - All monitoring data (Grafana, Prometheus)"
 	@echo "  - Homepage dashboard configuration"
@@ -384,6 +387,30 @@ homeassistant-setup: env-check
 	@./scripts/setup-homeassistant.sh
 	@echo ""
 	@echo "✓ Home Assistant configuration setup complete!"
+
+# Moltbot AI Assistant setup
+moltbot-setup: env-check
+	@echo "Building Moltbot sandbox image for code execution..."
+	@echo ""
+	@if docker images | grep -q "moltbot-sandbox.*bookworm-slim"; then \
+		echo "✓ Sandbox image already exists"; \
+		echo "  To rebuild: docker rmi moltbot-sandbox:bookworm-slim && make moltbot-setup"; \
+	else \
+		echo "Cloning Moltbot repository..."; \
+		if [ -d /tmp/moltbot-build ]; then rm -rf /tmp/moltbot-build; fi; \
+		git clone https://github.com/moltbot/moltbot.git /tmp/moltbot-build; \
+		echo "Building sandbox image (this may take 5-10 minutes)..."; \
+		cd /tmp/moltbot-build && docker build -t moltbot-sandbox:bookworm-slim -f Dockerfile.sandbox .; \
+		rm -rf /tmp/moltbot-build; \
+		echo ""; \
+		echo "✓ Sandbox image built successfully"; \
+	fi
+	@echo ""
+	@echo "Next steps:"
+	@echo "  1. Add ANTHROPIC_API_KEY to .env (see .env.example)"
+	@echo "  2. Start service: docker compose up -d moltbot"
+	@echo "  3. Access web UI: https://moltbot.\$${DOMAIN}"
+	@echo "  4. Complete onboarding and link Signal device"
 
 # WireGuard VPN Management (System Service)
 wireguard-status:
