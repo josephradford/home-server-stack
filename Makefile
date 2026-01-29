@@ -1,6 +1,10 @@
 # Home Server Stack Makefile
 # Simplifies deployment and maintenance operations
 
+# Load environment variables from .env file (silent include - won't error if missing)
+-include .env
+export
+
 .PHONY: help setup update start stop restart logs build build-custom pull status clean purge validate env-check
 .PHONY: logs-n8n logs-homepage logs-homeassistant logs-actualbudget logs-mealie logs-moltbot
 .PHONY: adguard-setup homeassistant-setup moltbot-setup setup-certs test-domain-access traefik-password
