@@ -7,6 +7,7 @@ A complete self-hosted infrastructure for home automation, AI, and network servi
 **Core Services:**
 - **[AdGuard Home](https://github.com/AdguardTeam/AdGuardHome)** - Network-wide ad blocking and DNS server
 - **[n8n](https://github.com/n8n-io/n8n)** - Workflow automation platform
+- **[Moltbot](https://github.com/moltbot/moltbot)** - AI assistant accessible via Signal/Telegram/WhatsApp
 - **[WireGuard](https://github.com/wireguard)** - VPN for secure remote access
 - **[Traefik](https://github.com/traefik/traefik)** - Reverse proxy for domain-based service access
 
@@ -55,6 +56,7 @@ All services are accessible via domain names on your local network:
 - **Traefik Dashboard:** `https://traefik.${DOMAIN}`
 - **AdGuard Home:** `https://adguard.${DOMAIN}` (DNS admin)
 - **n8n:** `https://n8n.${DOMAIN}` (Workflow automation)
+- **Moltbot:** `https://moltbot.${DOMAIN}` (AI assistant)
 - **Grafana:** `https://grafana.${DOMAIN}` (Monitoring)
 - **Prometheus:** `https://prometheus.${DOMAIN}` (Metrics)
 - **Alertmanager:** `https://alerts.${DOMAIN}` (Alerts)

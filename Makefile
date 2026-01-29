@@ -2,8 +2,8 @@
 # Simplifies deployment and maintenance operations
 
 .PHONY: help setup update start stop restart logs build build-custom pull status clean purge validate env-check
-.PHONY: logs-n8n logs-homepage logs-homeassistant logs-actualbudget logs-mealie
-.PHONY: adguard-setup homeassistant-setup setup-certs test-domain-access traefik-password
+.PHONY: logs-n8n logs-homepage logs-homeassistant logs-actualbudget logs-mealie logs-moltbot
+.PHONY: adguard-setup homeassistant-setup moltbot-setup setup-certs test-domain-access traefik-password
 .PHONY: wireguard-status wireguard-install wireguard-setup wireguard-check
 .PHONY: ssl-setup ssl-copy-certs ssl-configure-traefik ssl-setup-renewal ssl-renew-test
 .PHONY: dashboard-setup dashboard-start dashboard-stop dashboard-restart dashboard-logs dashboard-status
@@ -52,6 +52,7 @@ help:
 	@echo "  make logs-homeassistant - Show Home Assistant logs only"
 	@echo "  make logs-actualbudget  - Show Actual Budget logs only"
 	@echo "  make logs-mealie        - Show Mealie logs only"
+	@echo "  make logs-moltbot       - Show Moltbot logs only"
 	@echo "  make logs-homepage      - Show Homepage logs only"
 	@echo ""
 	@echo "Dashboard Management:"
@@ -65,6 +66,7 @@ help:
 	@echo "Service Configuration:"
 	@echo "  make adguard-setup            - Configure DNS rewrites for domain-based access"
 	@echo "  make homeassistant-setup      - Setup Home Assistant configuration files"
+	@echo "  make moltbot-setup            - Build Moltbot sandbox image for code execution"
 	@echo "  make traefik-password         - Generate Traefik dashboard password from .env"
 	@echo ""
 	@echo "WireGuard VPN Management:"
@@ -126,35 +128,38 @@ pull: validate
 setup: env-check validate wireguard-check
 	@echo "Starting first-time setup..."
 	@echo ""
-	@echo "Step 1/8: Setting up Traefik dashboard password..."
+	@echo "Step 1/10: Setting up Traefik dashboard password..."
 	@./scripts/setup-traefik-password.sh
 	@echo ""
-	@echo "Step 2/8: Setting up SSL certificate storage..."
+	@echo "Step 2/10: Setting up SSL certificate storage..."
 	@$(MAKE) setup-certs
 	@echo ""
-	@echo "Step 3/8: Setting up Homepage dashboard config..."
+	@echo "Step 3/10: Setting up Homepage dashboard config..."
 	@./scripts/configure-homepage.sh
 	@echo ""
-	@echo "Step 4/8: Setting up Home Assistant config..."
+	@echo "Step 4/10: Setting up Home Assistant config..."
 	@./scripts/setup-homeassistant.sh
 	@echo ""
-	@echo "Step 5/8: Pulling pre-built images..."
+	@echo "Step 5/10: Pulling pre-built images..."
 	@$(COMPOSE) pull --ignore-pull-failures
 	@echo ""
-	@echo "Step 6/8: Building custom services from source..."
+	@echo "Step 6/10: Building custom services from source..."
 	@$(COMPOSE) build homepage-api
 	@echo ""
-	@echo "Step 7/8: Starting services (Docker Compose will create networks)..."
+	@echo "Step 7/10: Building Moltbot sandbox for code execution..."
+	@$(MAKE) moltbot-setup || echo "⚠️  Moltbot sandbox build failed (service will still start, rebuild with: make moltbot-setup)"
+	@echo ""
+	@echo "Step 8/10: Starting services (Docker Compose will create networks)..."
 	@$(COMPOSE) up -d
 	@echo ""
-	@echo "Step 8/8: Fixing data directory permissions..."
+	@echo "Step 9/10: Fixing data directory permissions..."
 	@echo "Containers create directories as root, fixing ownership for user access..."
 	@if [ -d "data" ]; then \
 		sudo chown -R $(shell id -u):$(shell getent group docker | cut -d: -f3) data/ && \
 		echo "✓ Data directory permissions fixed"; \
 	fi
 	@echo ""
-	@echo "Step 8/8: Configuring AdGuard DNS rewrites..."
+	@echo "Step 10/10: Configuring AdGuard DNS rewrites..."
 	@$(MAKE) adguard-setup
 	@echo ""
 	@$(COMPOSE) ps
@@ -171,6 +176,8 @@ setup: env-check validate wireguard-check
 		echo "    - n8n:                https://n8n.$$DOMAIN"; \
 		echo "    - Home Assistant:     https://home.$$DOMAIN"; \
 		echo "    - Actual Budget:      https://actual.$$DOMAIN"; \
+		echo "    - Mealie:             https://mealie.$$DOMAIN"; \
+		echo "    - Moltbot:            https://moltbot.$$DOMAIN (requires ANTHROPIC_API_KEY)"; \
 		echo "    - Grafana:            https://grafana.$$DOMAIN"; \
 		echo "    - Prometheus:         https://prometheus.$$DOMAIN"; \
 		echo "    - Alertmanager:       https://alerts.$$DOMAIN"; \
@@ -294,6 +301,9 @@ logs-actualbudget:
 logs-mealie:
 	@$(COMPOSE) logs -f mealie
 
+logs-moltbot:
+	@$(COMPOSE) logs -f moltbot
+
 logs-homepage:
 	@$(COMPOSE_DASHBOARD) logs -f homepage
 
@@ -317,6 +327,8 @@ purge:
 	@echo "  - n8n workflows and database"
 	@echo "  - Home Assistant configuration and database"
 	@echo "  - Actual Budget financial data and budgets"
+	@echo "  - Mealie recipes and meal plans"
+	@echo "  - Moltbot AI assistant data (Signal sessions, chat history)"
 	@echo "  - WireGuard VPN configs"
 	@echo "  - All monitoring data (Grafana, Prometheus)"
 	@echo "  - Homepage dashboard configuration"
@@ -380,6 +392,30 @@ homeassistant-setup: env-check
 	@./scripts/setup-homeassistant.sh
 	@echo ""
 	@echo "✓ Home Assistant configuration setup complete!"
+
+# Moltbot AI Assistant setup
+moltbot-setup: env-check
+	@echo "Building Moltbot sandbox image for code execution..."
+	@echo ""
+	@if docker images | grep -q "moltbot-sandbox.*bookworm-slim"; then \
+		echo "✓ Sandbox image already exists"; \
+		echo "  To rebuild: docker rmi moltbot-sandbox:bookworm-slim && make moltbot-setup"; \
+	else \
+		echo "Cloning Moltbot repository..."; \
+		if [ -d /tmp/moltbot-build ]; then rm -rf /tmp/moltbot-build; fi; \
+		git clone https://github.com/moltbot/moltbot.git /tmp/moltbot-build; \
+		echo "Building sandbox image (this may take 5-10 minutes)..."; \
+		cd /tmp/moltbot-build && docker build -t moltbot-sandbox:bookworm-slim -f Dockerfile.sandbox .; \
+		rm -rf /tmp/moltbot-build; \
+		echo ""; \
+		echo "✓ Sandbox image built successfully"; \
+	fi
+	@echo ""
+	@echo "Next steps:"
+	@echo "  1. Add ANTHROPIC_API_KEY to .env (see .env.example)"
+	@echo "  2. Start service: docker compose up -d moltbot"
+	@echo "  3. Access web UI: https://moltbot.\$${DOMAIN}"
+	@echo "  4. Complete onboarding and link Signal device"
 
 # WireGuard VPN Management (System Service)
 wireguard-status:
