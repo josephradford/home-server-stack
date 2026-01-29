@@ -1,10 +1,6 @@
 # Home Server Stack Makefile
 # Simplifies deployment and maintenance operations
 
-# Load environment variables from .env file (silent include - won't error if missing)
--include .env
-export
-
 .PHONY: help setup update start stop restart logs build build-custom pull status clean purge validate env-check
 .PHONY: logs-n8n logs-homepage logs-homeassistant logs-actualbudget logs-mealie logs-moltbot
 .PHONY: adguard-setup homeassistant-setup moltbot-setup setup-certs test-domain-access traefik-password
@@ -417,12 +413,13 @@ moltbot-setup: env-check
 	@echo "Step 2/3: Running onboarding wizard..."
 	@echo "This will configure Moltbot to use your Anthropic API key."
 	@echo ""
-	@if [ -z "$(ANTHROPIC_API_KEY)" ]; then \
+	@ANTHROPIC_API_KEY=$$(grep '^ANTHROPIC_API_KEY=' .env 2>/dev/null | cut -d '=' -f 2-); \
+	if [ -z "$$ANTHROPIC_API_KEY" ]; then \
 		echo "⚠️  ANTHROPIC_API_KEY not set in .env"; \
 		echo "Please add ANTHROPIC_API_KEY to .env, then run:"; \
 		echo "  docker compose run --rm moltbot-cli onboard --anthropic-api-key \"\$$ANTHROPIC_API_KEY\""; \
 	else \
-		docker compose run --rm moltbot-cli onboard --anthropic-api-key "$(ANTHROPIC_API_KEY)"; \
+		docker compose run --rm moltbot-cli onboard --anthropic-api-key "$$ANTHROPIC_API_KEY"; \
 		echo ""; \
 		echo "✓ Onboarding complete"; \
 	fi
