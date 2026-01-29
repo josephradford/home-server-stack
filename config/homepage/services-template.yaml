@@ -171,6 +171,14 @@
           server: my-docker
           showStats: true
 
+      - Moltbot:
+          icon: mdi-robot
+          href: https://moltbot.{{HOMEPAGE_VAR_DOMAIN}}
+          description: AI assistant via messaging apps
+          container: moltbot
+          server: my-docker
+          showStats: true
+
   # Monitoring Stack - Metrics collection and visualization
   - Monitoring:
       - Prometheus:
