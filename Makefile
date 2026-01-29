@@ -302,7 +302,7 @@ logs-mealie:
 	@$(COMPOSE) logs -f mealie
 
 logs-moltbot:
-	@$(COMPOSE) logs -f moltbot
+	@$(COMPOSE) logs -f moltbot-gateway
 
 logs-homepage:
 	@$(COMPOSE_DASHBOARD) logs -f homepage
@@ -395,27 +395,39 @@ homeassistant-setup: env-check
 
 # Moltbot AI Assistant setup
 moltbot-setup: env-check
-	@echo "Building Moltbot sandbox image for code execution..."
+	@echo "Setting up Moltbot AI Assistant..."
 	@echo ""
-	@if docker images | grep -q "moltbot-sandbox.*bookworm-slim"; then \
-		echo "✓ Sandbox image already exists"; \
-		echo "  To rebuild: docker rmi moltbot-sandbox:bookworm-slim && make moltbot-setup"; \
+	@echo "Step 1/3: Building Moltbot gateway and sandbox images..."
+	@if [ -d /tmp/moltbot-build ]; then rm -rf /tmp/moltbot-build; fi
+	@git clone https://github.com/moltbot/moltbot.git /tmp/moltbot-build
+	@cd /tmp/moltbot-build && \
+		echo "Building gateway image (moltbot:local)..." && \
+		docker build -t moltbot:local -f Dockerfile . && \
+		echo "✓ Gateway image built" && \
+		echo "" && \
+		echo "Building sandbox image (moltbot-sandbox:bookworm-slim)..." && \
+		docker build -t moltbot-sandbox:bookworm-slim -f Dockerfile.sandbox . && \
+		echo "✓ Sandbox image built"
+	@rm -rf /tmp/moltbot-build
+	@echo ""
+	@echo "Step 2/3: Running onboarding wizard..."
+	@echo "This will configure Moltbot to use your Anthropic API key."
+	@echo ""
+	@if [ -z "$(ANTHROPIC_API_KEY)" ]; then \
+		echo "⚠️  ANTHROPIC_API_KEY not set in .env"; \
+		echo "Please add ANTHROPIC_API_KEY to .env, then run:"; \
+		echo "  docker compose run --rm moltbot-cli onboard --anthropic-api-key \"\$$ANTHROPIC_API_KEY\""; \
 	else \
-		echo "Cloning Moltbot repository..."; \
-		if [ -d /tmp/moltbot-build ]; then rm -rf /tmp/moltbot-build; fi; \
-		git clone https://github.com/moltbot/moltbot.git /tmp/moltbot-build; \
-		echo "Building sandbox image (this may take 5-10 minutes)..."; \
-		cd /tmp/moltbot-build && docker build -t moltbot-sandbox:bookworm-slim -f Dockerfile.sandbox .; \
-		rm -rf /tmp/moltbot-build; \
+		docker compose run --rm moltbot-cli onboard --anthropic-api-key "$(ANTHROPIC_API_KEY)"; \
 		echo ""; \
-		echo "✓ Sandbox image built successfully"; \
+		echo "✓ Onboarding complete"; \
 	fi
 	@echo ""
-	@echo "Next steps:"
-	@echo "  1. Add ANTHROPIC_API_KEY to .env (see .env.example)"
-	@echo "  2. Start service: docker compose up -d moltbot"
-	@echo "  3. Access web UI: https://moltbot.\$${DOMAIN}"
-	@echo "  4. Complete onboarding and link Signal device"
+	@echo "Step 3/3: Ready to start service"
+	@echo "Run: docker compose up -d moltbot-gateway"
+	@echo ""
+	@echo "Access web UI: https://moltbot.\$${DOMAIN}"
+	@echo "Then link Signal device via QR code in the web interface"
 
 # WireGuard VPN Management (System Service)
 wireguard-status:

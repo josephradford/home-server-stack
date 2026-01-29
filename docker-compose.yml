@@ -169,19 +169,23 @@ services:
       # Security: VPN/Local access only - meal planning and recipes should be private
       - "traefik.http.routers.mealie.middlewares=admin-secure"
 
-  moltbot:
-    image: ghcr.io/moltbot/moltbot:main
-    container_name: moltbot
+  moltbot-gateway:
+    image: ${MOLTBOT_IMAGE:-moltbot:local}
+    container_name: moltbot-gateway
     restart: unless-stopped
+    init: true
+    command: node dist/index.js gateway --bind lan --port 18789
     expose:
-      - 3000
+      - 18789
+      - 18790
     environment:
+      - HOME=/home/node
+      - TERM=xterm-256color
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
       - TZ=${TIMEZONE}
-      - MOLTBOT_SANDBOX_ENABLED=true
-      - MOLTBOT_SANDBOX_IMAGE=moltbot-sandbox:bookworm-slim
     volumes:
-      - ./data/moltbot:/app/data
+      - ./data/moltbot/.clawdbot:/home/node/.clawdbot
+      - ./data/moltbot/clawd:/home/node/clawd
       - /var/run/docker.sock:/var/run/docker.sock:ro
     networks:
       - homeserver
@@ -191,9 +195,28 @@ services:
       - "traefik.http.routers.moltbot.entrypoints=websecure"
       - "traefik.http.routers.moltbot.tls=true"
       # Using file provider certificate (wildcard from certbot)
-      - "traefik.http.services.moltbot.loadbalancer.server.port=3000"
+      - "traefik.http.services.moltbot.loadbalancer.server.port=18789"
       # Security: VPN/Local access only - AI assistant should be private
       - "traefik.http.routers.moltbot.middlewares=admin-secure"
+
+  moltbot-cli:
+    image: ${MOLTBOT_IMAGE:-moltbot:local}
+    container_name: moltbot-cli
+    stdin_open: true
+    tty: true
+    entrypoint: node dist/index.js
+    environment:
+      - HOME=/home/node
+      - TERM=xterm-256color
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+    volumes:
+      - ./data/moltbot/.clawdbot:/home/node/.clawdbot
+      - ./data/moltbot/clawd:/home/node/clawd
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - homeserver
+    profiles:
+      - tools
 
 networks:
   homeserver:
