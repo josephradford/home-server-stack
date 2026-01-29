@@ -417,9 +417,19 @@ moltbot-setup: env-check
 	if [ -z "$$ANTHROPIC_API_KEY" ]; then \
 		echo "⚠️  ANTHROPIC_API_KEY not set in .env"; \
 		echo "Please add ANTHROPIC_API_KEY to .env, then run:"; \
-		echo "  docker compose run --rm moltbot-cli onboard --anthropic-api-key \"\$$ANTHROPIC_API_KEY\""; \
+		echo "  ANTHROPIC_API_KEY=\$$(grep '^ANTHROPIC_API_KEY=' .env | cut -d '=' -f 2-)"; \
+		echo "  docker run --rm -it -e ANTHROPIC_API_KEY=\"\$$ANTHROPIC_API_KEY\" \\"; \
+		echo "    -v ./data/moltbot/.clawdbot:/home/node/.clawdbot \\"; \
+		echo "    -v ./data/moltbot/clawd:/home/node/clawd \\"; \
+		echo "    moltbot:local onboard --anthropic-api-key \"\$$ANTHROPIC_API_KEY\""; \
 	else \
-		docker compose run --rm moltbot-cli onboard --anthropic-api-key "$$ANTHROPIC_API_KEY"; \
+		docker run --rm -it \
+			-e HOME=/home/node \
+			-e TERM=xterm-256color \
+			-e ANTHROPIC_API_KEY="$$ANTHROPIC_API_KEY" \
+			-v "$(shell pwd)/data/moltbot/.clawdbot:/home/node/.clawdbot" \
+			-v "$(shell pwd)/data/moltbot/clawd:/home/node/clawd" \
+			moltbot:local onboard --anthropic-api-key "$$ANTHROPIC_API_KEY"; \
 		echo ""; \
 		echo "✓ Onboarding complete"; \
 	fi
