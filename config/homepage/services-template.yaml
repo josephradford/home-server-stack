@@ -175,7 +175,7 @@
           icon: mdi-robot
           href: https://moltbot.{{HOMEPAGE_VAR_DOMAIN}}
           description: AI assistant via messaging apps
-          container: moltbot
+          container: moltbot-gateway
           server: my-docker
           showStats: true
 
