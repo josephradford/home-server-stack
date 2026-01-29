@@ -83,6 +83,19 @@ Currently deployed and active services.
   - Multi-user support with permissions
   - Mobile apps for iOS and Android
 
+#### Moltbot
+- **Purpose:** AI assistant accessible via messaging apps (Signal, Telegram, WhatsApp, Discord, Slack)
+- **Access:** https://moltbot.${DOMAIN}
+- **Port:** 3000 (internal)
+- **Authentication:** None (VPN/local access only via Traefik middleware)
+- **Features:**
+  - Conversational AI powered by Anthropic Claude
+  - Multi-platform messaging support (Signal, Telegram, WhatsApp, Discord, Slack)
+  - Sandboxed code execution for programming tasks
+  - Device linking via QR code (Signal)
+  - Persistent chat history and session data
+  - Ephemeral sandbox containers for security
+
 ### Monitoring Stack
 
 #### Grafana
@@ -126,6 +139,7 @@ Currently deployed and active services.
 | Home Assistant | https://home.${DOMAIN} | http://IP:8123 |
 | Actual Budget | https://actual.${DOMAIN} | N/A |
 | Mealie | https://mealie.${DOMAIN} | N/A |
+| Moltbot | https://moltbot.${DOMAIN} | N/A |
 | Grafana | https://grafana.${DOMAIN} | http://IP:3001 |
 | Prometheus | https://prometheus.${DOMAIN} | http://IP:9090 |
 | Alertmanager | https://alerts.${DOMAIN} | http://IP:9093 |
