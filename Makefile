@@ -397,7 +397,7 @@ homeassistant-setup: env-check
 moltbot-setup: env-check
 	@echo "Setting up Moltbot AI Assistant..."
 	@echo ""
-	@echo "Step 1/3: Building Moltbot gateway and sandbox images..."
+	@echo "Step 1/4: Building Moltbot gateway and sandbox images..."
 	@if [ -d /tmp/moltbot-build ]; then rm -rf /tmp/moltbot-build; fi
 	@git clone https://github.com/moltbot/moltbot.git /tmp/moltbot-build
 	@cd /tmp/moltbot-build && \
@@ -410,7 +410,20 @@ moltbot-setup: env-check
 		echo "✓ Sandbox image built"
 	@rm -rf /tmp/moltbot-build
 	@echo ""
-	@echo "Step 2/3: Running onboarding wizard..."
+	@echo "Step 2/4: Preparing data directories..."
+	@mkdir -p data/moltbot/.clawdbot data/moltbot/clawd
+	@echo "Setting ownership to UID 1000 (node user in container)..."
+	@if [ "$$(id -u)" = "0" ]; then \
+		chown -R 1000:1000 data/moltbot; \
+	else \
+		sudo chown -R 1000:1000 data/moltbot || { \
+			echo "⚠️  Warning: Could not set ownership. If onboarding fails with permission error, run:"; \
+			echo "  sudo chown -R 1000:1000 data/moltbot"; \
+		}; \
+	fi
+	@echo "✓ Directories prepared"
+	@echo ""
+	@echo "Step 3/4: Running onboarding wizard..."
 	@echo "This will configure Moltbot to use your Anthropic API key."
 	@echo ""
 	@ANTHROPIC_API_KEY=$$(grep '^ANTHROPIC_API_KEY=' .env 2>/dev/null | cut -d '=' -f 2-); \
@@ -434,7 +447,7 @@ moltbot-setup: env-check
 		echo "✓ Onboarding complete"; \
 	fi
 	@echo ""
-	@echo "Step 3/3: Ready to start service"
+	@echo "Step 4/4: Ready to start service"
 	@echo "Run: docker compose up -d moltbot-gateway"
 	@echo ""
 	@echo "Access web UI: https://moltbot.\$${DOMAIN}"
