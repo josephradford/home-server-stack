@@ -110,6 +110,9 @@ validate: env-check
 build: validate
 	@echo "Building services from source..."
 	@$(COMPOSE) build
+	@echo ""
+	@echo "Building Moltbot images..."
+	@$(MAKE) moltbot-setup || echo "⚠️  Moltbot build failed (rebuild with: make moltbot-setup)"
 	@echo "✓ Build complete"
 
 # Build only custom services (faster rebuild during development)
