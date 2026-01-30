@@ -3,7 +3,7 @@
 
 .PHONY: help setup update start stop restart logs build build-custom pull status clean purge validate env-check
 .PHONY: logs-n8n logs-homepage logs-homeassistant logs-actualbudget logs-mealie logs-moltbot
-.PHONY: adguard-setup homeassistant-setup moltbot-setup setup-certs test-domain-access traefik-password
+.PHONY: adguard-setup homeassistant-setup moltbot-setup moltbot-onboard moltbot-start setup-certs test-domain-access traefik-password
 .PHONY: wireguard-status wireguard-install wireguard-setup wireguard-check
 .PHONY: ssl-setup ssl-copy-certs ssl-configure-traefik ssl-setup-renewal ssl-renew-test
 .PHONY: dashboard-setup dashboard-start dashboard-stop dashboard-restart dashboard-logs dashboard-status
@@ -427,15 +427,26 @@ moltbot-setup: env-check
 	@echo ""
 	@echo "Next steps:"
 	@echo "  1. Run onboarding wizard (interactive setup):"
-	@echo "     docker compose run --rm moltbot-cli onboard"
+	@echo "     make moltbot-onboard"
 	@echo ""
 	@echo "  2. Start the gateway:"
-	@echo "     docker compose up -d moltbot-gateway"
+	@echo "     make moltbot-start"
 	@echo ""
 	@echo "  3. Access web UI: https://moltbot.\$${DOMAIN}"
+
+# Moltbot onboarding wizard (interactive)
+moltbot-onboard:
+	@echo "Starting Moltbot onboarding wizard..."
 	@echo ""
+	@docker compose run --rm moltbot-cli onboard
+
+# Start Moltbot gateway
+moltbot-start:
+	@echo "Starting Moltbot gateway..."
+	@docker compose up -d moltbot-gateway
+	@echo ""
+	@echo "✓ Moltbot gateway started"
 	@echo "Access web UI: https://moltbot.\$${DOMAIN}"
-	@echo "Then link Signal device via QR code in the web interface"
 
 # WireGuard VPN Management (System Service)
 wireguard-status:
