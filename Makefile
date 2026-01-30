@@ -3,7 +3,7 @@
 
 .PHONY: help setup update start stop restart logs build build-custom pull status clean purge validate env-check
 .PHONY: logs-n8n logs-homepage logs-homeassistant logs-actualbudget logs-mealie logs-moltbot
-.PHONY: adguard-setup homeassistant-setup moltbot-setup setup-certs test-domain-access traefik-password
+.PHONY: adguard-setup homeassistant-setup moltbot-setup moltbot-onboard moltbot-start setup-certs test-domain-access traefik-password
 .PHONY: wireguard-status wireguard-install wireguard-setup wireguard-check
 .PHONY: ssl-setup ssl-copy-certs ssl-configure-traefik ssl-setup-renewal ssl-renew-test
 .PHONY: dashboard-setup dashboard-start dashboard-stop dashboard-restart dashboard-logs dashboard-status
@@ -110,6 +110,9 @@ validate: env-check
 build: validate
 	@echo "Building services from source..."
 	@$(COMPOSE) build
+	@echo ""
+	@echo "Building Moltbot images..."
+	@$(MAKE) moltbot-setup || echo "⚠️  Moltbot build failed (rebuild with: make moltbot-setup)"
 	@echo "✓ Build complete"
 
 # Build only custom services (faster rebuild during development)
@@ -397,7 +400,7 @@ homeassistant-setup: env-check
 moltbot-setup: env-check
 	@echo "Setting up Moltbot AI Assistant..."
 	@echo ""
-	@echo "Step 1/4: Building Moltbot gateway and sandbox images..."
+	@echo "Step 1/3: Building Moltbot gateway and sandbox images..."
 	@if [ -d /tmp/moltbot-build ]; then rm -rf /tmp/moltbot-build; fi
 	@git clone https://github.com/moltbot/moltbot.git /tmp/moltbot-build
 	@cd /tmp/moltbot-build && \
@@ -410,7 +413,7 @@ moltbot-setup: env-check
 		echo "✓ Sandbox image built"
 	@rm -rf /tmp/moltbot-build
 	@echo ""
-	@echo "Step 2/4: Preparing data directories..."
+	@echo "Step 2/3: Preparing data directories..."
 	@mkdir -p data/moltbot/.clawdbot data/moltbot/clawd
 	@echo "Setting ownership to UID 1000 (node user in container)..."
 	@if [ "$$(id -u)" = "0" ]; then \
@@ -423,35 +426,30 @@ moltbot-setup: env-check
 	fi
 	@echo "✓ Directories prepared"
 	@echo ""
-	@echo "Step 3/4: Running onboarding wizard..."
-	@echo "This will configure Moltbot to use your Anthropic API key."
+	@echo "Step 3/3: Setup complete!"
 	@echo ""
-	@ANTHROPIC_API_KEY=$$(grep '^ANTHROPIC_API_KEY=' .env 2>/dev/null | cut -d '=' -f 2-); \
-	if [ -z "$$ANTHROPIC_API_KEY" ]; then \
-		echo "⚠️  ANTHROPIC_API_KEY not set in .env"; \
-		echo "Please add ANTHROPIC_API_KEY to .env, then run:"; \
-		echo "  ANTHROPIC_API_KEY=\$$(grep '^ANTHROPIC_API_KEY=' .env | cut -d '=' -f 2-)"; \
-		echo "  docker run --rm -it -e ANTHROPIC_API_KEY=\"\$$ANTHROPIC_API_KEY\" \\"; \
-		echo "    -v ./data/moltbot/.clawdbot:/home/node/.clawdbot \\"; \
-		echo "    -v ./data/moltbot/clawd:/home/node/clawd \\"; \
-		echo "    moltbot:local node dist/index.js onboard --anthropic-api-key \"\$$ANTHROPIC_API_KEY\""; \
-	else \
-		docker run --rm -it \
-			-e HOME=/home/node \
-			-e TERM=xterm-256color \
-			-e ANTHROPIC_API_KEY="$$ANTHROPIC_API_KEY" \
-			-v "$(shell pwd)/data/moltbot/.clawdbot:/home/node/.clawdbot" \
-			-v "$(shell pwd)/data/moltbot/clawd:/home/node/clawd" \
-			moltbot:local node dist/index.js onboard --anthropic-api-key "$$ANTHROPIC_API_KEY"; \
-		echo ""; \
-		echo "✓ Onboarding complete"; \
-	fi
+	@echo "Next steps:"
+	@echo "  1. Run onboarding wizard (interactive setup):"
+	@echo "     make moltbot-onboard"
 	@echo ""
-	@echo "Step 4/4: Ready to start service"
-	@echo "Run: docker compose up -d moltbot-gateway"
+	@echo "  2. Start the gateway:"
+	@echo "     make moltbot-start"
 	@echo ""
+	@echo "  3. Access web UI: https://moltbot.\$${DOMAIN}"
+
+# Moltbot onboarding wizard (interactive)
+moltbot-onboard:
+	@echo "Starting Moltbot onboarding wizard..."
+	@echo ""
+	@docker compose run --rm moltbot-cli onboard
+
+# Start Moltbot gateway
+moltbot-start:
+	@echo "Starting Moltbot gateway..."
+	@docker compose up -d moltbot-gateway
+	@echo ""
+	@echo "✓ Moltbot gateway started"
 	@echo "Access web UI: https://moltbot.\$${DOMAIN}"
-	@echo "Then link Signal device via QR code in the web interface"
 
 # WireGuard VPN Management (System Service)
 wireguard-status:
