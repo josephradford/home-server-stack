@@ -183,6 +183,7 @@ services:
       - TERM=xterm-256color
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
       - TZ=${TIMEZONE}
+      - OPENCLAW_TRUSTED_PROXY_NETWORK=172.18.0.0/16
     volumes:
       - ./data/moltbot/.clawdbot:/home/node/.clawdbot
       - ./data/moltbot/clawd:/home/node/clawd
