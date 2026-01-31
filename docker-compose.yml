@@ -174,7 +174,7 @@ services:
     container_name: moltbot-gateway
     restart: unless-stopped
     init: true
-    command: node dist/index.js gateway --bind lan --port 18789 --trusted-proxies 172.18.0.0/16
+    command: node dist/index.js gateway --bind lan --port 18789
     expose:
       - 18789
       - 18790
