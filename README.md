@@ -69,31 +69,31 @@ All services are accessible via domain names on your local network:
 - Alertmanager: `http://SERVER_IP:9093` (alert management)
 - See [SERVICES.md](SERVICES.md) for complete list
 
-See **[docs/SETUP.md](docs/SETUP.md)** for detailed installation instructions.
+See **[docs/archive/SETUP.md](docs/archive/SETUP.md)** for detailed installation instructions.
 
 ## 🔒 SSL Certificates
 
-By default, services use **self-signed certificates** (browser warnings expected). For **trusted Let's Encrypt certificates**, see **[docs/CONFIGURATION.md#ssl-certificate-setup](docs/CONFIGURATION.md#ssl-certificate-setup)** for complete setup instructions using `make ssl-setup`.
+By default, services use **self-signed certificates** (browser warnings expected). For **trusted Let's Encrypt certificates**, see **[docs/archive/CONFIGURATION.md#ssl-certificate-setup](docs/archive/CONFIGURATION.md#ssl-certificate-setup)** for complete setup instructions using `make ssl-setup`.
 
 ## 📚 Documentation
 
 ### Getting Started
-- **[Setup Guide](docs/SETUP.md)** - Complete installation and initial setup
-- **[Configuration Guide](docs/CONFIGURATION.md)** - Service configuration and customization
-- **[Requirements](docs/REQUIREMENTS.md)** - System requirements and resource usage
+- **[Setup Guide](docs/archive/SETUP.md)** - Complete installation and initial setup
+- **[Configuration Guide](docs/archive/CONFIGURATION.md)** - Service configuration and customization
+- **[Requirements](docs/archive/REQUIREMENTS.md)** - System requirements and resource usage
 
 ### Operations
-- **[Operations Guide](docs/OPERATIONS.md)** - Managing services, updates, backups
-- **[Troubleshooting](docs/TROUBLESHOOTING.md)** - Common issues and solutions
-- **[Monitoring Deployment](docs/MONITORING_DEPLOYMENT.md)** - Optional monitoring stack setup
+- **[Operations Guide](docs/archive/OPERATIONS.md)** - Managing services, updates, backups
+- **[Troubleshooting](docs/archive/TROUBLESHOOTING.md)** - Common issues and solutions
+- **[Monitoring Deployment](docs/archive/MONITORING_DEPLOYMENT.md)** - Optional monitoring stack setup
 
 ### Monitoring & Alerts
-- **[Alerts & Response Procedures](docs/ALERTS.md)** - Alert definitions, troubleshooting, and response procedures
-- **[Known Issues](docs/KNOWN_ISSUES.md)** - Known bugs and workarounds
+- **[Alerts & Response Procedures](docs/archive/ALERTS.md)** - Alert definitions, troubleshooting, and response procedures
+- **[Known Issues](docs/archive/KNOWN_ISSUES.md)** - Known bugs and workarounds
 
 ### Advanced
-- **[Remote Access Setup](docs/REMOTE_ACCESS.md)** - Port forwarding and VPN configuration
-- **[Architecture Overview](docs/ARCHITECTURE.md)** - System design and data persistence
+- **[Remote Access Setup](docs/archive/REMOTE_ACCESS.md)** - Port forwarding and VPN configuration
+- **[Architecture Overview](docs/ARCHITECTURE.md)** - System design and visual diagrams
 
 ### Implementation Tickets
 - **[Monitoring Tickets](tickets/monitoring-tickets/README.md)** - Monitoring implementation roadmap
@@ -149,7 +149,7 @@ This stack includes a comprehensive dashboard with location tracking and integra
 docker compose -f docker-compose.dashboard.yml up -d
 ```
 
-See **[docs/DASHBOARD_SETUP.md](docs/DASHBOARD_SETUP.md)** for detailed instructions.
+See **[docs/archive/DASHBOARD_SETUP.md](docs/archive/DASHBOARD_SETUP.md)** for detailed instructions.
 
 ### Dashboard Features
 
@@ -175,7 +175,7 @@ Contributions are welcome! See **[CONTRIBUTING.md](CONTRIBUTING.md)** for guidel
 - Linux-based OS (tested on Ubuntu Server 24.04 LTS)
 - Docker and Docker Compose installed
 
-See **[docs/REQUIREMENTS.md](docs/REQUIREMENTS.md)** for detailed requirements.
+See **[docs/archive/REQUIREMENTS.md](docs/archive/REQUIREMENTS.md)** for detailed requirements.
 
 ## 📄 License
 

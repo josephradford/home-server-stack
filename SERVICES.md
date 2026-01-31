@@ -86,7 +86,7 @@ Currently deployed and active services.
 #### Moltbot
 - **Purpose:** AI assistant accessible via messaging apps (Signal, Telegram, WhatsApp, Discord, Slack)
 - **Access:** https://moltbot.${DOMAIN}
-- **Port:** 3000 (internal)
+- **Port:** 18789 (internal)
 - **Authentication:** None (VPN/local access only via Traefik middleware)
 - **Features:**
   - Conversational AI powered by Anthropic Claude
@@ -101,8 +101,7 @@ Currently deployed and active services.
 #### Grafana
 - **Purpose:** Metrics visualization and dashboards
 - **Access:** https://grafana.${DOMAIN}
-- **Legacy:** http://SERVER_IP:3001
-- **Port:** 3001
+- **Port:** 3000 (internal)
 - **Authentication:** admin / GRAFANA_PASSWORD
 
 #### Prometheus

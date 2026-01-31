@@ -48,6 +48,18 @@ graph TB
         N8N["n8n
         Workflow Automation
         :5678"]
+        HomeAssistant["Home Assistant
+        Home Automation
+        :8123"]
+        Mealie["Mealie
+        Meal Planning
+        :9000"]
+        ActualBudget["Actual Budget
+        Finance
+        :5006"]
+        Moltbot["Moltbot
+        AI Assistant
+        :18789"]
     end
 
     subgraph Monitoring["Monitoring Stack
@@ -76,13 +88,17 @@ graph TB
         :3000"]
         HomepageAPI["Homepage API
         Backend
-        :3001"]
+        :5000"]
     end
 
     subgraph Data["Data Persistence
     ./data/ bind mounts"]
         AdGuardData[(AdGuard Data)]
         N8NData[(n8n Database)]
+        HomeAssistantData[(Home Assistant Config)]
+        MealieData[(Mealie Recipes)]
+        ActualBudgetData[(Actual Budget Data)]
+        MoltbotData[(Moltbot AI Data)]
         TraefikData[(Traefik Certs/Logs)]
         GrafanaData[(Grafana Config)]
         PrometheusData[(Prometheus TSDB)]
@@ -105,6 +121,10 @@ graph TB
     %% Traefik routing
     Traefik -->|*.domain routing| AdGuard
     Traefik -->|*.domain routing| N8N
+    Traefik -->|*.domain routing| HomeAssistant
+    Traefik -->|*.domain routing| Mealie
+    Traefik -->|*.domain routing| ActualBudget
+    Traefik -->|*.domain routing| Moltbot
     Traefik -->|*.domain routing| Grafana
     Traefik -->|*.domain routing| Prometheus
     Traefik -->|*.domain routing| Alertmanager
@@ -133,6 +153,10 @@ graph TB
     %% Data persistence
     AdGuard -.->|Stores| AdGuardData
     N8N -.->|Stores| N8NData
+    HomeAssistant -.->|Stores| HomeAssistantData
+    Mealie -.->|Stores| MealieData
+    ActualBudget -.->|Stores| ActualBudgetData
+    Moltbot -.->|Stores| MoltbotData
     Traefik -.->|Stores| TraefikData
     Grafana -.->|Stores| GrafanaData
     Prometheus -.->|Stores| PrometheusData
@@ -148,10 +172,10 @@ graph TB
 
     class VPN,HTTP external
     class Traefik,Fail2ban,UFW network
-    class AdGuard,N8N core
+    class AdGuard,N8N,HomeAssistant,Mealie,ActualBudget,Moltbot core
     class Prometheus,Grafana,Alertmanager,NodeExporter,CAdvisor monitoring
     class Homepage,HomepageAPI dashboard
-    class AdGuardData,N8NData,TraefikData,GrafanaData,PrometheusData,WireGuardData data
+    class AdGuardData,N8NData,HomeAssistantData,MealieData,ActualBudgetData,MoltbotData,TraefikData,GrafanaData,PrometheusData,WireGuardData data
     class Certbot system
 ```
 
