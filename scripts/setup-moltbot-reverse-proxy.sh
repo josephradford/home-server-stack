@@ -45,9 +45,10 @@ try:
     if 'gateway' not in config:
         config['gateway'] = {}
 
-    # Add trustedProxies array with Docker bridge network
+    # Add trustedProxies array with Docker bridge network using env var substitution
     # This allows Moltbot to trust proxy headers from Traefik
-    config['gateway']['trustedProxies'] = ['172.18.0.0/16']
+    # OpenClaw substitutes ${VAR_NAME} at config load time
+    config['gateway']['trustedProxies'] = ['${OPENCLAW_TRUSTED_PROXY_NETWORK}']
 
     # Write updated config with proper formatting
     with open(config_file, 'w') as f:
