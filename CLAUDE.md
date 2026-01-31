@@ -431,6 +431,14 @@ For wildcard certificate (only on dashboard router):
   - Sets `TRAEFIK_DASHBOARD_USERS` environment variable
   - Called during `make setup` and `make traefik-password`
 
+- `scripts/setup-moltbot-reverse-proxy.sh` - Configures Moltbot to trust Traefik reverse proxy
+  - Adds `trustedProxies: ["172.18.0.0/16"]` to `moltbot.json` gateway section
+  - Fixes "Proxy headers detected from untrusted address" WebSocket errors
+  - Enables proper client IP detection behind Traefik
+  - Creates timestamped backup before modification
+  - Called automatically during `make moltbot-onboard`
+  - Can be run manually via `make moltbot-configure-proxy`
+
 ### SSL Certificate Management (certbot)
 - `scripts/setup-certbot-gandi.sh` - Installs certbot and generates Let's Encrypt wildcard certificate
   - Installs certbot via snap and certbot-dns-gandi via pip3
@@ -673,14 +681,19 @@ For wildcard certificate (only on dashboard router):
   - Sandbox execution - Isolated Docker containers for running code tasks
 - **Setup:**
   - Build images: `make moltbot-setup` (~10-15 minutes)
-  - Run onboarding: `make moltbot-onboard` (interactive wizard)
+  - Run onboarding: `make moltbot-onboard` (interactive wizard, automatically configures reverse proxy)
   - Start gateway: `make moltbot-start`
   - Configure channels via CLI (Telegram easiest, WhatsApp also supported)
 - **Configuration:**
   - Requires: `ANTHROPIC_API_KEY` for Claude AI models
   - Recommended model: `claude-sonnet-4-5`
-  - Configuration stored in `./data/moltbot/.clawdbot/`
+  - Configuration stored in `./data/moltbot/.clawdbot/moltbot.json`
   - Channel sessions in `./data/moltbot/.clawdbot/credentials/`
+  - **Reverse proxy:** Automatically configured during `make moltbot-onboard`
+    - Adds Docker bridge network (172.18.0.0/16) to trusted proxies
+    - Fixes "Proxy headers detected from untrusted address" errors
+    - Allows proper client IP detection behind Traefik reverse proxy
+    - Manual reconfiguration: `make moltbot-configure-proxy` (if needed)
 - **API Costs:**
   - Pay-per-use Anthropic API (no subscription)
   - Typical conversation: $0.05-0.50 per interaction
