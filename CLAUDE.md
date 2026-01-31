@@ -679,8 +679,16 @@ For wildcard certificate (only on dashboard router):
 - **Configuration:**
   - Requires: `ANTHROPIC_API_KEY` for Claude AI models
   - Recommended model: `claude-sonnet-4-5`
-  - Configuration stored in `./data/moltbot/.clawdbot/`
+  - Configuration stored in `./data/moltbot/.clawdbot/moltbot.json`
   - Channel sessions in `./data/moltbot/.clawdbot/credentials/`
+  - **Reverse proxy setup:** Add trustedProxies to config for Traefik integration:
+    ```json
+    "gateway": {
+      "trustedProxies": ["172.18.0.0/16"],
+      ...
+    }
+    ```
+    This allows proper client IP detection behind the reverse proxy
 - **API Costs:**
   - Pay-per-use Anthropic API (no subscription)
   - Typical conversation: $0.05-0.50 per interaction
