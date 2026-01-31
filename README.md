@@ -63,11 +63,13 @@ All services are accessible via domain names on your local network:
 
 **Note:** Services are accessible via domain names thanks to Traefik reverse proxy and AdGuard Home DNS. Your devices must use AdGuard Home as their DNS server (configured automatically if DHCP points to the server).
 
-**Direct IP Access:** Some services remain accessible via IP:port for specific operational needs:
+**Direct Access (Emergency/Operational):** Some services expose direct ports for specific use cases:
 - AdGuard Home: `http://SERVER_IP:8888` (emergency access if Traefik fails)
+- Home Assistant: `http://SERVER_IP:8123` (mobile app initial setup)
 - Prometheus: `http://SERVER_IP:9090` (metrics scraping)
-- Alertmanager: `http://SERVER_IP:9093` (alert management)
-- See [SERVICES.md](SERVICES.md) for complete list
+- Alertmanager: `http://SERVER_IP:9093` (alert routing)
+
+These are not intended for regular use - domain-based access via Traefik is recommended. See [SERVICES.md](SERVICES.md) for complete list.
 
 See **[docs/archive/SETUP.md](docs/archive/SETUP.md)** for detailed installation instructions.
 
