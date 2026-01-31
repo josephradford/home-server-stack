@@ -451,6 +451,11 @@ moltbot-start:
 	@echo "✓ Moltbot gateway started"
 	@echo "Access web UI: https://moltbot.\$${DOMAIN}"
 
+# Configure Moltbot for reverse proxy access
+moltbot-configure-proxy:
+	@echo "Configuring Moltbot for reverse proxy access..."
+	@./scripts/setup-moltbot-reverse-proxy.sh
+
 # WireGuard VPN Management (System Service)
 wireguard-status:
 	@echo "Checking WireGuard service status..."
