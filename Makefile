@@ -442,6 +442,9 @@ moltbot-onboard:
 	@echo "Starting Moltbot onboarding wizard..."
 	@echo ""
 	@docker compose run --rm moltbot-cli onboard
+	@echo ""
+	@echo "Configuring reverse proxy support..."
+	@./scripts/setup-moltbot-reverse-proxy.sh
 
 # Start Moltbot gateway
 moltbot-start:
@@ -451,10 +454,13 @@ moltbot-start:
 	@echo "✓ Moltbot gateway started"
 	@echo "Access web UI: https://moltbot.\$${DOMAIN}"
 
-# Configure Moltbot for reverse proxy access
+# Configure Moltbot for reverse proxy access (standalone - normally done during onboard)
 moltbot-configure-proxy:
 	@echo "Configuring Moltbot for reverse proxy access..."
 	@./scripts/setup-moltbot-reverse-proxy.sh
+	@echo ""
+	@echo "Note: This is automatically done during 'make moltbot-onboard'"
+	@echo "Only run this manually if you need to reconfigure an existing setup"
 
 # WireGuard VPN Management (System Service)
 wireguard-status:

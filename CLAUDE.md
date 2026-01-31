@@ -436,7 +436,8 @@ For wildcard certificate (only on dashboard router):
   - Fixes "Proxy headers detected from untrusted address" WebSocket errors
   - Enables proper client IP detection behind Traefik
   - Creates timestamped backup before modification
-  - Called via `make moltbot-configure-proxy`
+  - Called automatically during `make moltbot-onboard`
+  - Can be run manually via `make moltbot-configure-proxy`
 
 ### SSL Certificate Management (certbot)
 - `scripts/setup-certbot-gandi.sh` - Installs certbot and generates Let's Encrypt wildcard certificate
@@ -680,8 +681,7 @@ For wildcard certificate (only on dashboard router):
   - Sandbox execution - Isolated Docker containers for running code tasks
 - **Setup:**
   - Build images: `make moltbot-setup` (~10-15 minutes)
-  - Run onboarding: `make moltbot-onboard` (interactive wizard)
-  - Configure reverse proxy: `make moltbot-configure-proxy` (required for Traefik)
+  - Run onboarding: `make moltbot-onboard` (interactive wizard, automatically configures reverse proxy)
   - Start gateway: `make moltbot-start`
   - Configure channels via CLI (Telegram easiest, WhatsApp also supported)
 - **Configuration:**
@@ -689,10 +689,11 @@ For wildcard certificate (only on dashboard router):
   - Recommended model: `claude-sonnet-4-5`
   - Configuration stored in `./data/moltbot/.clawdbot/moltbot.json`
   - Channel sessions in `./data/moltbot/.clawdbot/credentials/`
-  - **Reverse proxy:** When accessing through Traefik, trustedProxies must be configured:
-    - Run `make moltbot-configure-proxy` to add Docker network to trusted proxies
-    - This fixes "Proxy headers detected from untrusted address" errors
-    - Allows proper client IP detection behind reverse proxy
+  - **Reverse proxy:** Automatically configured during `make moltbot-onboard`
+    - Adds Docker bridge network (172.18.0.0/16) to trusted proxies
+    - Fixes "Proxy headers detected from untrusted address" errors
+    - Allows proper client IP detection behind Traefik reverse proxy
+    - Manual reconfiguration: `make moltbot-configure-proxy` (if needed)
 - **API Costs:**
   - Pay-per-use Anthropic API (no subscription)
   - Typical conversation: $0.05-0.50 per interaction
