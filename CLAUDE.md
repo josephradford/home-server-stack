@@ -431,8 +431,6 @@ For wildcard certificate (only on dashboard router):
   - Sets `TRAEFIK_DASHBOARD_USERS` environment variable
   - Called during `make setup` and `make traefik-password`
 
-- `scripts/setup-homepage.sh` - Legacy Homepage setup script (replaced by configure-homepage.sh)
-
 ### SSL Certificate Management (certbot)
 - `scripts/setup-certbot-gandi.sh` - Installs certbot and generates Let's Encrypt wildcard certificate
   - Installs certbot via snap and certbot-dns-gandi via pip3
