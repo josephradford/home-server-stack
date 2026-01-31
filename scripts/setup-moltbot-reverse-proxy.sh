@@ -20,6 +20,10 @@ if [ ! -f "$CONFIG_FILE" ]; then
     exit 1
 fi
 
+# Stop the gateway if it's running (prevents config from being overwritten)
+echo "Stopping moltbot-gateway (if running)..."
+docker compose stop moltbot-gateway 2>/dev/null || true
+
 # Backup the config
 BACKUP_FILE="${CONFIG_FILE}.bak.$(date +%Y%m%d-%H%M%S)"
 cp "$CONFIG_FILE" "$BACKUP_FILE"
@@ -64,14 +68,26 @@ if [ $? -eq 0 ]; then
     echo "  - Enables proper client IP detection behind the reverse proxy"
     echo "  - Fixes 'Proxy headers detected from untrusted address' warnings"
     echo ""
+
+    # Verify the change was written
+    if grep -q '"trustedProxies"' "$CONFIG_FILE"; then
+        echo -e "${GREEN}✓${NC} Verified trustedProxies added to config"
+    else
+        echo -e "${RED}✗${NC} Warning: trustedProxies not found in config after update"
+        echo "This may indicate a problem with the configuration"
+    fi
+
+    echo ""
     echo -e "${BLUE}Next steps:${NC}"
-    echo "  1. Restart moltbot-gateway: ${YELLOW}docker compose restart moltbot-gateway${NC}"
+    echo "  1. Start moltbot-gateway: ${YELLOW}docker compose up -d moltbot-gateway${NC}"
     echo "  2. Check logs: ${YELLOW}docker logs moltbot-gateway --tail 50${NC}"
-    echo "  3. Access web UI: ${YELLOW}https://moltbot.\${DOMAIN}${NC}"
+    echo "  3. Verify config persisted: ${YELLOW}docker exec moltbot-gateway cat /home/node/.clawdbot/moltbot.json | grep trustedProxies${NC}"
+    echo "  4. Access web UI: ${YELLOW}https://moltbot.\${DOMAIN}${NC}"
     echo ""
 else
     echo -e "${RED}✗${NC} Failed to configure Moltbot"
     echo "Restoring backup from $BACKUP_FILE"
     cp "$BACKUP_FILE" "$CONFIG_FILE"
+    docker compose up -d moltbot-gateway 2>/dev/null || true
     exit 1
 fi
