@@ -90,6 +90,10 @@ make logs
 # View specific service logs
 make logs-n8n
 make logs-homeassistant
+make logs-actualbudget
+make logs-mealie
+make logs-moltbot
+make logs-homepage
 
 # View logs directly (useful for other services)
 docker compose -f docker-compose.yml -f docker-compose.monitoring.yml logs -f [service-name]
@@ -133,6 +137,44 @@ sudo wg show
 sudo systemctl status wg-quick@wg0
 ```
 
+### Service Configuration
+```bash
+# Configure AdGuard DNS rewrites for domain-based access
+make adguard-setup
+
+# Setup Home Assistant configuration files
+make homeassistant-setup
+
+# Setup Moltbot AI assistant (build images)
+make moltbot-setup
+
+# Run Moltbot onboarding wizard (interactive)
+make moltbot-onboard
+
+# Start Moltbot gateway
+make moltbot-start
+
+# Generate Traefik dashboard password from .env
+make traefik-password
+```
+
+### Dashboard Management
+```bash
+# Setup Homepage dashboard (first time)
+make dashboard-setup
+
+# Start/stop/restart Homepage dashboard
+make dashboard-start
+make dashboard-stop
+make dashboard-restart
+
+# View Homepage dashboard logs
+make dashboard-logs
+
+# Show Homepage dashboard status
+make dashboard-status
+```
+
 ### Testing & Validation
 ```bash
 # Test domain-based access for all services
@@ -141,8 +183,11 @@ make test-domain-access
 # Manually test DNS resolution
 dig @${SERVER_IP} n8n.${DOMAIN} +short
 
-# Configure AdGuard DNS rewrites manually
-make adguard-setup
+# Validate docker-compose configuration
+make validate
+
+# Check environment file exists
+make env-check
 ```
 
 ### Cleanup
@@ -158,7 +203,7 @@ make purge
 
 ### Multi-File Docker Compose
 The stack uses **four compose files** organized by logical function:
-- `docker-compose.yml` - Core services (AdGuard, n8n, Home Assistant, Mealie, Actual Budget) - user-facing services that "do stuff"
+- `docker-compose.yml` - Core services (AdGuard, n8n, Home Assistant, Mealie, Actual Budget, Moltbot) - user-facing services that "do stuff"
 - `docker-compose.network.yml` - Network & Security (Traefik, Fail2ban) - infrastructure layer
 - `docker-compose.monitoring.yml` - Monitoring stack (Prometheus, Grafana, Alertmanager, exporters)
 - `docker-compose.dashboard.yml` - Dashboard (Homepage, Homepage API)
@@ -319,6 +364,14 @@ Required variables in `.env`:
 
 See `.env.example` for complete variable list with descriptions and defaults.
 
+**Additional Environment Variables** (see `.env.example` for full documentation):
+- **Monitoring & Alerts:** `WEBHOOK_URL`, `ALERT_EMAIL_*` - AlertManager notification configuration
+- **n8n Performance:** `DB_SQLITE_POOL_SIZE`, `N8N_RUNNERS_*`, `EXECUTIONS_TIMEOUT*` - Performance tuning
+- **Moltbot AI:** `ANTHROPIC_API_KEY`, `MOLTBOT_IMAGE` - AI assistant configuration
+- **Dashboard:** `PUID`, `PGID`, `HOMEPAGE_ALLOWED_HOSTS` - Homepage permissions and access control
+- **Service Credentials:** Various `*_USERNAME` and `*_PASSWORD` pairs for service authentication
+- **WireGuard Advanced:** `WIREGUARD_SERVERURL` - Public IP for external VPN connections
+
 **Password Escaping**: Dollar signs in passwords must be escaped as `$$` for Docker Compose (e.g., `P@$$word123` → `P@$$$$word123`)
 
 ## Docker Compose Labels Pattern
@@ -342,8 +395,6 @@ For wildcard certificate (only on dashboard router):
 
 ## Git Workflow
 
-**Current Branch**: `feature/letsencrypt-ssl` (adding Let's Encrypt SSL support)
-
 **Branching Strategy** (GitHub Flow):
 - `main` - production-ready code
 - Feature branches - `feature/description`, `fix/description`, `docs/description`
@@ -362,6 +413,23 @@ For wildcard certificate (only on dashboard router):
   - Requires: `SERVER_IP`, `DOMAIN`, `ADGUARD_PASSWORD` in `.env`
 
 - `scripts/test-domain-access.sh` - Tests HTTPS access to all services via domains
+
+### Service Configuration
+- `scripts/setup-homeassistant.sh` - Sets up Home Assistant configuration files
+  - Copies configuration templates from `config/homeassistant-template/`
+  - Creates initial `configuration.yaml` and directory structure
+  - Prepares data directory for first-time onboarding
+
+- `scripts/configure-homepage.sh` - Generates Homepage dashboard configuration files
+  - Creates `services.yaml`, `widgets.yaml`, `docker.yaml` from templates
+  - Substitutes environment variables in configuration
+  - Called during `make setup` and `make dashboard-setup`
+
+- `scripts/setup-traefik-password.sh` - Generates Traefik dashboard password hash
+  - Reads `TRAEFIK_PASSWORD` from `.env`
+  - Creates htpasswd-format hash for basic authentication
+  - Sets `TRAEFIK_DASHBOARD_USERS` environment variable
+  - Called during `make setup` and `make traefik-password`
 
 ### SSL Certificate Management (certbot)
 - `scripts/setup-certbot-gandi.sh` - Installs certbot and generates Let's Encrypt wildcard certificate
@@ -391,6 +459,40 @@ For wildcard certificate (only on dashboard router):
 - `scripts/install-wireguard.sh` - Installs WireGuard as system service (one-time setup)
 - `scripts/setup-wireguard-server.sh` - Creates WireGuard server configuration
 - `scripts/wireguard-add-peer.sh` - Adds VPN peers (clients) and generates client configs
+- `scripts/setup-wireguard-routing.sh` - Configures WireGuard routing and forwarding
+  - Sets up IP forwarding and NAT rules
+  - Configures routing for split tunneling
+  - Called during WireGuard server setup
+
+- `scripts/test-wireguard-routing.sh` - Tests WireGuard routing configuration
+  - Verifies IP forwarding is enabled
+  - Checks NAT rules are configured
+  - Tests connectivity through VPN
+
+- `scripts/wireguard-peer-management.sh` - Advanced peer management utilities
+  - List all configured peers
+  - View peer statistics and connection status
+  - Remove or modify existing peers
+
+### Firewall & Security
+- `scripts/setup-firewall.sh` - Configures UFW firewall rules
+  - Sets up default deny incoming, allow outgoing
+  - Allows SSH (rate-limited), HTTP/HTTPS, WireGuard
+  - Permits full access from local network and VPN subnet
+  - Called during initial server setup
+
+### System Setup
+- `scripts/install-docker-official.sh` - Installs Docker from official repository
+  - Removes snap-based Docker installation
+  - Adds Docker's official apt repository
+  - Installs Docker Engine with proper dependencies
+  - One-time setup for Ubuntu systems
+
+- `scripts/setup-user-permissions.sh` - Adds user to docker group
+  - Enables running docker commands without sudo
+  - Creates docker group if it doesn't exist
+  - Adds current user to docker group
+  - Requires logout/login to take effect
 
 ## Monitoring Stack
 
@@ -403,7 +505,7 @@ For wildcard certificate (only on dashboard router):
 - Rules defined in `monitoring/prometheus/alert_rules.yml`
 - Alertmanager config in `monitoring/alertmanager/alertmanager.yml`
 - Alerts routed to webhook (default: `http://127.0.0.1:5001/`)
-- See `docs/ALERTS.md` for alert definitions and response procedures
+- See `docs/archive/ALERTS.md` for alert definitions and response procedures
 
 **Accessing Monitoring**:
 - Grafana: `https://grafana.${DOMAIN}`
@@ -424,6 +526,32 @@ For wildcard certificate (only on dashboard router):
 - Configuration auto-generated by `setup-adguard-dns.sh` script
 - Requires bcrypt password hash (generated via htpasswd)
 - DNS rewrites configured as: `'*.${DOMAIN}' → ${SERVER_IP}`
+
+### Home Assistant
+- Open-source home automation platform
+- Domain access: `https://home.${DOMAIN}` (Traefik with VPN/local access only)
+- Also accessible via direct IP: `http://${SERVER_IP}:8123`
+- Data persistence: `./data/homeassistant/`
+- **Setup:**
+  - Configuration template created by `setup-homeassistant.sh`
+  - Complete onboarding wizard on first access
+  - Generate long-lived access token for Homepage dashboard integration
+- **Configuration:**
+  - `HOMEASSISTANT_URL` - Internal URL for API access (default: `http://homeassistant:8123`)
+  - `HOMEASSISTANT_TOKEN` - Long-lived access token for widgets and integrations
+  - Requires `privileged: true` for hardware access (Bluetooth, USB devices)
+- **Features:**
+  - Location tracking and presence detection
+  - Device automation and control
+  - Dashboard customization
+  - Mobile app support (iOS/Android)
+  - RESTful API for integrations
+  - Webhook support for external triggers
+- **Integration:**
+  - Homepage dashboard shows location and state information
+  - Homepage API provides helper endpoints for location queries
+  - Token-based authentication for secure API access
+- See `config/homeassistant-template/` for initial configuration files
 
 ### Traefik
 - HTTP to HTTPS redirect configured on web entrypoint
@@ -473,7 +601,7 @@ For wildcard certificate (only on dashboard router):
   - Centralizes API key management and rate limiting
   - Provides caching layer to reduce external API calls
   - Monitors system services (WireGuard, Docker) that aren't visible as containers
-- **Documentation:** See `docs/BACKEND_API.md` for API endpoints and `homepage-api/README.md` for development
+- **Documentation:** See `docs/archive/BACKEND_API.md` for API endpoints and `homepage-api/README.md` for development
 
 ### Homepage Dashboard
 - **Purpose:** Unified dashboard with system monitoring, service widgets, and custom integrations
@@ -498,7 +626,7 @@ For wildcard certificate (only on dashboard router):
   - **Container stats** (showStats: true) - System resources from Docker
   - **Application widgets** - App-specific metrics via APIs
   - Both are complementary: container stats = infrastructure, widgets = application metrics
-- **Documentation:** See `docs/DASHBOARD_SETUP.md` and `config/homepage/services-template.yaml`
+- **Documentation:** See `docs/archive/DASHBOARD_SETUP.md` and `config/homepage/services-template.yaml`
 
 ### Mealie
 - Self-hosted meal planner and recipe manager
@@ -516,7 +644,7 @@ For wildcard certificate (only on dashboard router):
   - RESTful API for integrations
   - Multi-user support with permissions
   - Mobile apps for iOS and Android
-- See `SERVICES.md` for full feature list and `docs/CONFIGURATION.md` for setup
+- See `SERVICES.md` for full feature list and `docs/archive/CONFIGURATION.md` for setup
 
 ### Actual Budget
 - Self-hosted personal finance and budgeting
@@ -534,21 +662,54 @@ For wildcard certificate (only on dashboard router):
   - Multi-month views and reports
 - See `SERVICES.md` for complete details
 
+### Moltbot
+- AI assistant accessible via messaging apps (Telegram, WhatsApp, Discord, iMessage, Slack)
+- Provides intelligent conversational interface with sandboxed code execution
+- Domain access: `https://moltbot.${DOMAIN}` (web UI, VPN/local access only)
+- Data persistence: `./data/moltbot/`
+- **Architecture:**
+  - `moltbot-gateway` - Main service that connects messaging apps to AI agent
+  - `moltbot-cli` - CLI tool for onboarding and channel configuration
+  - Sandbox execution - Isolated Docker containers for running code tasks
+- **Setup:**
+  - Build images: `make moltbot-setup` (~10-15 minutes)
+  - Run onboarding: `make moltbot-onboard` (interactive wizard)
+  - Start gateway: `make moltbot-start`
+  - Configure channels via CLI (Telegram easiest, WhatsApp also supported)
+- **Configuration:**
+  - Requires: `ANTHROPIC_API_KEY` for Claude AI models
+  - Recommended model: `claude-sonnet-4-5`
+  - Configuration stored in `./data/moltbot/.clawdbot/`
+  - Channel sessions in `./data/moltbot/.clawdbot/credentials/`
+- **API Costs:**
+  - Pay-per-use Anthropic API (no subscription)
+  - Typical conversation: $0.05-0.50 per interaction
+  - Monitor usage at console.anthropic.com
+- **Security:**
+  - Web UI secured by Traefik admin-secure middleware (VPN/local only)
+  - API keys stored in data directory (never commit to git)
+  - Sandboxed code execution isolated from host
+  - Docker socket access required for spawning sandbox containers
+  - Monitor for prompt injection risks
+- See `.env.example` lines 265-336 for detailed documentation and troubleshooting
+
 ## Documentation Structure
 
 Comprehensive docs in `docs/` directory:
-- `SETUP.md` - Installation guide
-- `CONFIGURATION.md` - Service configuration
-- `OPERATIONS.md` - Day-to-day management, updates, backups
-- `TROUBLESHOOTING.md` - Common issues and solutions
-- `ARCHITECTURE.md` - Detailed system design
-- `MONITORING_DEPLOYMENT.md` - Monitoring setup guide
-- `ALERTS.md` - Alert definitions and response procedures
-- `REMOTE_ACCESS.md` - VPN and port forwarding setup
+- `ARCHITECTURE.md` - Detailed system design and visual diagrams
+- `archive/SETUP.md` - Installation guide
+- `archive/CONFIGURATION.md` - Service configuration
+- `archive/OPERATIONS.md` - Day-to-day management, updates, backups
+- `archive/TROUBLESHOOTING.md` - Common issues and solutions
+- `archive/MONITORING_DEPLOYMENT.md` - Monitoring setup guide
+- `archive/ALERTS.md` - Alert definitions and response procedures
+- `archive/REMOTE_ACCESS.md` - VPN and port forwarding setup
+- `archive/BACKEND_API.md` - Homepage API backend documentation
+- `archive/DASHBOARD_SETUP.md` - Homepage dashboard setup guide
 
 Implementation roadmaps:
-- `monitoring-tickets/README.md` - Monitoring implementation roadmap
-- `security-tickets/README.md` - Security hardening roadmap (VPN-first strategy)
+- `tickets/monitoring-tickets/README.md` - Monitoring implementation roadmap
+- `tickets/security-tickets/README.md` - Security hardening roadmap (VPN-first strategy)
 
 ## When Making Changes
 
@@ -619,7 +780,7 @@ sudo tail -20 /var/log/certbot-traefik-reload.log
 - Permissions wrong: Cert should be 644, key should be 600
 - After config changes: Must recreate container with `docker compose up -d --force-recreate traefik`
 
-See **[docs/TROUBLESHOOTING.md#ssl-certificate-issues](docs/TROUBLESHOOTING.md)** for detailed troubleshooting.
+See **[docs/archive/TROUBLESHOOTING.md#ssl-certificate-issues](docs/archive/TROUBLESHOOTING.md)** for detailed troubleshooting.
 
 ### DNS Resolution
 - Ensure AdGuard is running: `docker compose ps adguard`

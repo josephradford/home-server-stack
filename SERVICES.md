@@ -4,10 +4,15 @@ A comprehensive catalog of all services in this homelab stack - running, planned
 
 ## Access Methods
 
-All services are accessible via two methods:
+All services are accessible via domain-based routing through Traefik:
 
-1. **Domain-based (Recommended):** `https://servicename.${DOMAIN}`
-2. **IP:port (Legacy):** `http://SERVER_IP:PORT`
+1. **Domain-based (Primary):** `https://servicename.${DOMAIN}`
+
+Some services also expose direct ports for emergency/operational access:
+
+2. **Direct Access (Emergency/Operational):** `http://SERVER_IP:PORT`
+   - Used when Traefik is unavailable or for direct metrics scraping
+   - Not intended for regular use
 
 ---
 
@@ -32,7 +37,7 @@ Currently deployed and active services.
 #### AdGuard Home
 - **Purpose:** Network-wide ad blocking and DNS server
 - **Access:** https://adguard.${DOMAIN}
-- **Legacy:** http://SERVER_IP:8888
+- **Direct Access:** http://SERVER_IP:8888 (emergency access if Traefik fails)
 - **Port:** 8888 (admin), 53 (DNS)
 - **Authentication:** Set during initial setup
 
@@ -46,7 +51,7 @@ Currently deployed and active services.
 #### Home Assistant
 - **Purpose:** Location tracking and home automation
 - **Access:** https://home.${DOMAIN}
-- **Legacy:** http://SERVER_IP:8123
+- **Direct Access:** http://SERVER_IP:8123 (for mobile app initial setup)
 - **Port:** 8123
 - **Authentication:** Set during initial setup
 - **Features:**
@@ -86,7 +91,7 @@ Currently deployed and active services.
 #### Moltbot
 - **Purpose:** AI assistant accessible via messaging apps (Signal, Telegram, WhatsApp, Discord, Slack)
 - **Access:** https://moltbot.${DOMAIN}
-- **Port:** 3000 (internal)
+- **Port:** 18789 (internal)
 - **Authentication:** None (VPN/local access only via Traefik middleware)
 - **Features:**
   - Conversational AI powered by Anthropic Claude
@@ -101,21 +106,20 @@ Currently deployed and active services.
 #### Grafana
 - **Purpose:** Metrics visualization and dashboards
 - **Access:** https://grafana.${DOMAIN}
-- **Legacy:** http://SERVER_IP:3001
-- **Port:** 3001
+- **Port:** 3000 (internal)
 - **Authentication:** admin / GRAFANA_PASSWORD
 
 #### Prometheus
 - **Purpose:** Metrics collection and alerting
 - **Access:** https://prometheus.${DOMAIN}
-- **Legacy:** http://SERVER_IP:9090
+- **Direct Access:** http://SERVER_IP:9090 (for metrics scraping)
 - **Port:** 9090
 - **Authentication:** None (VPN-protected)
 
 #### Alertmanager
 - **Purpose:** Alert routing and management
 - **Access:** https://alerts.${DOMAIN}
-- **Legacy:** http://SERVER_IP:9093
+- **Direct Access:** http://SERVER_IP:9093 (for alert routing)
 - **Port:** 9093
 - **Authentication:** None (VPN-protected)
 
