@@ -403,11 +403,11 @@ openclaw-install:
 	@echo ""
 	@echo "Prerequisites:"
 	@echo "  - Node.js 22 or higher (check with: node --version)"
-	@echo "  - ANTHROPIC_API_KEY in .env file"
-	@echo "  - SSH access to your home server at SERVER_IP"
+	@echo "  - Anthropic API key (get from console.anthropic.com)"
+	@echo "  - Telegram Bot Token (get from @BotFather)"
 	@echo ""
 	@echo "Installation steps:"
-	@echo "  1. Check Node.js version on server"
+	@echo "  1. Check Node.js version"
 	@echo "  2. Install OpenClaw using official installer"
 	@echo "  3. Run onboarding wizard (interactive)"
 	@echo "  4. Configure Telegram bot"
@@ -415,25 +415,12 @@ openclaw-install:
 	@echo ""
 	@echo "═════════════════════════════════════════════════════════════════"
 	@echo ""
-	@set -a; . ./.env; set +a; \
-	if [ -z "$$ANTHROPIC_API_KEY" ]; then \
-		echo "❌ ERROR: ANTHROPIC_API_KEY not set in .env file"; \
-		echo ""; \
-		echo "Add your Anthropic API key to .env:"; \
-		echo "  ANTHROPIC_API_KEY=sk-ant-..."; \
-		echo ""; \
-		echo "Get your API key at: https://console.anthropic.com/settings/keys"; \
-		exit 1; \
-	fi
-	@echo "Step 1: Checking Node.js version on server..."
-	@set -a; . ./.env; set +a; \
-	echo "Running: ssh $$SERVER_IP 'node --version'"; \
-	ssh $$SERVER_IP 'node --version' || { \
+	@echo "Step 1: Checking Node.js version..."
+	@node --version || { \
 		echo ""; \
 		echo "❌ Node.js not found or version too old."; \
 		echo ""; \
-		echo "Install Node.js 22 on your server:"; \
-		echo "  ssh $$SERVER_IP"; \
+		echo "Install Node.js 22:"; \
 		echo "  curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -"; \
 		echo "  sudo apt-get install -y nodejs"; \
 		echo ""; \
@@ -441,62 +428,58 @@ openclaw-install:
 	}
 	@echo ""
 	@echo "Step 2: Installing OpenClaw..."
-	@set -a; . ./.env; set +a; \
-	echo "Running installer on server..."; \
-	ssh $$SERVER_IP 'curl -fsSL https://openclaw.ai/install.sh | bash'
+	@curl -fsSL https://openclaw.ai/install.sh | bash
 	@echo ""
 	@echo "Step 3: Running onboarding wizard..."
 	@echo ""
-	@echo "⚠️  IMPORTANT: During onboarding:"
-	@echo "  - Choose Telegram as your channel"
-	@echo "  - Use LONG-POLLING mode (default - no webhook needed)"
-	@echo "  - Provide your Telegram Bot Token from @BotFather"
-	@echo "  - Enable daemon installation (--install-daemon)"
+	@echo "⚠️  IMPORTANT: During onboarding you'll be asked for:"
+	@echo "  - AI provider: Choose Anthropic"
+	@echo "  - API key: Provide your Anthropic API key"
+	@echo "  - Model: Recommend claude-sonnet-4-5"
+	@echo "  - Channel: Choose Telegram"
+	@echo "  - Mode: LONG-POLLING (default - no webhook needed)"
+	@echo "  - Bot Token: Provide your Telegram Bot Token from @BotFather"
+	@echo "  - Daemon: Enable installation (--install-daemon)"
 	@echo ""
 	@echo "Press Enter to continue to onboarding wizard..."
 	@read confirm
-	@set -a; . ./.env; set +a; \
-	echo ""; \
-	echo "Running: ssh -t $$SERVER_IP 'ANTHROPIC_API_KEY=$$ANTHROPIC_API_KEY openclaw onboard --install-daemon'"; \
-	ssh -t $$SERVER_IP "ANTHROPIC_API_KEY=$$ANTHROPIC_API_KEY openclaw onboard --install-daemon"
+	@echo ""
+	@openclaw onboard --install-daemon
 	@echo ""
 	@echo "Step 4: Starting OpenClaw gateway..."
-	@set -a; . ./.env; set +a; \
-	ssh $$SERVER_IP 'openclaw gateway start'
+	@openclaw gateway start
 	@echo ""
 	@echo "═════════════════════════════════════════════════════════════════"
 	@echo "✓ OpenClaw Installation Complete!"
 	@echo "═════════════════════════════════════════════════════════════════"
 	@echo ""
-	@echo "OpenClaw is now running as a systemd service on your server."
+	@echo "OpenClaw is now running as a systemd service."
 	@echo ""
 	@echo "Next steps:"
 	@echo "  1. Test your Telegram bot by sending it a message"
 	@echo "  2. Check status: make openclaw-status"
 	@echo "  3. View logs: make openclaw-logs"
 	@echo ""
-	@echo "Web UI access: http://SERVER_IP:18789"
+	@set -a; . ./.env; set +a; \
+	echo "Web UI access: http://$$SERVER_IP:18789"
 	@echo ""
-	@echo "Useful commands on the server:"
-	@echo "  ssh SERVER_IP"
+	@echo "Useful commands:"
 	@echo "  openclaw gateway status    # Check gateway status"
 	@echo "  openclaw health            # Health check"
 	@echo "  journalctl --user -u openclaw-gateway -f  # View logs"
 	@echo ""
 
 # Check OpenClaw service status
-openclaw-status: env-check
-	@echo "Checking OpenClaw status on server..."
-	@set -a; . ./.env; set +a; \
-	ssh $$SERVER_IP 'openclaw gateway status && openclaw health'
+openclaw-status:
+	@echo "Checking OpenClaw status..."
+	@openclaw gateway status && openclaw health
 
 # View OpenClaw gateway logs
-openclaw-logs: env-check
-	@echo "Fetching OpenClaw logs from server..."
+openclaw-logs:
+	@echo "Viewing OpenClaw logs..."
 	@echo "Press Ctrl+C to stop following logs"
 	@echo ""
-	@set -a; . ./.env; set +a; \
-	ssh $$SERVER_IP 'journalctl --user -u openclaw-gateway -f'
+	@journalctl --user -u openclaw-gateway -f
 
 # WireGuard VPN Management (System Service)
 wireguard-status:

@@ -150,17 +150,19 @@ make traefik-password
 
 ### OpenClaw AI Assistant (Native Installation)
 ```bash
-# Install OpenClaw natively on server (interactive, requires SSH)
+# NOTE: Run these commands ON the server, not from your dev machine
+# SSH to server first: ssh user@SERVER_IP
+
+# Install OpenClaw natively (interactive)
 make openclaw-install
 
 # Check OpenClaw service status
 make openclaw-status
 
-# View OpenClaw gateway logs (live stream from server)
+# View OpenClaw gateway logs (live stream)
 make openclaw-logs
 
-# Manual operations on server (via SSH)
-ssh user@SERVER_IP
+# Manual operations
 openclaw gateway status        # Check gateway status
 openclaw health               # Health check
 openclaw onboard              # Re-run onboarding
@@ -683,13 +685,14 @@ For wildcard certificate (only on dashboard router):
   - Long-polling mode (default) requires no webhook or public URL
   - Sandbox execution - Isolated processes for running code tasks
 - **Setup:**
-  - Install via Makefile: `make openclaw-install` (interactive, requires SSH to server)
+  - Run on server (SSH to server first): `make openclaw-install`
   - Installation steps:
-    1. Checks Node.js 22+ is installed on server
+    1. Checks Node.js 22+ is installed
     2. Runs official OpenClaw installer: `curl -fsSL https://openclaw.ai/install.sh | bash`
     3. Runs onboarding wizard with `--install-daemon` flag
     4. Configures Telegram bot (requires Bot Token from @BotFather)
-    5. Starts gateway as systemd user service
+    5. Configures Anthropic API key (provided during onboarding)
+    6. Starts gateway as systemd user service
   - Configuration via interactive onboarding wizard (run once during installation)
 - **Configuration:**
   - Requires: `ANTHROPIC_API_KEY` in `.env` for Claude AI models
@@ -709,9 +712,9 @@ For wildcard certificate (only on dashboard router):
   - Web UI accessible only from local network (port 18789 not exposed publicly)
   - Monitor for prompt injection risks
 - **Management:**
-  - Check status: `make openclaw-status` or `ssh SERVER_IP 'openclaw gateway status'`
-  - View logs: `make openclaw-logs` or `ssh SERVER_IP 'journalctl --user -u openclaw-gateway -f'`
-  - Health check: `ssh SERVER_IP 'openclaw health'`
+  - Check status: `make openclaw-status` (run on server)
+  - View logs: `make openclaw-logs` (run on server)
+  - Health check: `openclaw health` (run on server)
   - Runs automatically on boot via systemd
 
 ## Documentation Structure
