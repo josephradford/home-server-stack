@@ -92,7 +92,6 @@ make logs-n8n
 make logs-homeassistant
 make logs-actualbudget
 make logs-mealie
-make logs-moltbot
 make logs-homepage
 
 # View logs directly (useful for other services)
@@ -145,17 +144,27 @@ make adguard-setup
 # Setup Home Assistant configuration files
 make homeassistant-setup
 
-# Setup Moltbot AI assistant (build images)
-make moltbot-setup
-
-# Run Moltbot onboarding wizard (interactive)
-make moltbot-onboard
-
-# Start Moltbot gateway
-make moltbot-start
-
 # Generate Traefik dashboard password from .env
 make traefik-password
+```
+
+### OpenClaw AI Assistant (Native Installation)
+```bash
+# Install OpenClaw natively on server (interactive, requires SSH)
+make openclaw-install
+
+# Check OpenClaw service status
+make openclaw-status
+
+# View OpenClaw gateway logs (live stream from server)
+make openclaw-logs
+
+# Manual operations on server (via SSH)
+ssh user@SERVER_IP
+openclaw gateway status        # Check gateway status
+openclaw health               # Health check
+openclaw onboard              # Re-run onboarding
+journalctl --user -u openclaw-gateway -f  # View systemd logs
 ```
 
 ### Dashboard Management
@@ -203,7 +212,7 @@ make purge
 
 ### Multi-File Docker Compose
 The stack uses **four compose files** organized by logical function:
-- `docker-compose.yml` - Core services (AdGuard, n8n, Home Assistant, Mealie, Actual Budget, Moltbot) - user-facing services that "do stuff"
+- `docker-compose.yml` - Core services (AdGuard, n8n, Home Assistant, Mealie, Actual Budget) - user-facing services that "do stuff"
 - `docker-compose.network.yml` - Network & Security (Traefik, Fail2ban) - infrastructure layer
 - `docker-compose.monitoring.yml` - Monitoring stack (Prometheus, Grafana, Alertmanager, exporters)
 - `docker-compose.dashboard.yml` - Dashboard (Homepage, Homepage API)
@@ -367,7 +376,7 @@ See `.env.example` for complete variable list with descriptions and defaults.
 **Additional Environment Variables** (see `.env.example` for full documentation):
 - **Monitoring & Alerts:** `WEBHOOK_URL`, `ALERT_EMAIL_*` - AlertManager notification configuration
 - **n8n Performance:** `DB_SQLITE_POOL_SIZE`, `N8N_RUNNERS_*`, `EXECUTIONS_TIMEOUT*` - Performance tuning
-- **Moltbot AI:** `ANTHROPIC_API_KEY`, `MOLTBOT_IMAGE` - AI assistant configuration
+- **OpenClaw AI:** `ANTHROPIC_API_KEY` - AI assistant API key (required for native installation)
 - **Dashboard:** `PUID`, `PGID`, `HOMEPAGE_ALLOWED_HOSTS` - Homepage permissions and access control
 - **Service Credentials:** Various `*_USERNAME` and `*_PASSWORD` pairs for service authentication
 - **WireGuard Advanced:** `WIREGUARD_SERVERURL` - Public IP for external VPN connections
@@ -430,14 +439,6 @@ For wildcard certificate (only on dashboard router):
   - Creates htpasswd-format hash for basic authentication
   - Sets `TRAEFIK_DASHBOARD_USERS` environment variable
   - Called during `make setup` and `make traefik-password`
-
-- `scripts/setup-moltbot-reverse-proxy.sh` - Configures Moltbot to trust Traefik reverse proxy
-  - Adds `trustedProxies: ["172.18.0.0/16"]` to `moltbot.json` gateway section
-  - Fixes "Proxy headers detected from untrusted address" WebSocket errors
-  - Enables proper client IP detection behind Traefik
-  - Creates timestamped backup before modification
-  - Called automatically during `make moltbot-onboard`
-  - Can be run manually via `make moltbot-configure-proxy`
 
 ### SSL Certificate Management (certbot)
 - `scripts/setup-certbot-gandi.sh` - Installs certbot and generates Let's Encrypt wildcard certificate
@@ -670,41 +671,48 @@ For wildcard certificate (only on dashboard router):
   - Multi-month views and reports
 - See `SERVICES.md` for complete details
 
-### Moltbot
-- AI assistant accessible via messaging apps (Telegram, WhatsApp, Discord, iMessage, Slack)
+### OpenClaw AI Assistant (Native Installation)
+- AI assistant accessible via messaging apps (Telegram, WhatsApp, Discord)
 - Provides intelligent conversational interface with sandboxed code execution
-- Domain access: `https://moltbot.${DOMAIN}` (web UI, VPN/local access only)
-- Data persistence: `./data/moltbot/`
+- **Installation:** Native system service (NOT Docker) - runs directly on Ubuntu server
+- Web UI access: `http://${SERVER_IP}:18789`
+- Configuration: `~/.openclaw/` on server (not in repo)
 - **Architecture:**
-  - `moltbot-gateway` - Main service that connects messaging apps to AI agent
-  - `moltbot-cli` - CLI tool for onboarding and channel configuration
-  - Sandbox execution - Isolated Docker containers for running code tasks
+  - `openclaw-gateway` - systemd user service that connects messaging apps to AI
+  - Runs on port 18789 (web UI) and 8787 (optional Telegram webhook)
+  - Long-polling mode (default) requires no webhook or public URL
+  - Sandbox execution - Isolated processes for running code tasks
 - **Setup:**
-  - Build images: `make moltbot-setup` (~10-15 minutes)
-  - Run onboarding: `make moltbot-onboard` (interactive wizard, automatically configures reverse proxy)
-  - Start gateway: `make moltbot-start`
-  - Configure channels via CLI (Telegram easiest, WhatsApp also supported)
+  - Install via Makefile: `make openclaw-install` (interactive, requires SSH to server)
+  - Installation steps:
+    1. Checks Node.js 22+ is installed on server
+    2. Runs official OpenClaw installer: `curl -fsSL https://openclaw.ai/install.sh | bash`
+    3. Runs onboarding wizard with `--install-daemon` flag
+    4. Configures Telegram bot (requires Bot Token from @BotFather)
+    5. Starts gateway as systemd user service
+  - Configuration via interactive onboarding wizard (run once during installation)
 - **Configuration:**
-  - Requires: `ANTHROPIC_API_KEY` for Claude AI models
+  - Requires: `ANTHROPIC_API_KEY` in `.env` for Claude AI models
   - Recommended model: `claude-sonnet-4-5`
-  - Configuration stored in `./data/moltbot/.clawdbot/moltbot.json`
-  - Channel sessions in `./data/moltbot/.clawdbot/credentials/`
-  - **Reverse proxy:** Automatically configured during `make moltbot-onboard`
-    - Adds Docker bridge network (172.18.0.0/16) to trusted proxies
-    - Fixes "Proxy headers detected from untrusted address" errors
-    - Allows proper client IP detection behind Traefik reverse proxy
-    - Manual reconfiguration: `make moltbot-configure-proxy` (if needed)
+  - Configuration stored on server: `~/.openclaw/openclaw.json`
+  - Channel sessions in `~/.openclaw/credentials/`
+  - Telegram uses **long-polling** (default) - no webhook or reverse proxy needed
 - **API Costs:**
   - Pay-per-use Anthropic API (no subscription)
   - Typical conversation: $0.05-0.50 per interaction
   - Monitor usage at console.anthropic.com
 - **Security:**
-  - Web UI secured by Traefik admin-secure middleware (VPN/local only)
-  - API keys stored in data directory (never commit to git)
+  - Runs as native systemd user service (isolated from Docker)
+  - API keys stored in server home directory (never commit to git)
   - Sandboxed code execution isolated from host
-  - Docker socket access required for spawning sandbox containers
+  - No Docker socket access required
+  - Web UI accessible only from local network (port 18789 not exposed publicly)
   - Monitor for prompt injection risks
-- See `.env.example` lines 265-336 for detailed documentation and troubleshooting
+- **Management:**
+  - Check status: `make openclaw-status` or `ssh SERVER_IP 'openclaw gateway status'`
+  - View logs: `make openclaw-logs` or `ssh SERVER_IP 'journalctl --user -u openclaw-gateway -f'`
+  - Health check: `ssh SERVER_IP 'openclaw health'`
+  - Runs automatically on boot via systemd
 
 ## Documentation Structure
 

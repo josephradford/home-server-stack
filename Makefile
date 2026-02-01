@@ -2,8 +2,8 @@
 # Simplifies deployment and maintenance operations
 
 .PHONY: help setup update start stop restart logs build build-custom pull status clean purge validate env-check
-.PHONY: logs-n8n logs-homepage logs-homeassistant logs-actualbudget logs-mealie logs-moltbot
-.PHONY: adguard-setup homeassistant-setup moltbot-setup moltbot-onboard moltbot-start setup-certs test-domain-access traefik-password
+.PHONY: logs-n8n logs-homepage logs-homeassistant logs-actualbudget logs-mealie
+.PHONY: adguard-setup homeassistant-setup openclaw-install openclaw-status openclaw-logs setup-certs test-domain-access traefik-password
 .PHONY: wireguard-status wireguard-install wireguard-setup wireguard-check
 .PHONY: ssl-setup ssl-copy-certs ssl-configure-traefik ssl-setup-renewal ssl-renew-test
 .PHONY: dashboard-setup dashboard-start dashboard-stop dashboard-restart dashboard-logs dashboard-status
@@ -52,7 +52,6 @@ help:
 	@echo "  make logs-homeassistant - Show Home Assistant logs only"
 	@echo "  make logs-actualbudget  - Show Actual Budget logs only"
 	@echo "  make logs-mealie        - Show Mealie logs only"
-	@echo "  make logs-moltbot       - Show Moltbot logs only"
 	@echo "  make logs-homepage      - Show Homepage logs only"
 	@echo ""
 	@echo "Dashboard Management:"
@@ -66,8 +65,12 @@ help:
 	@echo "Service Configuration:"
 	@echo "  make adguard-setup            - Configure DNS rewrites for domain-based access"
 	@echo "  make homeassistant-setup      - Setup Home Assistant configuration files"
-	@echo "  make moltbot-setup            - Build Moltbot sandbox image for code execution"
 	@echo "  make traefik-password         - Generate Traefik dashboard password from .env"
+	@echo ""
+	@echo "OpenClaw AI Assistant (Native Install):"
+	@echo "  make openclaw-install         - Install OpenClaw natively on the server"
+	@echo "  make openclaw-status          - Check OpenClaw service status"
+	@echo "  make openclaw-logs            - View OpenClaw gateway logs"
 	@echo ""
 	@echo "WireGuard VPN Management:"
 	@echo "  make wireguard-install        - Install WireGuard packages (one-time, requires sudo)"
@@ -110,9 +113,6 @@ validate: env-check
 build: validate
 	@echo "Building services from source..."
 	@$(COMPOSE) build
-	@echo ""
-	@echo "Building Moltbot images..."
-	@$(MAKE) moltbot-setup || echo "⚠️  Moltbot build failed (rebuild with: make moltbot-setup)"
 	@echo "✓ Build complete"
 
 # Build only custom services (faster rebuild during development)
@@ -149,20 +149,17 @@ setup: env-check validate wireguard-check
 	@echo "Step 6/10: Building custom services from source..."
 	@$(COMPOSE) build homepage-api
 	@echo ""
-	@echo "Step 7/10: Building Moltbot sandbox for code execution..."
-	@$(MAKE) moltbot-setup || echo "⚠️  Moltbot sandbox build failed (service will still start, rebuild with: make moltbot-setup)"
-	@echo ""
-	@echo "Step 8/10: Starting services (Docker Compose will create networks)..."
+	@echo "Step 7/10: Starting services (Docker Compose will create networks)..."
 	@$(COMPOSE) up -d
 	@echo ""
-	@echo "Step 9/10: Fixing data directory permissions..."
+	@echo "Step 8/10: Fixing data directory permissions..."
 	@echo "Containers create directories as root, fixing ownership for user access..."
 	@if [ -d "data" ]; then \
 		sudo chown -R $(shell id -u):$(shell getent group docker | cut -d: -f3) data/ && \
 		echo "✓ Data directory permissions fixed"; \
 	fi
 	@echo ""
-	@echo "Step 10/10: Configuring AdGuard DNS rewrites..."
+	@echo "Step 9/10: Configuring AdGuard DNS rewrites..."
 	@$(MAKE) adguard-setup
 	@echo ""
 	@$(COMPOSE) ps
@@ -180,7 +177,6 @@ setup: env-check validate wireguard-check
 		echo "    - Home Assistant:     https://home.$$DOMAIN"; \
 		echo "    - Actual Budget:      https://actual.$$DOMAIN"; \
 		echo "    - Mealie:             https://mealie.$$DOMAIN"; \
-		echo "    - Moltbot:            https://moltbot.$$DOMAIN (requires ANTHROPIC_API_KEY)"; \
 		echo "    - Grafana:            https://grafana.$$DOMAIN"; \
 		echo "    - Prometheus:         https://prometheus.$$DOMAIN"; \
 		echo "    - Alertmanager:       https://alerts.$$DOMAIN"; \
@@ -304,9 +300,6 @@ logs-actualbudget:
 logs-mealie:
 	@$(COMPOSE) logs -f mealie
 
-logs-moltbot:
-	@$(COMPOSE) logs -f moltbot-gateway
-
 logs-homepage:
 	@$(COMPOSE_DASHBOARD) logs -f homepage
 
@@ -396,71 +389,114 @@ homeassistant-setup: env-check
 	@echo ""
 	@echo "✓ Home Assistant configuration setup complete!"
 
-# Moltbot AI Assistant setup
-moltbot-setup: env-check
-	@echo "Setting up Moltbot AI Assistant..."
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# OpenClaw AI Assistant (Native Installation)
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+# Install OpenClaw natively on the server
+openclaw-install:
+	@echo "═════════════════════════════════════════════════════════════════"
+	@echo "OpenClaw AI Assistant - Native Installation"
+	@echo "═════════════════════════════════════════════════════════════════"
 	@echo ""
-	@echo "Step 1/3: Building Moltbot gateway and sandbox images..."
-	@if [ -d /tmp/moltbot-build ]; then rm -rf /tmp/moltbot-build; fi
-	@git clone https://github.com/moltbot/moltbot.git /tmp/moltbot-build
-	@cd /tmp/moltbot-build && \
-		echo "Building gateway image (moltbot:local)..." && \
-		docker build -t moltbot:local -f Dockerfile . && \
-		echo "✓ Gateway image built" && \
-		echo "" && \
-		echo "Building sandbox image (moltbot-sandbox:bookworm-slim)..." && \
-		docker build -t moltbot-sandbox:bookworm-slim -f Dockerfile.sandbox . && \
-		echo "✓ Sandbox image built"
-	@rm -rf /tmp/moltbot-build
+	@echo "This will install OpenClaw as a native system service (not Docker)."
 	@echo ""
-	@echo "Step 2/3: Preparing data directories..."
-	@mkdir -p data/moltbot/.clawdbot data/moltbot/clawd
-	@echo "Setting ownership to UID 1000 (node user in container)..."
-	@if [ "$$(id -u)" = "0" ]; then \
-		chown -R 1000:1000 data/moltbot; \
-	else \
-		sudo chown -R 1000:1000 data/moltbot || { \
-			echo "⚠️  Warning: Could not set ownership. If onboarding fails with permission error, run:"; \
-			echo "  sudo chown -R 1000:1000 data/moltbot"; \
-		}; \
+	@echo "Prerequisites:"
+	@echo "  - Node.js 22 or higher (check with: node --version)"
+	@echo "  - ANTHROPIC_API_KEY in .env file"
+	@echo "  - SSH access to your home server at SERVER_IP"
+	@echo ""
+	@echo "Installation steps:"
+	@echo "  1. Check Node.js version on server"
+	@echo "  2. Install OpenClaw using official installer"
+	@echo "  3. Run onboarding wizard (interactive)"
+	@echo "  4. Configure Telegram bot"
+	@echo "  5. Start gateway as systemd service"
+	@echo ""
+	@echo "═════════════════════════════════════════════════════════════════"
+	@echo ""
+	@set -a; . ./.env; set +a; \
+	if [ -z "$$ANTHROPIC_API_KEY" ]; then \
+		echo "❌ ERROR: ANTHROPIC_API_KEY not set in .env file"; \
+		echo ""; \
+		echo "Add your Anthropic API key to .env:"; \
+		echo "  ANTHROPIC_API_KEY=sk-ant-..."; \
+		echo ""; \
+		echo "Get your API key at: https://console.anthropic.com/settings/keys"; \
+		exit 1; \
 	fi
-	@echo "✓ Directories prepared"
+	@echo "Step 1: Checking Node.js version on server..."
+	@set -a; . ./.env; set +a; \
+	echo "Running: ssh $$SERVER_IP 'node --version'"; \
+	ssh $$SERVER_IP 'node --version' || { \
+		echo ""; \
+		echo "❌ Node.js not found or version too old."; \
+		echo ""; \
+		echo "Install Node.js 22 on your server:"; \
+		echo "  ssh $$SERVER_IP"; \
+		echo "  curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -"; \
+		echo "  sudo apt-get install -y nodejs"; \
+		echo ""; \
+		exit 1; \
+	}
 	@echo ""
-	@echo "Step 3/3: Setup complete!"
+	@echo "Step 2: Installing OpenClaw..."
+	@set -a; . ./.env; set +a; \
+	echo "Running installer on server..."; \
+	ssh $$SERVER_IP 'curl -fsSL https://openclaw.ai/install.sh | bash'
+	@echo ""
+	@echo "Step 3: Running onboarding wizard..."
+	@echo ""
+	@echo "⚠️  IMPORTANT: During onboarding:"
+	@echo "  - Choose Telegram as your channel"
+	@echo "  - Use LONG-POLLING mode (default - no webhook needed)"
+	@echo "  - Provide your Telegram Bot Token from @BotFather"
+	@echo "  - Enable daemon installation (--install-daemon)"
+	@echo ""
+	@echo "Press Enter to continue to onboarding wizard..."
+	@read confirm
+	@set -a; . ./.env; set +a; \
+	echo ""; \
+	echo "Running: ssh -t $$SERVER_IP 'ANTHROPIC_API_KEY=$$ANTHROPIC_API_KEY openclaw onboard --install-daemon'"; \
+	ssh -t $$SERVER_IP "ANTHROPIC_API_KEY=$$ANTHROPIC_API_KEY openclaw onboard --install-daemon"
+	@echo ""
+	@echo "Step 4: Starting OpenClaw gateway..."
+	@set -a; . ./.env; set +a; \
+	ssh $$SERVER_IP 'openclaw gateway start'
+	@echo ""
+	@echo "═════════════════════════════════════════════════════════════════"
+	@echo "✓ OpenClaw Installation Complete!"
+	@echo "═════════════════════════════════════════════════════════════════"
+	@echo ""
+	@echo "OpenClaw is now running as a systemd service on your server."
 	@echo ""
 	@echo "Next steps:"
-	@echo "  1. Run onboarding wizard (interactive setup):"
-	@echo "     make moltbot-onboard"
+	@echo "  1. Test your Telegram bot by sending it a message"
+	@echo "  2. Check status: make openclaw-status"
+	@echo "  3. View logs: make openclaw-logs"
 	@echo ""
-	@echo "  2. Start the gateway:"
-	@echo "     make moltbot-start"
+	@echo "Web UI access: http://SERVER_IP:18789"
 	@echo ""
-	@echo "  3. Access web UI: https://moltbot.\$${DOMAIN}"
+	@echo "Useful commands on the server:"
+	@echo "  ssh SERVER_IP"
+	@echo "  openclaw gateway status    # Check gateway status"
+	@echo "  openclaw health            # Health check"
+	@echo "  journalctl --user -u openclaw-gateway -f  # View logs"
+	@echo ""
 
-# Moltbot onboarding wizard (interactive)
-moltbot-onboard:
-	@echo "Starting Moltbot onboarding wizard..."
-	@echo ""
-	@docker compose run --rm moltbot-cli onboard
-	@echo ""
-	@echo "Configuring reverse proxy support..."
-	@./scripts/setup-moltbot-reverse-proxy.sh
+# Check OpenClaw service status
+openclaw-status: env-check
+	@echo "Checking OpenClaw status on server..."
+	@set -a; . ./.env; set +a; \
+	ssh $$SERVER_IP 'openclaw gateway status && openclaw health'
 
-# Start Moltbot gateway
-moltbot-start:
-	@echo "Starting Moltbot gateway..."
-	@docker compose up -d moltbot-gateway
+# View OpenClaw gateway logs
+openclaw-logs: env-check
+	@echo "Fetching OpenClaw logs from server..."
+	@echo "Press Ctrl+C to stop following logs"
 	@echo ""
-	@echo "✓ Moltbot gateway started"
-	@echo "Access web UI: https://moltbot.\$${DOMAIN}"
-
-# Configure Moltbot for reverse proxy access (standalone - normally done during onboard)
-moltbot-configure-proxy:
-	@echo "Configuring Moltbot for reverse proxy access..."
-	@./scripts/setup-moltbot-reverse-proxy.sh
-	@echo ""
-	@echo "Note: This is automatically done during 'make moltbot-onboard'"
-	@echo "Only run this manually if you need to reconfigure an existing setup"
+	@set -a; . ./.env; set +a; \
+	ssh $$SERVER_IP 'journalctl --user -u openclaw-gateway -f'
 
 # WireGuard VPN Management (System Service)
 wireguard-status:

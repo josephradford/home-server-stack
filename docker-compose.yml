@@ -6,7 +6,6 @@
 # - Home Assistant: Location tracking and home automation
 # - Actual Budget: Personal finance and budgeting
 # - Mealie: Meal planning and recipe management
-# - Moltbot: AI assistant accessible via Signal messaging
 
 services:
   adguard:
@@ -168,55 +167,6 @@ services:
       - "traefik.http.services.mealie.loadbalancer.server.port=9000"
       # Security: VPN/Local access only - meal planning and recipes should be private
       - "traefik.http.routers.mealie.middlewares=admin-secure"
-
-  moltbot-gateway:
-    image: ${MOLTBOT_IMAGE:-moltbot:local}
-    container_name: moltbot-gateway
-    restart: unless-stopped
-    init: true
-    command: node dist/index.js gateway --bind lan --port 18789
-    expose:
-      - 18789
-      - 18790
-    environment:
-      - HOME=/home/node
-      - TERM=xterm-256color
-      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
-      - TZ=${TIMEZONE}
-    volumes:
-      - ./data/moltbot/.clawdbot:/home/node/.clawdbot
-      - ./data/moltbot/clawd:/home/node/clawd
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-    networks:
-      - homeserver
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.moltbot.rule=Host(`moltbot.${DOMAIN}`)"
-      - "traefik.http.routers.moltbot.entrypoints=websecure"
-      - "traefik.http.routers.moltbot.tls=true"
-      # Using file provider certificate (wildcard from certbot)
-      - "traefik.http.services.moltbot.loadbalancer.server.port=18789"
-      # Security: VPN/Local access only - AI assistant should be private
-      - "traefik.http.routers.moltbot.middlewares=admin-secure"
-
-  moltbot-cli:
-    image: ${MOLTBOT_IMAGE:-moltbot:local}
-    container_name: moltbot-cli
-    stdin_open: true
-    tty: true
-    entrypoint: node dist/index.js
-    environment:
-      - HOME=/home/node
-      - TERM=xterm-256color
-      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
-    volumes:
-      - ./data/moltbot/.clawdbot:/home/node/.clawdbot
-      - ./data/moltbot/clawd:/home/node/clawd
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-    networks:
-      - homeserver
-    profiles:
-      - tools
 
 networks:
   homeserver:
