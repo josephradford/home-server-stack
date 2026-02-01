@@ -57,7 +57,11 @@ graph TB
         ActualBudget["Actual Budget
         Finance
         :5006"]
-        Moltbot["Moltbot
+    end
+
+    subgraph Native["Native Services
+    System Services - Not Docker"]
+        OpenClaw["OpenClaw
         AI Assistant
         :18789"]
     end
@@ -98,8 +102,9 @@ graph TB
         HomeAssistantData[(Home Assistant Config)]
         MealieData[(Mealie Recipes)]
         ActualBudgetData[(Actual Budget Data)]
-        MoltbotData[(Moltbot AI Data)]
         TraefikData[(Traefik Certs/Logs)]
+        OpenClawData[(OpenClaw Config
+        ~/.openclaw on server)]
         GrafanaData[(Grafana Config)]
         PrometheusData[(Prometheus TSDB)]
         WireGuardData[(WireGuard Configs)]
@@ -124,7 +129,6 @@ graph TB
     Traefik -->|*.domain routing| HomeAssistant
     Traefik -->|*.domain routing| Mealie
     Traefik -->|*.domain routing| ActualBudget
-    Traefik -->|*.domain routing| Moltbot
     Traefik -->|*.domain routing| Grafana
     Traefik -->|*.domain routing| Prometheus
     Traefik -->|*.domain routing| Alertmanager
@@ -156,7 +160,7 @@ graph TB
     HomeAssistant -.->|Stores| HomeAssistantData
     Mealie -.->|Stores| MealieData
     ActualBudget -.->|Stores| ActualBudgetData
-    Moltbot -.->|Stores| MoltbotData
+    OpenClaw -.->|Stores| OpenClawData
     Traefik -.->|Stores| TraefikData
     Grafana -.->|Stores| GrafanaData
     Prometheus -.->|Stores| PrometheusData
@@ -172,11 +176,12 @@ graph TB
 
     class VPN,HTTP external
     class Traefik,Fail2ban,UFW network
-    class AdGuard,N8N,HomeAssistant,Mealie,ActualBudget,Moltbot core
+    class AdGuard,N8N,HomeAssistant,Mealie,ActualBudget core
     class Prometheus,Grafana,Alertmanager,NodeExporter,CAdvisor monitoring
     class Homepage,HomepageAPI dashboard
-    class AdGuardData,N8NData,HomeAssistantData,MealieData,ActualBudgetData,MoltbotData,TraefikData,GrafanaData,PrometheusData,WireGuardData data
-    class Certbot system
+    class AdGuardData,N8NData,HomeAssistantData,MealieData,ActualBudgetData,TraefikData,GrafanaData,PrometheusData,WireGuardData data
+    class Certbot,OpenClaw system
+    class OpenClawData data
 ```
 
 ---

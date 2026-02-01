@@ -88,18 +88,23 @@ Currently deployed and active services.
   - Multi-user support with permissions
   - Mobile apps for iOS and Android
 
-#### Moltbot
-- **Purpose:** AI assistant accessible via messaging apps (Signal, Telegram, WhatsApp, Discord, Slack)
-- **Access:** https://moltbot.${DOMAIN}
-- **Port:** 18789 (internal)
-- **Authentication:** None (VPN/local access only via Traefik middleware)
+#### OpenClaw AI Assistant (Native Installation)
+- **Purpose:** AI assistant accessible via messaging apps (Telegram, WhatsApp, Discord)
+- **Installation:** Native systemd service (NOT Docker) - installed directly on Ubuntu server
+- **Access:** http://${SERVER_IP}:18789 (web UI, local network only)
+- **Setup:** `make openclaw-install` (requires SSH to server)
+- **Authentication:** None (local network access only, no Traefik routing)
 - **Features:**
   - Conversational AI powered by Anthropic Claude
-  - Multi-platform messaging support (Signal, Telegram, WhatsApp, Discord, Slack)
+  - Multi-platform messaging support (Telegram, WhatsApp, Discord)
   - Sandboxed code execution for programming tasks
-  - Device linking via QR code (Signal)
-  - Persistent chat history and session data
-  - Ephemeral sandbox containers for security
+  - Long-polling mode (default) - no webhook or public URL needed
+  - Persistent chat history and session data (stored on server: ~/.openclaw/)
+  - Runs as systemd user service (auto-starts on boot)
+- **Management:**
+  - Check status: `make openclaw-status`
+  - View logs: `make openclaw-logs`
+  - Manual SSH: `ssh SERVER_IP 'openclaw gateway status'`
 
 ### Monitoring Stack
 
@@ -143,7 +148,7 @@ Currently deployed and active services.
 | Home Assistant | https://home.${DOMAIN} | http://IP:8123 |
 | Actual Budget | https://actual.${DOMAIN} | N/A |
 | Mealie | https://mealie.${DOMAIN} | N/A |
-| Moltbot | https://moltbot.${DOMAIN} | N/A |
+| OpenClaw (Native) | N/A | http://IP:18789 |
 | Grafana | https://grafana.${DOMAIN} | http://IP:3001 |
 | Prometheus | https://prometheus.${DOMAIN} | http://IP:9090 |
 | Alertmanager | https://alerts.${DOMAIN} | http://IP:9093 |

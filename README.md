@@ -7,7 +7,7 @@ A complete self-hosted infrastructure for home automation, AI, and network servi
 **Core Services:**
 - **[AdGuard Home](https://github.com/AdguardTeam/AdGuardHome)** - Network-wide ad blocking and DNS server
 - **[n8n](https://github.com/n8n-io/n8n)** - Workflow automation platform
-- **[Moltbot](https://github.com/moltbot/moltbot)** - AI assistant accessible via Signal/Telegram/WhatsApp
+- **[OpenClaw](https://openclaw.ai)** - AI assistant accessible via Telegram/WhatsApp/Discord (native install)
 - **[WireGuard](https://github.com/wireguard)** - VPN for secure remote access
 - **[Traefik](https://github.com/traefik/traefik)** - Reverse proxy for domain-based service access
 
@@ -56,16 +56,22 @@ All services are accessible via domain names on your local network:
 - **Traefik Dashboard:** `https://traefik.${DOMAIN}`
 - **AdGuard Home:** `https://adguard.${DOMAIN}` (DNS admin)
 - **n8n:** `https://n8n.${DOMAIN}` (Workflow automation)
-- **Moltbot:** `https://moltbot.${DOMAIN}` (AI assistant)
 - **Grafana:** `https://grafana.${DOMAIN}` (Monitoring)
 - **Prometheus:** `https://prometheus.${DOMAIN}` (Metrics)
 - **Alertmanager:** `https://alerts.${DOMAIN}` (Alerts)
+
+**OpenClaw AI Assistant** (Native installation - not Docker):
+- Install with: `make openclaw-install` (requires SSH to server)
+- Web UI: `http://${SERVER_IP}:18789`
+- Access via Telegram bot
+- See `make help` for OpenClaw commands
 
 **Note:** Services are accessible via domain names thanks to Traefik reverse proxy and AdGuard Home DNS. Your devices must use AdGuard Home as their DNS server (configured automatically if DHCP points to the server).
 
 **Direct Access (Emergency/Operational):** Some services expose direct ports for specific use cases:
 - AdGuard Home: `http://SERVER_IP:8888` (emergency access if Traefik fails)
 - Home Assistant: `http://SERVER_IP:8123` (mobile app initial setup)
+- OpenClaw: `http://SERVER_IP:18789` (web UI - native installation)
 - Prometheus: `http://SERVER_IP:9090` (metrics scraping)
 - Alertmanager: `http://SERVER_IP:9093` (alert routing)
 
