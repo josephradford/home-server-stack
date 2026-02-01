@@ -92,7 +92,7 @@ Currently deployed and active services.
 - **Purpose:** AI assistant accessible via messaging apps (Telegram, WhatsApp, Discord)
 - **Installation:** Native systemd service (NOT Docker) - installed directly on Ubuntu server
 - **Access:** http://${SERVER_IP}:18789 (web UI, local network only)
-- **Setup:** `make openclaw-install` (requires SSH to server)
+- **Setup:** `make openclaw-install` (run on server)
 - **Authentication:** None (local network access only, no Traefik routing)
 - **Features:**
   - Conversational AI powered by Anthropic Claude
@@ -102,9 +102,9 @@ Currently deployed and active services.
   - Persistent chat history and session data (stored on server: ~/.openclaw/)
   - Runs as systemd user service (auto-starts on boot)
 - **Management:**
-  - Check status: `make openclaw-status`
-  - View logs: `make openclaw-logs`
-  - Manual SSH: `ssh SERVER_IP 'openclaw gateway status'`
+  - Check status: `make openclaw-status` (run on server)
+  - View logs: `make openclaw-logs` (run on server)
+  - Manual commands: `openclaw gateway status`, `openclaw health`
 
 ### Monitoring Stack
 

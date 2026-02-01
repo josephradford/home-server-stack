@@ -61,7 +61,7 @@ All services are accessible via domain names on your local network:
 - **Alertmanager:** `https://alerts.${DOMAIN}` (Alerts)
 
 **OpenClaw AI Assistant** (Native installation - not Docker):
-- Install with: `make openclaw-install` (requires SSH to server)
+- Install with: `make openclaw-install` (run on server, not dev machine)
 - Web UI: `http://${SERVER_IP}:18789`
 - Access via Telegram bot
 - See `make help` for OpenClaw commands
