@@ -109,28 +109,6 @@
         href: https://transportnsw.info/
         description: View all services
 
-# Family & Location - Location tracking and automation
-- Family & Location:
-    - Home Assistant:
-        icon: home-assistant.png
-        href: http://{{HOMEPAGE_VAR_SERVER_IP}}:8123
-        description: Location & Automation Hub
-        widget:
-          type: homeassistant
-          url: {{HOMEPAGE_VAR_HOMEASSISTANT_URL}}
-          key: {{HOMEPAGE_VAR_HOMEASSISTANT_TOKEN}}
-        container: homeassistant
-        server: my-docker
-        showStats: true
-
-    - Family Map:
-        icon: mdi-map-marker-multiple
-        href: http://{{HOMEPAGE_VAR_SERVER_IP}}:8123/lovelace/map
-        description: View all locations
-
-    # Person entities will be added after iOS app setup
-    # See Ticket 09 for iOS Companion App configuration
-
 # Core Services - Primary user-facing services that "do stuff"
 - Services:
   - Core Services:
@@ -152,30 +130,6 @@
           href: https://n8n.{{HOMEPAGE_VAR_DOMAIN}}
           description: Workflow automation
           container: n8n
-          server: my-docker
-          showStats: true
-
-      - Actual Budget:
-          icon: actual.png
-          href: https://actual.{{HOMEPAGE_VAR_DOMAIN}}
-          description: Personal finance & budgeting
-          container: actualbudget
-          server: my-docker
-          showStats: true
-
-      - Mealie:
-          icon: mealie.png
-          href: https://mealie.{{HOMEPAGE_VAR_DOMAIN}}
-          description: Meal planning & recipes
-          container: mealie
-          server: my-docker
-          showStats: true
-
-      - Moltbot:
-          icon: mdi-robot
-          href: https://moltbot.{{HOMEPAGE_VAR_DOMAIN}}
-          description: AI assistant via messaging apps
-          container: moltbot-gateway
           server: my-docker
           showStats: true
 

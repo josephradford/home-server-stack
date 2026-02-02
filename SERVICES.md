@@ -48,46 +48,6 @@ Currently deployed and active services.
 - **Port:** 5678
 - **Authentication:** N8N_USER / N8N_PASSWORD from .env
 
-#### Home Assistant
-- **Purpose:** Location tracking and home automation
-- **Access:** https://home.${DOMAIN}
-- **Direct Access:** http://SERVER_IP:8123 (for mobile app initial setup)
-- **Port:** 8123
-- **Authentication:** Set during initial setup
-- **Features:**
-  - Family location tracking via iOS/Android Companion App
-  - iCloud device tracking (AirPods, iPads, etc.)
-  - Home automation and location-based triggers
-  - Integration with n8n workflows
-
-#### Actual Budget
-- **Purpose:** Self-hosted personal finance and budgeting
-- **Access:** https://actual.${DOMAIN}
-- **Port:** 5006 (internal)
-- **Authentication:** No login required (VPN/local access only)
-- **Features:**
-  - Privacy-focused budgeting with local data storage
-  - Bank sync support (SimpleFIN, GoCardless)
-  - Mobile apps for iOS and Android
-  - End-to-end encrypted sync
-  - Zero-based budgeting methodology
-
-#### Mealie
-- **Purpose:** Self-hosted meal planner and recipe manager
-- **Access:** https://mealie.${DOMAIN}
-- **Port:** 9000 (internal)
-- **Authentication:** changeme@example.com / MyPassword (change after first login)
-- **Features:**
-  - Recipe management with image support and tags
-  - Meal planning calendar with drag-and-drop interface
-  - Automatic shopping list generation from meal plans
-  - Recipe import from URLs (supports 1000+ websites)
-  - Cooking mode with step-by-step instructions
-  - Mobile-responsive web interface
-  - RESTful API for integrations
-  - Multi-user support with permissions
-  - Mobile apps for iOS and Android
-
 #### OpenClaw AI Assistant (Native Installation)
 - **Purpose:** AI assistant accessible via messaging apps (Telegram, WhatsApp, Discord)
 - **Installation:** Native systemd service (NOT Docker) - installed directly on Ubuntu server
@@ -145,9 +105,6 @@ Currently deployed and active services.
 | Traefik | https://traefik.${DOMAIN} | N/A |
 | AdGuard | https://adguard.${DOMAIN} | http://IP:8888 |
 | n8n | https://n8n.${DOMAIN} | http://IP:5678 |
-| Home Assistant | https://home.${DOMAIN} | http://IP:8123 |
-| Actual Budget | https://actual.${DOMAIN} | N/A |
-| Mealie | https://mealie.${DOMAIN} | N/A |
 | OpenClaw (Native) | N/A | http://IP:18789 |
 | Grafana | https://grafana.${DOMAIN} | http://IP:3001 |
 | Prometheus | https://prometheus.${DOMAIN} | http://IP:9090 |

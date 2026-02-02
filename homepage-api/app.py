@@ -22,8 +22,6 @@ CORS(app)
 
 # Configuration from environment variables
 TRANSPORT_NSW_API_KEY = os.getenv('TRANSPORT_NSW_API_KEY')
-HOMEASSISTANT_URL = os.getenv('HOMEASSISTANT_URL', 'http://homeassistant:8123')
-HOMEASSISTANT_TOKEN = os.getenv('HOMEASSISTANT_TOKEN')
 TOMTOM_API_KEY = os.getenv('TOMTOM_API_KEY')
 
 # BOM Weather Configuration (using weather-au library)
@@ -39,7 +37,6 @@ def health_check():
         'timestamp': datetime.now().isoformat(),
         'services': {
             'transport_nsw': 'configured' if TRANSPORT_NSW_API_KEY else 'not configured',
-            'home_assistant': 'configured' if HOMEASSISTANT_TOKEN else 'not configured',
             'tomtom': 'configured' if TOMTOM_API_KEY else 'not configured',
             'wireguard': 'system service',
             'docker': 'system service'
@@ -663,48 +660,6 @@ def docker_status():
     
     except Exception as e:
         return jsonify({'error': f'Unexpected error: {str(e)}'}), 500
-
-
-# =============================================================================
-# HOME ASSISTANT HELPERS
-# =============================================================================
-
-@app.route('/api/homeassistant/locations')
-def ha_locations():
-    """Get family member locations from Home Assistant"""
-    try:
-        if not HOMEASSISTANT_TOKEN:
-            return jsonify({'error': 'Home Assistant not configured'}), 503
-
-        headers = {
-            'Authorization': f'Bearer {HOMEASSISTANT_TOKEN}',
-            'Content-Type': 'application/json'
-        }
-
-        response = requests.get(
-            f'{HOMEASSISTANT_URL}/api/states',
-            headers=headers,
-            timeout=10
-        )
-        response.raise_for_status()
-        states = response.json()
-
-        # Filter for person entities
-        persons = []
-        for entity in states:
-            if entity['entity_id'].startswith('person.'):
-                persons.append({
-                    'name': entity['attributes'].get('friendly_name'),
-                    'location': entity['state'],
-                    'latitude': entity['attributes'].get('latitude'),
-                    'longitude': entity['attributes'].get('longitude'),
-                    'last_updated': entity['last_updated']
-                })
-
-        return jsonify({'persons': persons})
-
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
 
 
 if __name__ == '__main__':

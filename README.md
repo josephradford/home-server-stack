@@ -70,7 +70,6 @@ All services are accessible via domain names on your local network:
 
 **Direct Access (Emergency/Operational):** Some services expose direct ports for specific use cases:
 - AdGuard Home: `http://SERVER_IP:8888` (emergency access if Traefik fails)
-- Home Assistant: `http://SERVER_IP:8123` (mobile app initial setup)
 - OpenClaw: `http://SERVER_IP:18789` (web UI - native installation)
 - Prometheus: `http://SERVER_IP:9090` (metrics scraping)
 - Alertmanager: `http://SERVER_IP:9093` (alert routing)
@@ -145,10 +144,9 @@ See **[SECURITY.md](SECURITY.md)** for security policy and **[security-tickets/R
 
 ## 📊 Dashboard & Automation
 
-This stack includes a comprehensive dashboard with location tracking and integrations:
+This stack includes a comprehensive dashboard with integrations:
 
 - **Homepage**: Unified dashboard for all services
-- **Home Assistant**: Automation hub and location tracking
 - **Backend API**: Custom integrations for BOM weather, Transport NSW, traffic
 
 ### Deploy Dashboard Services
@@ -165,7 +163,6 @@ See **[docs/archive/DASHBOARD_SETUP.md](docs/archive/DASHBOARD_SETUP.md)** for d
 - 📅 Google Calendar integration
 - 🚊 Real-time Transport NSW departures
 - 🚗 Traffic conditions for configurable routes
-- 📍 Family location tracking via iOS/Android
 - 🐳 Docker container monitoring
 
 ## 🤝 Contributing

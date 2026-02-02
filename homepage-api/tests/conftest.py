@@ -13,8 +13,6 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 os.environ['BOM_LOCATION'] = 'parramatta'
 os.environ['TRANSPORT_NSW_API_KEY'] = 'test-api-key'
 os.environ['TOMTOM_API_KEY'] = 'test-tomtom-key'
-os.environ['HOMEASSISTANT_URL'] = 'http://test-ha:8123'
-os.environ['HOMEASSISTANT_TOKEN'] = 'test-token'
 
 from app import app as flask_app
 

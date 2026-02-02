@@ -48,15 +48,6 @@ graph TB
         N8N["n8n
         Workflow Automation
         :5678"]
-        HomeAssistant["Home Assistant
-        Home Automation
-        :8123"]
-        Mealie["Mealie
-        Meal Planning
-        :9000"]
-        ActualBudget["Actual Budget
-        Finance
-        :5006"]
     end
 
     subgraph Native["Native Services
@@ -99,9 +90,6 @@ graph TB
     ./data/ bind mounts"]
         AdGuardData[(AdGuard Data)]
         N8NData[(n8n Database)]
-        HomeAssistantData[(Home Assistant Config)]
-        MealieData[(Mealie Recipes)]
-        ActualBudgetData[(Actual Budget Data)]
         TraefikData[(Traefik Certs/Logs)]
         OpenClawData[(OpenClaw Config
         ~/.openclaw on server)]
@@ -126,9 +114,6 @@ graph TB
     %% Traefik routing
     Traefik -->|*.domain routing| AdGuard
     Traefik -->|*.domain routing| N8N
-    Traefik -->|*.domain routing| HomeAssistant
-    Traefik -->|*.domain routing| Mealie
-    Traefik -->|*.domain routing| ActualBudget
     Traefik -->|*.domain routing| Grafana
     Traefik -->|*.domain routing| Prometheus
     Traefik -->|*.domain routing| Alertmanager
@@ -157,9 +142,6 @@ graph TB
     %% Data persistence
     AdGuard -.->|Stores| AdGuardData
     N8N -.->|Stores| N8NData
-    HomeAssistant -.->|Stores| HomeAssistantData
-    Mealie -.->|Stores| MealieData
-    ActualBudget -.->|Stores| ActualBudgetData
     OpenClaw -.->|Stores| OpenClawData
     Traefik -.->|Stores| TraefikData
     Grafana -.->|Stores| GrafanaData
@@ -176,10 +158,10 @@ graph TB
 
     class VPN,HTTP external
     class Traefik,Fail2ban,UFW network
-    class AdGuard,N8N,HomeAssistant,Mealie,ActualBudget core
+    class AdGuard,N8N core
     class Prometheus,Grafana,Alertmanager,NodeExporter,CAdvisor monitoring
     class Homepage,HomepageAPI dashboard
-    class AdGuardData,N8NData,HomeAssistantData,MealieData,ActualBudgetData,TraefikData,GrafanaData,PrometheusData,WireGuardData data
+    class AdGuardData,N8NData,TraefikData,GrafanaData,PrometheusData,WireGuardData data
     class Certbot,OpenClaw system
     class OpenClawData data
 ```
