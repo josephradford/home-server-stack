@@ -2,15 +2,15 @@
 # Simplifies deployment and maintenance operations
 
 .PHONY: help setup update start stop restart logs build build-custom pull status clean purge validate env-check
-.PHONY: logs-n8n logs-homepage logs-homeassistant logs-actualbudget logs-mealie
-.PHONY: adguard-setup homeassistant-setup openclaw-install openclaw-status openclaw-logs setup-certs test-domain-access traefik-password
+.PHONY: logs-n8n logs-homepage
+.PHONY: adguard-setup openclaw-install openclaw-status openclaw-logs setup-certs test-domain-access traefik-password
 .PHONY: wireguard-status wireguard-install wireguard-setup wireguard-check
 .PHONY: ssl-setup ssl-copy-certs ssl-configure-traefik ssl-setup-renewal ssl-renew-test
 .PHONY: dashboard-setup dashboard-start dashboard-stop dashboard-restart dashboard-logs dashboard-status
 
 # Compose file flags
 # Services are organized into logical groups:
-# - docker-compose.yml: Core services (AdGuard, n8n, Home Assistant, Actual Budget, Mealie)
+# - docker-compose.yml: Core services (AdGuard, n8n)
 # - docker-compose.network.yml: Network & Security (Traefik, Fail2ban)
 # - docker-compose.monitoring.yml: Monitoring stack (Prometheus, Grafana, Alertmanager, exporters)
 # - docker-compose.dashboard.yml: Dashboard (Homepage, Homepage API)
@@ -49,9 +49,6 @@ help:
 	@echo "Logs & Debugging:"
 	@echo "  make logs               - Show logs from all services"
 	@echo "  make logs-n8n           - Show n8n logs only"
-	@echo "  make logs-homeassistant - Show Home Assistant logs only"
-	@echo "  make logs-actualbudget  - Show Actual Budget logs only"
-	@echo "  make logs-mealie        - Show Mealie logs only"
 	@echo "  make logs-homepage      - Show Homepage logs only"
 	@echo ""
 	@echo "Dashboard Management:"
@@ -64,7 +61,6 @@ help:
 	@echo ""
 	@echo "Service Configuration:"
 	@echo "  make adguard-setup            - Configure DNS rewrites for domain-based access"
-	@echo "  make homeassistant-setup      - Setup Home Assistant configuration files"
 	@echo "  make traefik-password         - Generate Traefik dashboard password from .env"
 	@echo ""
 	@echo "OpenClaw AI Assistant (Native Install):"
@@ -131,35 +127,32 @@ pull: validate
 setup: env-check validate wireguard-check
 	@echo "Starting first-time setup..."
 	@echo ""
-	@echo "Step 1/10: Setting up Traefik dashboard password..."
+	@echo "Step 1/8: Setting up Traefik dashboard password..."
 	@./scripts/setup-traefik-password.sh
 	@echo ""
-	@echo "Step 2/10: Setting up SSL certificate storage..."
+	@echo "Step 2/8: Setting up SSL certificate storage..."
 	@$(MAKE) setup-certs
 	@echo ""
-	@echo "Step 3/10: Setting up Homepage dashboard config..."
+	@echo "Step 3/8: Setting up Homepage dashboard config..."
 	@./scripts/configure-homepage.sh
 	@echo ""
-	@echo "Step 4/10: Setting up Home Assistant config..."
-	@./scripts/setup-homeassistant.sh
-	@echo ""
-	@echo "Step 5/10: Pulling pre-built images..."
+	@echo "Step 4/8: Pulling pre-built images..."
 	@$(COMPOSE) pull --ignore-pull-failures
 	@echo ""
-	@echo "Step 6/10: Building custom services from source..."
+	@echo "Step 5/8: Building custom services from source..."
 	@$(COMPOSE) build homepage-api
 	@echo ""
-	@echo "Step 7/10: Starting services (Docker Compose will create networks)..."
+	@echo "Step 6/8: Starting services (Docker Compose will create networks)..."
 	@$(COMPOSE) up -d
 	@echo ""
-	@echo "Step 8/10: Fixing data directory permissions..."
+	@echo "Step 7/8: Fixing data directory permissions..."
 	@echo "Containers create directories as root, fixing ownership for user access..."
 	@if [ -d "data" ]; then \
 		sudo chown -R $(shell id -u):$(shell getent group docker | cut -d: -f3) data/ && \
 		echo "✓ Data directory permissions fixed"; \
 	fi
 	@echo ""
-	@echo "Step 9/10: Configuring AdGuard DNS rewrites..."
+	@echo "Step 8/8: Configuring AdGuard DNS rewrites..."
 	@$(MAKE) adguard-setup
 	@echo ""
 	@$(COMPOSE) ps
@@ -174,9 +167,6 @@ setup: env-check validate wireguard-check
 		echo "    - Traefik Dashboard:  https://traefik.$$DOMAIN"; \
 		echo "    - AdGuard Home:       https://adguard.$$DOMAIN"; \
 		echo "    - n8n:                https://n8n.$$DOMAIN"; \
-		echo "    - Home Assistant:     https://home.$$DOMAIN"; \
-		echo "    - Actual Budget:      https://actual.$$DOMAIN"; \
-		echo "    - Mealie:             https://mealie.$$DOMAIN"; \
 		echo "    - Grafana:            https://grafana.$$DOMAIN"; \
 		echo "    - Prometheus:         https://prometheus.$$DOMAIN"; \
 		echo "    - Alertmanager:       https://alerts.$$DOMAIN"; \
@@ -291,15 +281,6 @@ logs:
 logs-n8n:
 	@$(COMPOSE) logs -f n8n
 
-logs-homeassistant:
-	@$(COMPOSE) logs -f homeassistant
-
-logs-actualbudget:
-	@$(COMPOSE) logs -f actualbudget
-
-logs-mealie:
-	@$(COMPOSE) logs -f mealie
-
 logs-homepage:
 	@$(COMPOSE_DASHBOARD) logs -f homepage
 
@@ -321,9 +302,6 @@ purge:
 	@echo "  - All Docker images (requires re-download on next setup)"
 	@echo "  - AdGuard configuration and logs"
 	@echo "  - n8n workflows and database"
-	@echo "  - Home Assistant configuration and database"
-	@echo "  - Actual Budget financial data and budgets"
-	@echo "  - Mealie recipes and meal plans"
 	@echo "  - Moltbot AI assistant data (Signal sessions, chat history)"
 	@echo "  - WireGuard VPN configs"
 	@echo "  - All monitoring data (Grafana, Prometheus)"
@@ -381,13 +359,6 @@ adguard-setup: env-check
 	fi
 	@set -a; . ./.env; set +a; \
 	echo "Configure network devices to use $$SERVER_IP as DNS server"
-
-# Home Assistant configuration setup
-homeassistant-setup: env-check
-	@echo "Setting up Home Assistant configuration..."
-	@./scripts/setup-homeassistant.sh
-	@echo ""
-	@echo "✓ Home Assistant configuration setup complete!"
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # OpenClaw AI Assistant (Native Installation)
@@ -589,8 +560,6 @@ ssl-setup: env-check
 	if [ -n "$$DOMAIN" ]; then \
 		echo "Test your certificates:"; \
 		echo "  https://n8n.$$DOMAIN"; \
-		echo "  https://home.$$DOMAIN"; \
-		echo "  https://actual.$$DOMAIN"; \
 		echo "  https://grafana.$$DOMAIN"; \
 		echo "  https://traefik.$$DOMAIN"; \
 	fi
