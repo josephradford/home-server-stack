@@ -89,9 +89,6 @@ make logs
 
 # View specific service logs
 make logs-n8n
-make logs-homeassistant
-make logs-actualbudget
-make logs-mealie
 make logs-homepage
 
 # View logs directly (useful for other services)
@@ -140,9 +137,6 @@ sudo systemctl status wg-quick@wg0
 ```bash
 # Configure AdGuard DNS rewrites for domain-based access
 make adguard-setup
-
-# Setup Home Assistant configuration files
-make homeassistant-setup
 
 # Generate Traefik dashboard password from .env
 make traefik-password
@@ -214,7 +208,7 @@ make purge
 
 ### Multi-File Docker Compose
 The stack uses **four compose files** organized by logical function:
-- `docker-compose.yml` - Core services (AdGuard, n8n, Home Assistant, Mealie, Actual Budget) - user-facing services that "do stuff"
+- `docker-compose.yml` - Core services (AdGuard, n8n) - user-facing services that "do stuff"
 - `docker-compose.network.yml` - Network & Security (Traefik, Fail2ban) - infrastructure layer
 - `docker-compose.monitoring.yml` - Monitoring stack (Prometheus, Grafana, Alertmanager, exporters)
 - `docker-compose.dashboard.yml` - Dashboard (Homepage, Homepage API)
@@ -363,15 +357,12 @@ Required variables in `.env`:
 - `WIREGUARD_PORT`, `WIREGUARD_SUBNET`, `WIREGUARD_ALLOWEDIPS` - VPN configuration
 
 **Dashboard & Integration Variables:**
-- `HOMEASSISTANT_TOKEN` - Home Assistant long-lived access token (required for location tracking and widgets)
-- `HOMEASSISTANT_URL` - Home Assistant URL (default: http://homeassistant:8123)
 - `TRANSPORT_NSW_API_KEY` - Transport NSW OpenData API key for real-time departures
 - `TRANSPORT_STOP_*` - Transit stop IDs and display names for dashboard widgets
 - `TOMTOM_API_KEY` - TomTom Traffic API key for traffic conditions
 - `TRAFFIC_ROUTE_*` - Traffic route configurations with origin/destination and schedules
 - `BOM_LOCATION` - Australian suburb name for Bureau of Meteorology weather
 - `GOOGLE_CALENDAR_ICAL_URL` - Google Calendar iCal URL for calendar widget
-- `MEALIE_EMAIL`, `MEALIE_PASSWORD` - Mealie initial credentials (change after first login)
 
 See `.env.example` for complete variable list with descriptions and defaults.
 
@@ -426,11 +417,6 @@ For wildcard certificate (only on dashboard router):
 - `scripts/test-domain-access.sh` - Tests HTTPS access to all services via domains
 
 ### Service Configuration
-- `scripts/setup-homeassistant.sh` - Sets up Home Assistant configuration files
-  - Copies configuration templates from `config/homeassistant-template/`
-  - Creates initial `configuration.yaml` and directory structure
-  - Prepares data directory for first-time onboarding
-
 - `scripts/configure-homepage.sh` - Generates Homepage dashboard configuration files
   - Creates `services.yaml`, `widgets.yaml`, `docker.yaml` from templates
   - Substitutes environment variables in configuration
@@ -538,32 +524,6 @@ For wildcard certificate (only on dashboard router):
 - Requires bcrypt password hash (generated via htpasswd)
 - DNS rewrites configured as: `'*.${DOMAIN}' → ${SERVER_IP}`
 
-### Home Assistant
-- Open-source home automation platform
-- Domain access: `https://home.${DOMAIN}` (Traefik with VPN/local access only)
-- Also accessible via direct IP: `http://${SERVER_IP}:8123`
-- Data persistence: `./data/homeassistant/`
-- **Setup:**
-  - Configuration template created by `setup-homeassistant.sh`
-  - Complete onboarding wizard on first access
-  - Generate long-lived access token for Homepage dashboard integration
-- **Configuration:**
-  - `HOMEASSISTANT_URL` - Internal URL for API access (default: `http://homeassistant:8123`)
-  - `HOMEASSISTANT_TOKEN` - Long-lived access token for widgets and integrations
-  - Requires `privileged: true` for hardware access (Bluetooth, USB devices)
-- **Features:**
-  - Location tracking and presence detection
-  - Device automation and control
-  - Dashboard customization
-  - Mobile app support (iOS/Android)
-  - RESTful API for integrations
-  - Webhook support for external triggers
-- **Integration:**
-  - Homepage dashboard shows location and state information
-  - Homepage API provides helper endpoints for location queries
-  - Token-based authentication for secure API access
-- See `config/homeassistant-template/` for initial configuration files
-
 ### Traefik
 - HTTP to HTTPS redirect configured on web entrypoint
 - Dashboard accessible at `https://traefik.${DOMAIN}` with basic auth
@@ -593,7 +553,6 @@ For wildcard certificate (only on dashboard router):
   - BOM (Bureau of Meteorology) weather data for Australian locations
   - Transport NSW real-time departures API integration
   - TomTom traffic conditions with schedule-based filtering
-  - Home Assistant helpers and state queries
   - WireGuard VPN system service monitoring (status, connected peers)
   - Docker daemon system service monitoring (status, container count, disk usage)
   - Health check endpoint at `/api/health`
@@ -603,8 +562,6 @@ For wildcard certificate (only on dashboard router):
   - `TRANSPORT_STOP_*` - Transit stop IDs and display names for dashboard widgets
   - `TOMTOM_API_KEY` - TomTom API key for traffic data
   - `TRAFFIC_ROUTE_*` - Multiple traffic routes with origin/destination/schedule
-  - `HOMEASSISTANT_URL` - Home Assistant instance URL
-  - `HOMEASSISTANT_TOKEN` - Long-lived access token
   - `GOOGLE_CALENDAR_ICAL_URL` - Google Calendar iCal URL for calendar widget
 - **Why custom backend?**
   - Homepage widget framework limited for complex API integrations
@@ -624,7 +581,7 @@ For wildcard certificate (only on dashboard router):
 - **Configuration:**
   - Service definitions: `./data/homepage/config/services.yaml` (from template `./config/homepage/services-template.yaml`)
   - Docker integration: mounts `/var/run/docker.sock` for container stats
-  - Widget APIs: Integrates with AdGuard, Grafana, Home Assistant, Transport NSW, BOM, TomTom
+  - Widget APIs: Integrates with AdGuard, Grafana, Transport NSW, BOM, TomTom
   - Environment templating: Uses `HOMEPAGE_VAR_*` env vars in configs
 - **Data persistence:** `./data/homepage/config/`
 - **Features:**
@@ -638,40 +595,6 @@ For wildcard certificate (only on dashboard router):
   - **Application widgets** - App-specific metrics via APIs
   - Both are complementary: container stats = infrastructure, widgets = application metrics
 - **Documentation:** See `docs/archive/DASHBOARD_SETUP.md` and `config/homepage/services-template.yaml`
-
-### Mealie
-- Self-hosted meal planner and recipe manager
-- SQLite database for recipe storage
-- Image upload and management for recipe photos
-- Mobile-responsive web interface
-- Domain access: `https://mealie.${DOMAIN}`
-- Default credentials: `changeme@example.com` / `MyPassword` (change on first login)
-- Data persistence: `./data/mealie/`
-- **Features:**
-  - Recipe import from URLs (supports 1000+ websites)
-  - Meal planning calendar with drag-and-drop interface
-  - Automatic shopping list generation from meal plans
-  - Cooking mode with step-by-step instructions
-  - RESTful API for integrations
-  - Multi-user support with permissions
-  - Mobile apps for iOS and Android
-- See `SERVICES.md` for full feature list and `docs/archive/CONFIGURATION.md` for setup
-
-### Actual Budget
-- Self-hosted personal finance and budgeting
-- Zero-based budgeting methodology
-- End-to-end encrypted sync
-- Bank sync support via SimpleFIN or GoCardless
-- Domain access: `https://actual.${DOMAIN}`
-- No authentication by default (relies on VPN/local network security via middleware)
-- Data persistence: `./data/actual/`
-- **Features:**
-  - Privacy-focused: all data stored locally
-  - Mobile apps available for iOS and Android
-  - Budgeting with rollover and goals
-  - Transaction categorization and rules
-  - Multi-month views and reports
-- See `SERVICES.md` for complete details
 
 ### OpenClaw AI Assistant (Native Installation)
 - AI assistant accessible via messaging apps (Telegram, WhatsApp, Discord)
