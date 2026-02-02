@@ -402,20 +402,40 @@ openclaw-install:
 	@echo "This will install OpenClaw as a native system service (not Docker)."
 	@echo ""
 	@echo "Prerequisites:"
+	@echo "  - Homebrew package manager (installs if missing)"
 	@echo "  - Node.js 22 or higher (check with: node --version)"
 	@echo "  - Anthropic API key (get from console.anthropic.com)"
 	@echo "  - Telegram Bot Token (get from @BotFather)"
 	@echo ""
 	@echo "Installation steps:"
-	@echo "  1. Check Node.js version"
-	@echo "  2. Install OpenClaw using official installer"
-	@echo "  3. Run onboarding wizard (interactive)"
-	@echo "  4. Configure Telegram bot"
-	@echo "  5. Start gateway as systemd service"
+	@echo "  1. Check/install Homebrew"
+	@echo "  2. Check Node.js version"
+	@echo "  3. Install OpenClaw using official installer"
+	@echo "  4. Run onboarding wizard (interactive)"
+	@echo "  5. Configure Telegram bot"
+	@echo "  6. Start gateway as systemd service"
 	@echo ""
 	@echo "═════════════════════════════════════════════════════════════════"
 	@echo ""
-	@echo "Step 1: Checking Node.js version..."
+	@echo "Step 1: Checking for Homebrew..."
+	@if ! command -v brew > /dev/null 2>&1; then \
+		echo ""; \
+		echo "⚠️  Homebrew not found. Installing Homebrew..."; \
+		echo ""; \
+		echo "This will install Homebrew package manager."; \
+		echo "Press Ctrl+C to cancel, or Enter to continue..."; \
+		read confirm; \
+		/bin/bash -c "$$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"; \
+		echo ""; \
+		echo "Adding Homebrew to PATH..."; \
+		echo 'eval "$$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"' >> ~/.bashrc; \
+		eval "$$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"; \
+		echo "✓ Homebrew installed"; \
+	else \
+		echo "✓ Homebrew is already installed"; \
+	fi
+	@echo ""
+	@echo "Step 2: Checking Node.js version..."
 	@node --version || { \
 		echo ""; \
 		echo "❌ Node.js not found or version too old."; \
@@ -427,10 +447,10 @@ openclaw-install:
 		exit 1; \
 	}
 	@echo ""
-	@echo "Step 2: Installing OpenClaw..."
+	@echo "Step 3: Installing OpenClaw..."
 	@curl -fsSL https://openclaw.ai/install.sh | bash
 	@echo ""
-	@echo "Step 3: Running onboarding wizard..."
+	@echo "Step 4: Running onboarding wizard..."
 	@echo ""
 	@echo "⚠️  IMPORTANT: During onboarding you'll be asked for:"
 	@echo "  - AI provider: Choose Anthropic"
@@ -446,7 +466,7 @@ openclaw-install:
 	@echo ""
 	@openclaw onboard --install-daemon
 	@echo ""
-	@echo "Step 4: Starting OpenClaw gateway..."
+	@echo "Step 5: Starting OpenClaw gateway..."
 	@openclaw gateway start
 	@echo ""
 	@echo "═════════════════════════════════════════════════════════════════"

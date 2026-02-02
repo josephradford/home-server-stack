@@ -154,6 +154,7 @@ make traefik-password
 # SSH to server first: ssh user@SERVER_IP
 
 # Install OpenClaw natively (interactive)
+# This will check for/install Homebrew if needed, then install OpenClaw
 make openclaw-install
 
 # Check OpenClaw service status
@@ -687,13 +688,15 @@ For wildcard certificate (only on dashboard router):
 - **Setup:**
   - Run on server (SSH to server first): `make openclaw-install`
   - Installation steps:
-    1. Checks Node.js 22+ is installed
-    2. Runs official OpenClaw installer: `curl -fsSL https://openclaw.ai/install.sh | bash`
-    3. Runs onboarding wizard with `--install-daemon` flag
-    4. Configures Telegram bot (requires Bot Token from @BotFather)
-    5. Configures Anthropic API key (provided during onboarding)
-    6. Starts gateway as systemd user service
+    1. Checks for and installs Homebrew if not present
+    2. Checks Node.js 22+ is installed
+    3. Runs official OpenClaw installer: `curl -fsSL https://openclaw.ai/install.sh | bash`
+    4. Runs onboarding wizard with `--install-daemon` flag
+    5. Configures Telegram bot (requires Bot Token from @BotFather)
+    6. Configures Anthropic API key (provided during onboarding)
+    7. Starts gateway as systemd user service
   - Configuration via interactive onboarding wizard (run once during installation)
+  - **Note:** After installation, reload shell with `source ~/.bashrc` to add `openclaw` command to PATH
 - **Configuration:**
   - Requires: `ANTHROPIC_API_KEY` in `.env` for Claude AI models
   - Recommended model: `claude-sonnet-4-5`
