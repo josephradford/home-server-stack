@@ -87,26 +87,6 @@ services:
       # See ticket-13 for webhook architecture implementation
       - "traefik.http.routers.n8n.middlewares=admin-secure"
 
-  actualbudget:
-    image: actualbudget/actual-server:latest
-    container_name: actualbudget
-    restart: unless-stopped
-    expose:
-      - 5006
-    volumes:
-      - ./data/actualbudget:/data
-    networks:
-      - homeserver
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.actualbudget.rule=Host(`actual.${DOMAIN}`)"
-      - "traefik.http.routers.actualbudget.entrypoints=websecure"
-      - "traefik.http.routers.actualbudget.tls=true"
-      # Using file provider certificate (wildcard from certbot)
-      - "traefik.http.services.actualbudget.loadbalancer.server.port=5006"
-      # Security: VPN/Local access only - financial data should be private
-      - "traefik.http.routers.actualbudget.middlewares=admin-secure"
-
   mealie:
     image: ghcr.io/mealie-recipes/mealie:latest
     container_name: mealie
