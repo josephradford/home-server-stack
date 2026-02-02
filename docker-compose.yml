@@ -3,9 +3,6 @@
 # This file contains the primary user-facing services
 # - AdGuard Home: Network-wide ad blocking and DNS server
 # - n8n: Workflow automation platform
-# - Home Assistant: Location tracking and home automation
-# - Actual Budget: Personal finance and budgeting
-# - Mealie: Meal planning and recipe management
 
 services:
   adguard:
@@ -89,37 +86,6 @@ services:
       #   3. Keep n8n router with admin-secure for editor/UI access (VPN/local only)
       # See ticket-13 for webhook architecture implementation
       - "traefik.http.routers.n8n.middlewares=admin-secure"
-
-  homeassistant:
-    container_name: homeassistant
-    image: ghcr.io/home-assistant/home-assistant:stable
-    restart: unless-stopped
-    volumes:
-      - ./data/homeassistant:/config
-      - /etc/localtime:/etc/localtime:ro
-      - /run/dbus:/run/dbus:ro
-    environment:
-      - TZ=${TIMEZONE}
-    ports:
-      - "8123:8123"
-    privileged: true
-    networks:
-      - homeserver
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8123"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 120s
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.homeassistant.rule=Host(`home.${DOMAIN}`)"
-      - "traefik.http.routers.homeassistant.entrypoints=websecure"
-      - "traefik.http.routers.homeassistant.tls=true"
-      # Using file provider certificate (wildcard from certbot)
-      - "traefik.http.services.homeassistant.loadbalancer.server.port=8123"
-      # Security: VPN/Local access only - location tracking and automation should be private
-      - "traefik.http.routers.homeassistant.middlewares=admin-secure-no-ratelimit"
 
   actualbudget:
     image: actualbudget/actual-server:latest
