@@ -302,7 +302,6 @@ purge:
 	@echo "  - All Docker images (requires re-download on next setup)"
 	@echo "  - AdGuard configuration and logs"
 	@echo "  - n8n workflows and database"
-	@echo "  - Moltbot AI assistant data (Signal sessions, chat history)"
 	@echo "  - WireGuard VPN configs"
 	@echo "  - All monitoring data (Grafana, Prometheus)"
 	@echo "  - Homepage dashboard configuration"
