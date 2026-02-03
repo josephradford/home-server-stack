@@ -181,18 +181,38 @@ setup: env-check validate wireguard-check
 	@echo ""
 	@set -a; . ./.env; set +a; \
 	if [ -n "$$GANDIV5_PERSONAL_ACCESS_TOKEN" ] && [ -n "$$ACME_EMAIL" ] && [ -n "$$DOMAIN" ]; then \
-		echo "🔒 SSL Certificate Setup Available"; \
-		echo ""; \
-		echo "Your .env file is configured for Let's Encrypt SSL certificates."; \
-		echo "Would you like to set up trusted SSL certificates now? (y/N)"; \
-		read -r response; \
-		if [ "$$response" = "y" ] || [ "$$response" = "Y" ]; then \
-			$(MAKE) ssl-setup; \
-		else \
+		CERT_STATUS=$$(sudo certbot certificates 2>/dev/null | grep -A 5 "Certificate Name: $$DOMAIN" | grep "Expiry Date" | grep -oP 'VALID: \K[0-9]+' || echo "0"); \
+		if [ "$$CERT_STATUS" = "0" ]; then \
+			echo "🔒 SSL Certificate Setup Available"; \
 			echo ""; \
-			echo "Skipping SSL setup. Your services will use self-signed certificates."; \
-			echo "You can set up Let's Encrypt SSL later with: make ssl-setup"; \
-			echo "See docs/CONFIGURATION.md#ssl-certificate-setup for details."; \
+			echo "No valid certificate found for $$DOMAIN"; \
+			echo "Would you like to set up Let's Encrypt SSL certificates now? (y/N)"; \
+			read -r response; \
+			if [ "$$response" = "y" ] || [ "$$response" = "Y" ]; then \
+				$(MAKE) ssl-setup; \
+			else \
+				echo ""; \
+				echo "Skipping SSL setup. Your services will use self-signed certificates."; \
+				echo "You can set up Let's Encrypt SSL later with: make ssl-setup"; \
+			fi; \
+		elif [ "$$CERT_STATUS" -lt 30 ]; then \
+			echo "⚠️  SSL Certificate Expiring Soon"; \
+			echo ""; \
+			echo "Your certificate for $$DOMAIN expires in $$CERT_STATUS days"; \
+			echo "Would you like to renew it now? (y/N)"; \
+			read -r response; \
+			if [ "$$response" = "y" ] || [ "$$response" = "Y" ]; then \
+				sudo certbot renew --force-renewal; \
+				$(MAKE) ssl-copy-certs; \
+				$(COMPOSE_CORE) restart traefik; \
+			else \
+				echo ""; \
+				echo "Certificate will auto-renew within 30 days."; \
+			fi; \
+		else \
+			echo "✓ SSL Certificate Valid"; \
+			echo ""; \
+			echo "Certificate for $$DOMAIN is valid for $$CERT_STATUS more days"; \
 		fi; \
 	else \
 		echo "ℹ️  Using self-signed SSL certificates (browser warnings expected)"; \
@@ -203,7 +223,6 @@ setup: env-check validate wireguard-check
 		echo "  - GANDIV5_PERSONAL_ACCESS_TOKEN=your-gandi-token"; \
 		echo ""; \
 		echo "Then run: make ssl-setup"; \
-		echo "See docs/CONFIGURATION.md#ssl-certificate-setup for details."; \
 	fi
 	@echo ""
 	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
@@ -535,6 +554,11 @@ ssl-setup: env-check
 	@echo ""
 	@echo "Certificates will auto-renew every 90 days."
 	@echo "Check renewal logs: sudo tail -f /var/log/certbot-traefik-reload.log"
+
+# Copy certificates from Let's Encrypt to Traefik directory
+ssl-copy-certs: env-check
+	@echo "Copying Let's Encrypt certificates to Traefik..."
+	@./scripts/ssl/copy-certs-to-traefik.sh
 
 # Test certificate renewal (dry run)
 ssl-renew-test:
