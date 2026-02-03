@@ -91,23 +91,6 @@ sudo chmod 644 /var/log/certbot-traefik-reload.log
 echo -e "${GREEN}✓${NC} Log file created: /var/log/certbot-traefik-reload.log"
 echo ""
 
-# Test renewal (dry run)
-echo "Testing certificate renewal (dry run)..."
-echo ""
-echo -e "${YELLOW}Note: Dry run may fail if recent DNS changes haven't fully propagated.${NC}"
-echo -e "${YELLOW}This is normal and doesn't affect actual renewal.${NC}"
-echo ""
-sudo certbot renew --dry-run
-
-if [ $? -eq 0 ]; then
-    echo ""
-    echo -e "${GREEN}✓ Renewal dry run successful!${NC}"
-else
-    echo ""
-    echo -e "${YELLOW}⚠️  Renewal dry run failed (likely DNS propagation delay)${NC}"
-    echo -e "${YELLOW}This is normal after initial setup - automatic renewal will work fine.${NC}"
-fi
-
 echo ""
 echo -e "${GREEN}========================================${NC}"
 echo -e "${GREEN}Setup Complete!${NC}"
@@ -117,14 +100,17 @@ echo "Automatic renewal is now configured!"
 echo ""
 echo "How it works:"
 echo "  - Certbot's snap automatically runs 'certbot renew' twice daily"
-echo "  - When certificates are renewed, the hook script:"
+echo "  - When certificates are renewed (30 days before expiry), the hook script:"
 echo "    1. Copies new certificates to Traefik directory"
 echo "    2. Restarts Traefik container to load new certificates"
 echo "    3. Logs everything to /var/log/certbot-traefik-reload.log"
 echo ""
-echo "Manual renewal:"
-echo "  - Test: sudo certbot renew --dry-run"
-echo "  - Force: sudo certbot renew --force-renewal"
+echo "Your certificate is valid for 90 days and will auto-renew at 60 days."
+echo ""
+echo -e "${YELLOW}Testing renewal:${NC}"
+echo "  - Wait 2-4 hours for DNS caches to clear, then test with:"
+echo "    sudo certbot renew --dry-run"
+echo "  - Force renewal (if needed): sudo certbot renew --force-renewal"
 echo ""
 echo "View logs:"
 echo "  - Renewal logs: sudo tail -f /var/log/certbot-traefik-reload.log"

@@ -181,18 +181,41 @@ setup: env-check validate wireguard-check
 	@echo ""
 	@set -a; . ./.env; set +a; \
 	if [ -n "$$GANDIV5_PERSONAL_ACCESS_TOKEN" ] && [ -n "$$ACME_EMAIL" ] && [ -n "$$DOMAIN" ]; then \
-		echo "🔒 SSL Certificate Setup Available"; \
-		echo ""; \
-		echo "Your .env file is configured for Let's Encrypt SSL certificates."; \
-		echo "Would you like to set up trusted SSL certificates now? (y/N)"; \
-		read -r response; \
-		if [ "$$response" = "y" ] || [ "$$response" = "Y" ]; then \
-			$(MAKE) ssl-setup; \
-		else \
+		CERT_STATUS=$$(sudo certbot certificates 2>/dev/null | grep -A 5 "Certificate Name: $$DOMAIN" | grep "Expiry Date" | sed -n 's/.*VALID: \([0-9]\+\) days.*/\1/p'); \
+		if [ -z "$$CERT_STATUS" ]; then \
+			CERT_STATUS="0"; \
+		fi; \
+		if [ "$$CERT_STATUS" = "0" ]; then \
+			echo "🔒 SSL Certificate Setup Available"; \
 			echo ""; \
-			echo "Skipping SSL setup. Your services will use self-signed certificates."; \
-			echo "You can set up Let's Encrypt SSL later with: make ssl-setup"; \
-			echo "See docs/CONFIGURATION.md#ssl-certificate-setup for details."; \
+			echo "No valid certificate found for $$DOMAIN"; \
+			echo "Would you like to set up Let's Encrypt SSL certificates now? (y/N)"; \
+			read -r response; \
+			if [ "$$response" = "y" ] || [ "$$response" = "Y" ]; then \
+				$(MAKE) ssl-setup; \
+			else \
+				echo ""; \
+				echo "Skipping SSL setup. Your services will use self-signed certificates."; \
+				echo "You can set up Let's Encrypt SSL later with: make ssl-setup"; \
+			fi; \
+		elif [ "$$CERT_STATUS" -lt 30 ]; then \
+			echo "⚠️  SSL Certificate Expiring Soon"; \
+			echo ""; \
+			echo "Your certificate for $$DOMAIN expires in $$CERT_STATUS days"; \
+			echo "Would you like to renew it now? (y/N)"; \
+			read -r response; \
+			if [ "$$response" = "y" ] || [ "$$response" = "Y" ]; then \
+				sudo certbot renew --force-renewal; \
+				./scripts/ssl/copy-certs-to-traefik.sh; \
+				$(COMPOSE_CORE) restart traefik; \
+			else \
+				echo ""; \
+				echo "Certificate will auto-renew within 30 days."; \
+			fi; \
+		else \
+			echo "✓ SSL Certificate Valid"; \
+			echo ""; \
+			echo "Certificate for $$DOMAIN is valid for $$CERT_STATUS more days"; \
 		fi; \
 	else \
 		echo "ℹ️  Using self-signed SSL certificates (browser warnings expected)"; \
@@ -203,7 +226,6 @@ setup: env-check validate wireguard-check
 		echo "  - GANDIV5_PERSONAL_ACCESS_TOKEN=your-gandi-token"; \
 		echo ""; \
 		echo "Then run: make ssl-setup"; \
-		echo "See docs/CONFIGURATION.md#ssl-certificate-setup for details."; \
 	fi
 	@echo ""
 	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
@@ -526,6 +548,11 @@ ssl-setup: env-check
 		echo "  https://n8n.$$DOMAIN"; \
 		echo "  https://grafana.$$DOMAIN"; \
 		echo "  https://traefik.$$DOMAIN"; \
+		echo ""; \
+		echo "Certificate info:"; \
+		echo "  - Expires: 90 days from now"; \
+		echo "  - Auto-renewal: 30 days before expiry"; \
+		echo "  - Test renewal after 2-4 hours: sudo certbot renew --dry-run"; \
 	fi
 	@echo ""
 	@echo "Certificates will auto-renew every 90 days."
@@ -535,6 +562,10 @@ ssl-setup: env-check
 ssl-renew-test:
 	@echo "Testing certificate renewal (dry run)..."
 	@echo "This will simulate renewal without actually renewing certificates."
+	@echo ""
+	@echo "Note: Wait 2-4 hours after initial setup for DNS caches to clear."
+	@echo "Press Ctrl+C to cancel, or Enter to continue..."
+	@read confirm
 	@echo ""
 	@sudo certbot renew --dry-run
 
