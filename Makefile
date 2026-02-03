@@ -206,7 +206,7 @@ setup: env-check validate wireguard-check
 			read -r response; \
 			if [ "$$response" = "y" ] || [ "$$response" = "Y" ]; then \
 				sudo certbot renew --force-renewal; \
-				$(MAKE) ssl-copy-certs; \
+				./scripts/ssl/copy-certs-to-traefik.sh; \
 				$(COMPOSE_CORE) restart traefik; \
 			else \
 				echo ""; \
@@ -557,11 +557,6 @@ ssl-setup: env-check
 	@echo ""
 	@echo "Certificates will auto-renew every 90 days."
 	@echo "Check renewal logs: sudo tail -f /var/log/certbot-traefik-reload.log"
-
-# Copy certificates from Let's Encrypt to Traefik directory
-ssl-copy-certs: env-check
-	@echo "Copying Let's Encrypt certificates to Traefik..."
-	@./scripts/ssl/copy-certs-to-traefik.sh
 
 # Test certificate renewal (dry run)
 ssl-renew-test:
