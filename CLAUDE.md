@@ -36,10 +36,10 @@ This is a self-hosted infrastructure stack running on Docker Compose, providing 
 ```bash
 # One-time: Install Docker from official repository (if using snap Docker)
 # Check: which docker (if shows /snap/bin/docker, run the installer)
-./scripts/install-docker-official.sh
+./scripts/system/install-docker-official.sh
 
 # One-time: Add user to docker group (enables docker commands without sudo)
-./scripts/setup-user-permissions.sh
+./scripts/system/setup-user-permissions.sh
 
 # Copy environment template and configure
 cp .env.example .env
@@ -125,8 +125,8 @@ make wireguard-setup
 make wireguard-status
 
 # Add VPN peers (clients) one at a time
-sudo ./scripts/wireguard-add-peer.sh mydevice
-sudo ./scripts/wireguard-add-peer.sh phone
+sudo ./scripts/wireguard/wireguard-add-peer.sh mydevice
+sudo ./scripts/wireguard/wireguard-add-peer.sh phone
 
 # View detailed status
 sudo wg show
@@ -240,7 +240,7 @@ Example flow: `https://n8n.example.com` → DNS resolves to SERVER_IP → Traefi
 - Manual API tests with Gandi succeed, but Lego consistently returns 403 Forbidden during DNS-01 challenge
 - Root cause: Bug or incompatibility between Lego's Gandi provider and Gandi API v5
 - Solution: Use certbot with `certbot-dns-gandi` plugin which works reliably with same credentials
-- See `scripts/setup-certbot-gandi.sh` for detailed implementation
+- See `scripts/ssl/setup-certbot-gandi.sh` for detailed implementation
 
 **How it works**:
 1. **certbot** generates wildcard certificate for `*.DOMAIN` and `DOMAIN` via DNS-01 challenge
@@ -290,7 +290,7 @@ The stack implements **multi-layered defense-in-depth** security:
 - WireGuard VPN (UDP 51820) - primary remote access
 - HTTP/HTTPS (80/443) for Traefik reverse proxy
 - Full access for local network (192.168.1.0/24) and VPN clients (10.13.13.0/24)
-- Setup: `./scripts/setup-firewall.sh`
+- Setup: `./scripts/system/setup-firewall.sh`
 
 #### Layer 2: Traefik Middleware Security
 **admin-secure middleware chain** (applied to all admin interfaces):
@@ -409,83 +409,83 @@ For wildcard certificate (only on dashboard router):
 ## Scripts Overview
 
 ### DNS & Domain Configuration
-- `scripts/setup-adguard-dns.sh` - Configures AdGuard DNS rewrites for `*.DOMAIN` → `SERVER_IP`
+- `scripts/adguard/setup-adguard-dns.sh` - Configures AdGuard DNS rewrites for `*.DOMAIN` → `SERVER_IP`
   - Generates bcrypt password hash using htpasswd
   - Creates/updates `AdGuardHome.yaml` with DNS rewrites
   - Requires: `SERVER_IP`, `DOMAIN`, `ADGUARD_PASSWORD` in `.env`
 
-- `scripts/test-domain-access.sh` - Tests HTTPS access to all services via domains
+- `scripts/testing/test-domain-access.sh` - Tests HTTPS access to all services via domains
 
 ### Service Configuration
-- `scripts/configure-homepage.sh` - Generates Homepage dashboard configuration files
+- `scripts/homepage/configure-homepage.sh` - Generates Homepage dashboard configuration files
   - Creates `services.yaml`, `widgets.yaml`, `docker.yaml` from templates
   - Substitutes environment variables in configuration
   - Called during `make setup` and `make dashboard-setup`
 
-- `scripts/setup-traefik-password.sh` - Generates Traefik dashboard password hash
+- `scripts/traefik/setup-traefik-password.sh` - Generates Traefik dashboard password hash
   - Reads `TRAEFIK_PASSWORD` from `.env`
   - Creates htpasswd-format hash for basic authentication
   - Sets `TRAEFIK_DASHBOARD_USERS` environment variable
   - Called during `make setup` and `make traefik-password`
 
 ### SSL Certificate Management (certbot)
-- `scripts/setup-certbot-gandi.sh` - Installs certbot and generates Let's Encrypt wildcard certificate
+- `scripts/ssl/setup-certbot-gandi.sh` - Installs certbot and generates Let's Encrypt wildcard certificate
   - Installs certbot via snap and certbot-dns-gandi via pip3
   - Handles Ubuntu 24.04 externally-managed Python environment (--break-system-packages)
   - Creates Gandi API credentials file at `/etc/letsencrypt/gandi/gandi.ini`
   - Generates wildcard cert for `*.DOMAIN` and `DOMAIN` using DNS-01 challenge
   - Requires: `DOMAIN`, `ACME_EMAIL`, `GANDIV5_PERSONAL_ACCESS_TOKEN` in `.env`
 
-- `scripts/copy-certs-to-traefik.sh` - Copies certificates from Let's Encrypt to Traefik
+- `scripts/ssl/copy-certs-to-traefik.sh` - Copies certificates from Let's Encrypt to Traefik
   - Copies `/etc/letsencrypt/live/DOMAIN/fullchain.pem` → `./data/traefik/certs/DOMAIN.crt`
   - Copies `/etc/letsencrypt/live/DOMAIN/privkey.pem` → `./data/traefik/certs/DOMAIN.key`
   - Sets proper ownership and permissions (644 for cert, 600 for key)
 
-- `scripts/configure-traefik-file-provider.sh` - Configures Traefik to use file provider
+- `scripts/traefik/configure-traefik-file-provider.sh` - Configures Traefik to use file provider
   - Creates `./config/traefik/dynamic-certs.yml` with certificate paths
   - Configures Traefik to load certificates from file instead of ACME
   - Must restart Traefik after running (use `make ssl-configure-traefik`)
 
-- `scripts/setup-cert-renewal.sh` - Sets up automatic certificate renewal
+- `scripts/ssl/setup-cert-renewal.sh` - Sets up automatic certificate renewal
   - Creates post-renewal hook: `/etc/letsencrypt/renewal-hooks/deploy/traefik-reload.sh`
   - Hook automatically copies renewed certs and restarts Traefik container
   - Creates log file: `/var/log/certbot-traefik-reload.log`
   - Tests renewal with dry run
 
 ### VPN Management (System Service)
-- `scripts/install-wireguard.sh` - Installs WireGuard as system service (one-time setup)
-- `scripts/setup-wireguard-server.sh` - Creates WireGuard server configuration
-- `scripts/wireguard-add-peer.sh` - Adds VPN peers (clients) and generates client configs
-- `scripts/setup-wireguard-routing.sh` - Configures WireGuard routing and forwarding
+- `scripts/wireguard/install-wireguard.sh` - Installs WireGuard as system service (one-time setup)
+- `scripts/wireguard/setup-wireguard-server.sh` - Creates WireGuard server configuration
+- `scripts/wireguard/wireguard-add-peer.sh` - Adds VPN peers (clients) and generates client configs
+- `scripts/wireguard/setup-wireguard-routing.sh` - Configures WireGuard routing and forwarding
   - Sets up IP forwarding and NAT rules
   - Configures routing for split tunneling
   - Called during WireGuard server setup
 
-- `scripts/test-wireguard-routing.sh` - Tests WireGuard routing configuration
+- `scripts/wireguard/test-wireguard-routing.sh` - Tests WireGuard routing configuration
   - Verifies IP forwarding is enabled
   - Checks NAT rules are configured
   - Tests connectivity through VPN
 
-- `scripts/wireguard-peer-management.sh` - Advanced peer management utilities
+- `scripts/wireguard/wireguard-peer-management.sh` - Advanced peer management utilities
   - List all configured peers
   - View peer statistics and connection status
   - Remove or modify existing peers
 
 ### Firewall & Security
-- `scripts/setup-firewall.sh` - Configures UFW firewall rules
+- `scripts/system/setup-firewall.sh` - Configures UFW firewall rules
   - Sets up default deny incoming, allow outgoing
   - Allows SSH (rate-limited), HTTP/HTTPS, WireGuard
   - Permits full access from local network and VPN subnet
   - Called during initial server setup
 
 ### System Setup
-- `scripts/install-docker-official.sh` - Installs Docker from official repository
+- `scripts/system/install-docker-official.sh` - Installs Docker from official repository
   - Removes snap-based Docker installation
   - Adds Docker's official apt repository
   - Installs Docker Engine with proper dependencies
   - One-time setup for Ubuntu systems
 
-- `scripts/setup-user-permissions.sh` - Adds user to docker group
+- `scripts/system/setup-user-permissions.sh` - Adds user to docker group
   - Enables running docker commands without sudo
   - Creates docker group if it doesn't exist
   - Adds current user to docker group
@@ -730,7 +730,7 @@ sudo tail -20 /var/log/certbot-traefik-reload.log
 - Ensure AdGuard is running: `docker compose ps adguard`
 - Test DNS directly: `dig @${SERVER_IP} n8n.${DOMAIN} +short`
 - Check AdGuard logs: `docker compose logs adguard`
-- Verify DNS rewrites: `./scripts/setup-adguard-dns.sh`
+- Verify DNS rewrites: `./scripts/adguard/setup-adguard-dns.sh`
 
 ### Service Not Accessible
 1. Check service is running: `make status`
