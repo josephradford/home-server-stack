@@ -502,7 +502,6 @@ For wildcard certificate (only on dashboard router):
 - Rules defined in `monitoring/prometheus/alert_rules.yml`
 - Alertmanager config in `monitoring/alertmanager/alertmanager.yml`
 - Alerts routed to webhook (default: `http://127.0.0.1:5001/`)
-- See `docs/archive/ALERTS.md` for alert definitions and response procedures
 
 **Accessing Monitoring**:
 - Grafana: `https://grafana.${DOMAIN}`
@@ -569,7 +568,7 @@ For wildcard certificate (only on dashboard router):
   - Centralizes API key management and rate limiting
   - Provides caching layer to reduce external API calls
   - Monitors system services (WireGuard, Docker) that aren't visible as containers
-- **Documentation:** See `docs/archive/BACKEND_API.md` for API endpoints and `homepage-api/README.md` for development
+- **Documentation:** See `homepage-api/README.md` for development and API endpoints
 
 ### Homepage Dashboard
 - **Purpose:** Unified dashboard with system monitoring, service widgets, and custom integrations
@@ -594,7 +593,7 @@ For wildcard certificate (only on dashboard router):
   - **Container stats** (showStats: true) - System resources from Docker
   - **Application widgets** - App-specific metrics via APIs
   - Both are complementary: container stats = infrastructure, widgets = application metrics
-- **Documentation:** See `docs/archive/DASHBOARD_SETUP.md` and `config/homepage/services-template.yaml`
+- **Configuration:** See `config/homepage/services-template.yaml` for widget configuration
 
 ### OpenClaw AI Assistant (Native Installation)
 - AI assistant accessible via messaging apps (Telegram, WhatsApp, Discord)
@@ -726,8 +725,6 @@ sudo tail -20 /var/log/certbot-traefik-reload.log
 - File provider not loaded: Check `./config/traefik/dynamic-certs.yml` exists
 - Permissions wrong: Cert should be 644, key should be 600
 - After config changes: Must recreate container with `docker compose up -d --force-recreate traefik`
-
-See **[docs/archive/TROUBLESHOOTING.md#ssl-certificate-issues](docs/archive/TROUBLESHOOTING.md)** for detailed troubleshooting.
 
 ### DNS Resolution
 - Ensure AdGuard is running: `docker compose ps adguard`
