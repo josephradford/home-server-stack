@@ -181,7 +181,10 @@ setup: env-check validate wireguard-check
 	@echo ""
 	@set -a; . ./.env; set +a; \
 	if [ -n "$$GANDIV5_PERSONAL_ACCESS_TOKEN" ] && [ -n "$$ACME_EMAIL" ] && [ -n "$$DOMAIN" ]; then \
-		CERT_STATUS=$$(sudo certbot certificates 2>/dev/null | grep -A 5 "Certificate Name: $$DOMAIN" | grep "Expiry Date" | grep -oP 'VALID: \K[0-9]+' || echo "0"); \
+		CERT_STATUS=$$(sudo certbot certificates 2>/dev/null | grep -A 5 "Certificate Name: $$DOMAIN" | grep "Expiry Date" | sed -n 's/.*VALID: \([0-9]\+\) days.*/\1/p'); \
+		if [ -z "$$CERT_STATUS" ]; then \
+			CERT_STATUS="0"; \
+		fi; \
 		if [ "$$CERT_STATUS" = "0" ]; then \
 			echo "🔒 SSL Certificate Setup Available"; \
 			echo ""; \
