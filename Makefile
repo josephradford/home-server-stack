@@ -3,9 +3,9 @@
 
 .PHONY: help setup update start stop restart logs build build-custom pull status clean purge validate env-check
 .PHONY: logs-n8n logs-homepage
-.PHONY: adguard-setup openclaw-install openclaw-status openclaw-logs setup-certs test-domain-access traefik-password
+.PHONY: openclaw-install openclaw-status openclaw-logs setup-certs test-domain-access
 .PHONY: wireguard-status wireguard-install wireguard-setup wireguard-check
-.PHONY: ssl-setup ssl-copy-certs ssl-configure-traefik ssl-setup-renewal ssl-renew-test
+.PHONY: ssl-setup ssl-renew-test
 
 # Compose file flags
 # Services are organized into logical groups:
@@ -47,10 +47,6 @@ help:
 	@echo "  make logs               - Show logs from all services"
 	@echo "  make logs-n8n           - Show n8n logs only"
 	@echo "  make logs-homepage      - Show Homepage logs only"
-	@echo "Service Configuration:"
-	@echo "  make adguard-setup            - Configure DNS rewrites for domain-based access"
-	@echo "  make traefik-password         - Generate Traefik dashboard password from .env"
-	@echo ""
 	@echo "OpenClaw AI Assistant (Native Install):"
 	@echo "  make openclaw-install         - Install OpenClaw natively on the server"
 	@echo "  make openclaw-status          - Check OpenClaw service status"
@@ -63,9 +59,6 @@ help:
 	@echo ""
 	@echo "SSL/TLS Certificate Management:"
 	@echo "  make ssl-setup          - Complete Let's Encrypt SSL setup (certbot + renewal)"
-	@echo "  make ssl-copy-certs     - Copy Let's Encrypt certs to Traefik"
-	@echo "  make ssl-configure-traefik - Configure Traefik file provider for certs"
-	@echo "  make ssl-setup-renewal  - Setup automatic certificate renewal"
 	@echo "  make ssl-renew-test     - Test certificate renewal (dry run)"
 	@echo ""
 	@echo "Testing & Validation:"
@@ -141,7 +134,8 @@ setup: env-check validate wireguard-check
 	fi
 	@echo ""
 	@echo "Step 8/8: Configuring AdGuard DNS rewrites..."
-	@$(MAKE) adguard-setup
+	@./scripts/adguard/setup-adguard-dns.sh
+	@$(COMPOSE_CORE) restart adguard
 	@echo ""
 	@$(COMPOSE) ps
 	@echo ""
@@ -324,29 +318,6 @@ purge:
 	@echo "✓ Purge complete - ALL DATA DELETED"
 
 # AdGuard Home DNS rewrites setup
-adguard-setup: env-check
-	@echo "Setting up AdGuard DNS rewrites for domain-based access..."
-	@./scripts/adguard/setup-adguard-dns.sh
-	@echo ""
-	@echo "Restarting AdGuard to apply configuration..."
-	@$(COMPOSE_CORE) restart adguard
-	@echo ""
-	@echo "✓ AdGuard DNS setup complete!"
-	@echo ""
-	@echo "Testing DNS resolution..."
-	@sleep 3
-	@set -a; . ./.env; set +a; \
-	if [ -n "$$DOMAIN" ]; then \
-		echo "Testing: n8n.$$DOMAIN"; \
-		dig @$$SERVER_IP n8n.$$DOMAIN +short || true; \
-		echo ""; \
-		echo "All *.$$DOMAIN domains should now resolve to $$SERVER_IP"; \
-	else \
-		echo "ERROR: DOMAIN not set in .env"; \
-	fi
-	@set -a; . ./.env; set +a; \
-	echo "Configure network devices to use $$SERVER_IP as DNS server"
-
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # OpenClaw AI Assistant (Native Installation)
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -484,17 +455,6 @@ test-domain-access: env-check
 	@echo "Testing domain-based access..."
 	@./scripts/testing/test-domain-access.sh
 
-# Setup Traefik dashboard password
-traefik-password: env-check
-	@echo "Setting up Traefik dashboard password..."
-	@./scripts/traefik/setup-traefik-password.sh
-	@echo ""
-	@echo "Restarting Traefik to apply new password..."
-	@$(COMPOSE_CORE) stop traefik
-	@$(COMPOSE_CORE) rm -f traefik
-	@$(COMPOSE_CORE) up -d traefik
-	@echo "✓ Traefik password updated and service restarted"
-
 # Let's Encrypt SSL Certificate Setup with certbot
 # Note: Uses certbot instead of Traefik's built-in ACME due to compatibility issues
 # with Gandi API v5 in Traefik's Lego library (v4.21.0)
@@ -553,28 +513,6 @@ ssl-setup: env-check
 	@echo ""
 	@echo "Certificates will auto-renew every 90 days."
 	@echo "Check renewal logs: sudo tail -f /var/log/certbot-traefik-reload.log"
-
-# Copy Let's Encrypt certificates to Traefik directory
-ssl-copy-certs: env-check
-	@echo "Copying Let's Encrypt certificates to Traefik..."
-	@./scripts/ssl/copy-certs-to-traefik.sh
-
-# Configure Traefik to use file provider for certificates
-ssl-configure-traefik: env-check
-	@echo "Configuring Traefik file provider..."
-	@./scripts/traefik/configure-traefik-file-provider.sh
-	@echo ""
-	@echo "Restarting Traefik to apply configuration..."
-	@$(COMPOSE_CORE) stop traefik
-	@$(COMPOSE_CORE) rm -f traefik
-	@$(COMPOSE_CORE) up -d traefik
-	@sleep 3
-	@echo "✓ Traefik configured and restarted"
-
-# Setup automatic certificate renewal
-ssl-setup-renewal: env-check
-	@echo "Setting up automatic certificate renewal..."
-	@./scripts/ssl/setup-cert-renewal.sh
 
 # Test certificate renewal (dry run)
 ssl-renew-test:
