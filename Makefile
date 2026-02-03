@@ -135,7 +135,24 @@ setup: env-check validate wireguard-check
 	@echo ""
 	@echo "Step 8/8: Configuring AdGuard DNS rewrites..."
 	@./scripts/adguard/setup-adguard-dns.sh
+	@echo ""
+	@echo "Restarting AdGuard to apply configuration..."
 	@$(COMPOSE_CORE) restart adguard
+	@echo ""
+	@echo "✓ AdGuard DNS setup complete!"
+	@echo ""
+	@echo "Testing DNS resolution..."
+	@sleep 3
+	@set -a; . ./.env; set +a; \
+	if [ -n "$$DOMAIN" ]; then \
+		echo "Testing: n8n.$$DOMAIN"; \
+		dig @$$SERVER_IP n8n.$$DOMAIN +short || true; \
+		echo ""; \
+		echo "All *.$$DOMAIN domains should now resolve to $$SERVER_IP"; \
+		echo "Configure network devices to use $$SERVER_IP as DNS server"; \
+	else \
+		echo "ERROR: DOMAIN not set in .env"; \
+	fi
 	@echo ""
 	@$(COMPOSE) ps
 	@echo ""
