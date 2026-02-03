@@ -48,7 +48,7 @@ services:
 
     # Network configuration
     networks:
-      - server-network
+      - homeserver
 
   # OpenClaw Gateway - Main service
   openclaw-gateway:
@@ -83,7 +83,7 @@ services:
 
     # Network configuration
     networks:
-      - server-network
+      - homeserver
 
     # Health check
     healthcheck:
@@ -110,5 +110,5 @@ services:
       - "app.access=http://${SERVER_IP}:18789"
 
 networks:
-  server-network:
-    external: true
+  homeserver:
+    driver: bridge
