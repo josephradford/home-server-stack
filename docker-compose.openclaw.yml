@@ -1,0 +1,114 @@
+# OpenClaw AI Assistant - Docker Compose Configuration
+# Note: OpenClaw is NOT behind Traefik - accessed directly via SERVER_IP:18789
+#
+# First-time setup workflow:
+#   1. Build image: make openclaw-build
+#   2. Run onboarding: make openclaw-onboard (interactive setup wizard)
+#   3. Start gateway: make openclaw-start
+#   4. Access Web UI: http://${SERVER_IP}:18789
+#
+# The onboarding wizard will guide you through:
+# - AI provider selection (Anthropic)
+# - API key configuration
+# - Model selection (recommend claude-sonnet-4-5)
+# - Channel setup (Telegram, WhatsApp, Discord, etc.)
+# - Gateway token generation
+
+services:
+  # OpenClaw CLI - Used for onboarding only
+  openclaw-cli:
+    build:
+      context: ./openclaw
+      dockerfile: Dockerfile
+      args:
+        OPENCLAW_DOCKER_APT_PACKAGES: "${OPENCLAW_DOCKER_APT_PACKAGES:-}"
+    image: openclaw-custom:latest
+    container_name: openclaw-cli
+    profiles:
+      - setup  # This service only runs when explicitly called
+
+    # Interactive terminal for onboarding
+    stdin_open: true
+    tty: true
+
+    # Environment configuration
+    environment:
+      - NODE_ENV=production
+      - HOMEBREW_NO_AUTO_UPDATE=1
+      - HOMEBREW_NO_INSTALL_CLEANUP=1
+      - PATH=/home/linuxbrew/.linuxbrew/bin:/home/linuxbrew/.linuxbrew/sbin:/home/node/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+    # Volume mounts for persistence
+    volumes:
+      - ${OPENCLAW_CONFIG_DIR:-./data/openclaw/config}:/home/node/.openclaw
+      - ${OPENCLAW_WORKSPACE_DIR:-./data/openclaw/workspace}:/home/node/.openclaw/workspace
+
+    # Run onboarding command
+    command: ["openclaw", "onboard"]
+
+    # Network configuration
+    networks:
+      - server-network
+
+  # OpenClaw Gateway - Main service
+  openclaw-gateway:
+    build:
+      context: ./openclaw
+      dockerfile: Dockerfile
+      args:
+        OPENCLAW_DOCKER_APT_PACKAGES: "${OPENCLAW_DOCKER_APT_PACKAGES:-}"
+    container_name: openclaw-gateway
+    image: openclaw-custom:latest
+    restart: unless-stopped
+
+    # Port mapping - Direct access without Traefik
+    ports:
+      - "${OPENCLAW_GATEWAY_PORT:-18789}:18789"  # Web UI
+      - "${OPENCLAW_BRIDGE_PORT:-18790}:18790"   # Bridge API (optional)
+
+    # Environment configuration
+    environment:
+      - NODE_ENV=production
+      - OPENCLAW_GATEWAY_BIND=${OPENCLAW_GATEWAY_BIND:-0.0.0.0}
+
+      # Homebrew configuration
+      - HOMEBREW_NO_AUTO_UPDATE=1
+      - HOMEBREW_NO_INSTALL_CLEANUP=1
+      - PATH=/home/linuxbrew/.linuxbrew/bin:/home/linuxbrew/.linuxbrew/sbin:/home/node/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+    # Volume mounts for persistence
+    volumes:
+      - ${OPENCLAW_CONFIG_DIR:-./data/openclaw/config}:/home/node/.openclaw
+      - ${OPENCLAW_WORKSPACE_DIR:-./data/openclaw/workspace}:/home/node/.openclaw/workspace
+
+    # Network configuration
+    networks:
+      - server-network
+
+    # Health check
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:18789/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+    # Resource limits (optional - adjust based on usage)
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 4G
+        reservations:
+          cpus: '0.5'
+          memory: 1G
+
+    # Labels for documentation
+    labels:
+      - "app.category=ai-assistant"
+      - "app.description=OpenClaw AI Assistant with Homebrew and GOG"
+      - "app.access=http://${SERVER_IP}:18789"
+
+networks:
+  server-network:
+    external: true

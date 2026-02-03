@@ -142,25 +142,25 @@ make adguard-setup
 make traefik-password
 ```
 
-### OpenClaw AI Assistant (Native Installation)
+### OpenClaw AI Assistant (Docker Deployment)
 ```bash
-# NOTE: Run these commands ON the server, not from your dev machine
-# SSH to server first: ssh user@SERVER_IP
+# First-time setup (once)
+make openclaw-build      # Build Docker image (10-15 minutes)
+make openclaw-onboard    # Run interactive setup wizard
 
-# Install OpenClaw natively (interactive)
-make openclaw-install
+# Service management (integrated with all services)
+make start               # Start all services (includes OpenClaw)
+make stop                # Stop all services
+make restart             # Restart all services
+make status              # Show status of all services
 
-# Check OpenClaw service status
-make openclaw-status
-
-# View OpenClaw gateway logs (live stream)
-make openclaw-logs
+# OpenClaw-specific logs
+make logs-openclaw       # View OpenClaw logs only
+make logs                # View all service logs (includes OpenClaw)
 
 # Manual operations
-openclaw gateway status        # Check gateway status
-openclaw health               # Health check
-openclaw onboard              # Re-run onboarding
-journalctl --user -u openclaw-gateway -f  # View systemd logs
+docker compose -f docker-compose.openclaw.yml exec openclaw-gateway bash  # Shell access
+docker compose -f docker-compose.openclaw.yml run --rm openclaw-cli onboard  # Re-run setup wizard
 ```
 
 ### Dashboard Management
@@ -207,20 +207,24 @@ make purge
 ## Architecture & Key Concepts
 
 ### Multi-File Docker Compose
-The stack uses **four compose files** organized by logical function:
+The stack uses **five compose files** organized by logical function:
 - `docker-compose.yml` - Core services (AdGuard, n8n) - user-facing services that "do stuff"
 - `docker-compose.network.yml` - Network & Security (Traefik, Fail2ban) - infrastructure layer
 - `docker-compose.monitoring.yml` - Monitoring stack (Prometheus, Grafana, Alertmanager, exporters)
 - `docker-compose.dashboard.yml` - Dashboard (Homepage, Homepage API)
+- `docker-compose.openclaw.yml` - OpenClaw AI Assistant (NOT behind Traefik, direct port access)
 
 **Note on WireGuard VPN**: WireGuard is installed as a **system service** (not Docker) to ensure VPN access remains available when Docker services are restarted or stopped. See "WireGuard VPN Management" section above.
 
-The Makefile combines all files by default: `docker compose -f docker-compose.yml -f docker-compose.network.yml -f docker-compose.monitoring.yml -f docker-compose.dashboard.yml`
+The Makefile combines most files by default: `docker compose -f docker-compose.yml -f docker-compose.network.yml -f docker-compose.monitoring.yml -f docker-compose.dashboard.yml`
+
+OpenClaw is managed separately with its own compose file and Makefile targets (e.g., `make openclaw-start`) since it's not behind Traefik and uses direct port access.
 
 This organization provides:
 - **Clear separation of concerns** - Easy to understand what each file contains
-- **Logical grouping** - Services grouped by function (core, network, monitoring, dashboard)
+- **Logical grouping** - Services grouped by function (core, network, monitoring, dashboard, ai-assistant)
 - **Modular deployment** - Can deploy subsets if needed (e.g., core + network without monitoring)
+- **Independent AI assistant** - OpenClaw operates independently without Traefik routing
 - **Homepage dashboard alignment** - Dashboard sections mirror compose file organization
 
 ### Domain-Based Routing Architecture
@@ -595,49 +599,64 @@ For wildcard certificate (only on dashboard router):
   - Both are complementary: container stats = infrastructure, widgets = application metrics
 - **Configuration:** See `config/homepage/services-template.yaml` for widget configuration
 
-### OpenClaw AI Assistant (Native Installation)
+### OpenClaw AI Assistant (Docker Deployment)
 - AI assistant accessible via messaging apps (Telegram, WhatsApp, Discord)
 - Provides intelligent conversational interface with sandboxed code execution
-- **Installation:** Native system service (NOT Docker) - runs directly on Ubuntu server
-- Web UI access: `http://${SERVER_IP}:18789`
-- Configuration: `~/.openclaw/` on server (not in repo)
+- **Container:** `openclaw-gateway` (built from `./openclaw/Dockerfile`)
+- **Ports:** 18789 (Web UI), 18790 (Bridge API)
+- **Domain access:** Direct port access - `http://${SERVER_IP}:18789` (NOT behind Traefik)
+- **Security:** admin-secure middleware not applied - only accessible from local network or VPN
 - **Architecture:**
-  - `openclaw-gateway` - systemd user service that connects messaging apps to AI
-  - Runs on port 18789 (web UI) and 8787 (optional Telegram webhook)
-  - Long-polling mode (default) requires no webhook or public URL
+  - Runs in Docker with Homebrew and GOG (Google OAuth CLI) preinstalled
+  - Based on Node.js 22 (Debian Bookworm)
+  - OpenClaw installed via official installer (not pre-built)
   - Sandbox execution - Isolated processes for running code tasks
-- **Setup:**
-  - Run on server (SSH to server first): `make openclaw-install`
-  - Installation steps:
-    1. Checks Node.js 22+ is installed
-    2. Runs official OpenClaw installer: `curl -fsSL https://openclaw.ai/install.sh | bash`
-    3. Runs onboarding wizard with `--install-daemon` flag
-    4. Configures Telegram bot (requires Bot Token from @BotFather)
-    5. Configures Anthropic API key (provided during onboarding)
-    6. Starts gateway as systemd user service
-  - Configuration via interactive onboarding wizard (run once during installation)
+- **Pre-installed Tools:**
+  - **OpenClaw CLI** - Installed via official `openclaw.ai/install.sh` script
+  - **Homebrew (Linuxbrew)** - Package manager for additional tools
+  - **GOG (Google OAuth CLI)** - Google services integration (Gmail, Calendar, Drive, etc.)
+  - Accessible via `brew install <package>` inside container
+- **Setup (Interactive Wizard):**
+  1. Build image: `make openclaw-build` (takes 10-15 minutes first time)
+  2. Run setup wizard: `make openclaw-onboard` (interactive)
+     - Choose AI provider: **Anthropic**
+     - Enter API key from console.anthropic.com
+     - Select model: **claude-sonnet-4-5** (recommended)
+     - Configure messaging channels (Telegram, WhatsApp, Discord, etc.)
+     - Gateway token generated automatically
+  3. Start gateway: `make openclaw-start`
+  4. Access Web UI: `http://${SERVER_IP}:18789`
+  5. Test by sending message to your configured channel
 - **Configuration:**
-  - Requires: `ANTHROPIC_API_KEY` in `.env` for Claude AI models
-  - Recommended model: `claude-sonnet-4-5`
-  - Configuration stored on server: `~/.openclaw/openclaw.json`
-  - Channel sessions in `~/.openclaw/credentials/`
+  - All configuration done via interactive setup wizard (no manual `.env` editing required)
+  - Configuration persisted: `./data/openclaw/config/openclaw.json`
+  - Workspace directory: `./data/openclaw/workspace/`
   - Telegram uses **long-polling** (default) - no webhook or reverse proxy needed
+  - Optional `.env` variables:
+    - `OPENCLAW_GATEWAY_PORT` - Default: 18789
+    - `OPENCLAW_DOCKER_APT_PACKAGES` - Additional system packages to install
 - **API Costs:**
   - Pay-per-use Anthropic API (no subscription)
   - Typical conversation: $0.05-0.50 per interaction
   - Monitor usage at console.anthropic.com
 - **Security:**
-  - Runs as native systemd user service (isolated from Docker)
-  - API keys stored in server home directory (never commit to git)
+  - Direct port access (18789) - not exposed via Traefik
+  - Firewall should restrict access to local network and VPN subnet only
+  - API keys stored in `./data/openclaw/config/` (never commit to git)
   - Sandboxed code execution isolated from host
-  - No Docker socket access required
-  - Web UI accessible only from local network (port 18789 not exposed publicly)
+  - Runs as non-root `node` user (UID 1000)
+  - Web UI accessible only from trusted networks
   - Monitor for prompt injection risks
 - **Management:**
-  - Check status: `make openclaw-status` (run on server)
-  - View logs: `make openclaw-logs` (run on server)
-  - Health check: `openclaw health` (run on server)
-  - Runs automatically on boot via systemd
+  - Start/Stop/Restart: Integrated with `make start/stop/restart` (manages all services)
+  - Status: `make status` (shows all services including OpenClaw)
+  - Logs: `make logs-openclaw` (OpenClaw only) or `make logs` (all services)
+  - Re-run setup: `docker compose -f docker-compose.openclaw.yml run --rm openclaw-cli onboard`
+  - Shell access: `docker compose -f docker-compose.openclaw.yml exec openclaw-gateway bash`
+- **Data Persistence:**
+  - Configuration: `./data/openclaw/config/` (mounted to `/home/node/.openclaw`)
+  - Workspace: `./data/openclaw/workspace/` (mounted to `/home/node/.openclaw/workspace`)
+  - Included in backup strategy: `tar -czf backup.tar.gz data/ .env`
 
 ## Documentation Structure
 

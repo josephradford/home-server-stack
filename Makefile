@@ -2,8 +2,8 @@
 # Simplifies deployment and maintenance operations
 
 .PHONY: help setup update start stop restart logs build build-custom pull status clean purge validate env-check
-.PHONY: logs-n8n logs-homepage
-.PHONY: openclaw-install openclaw-status openclaw-logs setup-certs test-domain-access
+.PHONY: logs-n8n logs-homepage logs-openclaw
+.PHONY: openclaw-build openclaw-onboard setup-certs test-domain-access
 .PHONY: wireguard-status wireguard-install wireguard-setup wireguard-check
 .PHONY: ssl-setup ssl-renew-test
 
@@ -13,15 +13,18 @@
 # - docker-compose.network.yml: Network & Security (Traefik, Fail2ban)
 # - docker-compose.monitoring.yml: Monitoring stack (Prometheus, Grafana, Alertmanager, exporters)
 # - docker-compose.dashboard.yml: Dashboard (Homepage, Homepage API)
+# - docker-compose.openclaw.yml: OpenClaw AI Assistant (NOT behind Traefik)
 #
 # NOTE: WireGuard is now a system service, not Docker service
 # Install with: sudo ./scripts/wireguard/install-wireguard.sh
 # Check status: make wireguard-status
 #
 # COMPOSE_CORE: Core + Network + Monitoring (used for operations that shouldn't restart dashboard)
-# COMPOSE: All services including dashboard (default for most operations)
+# COMPOSE: All services including dashboard and OpenClaw (default for most operations)
+# COMPOSE_OPENCLAW: OpenClaw only (for build/onboard operations)
 COMPOSE_CORE := docker compose -f docker-compose.yml -f docker-compose.network.yml -f docker-compose.monitoring.yml
-COMPOSE := docker compose -f docker-compose.yml -f docker-compose.network.yml -f docker-compose.monitoring.yml -f docker-compose.dashboard.yml
+COMPOSE := docker compose -f docker-compose.yml -f docker-compose.network.yml -f docker-compose.monitoring.yml -f docker-compose.dashboard.yml -f docker-compose.openclaw.yml
+COMPOSE_OPENCLAW := docker compose -f docker-compose.openclaw.yml
 
 # Default target - show help
 help:
@@ -32,7 +35,7 @@ help:
 	@echo "  make env-check          - Verify .env file exists and is configured"
 	@echo ""
 	@echo "Service Management:"
-	@echo "  make start              - Start all services (core + monitoring + dashboard)"
+	@echo "  make start              - Start all services (includes OpenClaw if configured)"
 	@echo "  make stop               - Stop all services"
 	@echo "  make restart            - Restart all services"
 	@echo "  make status             - Show status of all services"
@@ -47,10 +50,12 @@ help:
 	@echo "  make logs               - Show logs from all services"
 	@echo "  make logs-n8n           - Show n8n logs only"
 	@echo "  make logs-homepage      - Show Homepage logs only"
-	@echo "OpenClaw AI Assistant (Native Install):"
-	@echo "  make openclaw-install         - Install OpenClaw natively on the server"
-	@echo "  make openclaw-status          - Check OpenClaw service status"
-	@echo "  make openclaw-logs            - View OpenClaw gateway logs"
+	@echo "  make logs-openclaw      - Show OpenClaw logs only"
+	@echo ""
+	@echo "OpenClaw AI Assistant Setup:"
+	@echo "  make openclaw-build     - Build OpenClaw image (with Homebrew + GOG)"
+	@echo "  make openclaw-onboard   - Run setup wizard (first time only)"
+	@echo "  Note: Use 'make start/stop/restart' to manage OpenClaw with other services"
 	@echo ""
 	@echo "WireGuard VPN Management:"
 	@echo "  make wireguard-install        - Install WireGuard packages (one-time, requires sudo)"
@@ -305,6 +310,9 @@ logs-n8n:
 logs-homepage:
 	@$(COMPOSE) logs -f homepage
 
+logs-openclaw:
+	@$(COMPOSE) logs -f openclaw-gateway
+
 # Clean up all services (preserves ./data/)
 clean:
 	@echo "WARNING: This will remove all containers and volumes!"
@@ -356,98 +364,63 @@ purge:
 	@docker image prune -af
 	@echo "✓ Purge complete - ALL DATA DELETED"
 
-# AdGuard Home DNS rewrites setup
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# OpenClaw AI Assistant (Native Installation)
+# OpenClaw AI Assistant (Docker Deployment)
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-# Install OpenClaw natively on the server
-openclaw-install:
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# OpenClaw AI Assistant Setup (First-time only)
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+# Build OpenClaw Docker image with Homebrew and GOG
+openclaw-build: env-check
 	@echo "═════════════════════════════════════════════════════════════════"
-	@echo "OpenClaw AI Assistant - Native Installation"
-	@echo "═════════════════════════════════════════════════════════════════"
-	@echo ""
-	@echo "This will install OpenClaw as a native system service (not Docker)."
-	@echo ""
-	@echo "Prerequisites:"
-	@echo "  - Node.js 22 or higher (check with: node --version)"
-	@echo "  - Anthropic API key (get from console.anthropic.com)"
-	@echo "  - Telegram Bot Token (get from @BotFather)"
-	@echo ""
-	@echo "Installation steps:"
-	@echo "  1. Check Node.js version"
-	@echo "  2. Install OpenClaw using official installer"
-	@echo "  3. Run onboarding wizard (interactive)"
-	@echo "  4. Configure Telegram bot"
-	@echo "  5. Start gateway as systemd service"
-	@echo ""
+	@echo "OpenClaw AI Assistant - Building Docker Image"
 	@echo "═════════════════════════════════════════════════════════════════"
 	@echo ""
-	@echo "Step 1: Checking Node.js version..."
-	@node --version || { \
-		echo ""; \
-		echo "❌ Node.js not found or version too old."; \
-		echo ""; \
-		echo "Install Node.js 22:"; \
-		echo "  curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -"; \
-		echo "  sudo apt-get install -y nodejs"; \
-		echo ""; \
-		exit 1; \
-	}
+	@echo "Building custom OpenClaw image with:"
+	@echo "  - Node.js 22"
+	@echo "  - OpenClaw CLI (via official installer)"
+	@echo "  - Homebrew (Linuxbrew)"
+	@echo "  - GOG (Google OAuth CLI)"
 	@echo ""
-	@echo "Step 2: Installing OpenClaw..."
-	@curl -fsSL https://openclaw.ai/install.sh | bash
+	@echo "This may take 10-15 minutes on first build..."
 	@echo ""
-	@echo "Step 3: Running onboarding wizard..."
+	@$(COMPOSE_OPENCLAW) build
 	@echo ""
-	@echo "⚠️  IMPORTANT: During onboarding you'll be asked for:"
-	@echo "  - AI provider: Choose Anthropic"
-	@echo "  - API key: Provide your Anthropic API key"
-	@echo "  - Model: Recommend claude-sonnet-4-5"
-	@echo "  - Channel: Choose Telegram"
-	@echo "  - Mode: LONG-POLLING (default - no webhook needed)"
-	@echo "  - Bot Token: Provide your Telegram Bot Token from @BotFather"
-	@echo "  - Daemon: Enable installation (--install-daemon)"
+	@echo "✓ OpenClaw image built successfully!"
 	@echo ""
-	@echo "Press Enter to continue to onboarding wizard..."
+	@echo "Next step: Run the setup wizard"
+	@echo "  make openclaw-onboard"
+	@echo ""
+
+# Run OpenClaw onboarding wizard
+openclaw-onboard: env-check
+	@echo "═════════════════════════════════════════════════════════════════"
+	@echo "OpenClaw AI Assistant - Setup Wizard"
+	@echo "═════════════════════════════════════════════════════════════════"
+	@echo ""
+	@echo "This will run the interactive OpenClaw setup wizard."
+	@echo ""
+	@echo "You'll be asked to configure:"
+	@echo "  - AI provider (choose Anthropic)"
+	@echo "  - API key (from console.anthropic.com)"
+	@echo "  - Model (recommend claude-sonnet-4-5)"
+	@echo "  - Messaging channels (Telegram, WhatsApp, Discord, etc.)"
+	@echo "  - Gateway token (auto-generated)"
+	@echo ""
+	@echo "Press Ctrl+C to cancel, or Enter to continue..."
 	@read confirm
 	@echo ""
-	@openclaw onboard --install-daemon
+	@$(COMPOSE_OPENCLAW) run --rm openclaw-cli
 	@echo ""
-	@echo "Step 4: Starting OpenClaw gateway..."
-	@openclaw gateway start
+	@echo "✓ Onboarding complete!"
 	@echo ""
-	@echo "═════════════════════════════════════════════════════════════════"
-	@echo "✓ OpenClaw Installation Complete!"
-	@echo "═════════════════════════════════════════════════════════════════"
+	@echo "Your configuration has been saved to ./data/openclaw/config/"
 	@echo ""
-	@echo "OpenClaw is now running as a systemd service."
+	@echo "Next step: Start all services"
+	@echo "  make start"
 	@echo ""
-	@echo "Next steps:"
-	@echo "  1. Test your Telegram bot by sending it a message"
-	@echo "  2. Check status: make openclaw-status"
-	@echo "  3. View logs: make openclaw-logs"
-	@echo ""
-	@set -a; . ./.env; set +a; \
-	echo "Web UI access: http://$$SERVER_IP:18789"
-	@echo ""
-	@echo "Useful commands:"
-	@echo "  openclaw gateway status    # Check gateway status"
-	@echo "  openclaw health            # Health check"
-	@echo "  journalctl --user -u openclaw-gateway -f  # View logs"
-	@echo ""
-
-# Check OpenClaw service status
-openclaw-status:
-	@echo "Checking OpenClaw status..."
-	@openclaw gateway status && openclaw health
-
-# View OpenClaw gateway logs
-openclaw-logs:
-	@echo "Viewing OpenClaw logs..."
-	@echo "Press Ctrl+C to stop following logs"
-	@echo ""
-	@journalctl --user -u openclaw-gateway -f
 
 # WireGuard VPN Management (System Service)
 wireguard-status:
