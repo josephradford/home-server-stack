@@ -6,7 +6,6 @@
 .PHONY: adguard-setup openclaw-install openclaw-status openclaw-logs setup-certs test-domain-access traefik-password
 .PHONY: wireguard-status wireguard-install wireguard-setup wireguard-check
 .PHONY: ssl-setup ssl-copy-certs ssl-configure-traefik ssl-setup-renewal ssl-renew-test
-.PHONY: dashboard-setup dashboard-start dashboard-stop dashboard-restart dashboard-logs dashboard-status
 
 # Compose file flags
 # Services are organized into logical groups:
@@ -19,11 +18,9 @@
 # Install with: sudo ./scripts/wireguard/install-wireguard.sh
 # Check status: make wireguard-status
 #
-# COMPOSE_CORE: Core + Network + Monitoring (everything except dashboard)
-# COMPOSE_DASHBOARD: Dashboard only (for dashboard-specific operations)
-# COMPOSE: All services (default for most operations)
+# COMPOSE_CORE: Core + Network + Monitoring (used for operations that shouldn't restart dashboard)
+# COMPOSE: All services including dashboard (default for most operations)
 COMPOSE_CORE := docker compose -f docker-compose.yml -f docker-compose.network.yml -f docker-compose.monitoring.yml
-COMPOSE_DASHBOARD := docker compose -f docker-compose.dashboard.yml
 COMPOSE := docker compose -f docker-compose.yml -f docker-compose.network.yml -f docker-compose.monitoring.yml -f docker-compose.dashboard.yml
 
 # Default target - show help
@@ -50,15 +47,6 @@ help:
 	@echo "  make logs               - Show logs from all services"
 	@echo "  make logs-n8n           - Show n8n logs only"
 	@echo "  make logs-homepage      - Show Homepage logs only"
-	@echo ""
-	@echo "Dashboard Management:"
-	@echo "  make dashboard-setup    - Setup and start Homepage dashboard"
-	@echo "  make dashboard-start    - Start Homepage dashboard"
-	@echo "  make dashboard-stop     - Stop Homepage dashboard"
-	@echo "  make dashboard-restart  - Restart Homepage dashboard"
-	@echo "  make dashboard-logs     - Show Homepage dashboard logs"
-	@echo "  make dashboard-status   - Show Homepage dashboard status"
-	@echo ""
 	@echo "Service Configuration:"
 	@echo "  make adguard-setup            - Configure DNS rewrites for domain-based access"
 	@echo "  make traefik-password         - Generate Traefik dashboard password from .env"
@@ -282,7 +270,7 @@ logs-n8n:
 	@$(COMPOSE) logs -f n8n
 
 logs-homepage:
-	@$(COMPOSE_DASHBOARD) logs -f homepage
+	@$(COMPOSE) logs -f homepage
 
 # Clean up all services (preserves ./data/)
 clean:
@@ -595,55 +583,3 @@ ssl-renew-test:
 	@echo ""
 	@sudo certbot renew --dry-run
 
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# Dashboard Management
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-# Setup Homepage dashboard (first time)
-dashboard-setup: env-check
-	@echo "Setting up Homepage Dashboard..."
-	@echo ""
-	@echo "Step 1/3: Creating config directory..."
-	@mkdir -p data/homepage/config
-	@echo "✓ Config directory created"
-	@echo ""
-	@echo "Step 2/3: Generating Homepage configuration files..."
-	@./scripts/homepage/configure-homepage.sh
-	@echo ""
-	@echo "Step 3/3: Starting Homepage dashboard (Docker Compose will create network)..."
-	@$(COMPOSE_DASHBOARD) up -d
-	@echo ""
-	@echo "✓ Homepage Dashboard setup complete!"
-	@echo ""
-	@set -a; . ./.env; set +a; \
-	echo "Access your dashboard at: https://homepage.$$DOMAIN"
-	@echo ""
-	@echo "Check logs with: make dashboard-logs"
-
-# Start Homepage dashboard
-dashboard-start: env-check
-	@echo "Starting Homepage dashboard..."
-	@$(COMPOSE_DASHBOARD) up -d
-	@echo "✓ Homepage dashboard started"
-	@set -a; . ./.env; set +a; \
-	echo "Access at: https://homepage.$$DOMAIN"
-
-# Stop Homepage dashboard
-dashboard-stop:
-	@echo "Stopping Homepage dashboard..."
-	@$(COMPOSE_DASHBOARD) down
-	@echo "✓ Homepage dashboard stopped"
-
-# Restart Homepage dashboard
-dashboard-restart: env-check
-	@echo "Restarting Homepage dashboard..."
-	@$(COMPOSE_DASHBOARD) restart
-	@echo "✓ Homepage dashboard restarted"
-
-# Show Homepage dashboard logs
-dashboard-logs:
-	@$(COMPOSE_DASHBOARD) logs -f homepage
-
-# Show Homepage dashboard status
-dashboard-status:
-	@$(COMPOSE_DASHBOARD) ps
