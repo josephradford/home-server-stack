@@ -234,6 +234,21 @@ setup: env-check validate wireguard-check
 	fi
 	@echo ""
 	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+	@echo ""
+	@echo "🤖 Optional: OpenClaw AI Assistant Setup"
+	@echo ""
+	@echo "OpenClaw provides AI-powered assistance via Telegram, WhatsApp, or Discord"
+	@echo "with Homebrew and Google services (GOG) integration built-in."
+	@echo ""
+	@echo "To set up OpenClaw:"
+	@echo "  1. make openclaw-build     # Build Docker image (10-15 minutes)"
+	@echo "  2. make openclaw-onboard   # Run interactive setup wizard"
+	@echo "  3. make start              # Start gateway with other services"
+	@echo ""
+	@set -a; . ./.env; set +a; \
+	echo "Access: http://$$SERVER_IP:18789 (after setup)"
+	@echo ""
+	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
 # Check WireGuard is running (required for all Docker operations)
 wireguard-check:
