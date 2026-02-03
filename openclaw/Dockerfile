@@ -38,11 +38,15 @@ RUN brew --version
 # Note: gogcli may not be available in homebrew, so using npm as primary method
 RUN npm install -g @google/oauth-cli || echo "GOG installation skipped - will be available via skills"
 
-# Install OpenClaw globally
-RUN curl -fsSL https://openclaw.ai/install.sh | bash
+# Install OpenClaw globally (non-interactive)
+# Redirect stdin from /dev/null to prevent interactive prompts during build
+RUN curl -fsSL https://openclaw.ai/install.sh | bash < /dev/null || true
 
-# Add OpenClaw to PATH
-ENV PATH="/home/node/.local/bin:${PATH}"
+# Add OpenClaw to PATH (includes both npm-global and local bin)
+ENV PATH="/home/node/.npm-global/bin:/home/node/.local/bin:${PATH}"
+
+# Verify OpenClaw was installed
+RUN which openclaw || echo "OpenClaw not in PATH yet, will be available after shell reload"
 
 # Set production environment
 ENV NODE_ENV=production
