@@ -16,7 +16,7 @@
 # - docker-compose.dashboard.yml: Dashboard (Homepage, Homepage API)
 #
 # NOTE: WireGuard is now a system service, not Docker service
-# Install with: sudo ./scripts/install-wireguard.sh
+# Install with: sudo ./scripts/wireguard/install-wireguard.sh
 # Check status: make wireguard-status
 #
 # COMPOSE_CORE: Core + Network + Monitoring (everything except dashboard)
@@ -128,13 +128,13 @@ setup: env-check validate wireguard-check
 	@echo "Starting first-time setup..."
 	@echo ""
 	@echo "Step 1/8: Setting up Traefik dashboard password..."
-	@./scripts/setup-traefik-password.sh
+	@./scripts/traefik/setup-traefik-password.sh
 	@echo ""
 	@echo "Step 2/8: Setting up SSL certificate storage..."
 	@$(MAKE) setup-certs
 	@echo ""
 	@echo "Step 3/8: Setting up Homepage dashboard config..."
-	@./scripts/configure-homepage.sh
+	@./scripts/homepage/configure-homepage.sh
 	@echo ""
 	@echo "Step 4/8: Pulling pre-built images..."
 	@$(COMPOSE) pull --ignore-pull-failures
@@ -223,7 +223,7 @@ wireguard-check:
 		echo "   make wireguard-install"; \
 		echo ""; \
 		echo "2. Create server configuration:"; \
-		echo "   sudo ./scripts/setup-wireguard-server.sh"; \
+		echo "   sudo ./scripts/wireguard/setup-wireguard-server.sh"; \
 		echo ""; \
 		echo "3. Enable and start the service:"; \
 		echo "   sudo systemctl enable --now wg-quick@wg0"; \
@@ -338,7 +338,7 @@ purge:
 # AdGuard Home DNS rewrites setup
 adguard-setup: env-check
 	@echo "Setting up AdGuard DNS rewrites for domain-based access..."
-	@./scripts/setup-adguard-dns.sh
+	@./scripts/adguard/setup-adguard-dns.sh
 	@echo ""
 	@echo "Restarting AdGuard to apply configuration..."
 	@$(COMPOSE_CORE) restart adguard
@@ -465,14 +465,14 @@ wireguard-install:
 	@echo "Installing WireGuard as a system service..."
 	@echo ""
 	@echo "This script requires sudo. You will be prompted for your password."
-	@sudo ./scripts/install-wireguard.sh
+	@sudo ./scripts/wireguard/install-wireguard.sh
 
 wireguard-setup: env-check
 	@echo "Setting up WireGuard VPN server..."
 	@echo ""
 	@echo "This script requires sudo. You will be prompted for your password."
 	@echo ""
-	@sudo ./scripts/setup-wireguard-server.sh
+	@sudo ./scripts/wireguard/setup-wireguard-server.sh
 	@echo ""
 	@echo "Enabling and starting WireGuard service..."
 	@sudo systemctl enable --now wg-quick@wg0
@@ -482,7 +482,7 @@ wireguard-setup: env-check
 	@make wireguard-status
 	@echo ""
 	@echo "Next: Add VPN peers"
-	@echo "  sudo ./scripts/wireguard-add-peer.sh <peer-name>"
+	@echo "  sudo ./scripts/wireguard/wireguard-add-peer.sh <peer-name>"
 
 # Setup SSL certificate storage (for certbot-generated certs)
 setup-certs:
@@ -494,12 +494,12 @@ setup-certs:
 # Test domain-based access for all services
 test-domain-access: env-check
 	@echo "Testing domain-based access..."
-	@./scripts/test-domain-access.sh
+	@./scripts/testing/test-domain-access.sh
 
 # Setup Traefik dashboard password
 traefik-password: env-check
 	@echo "Setting up Traefik dashboard password..."
-	@./scripts/setup-traefik-password.sh
+	@./scripts/traefik/setup-traefik-password.sh
 	@echo ""
 	@echo "Restarting Traefik to apply new password..."
 	@$(COMPOSE_CORE) stop traefik
@@ -532,13 +532,13 @@ ssl-setup: env-check
 	@read confirm
 	@echo ""
 	@echo "Step 1/5: Installing certbot and generating certificate..."
-	@./scripts/setup-certbot-gandi.sh
+	@./scripts/ssl/setup-certbot-gandi.sh
 	@echo ""
 	@echo "Step 2/5: Copying certificates to Traefik..."
-	@./scripts/copy-certs-to-traefik.sh
+	@./scripts/ssl/copy-certs-to-traefik.sh
 	@echo ""
 	@echo "Step 3/5: Configuring Traefik file provider..."
-	@./scripts/configure-traefik-file-provider.sh
+	@./scripts/traefik/configure-traefik-file-provider.sh
 	@echo ""
 	@echo "Step 4/5: Recreating Traefik container with new configuration..."
 	@$(COMPOSE_CORE) stop traefik
@@ -547,7 +547,7 @@ ssl-setup: env-check
 	@sleep 5
 	@echo ""
 	@echo "Step 5/5: Setting up automatic renewal..."
-	@./scripts/setup-cert-renewal.sh
+	@./scripts/ssl/setup-cert-renewal.sh
 	@echo ""
 	@echo "==================================================="
 	@echo "✓ SSL Setup Complete!"
@@ -569,12 +569,12 @@ ssl-setup: env-check
 # Copy Let's Encrypt certificates to Traefik directory
 ssl-copy-certs: env-check
 	@echo "Copying Let's Encrypt certificates to Traefik..."
-	@./scripts/copy-certs-to-traefik.sh
+	@./scripts/ssl/copy-certs-to-traefik.sh
 
 # Configure Traefik to use file provider for certificates
 ssl-configure-traefik: env-check
 	@echo "Configuring Traefik file provider..."
-	@./scripts/configure-traefik-file-provider.sh
+	@./scripts/traefik/configure-traefik-file-provider.sh
 	@echo ""
 	@echo "Restarting Traefik to apply configuration..."
 	@$(COMPOSE_CORE) stop traefik
@@ -586,7 +586,7 @@ ssl-configure-traefik: env-check
 # Setup automatic certificate renewal
 ssl-setup-renewal: env-check
 	@echo "Setting up automatic certificate renewal..."
-	@./scripts/setup-cert-renewal.sh
+	@./scripts/ssl/setup-cert-renewal.sh
 
 # Test certificate renewal (dry run)
 ssl-renew-test:
@@ -608,7 +608,7 @@ dashboard-setup: env-check
 	@echo "✓ Config directory created"
 	@echo ""
 	@echo "Step 2/3: Generating Homepage configuration files..."
-	@./scripts/configure-homepage.sh
+	@./scripts/homepage/configure-homepage.sh
 	@echo ""
 	@echo "Step 3/3: Starting Homepage dashboard (Docker Compose will create network)..."
 	@$(COMPOSE_DASHBOARD) up -d
