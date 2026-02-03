@@ -76,37 +76,19 @@ All services are accessible via domain names on your local network:
 
 These are not intended for regular use - domain-based access via Traefik is recommended. See [SERVICES.md](SERVICES.md) for complete list.
 
-See **[docs/archive/SETUP.md](docs/archive/SETUP.md)** for detailed installation instructions.
-
-## 🔒 SSL Certificates
-
-By default, services use **self-signed certificates** (browser warnings expected). For **trusted Let's Encrypt certificates**, see **[docs/archive/CONFIGURATION.md#ssl-certificate-setup](docs/archive/CONFIGURATION.md#ssl-certificate-setup)** for complete setup instructions using `make ssl-setup`.
-
 ## 📚 Documentation
 
-### Getting Started
-- **[Setup Guide](docs/archive/SETUP.md)** - Complete installation and initial setup
-- **[Configuration Guide](docs/archive/CONFIGURATION.md)** - Service configuration and customization
-- **[Requirements](docs/archive/REQUIREMENTS.md)** - System requirements and resource usage
+**Primary documentation:**
+- **[CLAUDE.md](CLAUDE.md)** - Complete operational guide (setup, configuration, operations, troubleshooting)
+- **[ARCHITECTURE.md](ARCHITECTURE.md)** - System architecture and visual diagrams
+- **[SERVICES.md](SERVICES.md)** - Service catalog with access details
 
-### Operations
-- **[Operations Guide](docs/archive/OPERATIONS.md)** - Managing services, updates, backups
-- **[Troubleshooting](docs/archive/TROUBLESHOOTING.md)** - Common issues and solutions
-- **[Monitoring Deployment](docs/archive/MONITORING_DEPLOYMENT.md)** - Optional monitoring stack setup
-
-### Monitoring & Alerts
-- **[Alerts & Response Procedures](docs/archive/ALERTS.md)** - Alert definitions, troubleshooting, and response procedures
-- **[Known Issues](docs/archive/KNOWN_ISSUES.md)** - Known bugs and workarounds
-
-### Advanced
-- **[Remote Access Setup](docs/archive/REMOTE_ACCESS.md)** - Port forwarding and VPN configuration
-- **[Architecture Overview](docs/ARCHITECTURE.md)** - System design and visual diagrams
-
-### Implementation Tickets
-- **[Monitoring Tickets](tickets/monitoring-tickets/README.md)** - Monitoring implementation roadmap
-- **[Security Tickets](tickets/security-tickets/README.md)** - Security hardening roadmap (VPN-first strategy)
-- **[Domain Access Tickets](tickets/domain-access-tickets/README.md)** - Domain-based routing implementation history
-- **[Dashboard Tickets](tickets/dashboard-tickets/tickets_index.md)** - Homepage dashboard with integrations
+All operational knowledge is consolidated in CLAUDE.md which covers:
+- Initial setup and configuration
+- Service management and operations
+- SSL certificate setup with Let's Encrypt
+- Troubleshooting common issues
+- Architecture and design decisions
 
 ## 🔐 Security
 
