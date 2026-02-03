@@ -3,10 +3,9 @@
 
 .PHONY: help setup update start stop restart logs build build-custom pull status clean purge validate env-check
 .PHONY: logs-n8n logs-homepage
-.PHONY: adguard-setup openclaw-install openclaw-status openclaw-logs setup-certs test-domain-access traefik-password
+.PHONY: openclaw-install openclaw-status openclaw-logs setup-certs test-domain-access
 .PHONY: wireguard-status wireguard-install wireguard-setup wireguard-check
-.PHONY: ssl-setup ssl-copy-certs ssl-configure-traefik ssl-setup-renewal ssl-renew-test
-.PHONY: dashboard-setup dashboard-start dashboard-stop dashboard-restart dashboard-logs dashboard-status
+.PHONY: ssl-setup ssl-renew-test
 
 # Compose file flags
 # Services are organized into logical groups:
@@ -19,11 +18,9 @@
 # Install with: sudo ./scripts/wireguard/install-wireguard.sh
 # Check status: make wireguard-status
 #
-# COMPOSE_CORE: Core + Network + Monitoring (everything except dashboard)
-# COMPOSE_DASHBOARD: Dashboard only (for dashboard-specific operations)
-# COMPOSE: All services (default for most operations)
+# COMPOSE_CORE: Core + Network + Monitoring (used for operations that shouldn't restart dashboard)
+# COMPOSE: All services including dashboard (default for most operations)
 COMPOSE_CORE := docker compose -f docker-compose.yml -f docker-compose.network.yml -f docker-compose.monitoring.yml
-COMPOSE_DASHBOARD := docker compose -f docker-compose.dashboard.yml
 COMPOSE := docker compose -f docker-compose.yml -f docker-compose.network.yml -f docker-compose.monitoring.yml -f docker-compose.dashboard.yml
 
 # Default target - show help
@@ -50,19 +47,6 @@ help:
 	@echo "  make logs               - Show logs from all services"
 	@echo "  make logs-n8n           - Show n8n logs only"
 	@echo "  make logs-homepage      - Show Homepage logs only"
-	@echo ""
-	@echo "Dashboard Management:"
-	@echo "  make dashboard-setup    - Setup and start Homepage dashboard"
-	@echo "  make dashboard-start    - Start Homepage dashboard"
-	@echo "  make dashboard-stop     - Stop Homepage dashboard"
-	@echo "  make dashboard-restart  - Restart Homepage dashboard"
-	@echo "  make dashboard-logs     - Show Homepage dashboard logs"
-	@echo "  make dashboard-status   - Show Homepage dashboard status"
-	@echo ""
-	@echo "Service Configuration:"
-	@echo "  make adguard-setup            - Configure DNS rewrites for domain-based access"
-	@echo "  make traefik-password         - Generate Traefik dashboard password from .env"
-	@echo ""
 	@echo "OpenClaw AI Assistant (Native Install):"
 	@echo "  make openclaw-install         - Install OpenClaw natively on the server"
 	@echo "  make openclaw-status          - Check OpenClaw service status"
@@ -75,9 +59,6 @@ help:
 	@echo ""
 	@echo "SSL/TLS Certificate Management:"
 	@echo "  make ssl-setup          - Complete Let's Encrypt SSL setup (certbot + renewal)"
-	@echo "  make ssl-copy-certs     - Copy Let's Encrypt certs to Traefik"
-	@echo "  make ssl-configure-traefik - Configure Traefik file provider for certs"
-	@echo "  make ssl-setup-renewal  - Setup automatic certificate renewal"
 	@echo "  make ssl-renew-test     - Test certificate renewal (dry run)"
 	@echo ""
 	@echo "Testing & Validation:"
@@ -153,7 +134,25 @@ setup: env-check validate wireguard-check
 	fi
 	@echo ""
 	@echo "Step 8/8: Configuring AdGuard DNS rewrites..."
-	@$(MAKE) adguard-setup
+	@./scripts/adguard/setup-adguard-dns.sh
+	@echo ""
+	@echo "Restarting AdGuard to apply configuration..."
+	@$(COMPOSE_CORE) restart adguard
+	@echo ""
+	@echo "✓ AdGuard DNS setup complete!"
+	@echo ""
+	@echo "Testing DNS resolution..."
+	@sleep 3
+	@set -a; . ./.env; set +a; \
+	if [ -n "$$DOMAIN" ]; then \
+		echo "Testing: n8n.$$DOMAIN"; \
+		dig @$$SERVER_IP n8n.$$DOMAIN +short || true; \
+		echo ""; \
+		echo "All *.$$DOMAIN domains should now resolve to $$SERVER_IP"; \
+		echo "Configure network devices to use $$SERVER_IP as DNS server"; \
+	else \
+		echo "ERROR: DOMAIN not set in .env"; \
+	fi
 	@echo ""
 	@$(COMPOSE) ps
 	@echo ""
@@ -282,7 +281,7 @@ logs-n8n:
 	@$(COMPOSE) logs -f n8n
 
 logs-homepage:
-	@$(COMPOSE_DASHBOARD) logs -f homepage
+	@$(COMPOSE) logs -f homepage
 
 # Clean up all services (preserves ./data/)
 clean:
@@ -336,29 +335,6 @@ purge:
 	@echo "✓ Purge complete - ALL DATA DELETED"
 
 # AdGuard Home DNS rewrites setup
-adguard-setup: env-check
-	@echo "Setting up AdGuard DNS rewrites for domain-based access..."
-	@./scripts/adguard/setup-adguard-dns.sh
-	@echo ""
-	@echo "Restarting AdGuard to apply configuration..."
-	@$(COMPOSE_CORE) restart adguard
-	@echo ""
-	@echo "✓ AdGuard DNS setup complete!"
-	@echo ""
-	@echo "Testing DNS resolution..."
-	@sleep 3
-	@set -a; . ./.env; set +a; \
-	if [ -n "$$DOMAIN" ]; then \
-		echo "Testing: n8n.$$DOMAIN"; \
-		dig @$$SERVER_IP n8n.$$DOMAIN +short || true; \
-		echo ""; \
-		echo "All *.$$DOMAIN domains should now resolve to $$SERVER_IP"; \
-	else \
-		echo "ERROR: DOMAIN not set in .env"; \
-	fi
-	@set -a; . ./.env; set +a; \
-	echo "Configure network devices to use $$SERVER_IP as DNS server"
-
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # OpenClaw AI Assistant (Native Installation)
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -496,17 +472,6 @@ test-domain-access: env-check
 	@echo "Testing domain-based access..."
 	@./scripts/testing/test-domain-access.sh
 
-# Setup Traefik dashboard password
-traefik-password: env-check
-	@echo "Setting up Traefik dashboard password..."
-	@./scripts/traefik/setup-traefik-password.sh
-	@echo ""
-	@echo "Restarting Traefik to apply new password..."
-	@$(COMPOSE_CORE) stop traefik
-	@$(COMPOSE_CORE) rm -f traefik
-	@$(COMPOSE_CORE) up -d traefik
-	@echo "✓ Traefik password updated and service restarted"
-
 # Let's Encrypt SSL Certificate Setup with certbot
 # Note: Uses certbot instead of Traefik's built-in ACME due to compatibility issues
 # with Gandi API v5 in Traefik's Lego library (v4.21.0)
@@ -566,28 +531,6 @@ ssl-setup: env-check
 	@echo "Certificates will auto-renew every 90 days."
 	@echo "Check renewal logs: sudo tail -f /var/log/certbot-traefik-reload.log"
 
-# Copy Let's Encrypt certificates to Traefik directory
-ssl-copy-certs: env-check
-	@echo "Copying Let's Encrypt certificates to Traefik..."
-	@./scripts/ssl/copy-certs-to-traefik.sh
-
-# Configure Traefik to use file provider for certificates
-ssl-configure-traefik: env-check
-	@echo "Configuring Traefik file provider..."
-	@./scripts/traefik/configure-traefik-file-provider.sh
-	@echo ""
-	@echo "Restarting Traefik to apply configuration..."
-	@$(COMPOSE_CORE) stop traefik
-	@$(COMPOSE_CORE) rm -f traefik
-	@$(COMPOSE_CORE) up -d traefik
-	@sleep 3
-	@echo "✓ Traefik configured and restarted"
-
-# Setup automatic certificate renewal
-ssl-setup-renewal: env-check
-	@echo "Setting up automatic certificate renewal..."
-	@./scripts/ssl/setup-cert-renewal.sh
-
 # Test certificate renewal (dry run)
 ssl-renew-test:
 	@echo "Testing certificate renewal (dry run)..."
@@ -595,55 +538,3 @@ ssl-renew-test:
 	@echo ""
 	@sudo certbot renew --dry-run
 
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# Dashboard Management
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-# Setup Homepage dashboard (first time)
-dashboard-setup: env-check
-	@echo "Setting up Homepage Dashboard..."
-	@echo ""
-	@echo "Step 1/3: Creating config directory..."
-	@mkdir -p data/homepage/config
-	@echo "✓ Config directory created"
-	@echo ""
-	@echo "Step 2/3: Generating Homepage configuration files..."
-	@./scripts/homepage/configure-homepage.sh
-	@echo ""
-	@echo "Step 3/3: Starting Homepage dashboard (Docker Compose will create network)..."
-	@$(COMPOSE_DASHBOARD) up -d
-	@echo ""
-	@echo "✓ Homepage Dashboard setup complete!"
-	@echo ""
-	@set -a; . ./.env; set +a; \
-	echo "Access your dashboard at: https://homepage.$$DOMAIN"
-	@echo ""
-	@echo "Check logs with: make dashboard-logs"
-
-# Start Homepage dashboard
-dashboard-start: env-check
-	@echo "Starting Homepage dashboard..."
-	@$(COMPOSE_DASHBOARD) up -d
-	@echo "✓ Homepage dashboard started"
-	@set -a; . ./.env; set +a; \
-	echo "Access at: https://homepage.$$DOMAIN"
-
-# Stop Homepage dashboard
-dashboard-stop:
-	@echo "Stopping Homepage dashboard..."
-	@$(COMPOSE_DASHBOARD) down
-	@echo "✓ Homepage dashboard stopped"
-
-# Restart Homepage dashboard
-dashboard-restart: env-check
-	@echo "Restarting Homepage dashboard..."
-	@$(COMPOSE_DASHBOARD) restart
-	@echo "✓ Homepage dashboard restarted"
-
-# Show Homepage dashboard logs
-dashboard-logs:
-	@$(COMPOSE_DASHBOARD) logs -f homepage
-
-# Show Homepage dashboard status
-dashboard-status:
-	@$(COMPOSE_DASHBOARD) ps
