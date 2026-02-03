@@ -526,6 +526,11 @@ ssl-setup: env-check
 		echo "  https://n8n.$$DOMAIN"; \
 		echo "  https://grafana.$$DOMAIN"; \
 		echo "  https://traefik.$$DOMAIN"; \
+		echo ""; \
+		echo "Certificate info:"; \
+		echo "  - Expires: 90 days from now"; \
+		echo "  - Auto-renewal: 30 days before expiry"; \
+		echo "  - Test renewal after 2-4 hours: sudo certbot renew --dry-run"; \
 	fi
 	@echo ""
 	@echo "Certificates will auto-renew every 90 days."
@@ -535,6 +540,10 @@ ssl-setup: env-check
 ssl-renew-test:
 	@echo "Testing certificate renewal (dry run)..."
 	@echo "This will simulate renewal without actually renewing certificates."
+	@echo ""
+	@echo "Note: Wait 2-4 hours after initial setup for DNS caches to clear."
+	@echo "Press Ctrl+C to cancel, or Enter to continue..."
+	@read confirm
 	@echo ""
 	@sudo certbot renew --dry-run
 
