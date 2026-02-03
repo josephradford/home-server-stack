@@ -4,7 +4,6 @@ Provides custom endpoints for:
 - BOM weather data (Australian Bureau of Meteorology)
 - Transport NSW data enrichment
 - Traffic conditions (TomTom API)
-- Home Assistant integration helpers
 """
 
 from flask import Flask, jsonify, request
