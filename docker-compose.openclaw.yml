@@ -37,7 +37,7 @@ services:
       - NODE_ENV=production
       - HOMEBREW_NO_AUTO_UPDATE=1
       - HOMEBREW_NO_INSTALL_CLEANUP=1
-      - PATH=/home/linuxbrew/.linuxbrew/bin:/home/linuxbrew/.linuxbrew/sbin:/home/node/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+      - PATH=/home/node/.npm-global/bin:/home/linuxbrew/.linuxbrew/bin:/home/linuxbrew/.linuxbrew/sbin:/home/node/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
     # Volume mounts for persistence
     volumes:
@@ -76,7 +76,7 @@ services:
       # Homebrew configuration
       - HOMEBREW_NO_AUTO_UPDATE=1
       - HOMEBREW_NO_INSTALL_CLEANUP=1
-      - PATH=/home/linuxbrew/.linuxbrew/bin:/home/linuxbrew/.linuxbrew/sbin:/home/node/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+      - PATH=/home/node/.npm-global/bin:/home/linuxbrew/.linuxbrew/bin:/home/linuxbrew/.linuxbrew/sbin:/home/node/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
     # Volume mounts for persistence
     volumes:
