@@ -39,14 +39,19 @@ RUN brew --version
 RUN npm install -g @google/oauth-cli || echo "GOG installation skipped - will be available via skills"
 
 # Install OpenClaw globally (non-interactive)
-# Redirect stdin from /dev/null to prevent interactive prompts during build
-RUN curl -fsSL https://openclaw.ai/install.sh | bash < /dev/null || true
+# The installer script may try to be interactive, so we redirect stdin and suppress the error
+RUN curl -fsSL https://openclaw.ai/install.sh > /tmp/install-openclaw.sh && \
+    bash /tmp/install-openclaw.sh < /dev/null 2>&1 || true && \
+    rm /tmp/install-openclaw.sh
 
 # Add OpenClaw to PATH (includes both npm-global and local bin)
 ENV PATH="/home/node/.npm-global/bin:/home/node/.local/bin:${PATH}"
 
-# Verify OpenClaw was installed
-RUN which openclaw || echo "OpenClaw not in PATH yet, will be available after shell reload"
+# Verify OpenClaw installation and show diagnostic info
+RUN echo "=== OpenClaw Installation Check ===" && \
+    ls -la /home/node/.npm-global/bin/ 2>/dev/null || echo "npm-global/bin not found" && \
+    ls -la /home/node/.local/bin/ 2>/dev/null || echo ".local/bin not found" && \
+    which openclaw && openclaw --version || echo "WARNING: openclaw command not found in PATH"
 
 # Set production environment
 ENV NODE_ENV=production
