@@ -106,7 +106,7 @@ build-custom: validate
 # Pull latest images for services using pre-built images
 pull: validate
 	@echo "Pulling latest Docker images..."
-	@$(COMPOSE) pull --ignore-pull-failures --progress=plain
+	@$(COMPOSE) pull --ignore-pull-failures
 	@echo "✓ Images pulled"
 
 # First time setup
@@ -123,13 +123,13 @@ setup: env-check validate wireguard-check
 	@./scripts/homepage/configure-homepage.sh
 	@echo ""
 	@echo "Step 4/8: Pulling pre-built images..."
-	@$(COMPOSE) pull --ignore-pull-failures --progress=plain
+	@$(COMPOSE) pull --ignore-pull-failures
 	@echo ""
 	@echo "Step 5/8: Building custom services from source..."
 	@$(COMPOSE) build homepage-api --progress=plain
 	@echo ""
 	@echo "Step 6/8: Starting services (Docker Compose will create networks)..."
-	@$(COMPOSE) up -d --progress=plain
+	@$(COMPOSE) up -d
 	@echo ""
 	@echo "Step 7/8: Fixing data directory permissions..."
 	@echo "Containers create directories as root, fixing ownership for user access..."
@@ -280,7 +280,7 @@ update: env-check validate wireguard-check
 	@echo "Updating all services..."
 	@echo ""
 	@echo "Step 1/3: Pulling latest images..."
-	@$(COMPOSE) pull --ignore-pull-failures --progress=plain
+	@$(COMPOSE) pull --ignore-pull-failures
 	@echo ""
 	@echo "Step 2/3: Building custom services from source..."
 	@$(COMPOSE) build homepage-api --progress=plain
