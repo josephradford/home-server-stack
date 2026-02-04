@@ -23,6 +23,7 @@ services:
       args:
         OPENCLAW_DOCKER_APT_PACKAGES: "${OPENCLAW_DOCKER_APT_PACKAGES:-}"
     image: openclaw-custom:latest
+    pull_policy: never  # Don't try to pull - this is a local build-only image
     container_name: openclaw-cli
     profiles:
       - setup  # This service only runs when explicitly called
@@ -59,6 +60,7 @@ services:
         OPENCLAW_DOCKER_APT_PACKAGES: "${OPENCLAW_DOCKER_APT_PACKAGES:-}"
     container_name: openclaw-gateway
     image: openclaw-custom:latest
+    pull_policy: never  # Don't try to pull - this is a local build-only image
     restart: unless-stopped
 
     # Port mapping - Direct access without Traefik
