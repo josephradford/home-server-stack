@@ -427,7 +427,7 @@ openclaw-onboard: env-check
 	@echo "Press Ctrl+C to cancel, or Enter to continue..."
 	@read confirm
 	@echo ""
-	@$(COMPOSE_OPENCLAW) run --rm openclaw-cli
+	@$(COMPOSE_OPENCLAW) run --rm openclaw-cli sh -c "openclaw onboard && exit 0"
 	@echo ""
 	@echo "✓ Onboarding complete!"
 	@echo ""
