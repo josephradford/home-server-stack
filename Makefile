@@ -2,8 +2,8 @@
 # Simplifies deployment and maintenance operations
 
 .PHONY: help setup update start stop restart logs build build-custom pull status clean purge validate env-check
-.PHONY: logs-n8n logs-homepage logs-openclaw
-.PHONY: openclaw-build openclaw-onboard setup-certs test-domain-access
+.PHONY: logs-n8n logs-homepage
+.PHONY: setup-certs test-domain-access
 .PHONY: wireguard-status wireguard-install wireguard-setup wireguard-check
 .PHONY: ssl-setup ssl-renew-test
 
@@ -13,18 +13,15 @@
 # - docker-compose.network.yml: Network & Security (Traefik, Fail2ban)
 # - docker-compose.monitoring.yml: Monitoring stack (Prometheus, Grafana, Alertmanager, exporters)
 # - docker-compose.dashboard.yml: Dashboard (Homepage, Homepage API)
-# - docker-compose.openclaw.yml: OpenClaw AI Assistant (NOT behind Traefik)
 #
 # NOTE: WireGuard is now a system service, not Docker service
 # Install with: sudo ./scripts/wireguard/install-wireguard.sh
 # Check status: make wireguard-status
 #
 # COMPOSE_CORE: Core + Network + Monitoring (used for operations that shouldn't restart dashboard)
-# COMPOSE: All services including dashboard and OpenClaw (default for most operations)
-# COMPOSE_OPENCLAW: OpenClaw only (for build/onboard operations)
+# COMPOSE: All services including dashboard (default for most operations)
 COMPOSE_CORE := docker compose -f docker-compose.yml -f docker-compose.network.yml -f docker-compose.monitoring.yml
-COMPOSE := docker compose -f docker-compose.yml -f docker-compose.network.yml -f docker-compose.monitoring.yml -f docker-compose.dashboard.yml -f docker-compose.openclaw.yml
-COMPOSE_OPENCLAW := docker compose -f docker-compose.openclaw.yml
+COMPOSE := docker compose -f docker-compose.yml -f docker-compose.network.yml -f docker-compose.monitoring.yml -f docker-compose.dashboard.yml
 
 # Default target - show help
 help:
@@ -50,12 +47,6 @@ help:
 	@echo "  make logs               - Show logs from all services"
 	@echo "  make logs-n8n           - Show n8n logs only"
 	@echo "  make logs-homepage      - Show Homepage logs only"
-	@echo "  make logs-openclaw      - Show OpenClaw logs only"
-	@echo ""
-	@echo "OpenClaw AI Assistant Setup:"
-	@echo "  make openclaw-build     - Build OpenClaw image (with Homebrew + GOG)"
-	@echo "  make openclaw-onboard   - Run setup wizard (first time only)"
-	@echo "  Note: Use 'make start/stop/restart' to manage OpenClaw with other services"
 	@echo ""
 	@echo "WireGuard VPN Management:"
 	@echo "  make wireguard-install        - Install WireGuard packages (one-time, requires sudo)"
@@ -233,22 +224,6 @@ setup: env-check validate wireguard-check
 		echo "Then run: make ssl-setup"; \
 	fi
 	@echo ""
-	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-	@echo ""
-	@echo "🤖 Optional: OpenClaw AI Assistant Setup"
-	@echo ""
-	@echo "OpenClaw provides AI-powered assistance via Telegram, WhatsApp, or Discord"
-	@echo "with Homebrew and Google services (GOG) integration built-in."
-	@echo ""
-	@echo "To set up OpenClaw:"
-	@echo "  1. make openclaw-build     # Build Docker image (10-15 minutes)"
-	@echo "  2. make openclaw-onboard   # Run interactive setup wizard"
-	@echo "  3. make start              # Start gateway with other services"
-	@echo ""
-	@set -a; . ./.env; set +a; \
-	echo "Access: http://$$SERVER_IP:18789 (after setup)"
-	@echo ""
-	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
 # Check WireGuard is running (required for all Docker operations)
 wireguard-check:
@@ -325,9 +300,6 @@ logs-n8n:
 logs-homepage:
 	@$(COMPOSE) logs -f homepage
 
-logs-openclaw:
-	@$(COMPOSE) logs -f openclaw-gateway
-
 # Clean up all services (preserves ./data/)
 clean:
 	@echo "WARNING: This will remove all containers and volumes!"
@@ -378,64 +350,6 @@ purge:
 	@echo "Removing all Docker images..."
 	@docker image prune -af
 	@echo "✓ Purge complete - ALL DATA DELETED"
-
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# OpenClaw AI Assistant (Docker Deployment)
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-# OpenClaw AI Assistant Setup (First-time only)
-# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-# Build OpenClaw Docker image with Homebrew and GOG
-openclaw-build: env-check
-	@echo "═════════════════════════════════════════════════════════════════"
-	@echo "OpenClaw AI Assistant - Building Docker Image"
-	@echo "═════════════════════════════════════════════════════════════════"
-	@echo ""
-	@echo "Building custom OpenClaw image with:"
-	@echo "  - Node.js 22"
-	@echo "  - OpenClaw CLI (via official installer)"
-	@echo "  - Homebrew (Linuxbrew)"
-	@echo "  - GOG (Google OAuth CLI)"
-	@echo ""
-	@echo "This may take 10-15 minutes on first build..."
-	@echo ""
-	@$(COMPOSE_OPENCLAW) build --progress=plain
-	@echo ""
-	@echo "✓ OpenClaw image built successfully!"
-	@echo ""
-	@echo "Next step: Run the setup wizard"
-	@echo "  make openclaw-onboard"
-	@echo ""
-
-# Run OpenClaw onboarding wizard
-openclaw-onboard: env-check
-	@echo "═════════════════════════════════════════════════════════════════"
-	@echo "OpenClaw AI Assistant - Setup Wizard"
-	@echo "═════════════════════════════════════════════════════════════════"
-	@echo ""
-	@echo "This will run the interactive OpenClaw setup wizard."
-	@echo ""
-	@echo "You'll be asked to configure:"
-	@echo "  - AI provider (choose Anthropic)"
-	@echo "  - API key (from console.anthropic.com)"
-	@echo "  - Model (recommend claude-sonnet-4-5)"
-	@echo "  - Messaging channels (Telegram, WhatsApp, Discord, etc.)"
-	@echo "  - Gateway token (auto-generated)"
-	@echo ""
-	@echo "Press Ctrl+C to cancel, or Enter to continue..."
-	@read confirm
-	@echo ""
-	@$(COMPOSE_OPENCLAW) run --rm openclaw-cli sh -c "openclaw onboard && exit 0"
-	@echo ""
-	@echo "✓ Onboarding complete!"
-	@echo ""
-	@echo "Your configuration has been saved to ./data/openclaw/config/"
-	@echo ""
-	@echo "Next step: Start all services"
-	@echo "  make start"
-	@echo ""
 
 # WireGuard VPN Management (System Service)
 wireguard-status:
