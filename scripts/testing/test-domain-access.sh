@@ -149,7 +149,9 @@ test_domain() {
 echo "Checking service status..."
 echo "----------------------------------------"
 
-services=("traefik" "glance" "hortusfox" "grafana" "n8n" "adguard-home" "ollama" "prometheus" "alertmanager" "habitica-client")
+# Services with Traefik routing (accessible via domains)
+# Based on actual docker-compose.yml configurations
+services=("traefik" "grafana" "n8n" "adguard-home" "prometheus" "alertmanager" "homepage" "homepage-api")
 all_running=true
 
 for service in "${services[@]}"; do
@@ -165,7 +167,7 @@ echo ""
 
 if [ "$all_running" = false ]; then
     echo -e "${RED}ERROR: Not all required services are running${NC}"
-    echo "Please start services with: make up"
+    echo "Please start services with: make start"
     exit 1
 fi
 
@@ -185,17 +187,18 @@ fi
 
 echo ""
 
-# Run tests for each service
-test_domain "glance.home.local" "Glance Dashboard"
-test_domain "hortusfox.home.local" "HortusFox Plant Manager"
-test_domain "grafana.home.local" "Grafana Monitoring"
-test_domain "n8n.home.local" "n8n Workflow Automation"
-test_domain "adguard.home.local" "AdGuard Home"
-test_domain "ollama.home.local" "Ollama AI API"
-test_domain "habitica.home.local" "Habitica Habit Tracker"
-test_domain "prometheus.home.local" "Prometheus Monitoring"
-test_domain "alerts.home.local" "Alertmanager"
-test_domain "traefik.home.local" "Traefik Dashboard"
+# Load DOMAIN from .env to construct full domain names
+DOMAIN="${DOMAIN:-home.local}"
+
+# Run tests for each service (based on actual docker-compose configurations)
+test_domain "n8n.${DOMAIN}" "n8n Workflow Automation"
+test_domain "adguard.${DOMAIN}" "AdGuard Home"
+test_domain "homepage.${DOMAIN}" "Homepage Dashboard"
+test_domain "homepage-api.${DOMAIN}" "Homepage API"
+test_domain "grafana.${DOMAIN}" "Grafana Monitoring"
+test_domain "prometheus.${DOMAIN}" "Prometheus Monitoring"
+test_domain "alerts.${DOMAIN}" "Alertmanager"
+test_domain "traefik.${DOMAIN}" "Traefik Dashboard"
 
 # Summary
 echo "========================================"
@@ -212,27 +215,26 @@ if [ $FAILED_TESTS -eq 0 ]; then
     echo "Domain-based access is working correctly."
     echo ""
     echo "Access services via:"
-    echo "  • Glance:       https://glance.home.local"
-    echo "  • HortusFox:    https://hortusfox.home.local"
-    echo "  • Grafana:      https://grafana.home.local"
-    echo "  • n8n:          https://n8n.home.local"
-    echo "  • AdGuard:      https://adguard.home.local"
-    echo "  • Ollama:       https://ollama.home.local"
-    echo "  • Habitica:     https://habitica.home.local"
-    echo "  • Prometheus:   https://prometheus.home.local"
-    echo "  • Alertmanager: https://alerts.home.local"
-    echo "  • Traefik:      https://traefik.home.local"
+    echo "  • Homepage:     https://homepage.${DOMAIN}"
+    echo "  • n8n:          https://n8n.${DOMAIN}"
+    echo "  • AdGuard:      https://adguard.${DOMAIN}"
+    echo "  • Grafana:      https://grafana.${DOMAIN}"
+    echo "  • Prometheus:   https://prometheus.${DOMAIN}"
+    echo "  • Alertmanager: https://alerts.${DOMAIN}"
+    echo "  • Traefik:      https://traefik.${DOMAIN}"
+    echo "  • Homepage API: https://homepage-api.${DOMAIN}"
     echo ""
-    echo "Note: You may see certificate warnings due to self-signed certificates."
+    echo "Note: You may see certificate warnings if using self-signed certificates."
     exit 0
 else
     echo -e "${RED}✗ Some tests failed${NC}"
     echo ""
     echo "Troubleshooting steps:"
-    echo "  1. Verify services are running: docker ps"
+    echo "  1. Verify services are running: make status"
     echo "  2. Check Traefik logs: docker logs traefik"
-    echo "  3. Verify DNS configuration: make adguard-setup"
-    echo "  4. Check AdGuard DNS: dig @${DNS_SERVER} glance.home.local"
+    echo "  3. Check AdGuard DNS: dig @${DNS_SERVER} n8n.${DOMAIN}"
+    echo "  4. Verify DNS configuration in AdGuard: https://adguard.${DOMAIN}"
     echo "  5. Ensure your client is using ${DNS_SERVER} as DNS server"
+    echo "  6. Check specific service logs: make logs-<service-name>"
     exit 1
 fi
