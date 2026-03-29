@@ -24,11 +24,6 @@ jobs:
         sed -i 's/192.168.1.100/127.0.0.1/g' .env
         sed -i 's/your_secure_password_here/test-password/g' .env
         sed -i 's/your_secure_grafana_password/test-grafana-password/g' .env
-        sed -i 's/your_secure_bookwyrm_db_password/test-bookwyrm-password/g' .env
-        sed -i 's/your_secure_redis_activity_password/test-redis-activity/g' .env
-        sed -i 's/your_secure_redis_broker_password/test-redis-broker/g' .env
-        sed -i 's/your_very_long_secret_key_here_at_least_50_characters/test-secret-key-for-bookwyrm-at-least-50-chars-long/g' .env
-        sed -i 's/your-public-ip-or-domain.com/localhost/g' .env
 
     - name: Validate Docker Compose syntax
       run: |
