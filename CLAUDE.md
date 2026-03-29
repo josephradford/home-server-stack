@@ -100,11 +100,8 @@ docker compose -f docker-compose.yml -f docker-compose.monitoring.yml logs -f [s
 # Complete Let's Encrypt SSL setup (certbot + auto-renewal)
 make ssl-setup
 
-# Individual SSL operations
-make ssl-copy-certs           # Copy certs from /etc/letsencrypt to Traefik
-make ssl-configure-traefik    # Configure Traefik file provider
-make ssl-setup-renewal        # Setup automatic renewal
-make ssl-renew-test          # Test renewal (dry run)
+# Test renewal (dry run)
+make ssl-renew-test
 
 # Manual certificate operations (advanced)
 sudo certbot certificates                    # View certificate info
@@ -121,6 +118,9 @@ make wireguard-install
 # Create server config and start service
 make wireguard-setup
 
+# Set up Docker bridge forwarding (run after make start)
+make wireguard-routing
+
 # Check WireGuard status
 make wireguard-status
 
@@ -128,35 +128,40 @@ make wireguard-status
 sudo ./scripts/wireguard/wireguard-add-peer.sh mydevice
 sudo ./scripts/wireguard/wireguard-add-peer.sh phone
 
+# List and manage existing peers
+make wireguard-peers
+
+# Test VPN routing and connectivity
+make wireguard-test
+
 # View detailed status
 sudo wg show
 sudo systemctl status wg-quick@wg0
 ```
 
 ### Service Configuration
-```bash
-# Configure AdGuard DNS rewrites for domain-based access
-make adguard-setup
 
-# Generate Traefik dashboard password from .env
-make traefik-password
+AdGuard DNS rewrites and Traefik password are configured automatically by `make setup`. To reconfigure manually:
+
+```bash
+# Configure AdGuard DNS rewrites
+./scripts/adguard/setup-adguard-dns.sh
+
+# Regenerate Traefik dashboard password
+./scripts/traefik/setup-traefik-password.sh
 ```
 
 ### Dashboard Management
+
+The Homepage dashboard is managed with the main service targets:
+
 ```bash
-# Setup Homepage dashboard (first time)
-make dashboard-setup
-
-# Start/stop/restart Homepage dashboard
-make dashboard-start
-make dashboard-stop
-make dashboard-restart
-
-# View Homepage dashboard logs
-make dashboard-logs
-
-# Show Homepage dashboard status
-make dashboard-status
+make start    # Start all services including Homepage
+make stop     # Stop all services
+make restart  # Restart all services
+make logs     # View all service logs
+make logs-homepage  # View Homepage logs only
+make status   # Check all service health
 ```
 
 ### Testing & Validation
@@ -233,11 +238,8 @@ Example flow: `https://n8n.example.com` → DNS resolves to SERVER_IP → Traefi
 # Complete SSL setup (all steps)
 make ssl-setup
 
-# Individual steps
-make ssl-copy-certs            # Copy certs from /etc/letsencrypt to Traefik
-make ssl-configure-traefik     # Configure file provider
-make ssl-setup-renewal         # Setup auto-renewal hook
-make ssl-renew-test           # Test renewal (dry run)
+# Test renewal (dry run)
+make ssl-renew-test
 ```
 
 **Auto-Renewal**:
@@ -398,13 +400,13 @@ For wildcard certificate (only on dashboard router):
 - `scripts/homepage/configure-homepage.sh` - Generates Homepage dashboard configuration files
   - Creates `services.yaml`, `widgets.yaml`, `docker.yaml` from templates
   - Substitutes environment variables in configuration
-  - Called during `make setup` and `make dashboard-setup`
+  - Called during `make setup`
 
 - `scripts/traefik/setup-traefik-password.sh` - Generates Traefik dashboard password hash
   - Reads `TRAEFIK_PASSWORD` from `.env`
   - Creates htpasswd-format hash for basic authentication
   - Sets `TRAEFIK_DASHBOARD_USERS` environment variable
-  - Called during `make setup` and `make traefik-password`
+  - Called during `make setup`
 
 ### SSL Certificate Management (certbot)
 - `scripts/ssl/setup-certbot-gandi.sh` - Installs certbot and generates Let's Encrypt wildcard certificate
@@ -422,7 +424,7 @@ For wildcard certificate (only on dashboard router):
 - `scripts/traefik/configure-traefik-file-provider.sh` - Configures Traefik to use file provider
   - Creates `./config/traefik/dynamic-certs.yml` with certificate paths
   - Configures Traefik to load certificates from file instead of ACME
-  - Must restart Traefik after running (use `make ssl-configure-traefik`)
+  - Must restart Traefik after running (use `make restart` or `docker compose restart traefik`)
 
 - `scripts/ssl/setup-cert-renewal.sh` - Sets up automatic certificate renewal
   - Creates post-renewal hook: `/etc/letsencrypt/renewal-hooks/deploy/traefik-reload.sh`
@@ -434,40 +436,41 @@ For wildcard certificate (only on dashboard router):
 - `scripts/wireguard/install-wireguard.sh` - Installs WireGuard as system service (one-time setup)
 - `scripts/wireguard/setup-wireguard-server.sh` - Creates WireGuard server configuration
 - `scripts/wireguard/wireguard-add-peer.sh` - Adds VPN peers (clients) and generates client configs
-- `scripts/wireguard/setup-wireguard-routing.sh` - Configures WireGuard routing and forwarding
-  - Sets up IP forwarding and NAT rules
-  - Configures routing for split tunneling
-  - Called during WireGuard server setup
+- `scripts/wireguard/setup-wireguard-routing.sh` - Configures iptables DOCKER-USER rules for VPN routing
+  - Detects primary LAN interface and Docker bridge subnet automatically
+  - Adds forwarding rules so VPN clients can reach Docker services and the LAN
+  - Installs `iptables-persistent` to survive reboots
+  - Run via `make wireguard-routing` **after** `make start` (Docker networks must exist)
+  - Note: distinct from `wg0.conf` PostUp/PostDown rules — those handle VPN NAT, this handles Docker bridge forwarding
 
 - `scripts/wireguard/test-wireguard-routing.sh` - Tests WireGuard routing configuration
   - Verifies IP forwarding is enabled
-  - Checks NAT rules are configured
+  - Checks NAT and DOCKER-USER iptables rules are configured
   - Tests connectivity through VPN
+  - Run via `make wireguard-test`
 
 - `scripts/wireguard/wireguard-peer-management.sh` - Advanced peer management utilities
   - List all configured peers
   - View peer statistics and connection status
   - Remove or modify existing peers
+  - Run via `make wireguard-peers`
 
-### Firewall & Security
+### System Setup (run manually once on a new machine — not called by any make target)
+- `scripts/system/install-docker-official.sh` - Installs Docker from official repository
+  - Removes snap-based Docker installation (snap Docker lacks docker group, breaks Homepage stats)
+  - Adds Docker's official apt repository and installs Docker CE
+  - Run: `sudo ./scripts/system/install-docker-official.sh`
+
+- `scripts/system/setup-user-permissions.sh` - Adds user to docker group
+  - Enables running docker commands without sudo
+  - Run: `sudo ./scripts/system/setup-user-permissions.sh`
+  - Requires logout/login to take effect
+
 - `scripts/system/setup-firewall.sh` - Configures UFW firewall rules
   - Sets up default deny incoming, allow outgoing
   - Allows SSH (rate-limited), HTTP/HTTPS, WireGuard
   - Permits full access from local network and VPN subnet
-  - Called during initial server setup
-
-### System Setup
-- `scripts/system/install-docker-official.sh` - Installs Docker from official repository
-  - Removes snap-based Docker installation
-  - Adds Docker's official apt repository
-  - Installs Docker Engine with proper dependencies
-  - One-time setup for Ubuntu systems
-
-- `scripts/system/setup-user-permissions.sh` - Adds user to docker group
-  - Enables running docker commands without sudo
-  - Creates docker group if it doesn't exist
-  - Adds current user to docker group
-  - Requires logout/login to take effect
+  - Run: `sudo ./scripts/system/setup-firewall.sh`
 
 ## Monitoring Stack
 
@@ -679,7 +682,6 @@ sudo tail -20 /var/log/certbot-traefik-reload.log
 - All passwords must be changed from defaults in `.env.example`
 - Docker images should be pinned versions (not `:latest` in production)
 - VPN-first: Only WireGuard should be exposed to internet by default
-- See `SECURITY.md` for security policy and vulnerability reporting
 - See `security-tickets/README.md` for complete security roadmap
 
 ## Testing Checklist

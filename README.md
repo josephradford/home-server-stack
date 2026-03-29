@@ -7,7 +7,6 @@ A complete self-hosted infrastructure for home automation, AI, and network servi
 **Core Services:**
 - **[AdGuard Home](https://github.com/AdguardTeam/AdGuardHome)** - Network-wide ad blocking and DNS server
 - **[n8n](https://github.com/n8n-io/n8n)** - Workflow automation platform
-- **[OpenClaw](https://openclaw.ai)** - AI assistant accessible via Telegram/WhatsApp/Discord (native install)
 - **[WireGuard](https://github.com/wireguard)** - VPN for secure remote access
 - **[Traefik](https://github.com/traefik/traefik)** - Reverse proxy for domain-based service access
 
@@ -59,18 +58,12 @@ All services are accessible via domain names on your local network:
 - **Grafana:** `https://grafana.${DOMAIN}` (Monitoring)
 - **Prometheus:** `https://prometheus.${DOMAIN}` (Metrics)
 - **Alertmanager:** `https://alerts.${DOMAIN}` (Alerts)
-
-**OpenClaw AI Assistant** (Native installation - not Docker):
-- Install with: `make openclaw-install` (run on server, not dev machine)
-- Web UI: `http://${SERVER_IP}:18789`
-- Access via Telegram bot
-- See `make help` for OpenClaw commands
+- **Homepage:** `https://homepage.${DOMAIN}` (Dashboard)
 
 **Note:** Services are accessible via domain names thanks to Traefik reverse proxy and AdGuard Home DNS. Your devices must use AdGuard Home as their DNS server (configured automatically if DHCP points to the server).
 
 **Direct Access (Emergency/Operational):** Some services expose direct ports for specific use cases:
 - AdGuard Home: `http://SERVER_IP:8888` (emergency access if Traefik fails)
-- OpenClaw: `http://SERVER_IP:18789` (web UI - native installation)
 - Prometheus: `http://SERVER_IP:9090` (metrics scraping)
 - Alertmanager: `http://SERVER_IP:9093` (alert routing)
 
@@ -122,7 +115,7 @@ This project implements **multi-layered defense-in-depth security** with four pr
 - **Future Webhooks**: Public access with rate limiting (not yet configured)
 - **VPN Primary Boundary**: WireGuard for all remote admin access
 
-See **[SECURITY.md](SECURITY.md)** for security policy and **[security-tickets/README.md](security-tickets/README.md)** for the complete security roadmap.
+See **[security-tickets/README.md](security-tickets/README.md)** for the complete security roadmap.
 
 ## 📊 Dashboard & Automation
 
@@ -137,7 +130,7 @@ This stack includes a comprehensive dashboard with integrations:
 docker compose -f docker-compose.dashboard.yml up -d
 ```
 
-See **[docs/archive/DASHBOARD_SETUP.md](docs/archive/DASHBOARD_SETUP.md)** for detailed instructions.
+See **[CLAUDE.md](CLAUDE.md)** for detailed dashboard setup instructions.
 
 ### Dashboard Features
 
@@ -149,10 +142,7 @@ See **[docs/archive/DASHBOARD_SETUP.md](docs/archive/DASHBOARD_SETUP.md)** for d
 
 ## 🤝 Contributing
 
-Contributions are welcome! See **[CONTRIBUTING.md](CONTRIBUTING.md)** for guidelines on:
-- Submitting bug reports and feature requests
-- Development workflow and branching strategy
-- Pull request process
+Contributions are welcome! Submit bug reports and feature requests via [GitHub Issues](https://github.com/josephradford/home-server-stack/issues). Follow the branching strategy documented in [CLAUDE.md](CLAUDE.md) (GitHub Flow — feature branches, squash merge to main).
 
 ## 📊 System Requirements
 
@@ -162,7 +152,6 @@ Contributions are welcome! See **[CONTRIBUTING.md](CONTRIBUTING.md)** for guidel
 - Linux-based OS (tested on Ubuntu Server 24.04 LTS)
 - Docker and Docker Compose installed
 
-See **[docs/archive/REQUIREMENTS.md](docs/archive/REQUIREMENTS.md)** for detailed requirements.
 
 ## 📄 License
 
@@ -175,7 +164,7 @@ This project is open source. Individual services maintain their own licenses:
 
 ## 💬 Support
 
-- **Documentation**: Check the [docs/](docs/) directory
+- **Documentation**: See [CLAUDE.md](CLAUDE.md) and [ARCHITECTURE.md](ARCHITECTURE.md)
 - **Issues**: [GitHub Issues](https://github.com/josephradford/home-server-stack/issues)
 - **Service-specific docs**:
   - [AdGuard Home](https://adguard.com/kb/)

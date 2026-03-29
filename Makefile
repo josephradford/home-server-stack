@@ -4,7 +4,7 @@
 .PHONY: help setup update start stop restart logs build build-custom pull status clean purge validate env-check
 .PHONY: logs-n8n logs-homepage
 .PHONY: setup-certs test-domain-access
-.PHONY: wireguard-status wireguard-install wireguard-setup wireguard-check
+.PHONY: wireguard-status wireguard-install wireguard-setup wireguard-routing wireguard-test wireguard-peers wireguard-check
 .PHONY: ssl-setup ssl-renew-test
 
 # Compose file flags
@@ -27,12 +27,17 @@ COMPOSE := docker compose -f docker-compose.yml -f docker-compose.network.yml -f
 help:
 	@echo "Home Server Stack - Available Commands"
 	@echo ""
+	@echo "Server Prerequisites (run once on a brand new machine, requires sudo):"
+	@echo "  sudo ./scripts/system/install-docker-official.sh  - Replace snap Docker with official Docker CE"
+	@echo "  sudo ./scripts/system/setup-user-permissions.sh   - Add user to docker group (requires logout)"
+	@echo "  sudo ./scripts/system/setup-firewall.sh           - Configure UFW firewall rules"
+	@echo ""
 	@echo "Setup & Deployment:"
 	@echo "  make setup              - First time setup (core + monitoring + dashboard)"
 	@echo "  make env-check          - Verify .env file exists and is configured"
 	@echo ""
 	@echo "Service Management:"
-	@echo "  make start              - Start all services (includes OpenClaw if configured)"
+	@echo "  make start              - Start all services"
 	@echo "  make stop               - Stop all services"
 	@echo "  make restart            - Restart all services"
 	@echo "  make status             - Show status of all services"
@@ -49,9 +54,12 @@ help:
 	@echo "  make logs-homepage      - Show Homepage logs only"
 	@echo ""
 	@echo "WireGuard VPN Management:"
-	@echo "  make wireguard-install        - Install WireGuard packages (one-time, requires sudo)"
-	@echo "  make wireguard-setup          - Create config and start service (requires sudo)"
-	@echo "  make wireguard-status         - Check WireGuard service status"
+	@echo "  make wireguard-install  - Install WireGuard packages (one-time, requires sudo)"
+	@echo "  make wireguard-setup    - Create server config and start service (requires sudo)"
+	@echo "  make wireguard-routing  - Set up Docker bridge forwarding for VPN clients (run after make start)"
+	@echo "  make wireguard-peers    - List, view, and manage VPN peers"
+	@echo "  make wireguard-test     - Test VPN routing and connectivity"
+	@echo "  make wireguard-status   - Check WireGuard service status"
 	@echo ""
 	@echo "SSL/TLS Certificate Management:"
 	@echo "  make ssl-setup          - Complete Let's Encrypt SSL setup (certbot + renewal)"
@@ -381,8 +389,32 @@ wireguard-setup: env-check
 	@echo ""
 	@make wireguard-status
 	@echo ""
-	@echo "Next: Add VPN peers"
-	@echo "  sudo ./scripts/wireguard/wireguard-add-peer.sh <peer-name>"
+	@echo "Next steps:"
+	@echo "  1. Start Docker services:  make start"
+	@echo "  2. Set up VPN routing:     make wireguard-routing  (run after make start)"
+	@echo "  3. Add VPN peers:          sudo ./scripts/wireguard/wireguard-add-peer.sh <peer-name>"
+
+# Set up iptables rules for VPN clients to access Docker services and LAN
+# Must be run after 'make start' so Docker networks exist for accurate subnet detection
+wireguard-routing:
+	@echo "Setting up WireGuard routing for Docker bridge access..."
+	@echo ""
+	@echo "This configures iptables DOCKER-USER rules so VPN clients can reach"
+	@echo "services running in Docker containers and the local network."
+	@echo ""
+	@echo "Note: Run this after 'make start' so Docker networks exist."
+	@echo ""
+	@sudo ./scripts/wireguard/setup-wireguard-routing.sh
+
+# Manage VPN peers (list, view stats, remove)
+wireguard-peers:
+	@./scripts/wireguard/wireguard-peer-management.sh
+
+# Test WireGuard routing and connectivity
+wireguard-test:
+	@echo "Testing WireGuard routing and connectivity..."
+	@echo ""
+	@./scripts/wireguard/test-wireguard-routing.sh
 
 # Setup SSL certificate storage (for certbot-generated certs)
 setup-certs:

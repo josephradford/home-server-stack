@@ -50,13 +50,6 @@ graph TB
         :5678"]
     end
 
-    subgraph Native["Native Services
-    System Services - Not Docker"]
-        OpenClaw["OpenClaw
-        AI Assistant
-        :18789"]
-    end
-
     subgraph Monitoring["Monitoring Stack
     docker-compose.monitoring.yml"]
         Prometheus["Prometheus
@@ -91,8 +84,6 @@ graph TB
         AdGuardData[(AdGuard Data)]
         N8NData[(n8n Database)]
         TraefikData[(Traefik Certs/Logs)]
-        OpenClawData[(OpenClaw Config
-        ~/.openclaw on server)]
         GrafanaData[(Grafana Config)]
         PrometheusData[(Prometheus TSDB)]
         WireGuardData[(WireGuard Configs)]
@@ -142,7 +133,6 @@ graph TB
     %% Data persistence
     AdGuard -.->|Stores| AdGuardData
     N8N -.->|Stores| N8NData
-    OpenClaw -.->|Stores| OpenClawData
     Traefik -.->|Stores| TraefikData
     Grafana -.->|Stores| GrafanaData
     Prometheus -.->|Stores| PrometheusData
@@ -162,8 +152,7 @@ graph TB
     class Prometheus,Grafana,Alertmanager,NodeExporter,CAdvisor monitoring
     class Homepage,HomepageAPI dashboard
     class AdGuardData,N8NData,TraefikData,GrafanaData,PrometheusData,WireGuardData data
-    class Certbot,OpenClaw system
-    class OpenClawData data
+    class Certbot system
 ```
 
 ---
@@ -415,9 +404,9 @@ graph LR
             traefik.yml, dynamic-certs.yml"]
             Fail2banConfig["./config/fail2ban/
             jail.local, filter.d/"]
-            PromConfig["./config/prometheus/
+            PromConfig["./monitoring/prometheus/
             prometheus.yml, alert_rules.yml"]
-            AlertConfig["./config/alertmanager/
+            AlertConfig["./monitoring/alertmanager/
             alertmanager.yml"]
             HomepageConfig["./config/homepage/
             services.yaml, docker.yaml"]
