@@ -48,23 +48,22 @@ Currently deployed and active services.
 - **Port:** 5678
 - **Authentication:** N8N_USER / N8N_PASSWORD from .env
 
-#### OpenClaw AI Assistant (Native Installation)
-- **Purpose:** AI assistant accessible via messaging apps (Telegram, WhatsApp, Discord)
-- **Installation:** Native systemd service (NOT Docker) - installed directly on Ubuntu server
-- **Access:** http://${SERVER_IP}:18789 (web UI, local network only)
-- **Setup:** `make openclaw-install` (run on server)
-- **Authentication:** None (local network access only, no Traefik routing)
+### Dashboard
+
+#### Homepage
+- **Purpose:** Unified dashboard with service widgets, system monitoring, and custom integrations
+- **Access:** https://homepage.${DOMAIN}
+- **Authentication:** IP-restricted (local network / VPN only)
 - **Features:**
-  - Conversational AI powered by Anthropic Claude
-  - Multi-platform messaging support (Telegram, WhatsApp, Discord)
-  - Sandboxed code execution for programming tasks
-  - Long-polling mode (default) - no webhook or public URL needed
-  - Persistent chat history and session data (stored on server: ~/.openclaw/)
-  - Runs as systemd user service (auto-starts on boot)
-- **Management:**
-  - Check status: `make openclaw-status` (run on server)
-  - View logs: `make openclaw-logs` (run on server)
-  - Manual commands: `openclaw gateway status`, `openclaw health`
+  - Service health status and uptime
+  - Docker container resource monitoring (CPU, RAM, network)
+  - BOM weather, Transport NSW departures, TomTom traffic
+  - Google Calendar integration
+
+#### Homepage API
+- **Purpose:** Custom backend providing integrations for Homepage widgets
+- **Access:** https://homepage-api.${DOMAIN}
+- **Authentication:** IP-restricted (local network / VPN only)
 
 ### Monitoring Stack
 
@@ -105,8 +104,9 @@ Currently deployed and active services.
 | Traefik | https://traefik.${DOMAIN} | N/A |
 | AdGuard | https://adguard.${DOMAIN} | http://IP:8888 |
 | n8n | https://n8n.${DOMAIN} | http://IP:5678 |
-| OpenClaw (Native) | N/A | http://IP:18789 |
-| Grafana | https://grafana.${DOMAIN} | http://IP:3001 |
+| Homepage | https://homepage.${DOMAIN} | N/A |
+| Homepage API | https://homepage-api.${DOMAIN} | N/A |
+| Grafana | https://grafana.${DOMAIN} | N/A (Traefik only) |
 | Prometheus | https://prometheus.${DOMAIN} | http://IP:9090 |
 | Alertmanager | https://alerts.${DOMAIN} | http://IP:9093 |
 
@@ -149,7 +149,7 @@ Services that are popular, I have considered, but decided they don't fit my use 
 
 Services that were tested but didn't make the cut.
 
-- None yet
+- **[OpenClaw](https://openclaw.ai)** - AI assistant accessible via Telegram/WhatsApp/Discord. Removed due to complex Docker deployment (Homebrew in container, interactive onboarding wizard incompatible with automated container lifecycle). May be revisited if an official Docker image or env-var-based config is available.
 
 ---
 
