@@ -1,0 +1,30 @@
+{
+  gateway: {
+    bind: "0.0.0.0:18789",
+    token: "${OPENCLAW_GATEWAY_TOKEN}",
+    // trustedProxies covers the Docker bridge CIDR (172.16.0.0/12 = full RFC1918 172.x block).
+    // This is intentionally broad: admin-secure middleware already enforces IP allowlisting
+    // at the Traefik layer, so only LAN/VPN clients ever reach OpenClaw. The /12 avoids
+    // hardcoding a specific Docker network subnet that may vary across installations.
+    // To tighten: replace with output of:
+    //   docker network inspect homeserver --format '{{(index .IPAM.Config 0).Subnet}}'
+    trustedProxies: ["172.16.0.0/12"],
+  },
+  agents: {
+    defaults: {
+      model: {
+        primary: "anthropic/claude-sonnet-4-6",
+      },
+      env: {
+        ANTHROPIC_API_KEY: "${ANTHROPIC_API_KEY}",
+      },
+    },
+  },
+  channels: {
+    telegram: {
+      token: "${TELEGRAM_BOT_TOKEN}",
+      // Only allow messages from explicitly paired users
+      dmPolicy: "pairing",
+    },
+  },
+}
