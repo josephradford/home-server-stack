@@ -14,7 +14,9 @@ echo ""
 
 # Load environment variables
 if [ -f .env ]; then
-    export $(grep -v '^#' .env | xargs)
+    set -a
+    source .env
+    set +a
 else
     echo -e "${RED}Error: .env file not found${NC}"
     exit 1
