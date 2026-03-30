@@ -39,14 +39,14 @@ if [ -z "$GANDIV5_PERSONAL_ACCESS_TOKEN" ]; then
     exit 1
 fi
 
-if [ -z "$ACME_EMAIL" ]; then
-    echo -e "${RED}ERROR: ACME_EMAIL not set in .env file${NC}"
+if [ -z "$LETSENCRYPT_EMAIL" ]; then
+    echo -e "${RED}ERROR: LETSENCRYPT_EMAIL not set in .env file${NC}"
     exit 1
 fi
 
 echo "Configuration:"
 echo "  Domain: $DOMAIN"
-echo "  Email: $ACME_EMAIL"
+echo "  Email: $LETSENCRYPT_EMAIL"
 echo "  Gandi Token: ${GANDIV5_PERSONAL_ACCESS_TOKEN:0:10}..."
 echo ""
 
@@ -132,7 +132,7 @@ sudo certbot certonly \
   --dns-gandi-propagation-seconds 60 \
   -d "$DOMAIN" \
   -d "*.$DOMAIN" \
-  --email "$ACME_EMAIL" \
+  --email "$LETSENCRYPT_EMAIL" \
   --agree-tos \
   --non-interactive
 

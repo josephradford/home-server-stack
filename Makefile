@@ -190,7 +190,7 @@ setup: env-check validate wireguard-check
 	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 	@echo ""
 	@set -a; . ./.env; set +a; \
-	if [ -n "$$GANDIV5_PERSONAL_ACCESS_TOKEN" ] && [ -n "$$ACME_EMAIL" ] && [ -n "$$DOMAIN" ]; then \
+	if [ -n "$$GANDIV5_PERSONAL_ACCESS_TOKEN" ] && [ -n "$$LETSENCRYPT_EMAIL" ] && [ -n "$$DOMAIN" ]; then \
 		CERT_STATUS=$$(sudo certbot certificates 2>/dev/null | grep -A 5 "Certificate Name: $$DOMAIN" | grep "Expiry Date" | sed -n 's/.*VALID: \([0-9]\+\) days.*/\1/p'); \
 		if [ -z "$$CERT_STATUS" ]; then \
 			CERT_STATUS="0"; \
@@ -232,7 +232,7 @@ setup: env-check validate wireguard-check
 		echo ""; \
 		echo "For trusted Let's Encrypt certificates, add to .env:"; \
 		echo "  - DOMAIN=your-domain.com"; \
-		echo "  - ACME_EMAIL=your-email@example.com"; \
+		echo "  - LETSENCRYPT_EMAIL=your-email@example.com"; \
 		echo "  - GANDIV5_PERSONAL_ACCESS_TOKEN=your-gandi-token"; \
 		echo ""; \
 		echo "Then run: make ssl-setup"; \
@@ -486,7 +486,7 @@ ssl-setup: env-check
 	@echo ""
 	@echo "Prerequisites:"
 	@echo "  - DOMAIN must be set in .env"
-	@echo "  - ACME_EMAIL must be set in .env"
+	@echo "  - LETSENCRYPT_EMAIL must be set in .env"
 	@echo "  - GANDIV5_PERSONAL_ACCESS_TOKEN must be set in .env"
 	@echo "  - Domain must be hosted on Gandi"
 	@echo ""
