@@ -459,18 +459,18 @@ For wildcard certificate (only on dashboard router):
 - `scripts/system/install-docker-official.sh` - Installs Docker from official repository
   - Removes snap-based Docker installation (snap Docker lacks docker group, breaks Homepage stats)
   - Adds Docker's official apt repository and installs Docker CE
-  - Run: `sudo ./scripts/system/install-docker-official.sh`
+  - Run: `./scripts/system/install-docker-official.sh`
 
 - `scripts/system/setup-user-permissions.sh` - Adds user to docker group
   - Enables running docker commands without sudo
-  - Run: `sudo ./scripts/system/setup-user-permissions.sh`
+  - Run: `./scripts/system/setup-user-permissions.sh`
   - Requires logout/login to take effect
 
 - `scripts/system/setup-firewall.sh` - Configures UFW firewall rules
   - Sets up default deny incoming, allow outgoing
   - Allows SSH (rate-limited), HTTP/HTTPS, WireGuard
   - Permits full access from local network and VPN subnet
-  - Run: `sudo ./scripts/system/setup-firewall.sh`
+  - Run: `./scripts/system/setup-firewall.sh`
 
 ## Monitoring Stack
 
