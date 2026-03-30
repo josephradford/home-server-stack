@@ -6,6 +6,7 @@
 .PHONY: setup-certs test-domain-access
 .PHONY: wireguard-status wireguard-install wireguard-setup wireguard-routing wireguard-test wireguard-peers wireguard-check
 .PHONY: ssl-setup ssl-renew-test
+.PHONY: ddns-setup ddns-update ddns-status
 
 # Compose file flags
 # Services are organized into logical groups:
@@ -64,6 +65,11 @@ help:
 	@echo "SSL/TLS Certificate Management:"
 	@echo "  make ssl-setup          - Complete Let's Encrypt SSL setup (certbot + renewal)"
 	@echo "  make ssl-renew-test     - Test certificate renewal (dry run)"
+	@echo ""
+	@echo "Dynamic DNS (Gandi LiveDNS):"
+	@echo "  make ddns-setup     - Create vpn.DOMAIN DNS record and install 5-min cron updater"
+	@echo "  make ddns-update    - Manually trigger a DDNS IP check and update"
+	@echo "  make ddns-status    - Show current public IP vs Gandi DNS record"
 	@echo ""
 	@echo "Testing & Validation:"
 	@echo "  make test-domain-access - Test domain-based access for all services"
@@ -184,7 +190,7 @@ setup: env-check validate wireguard-check
 	@echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 	@echo ""
 	@set -a; . ./.env; set +a; \
-	if [ -n "$$GANDIV5_PERSONAL_ACCESS_TOKEN" ] && [ -n "$$ACME_EMAIL" ] && [ -n "$$DOMAIN" ]; then \
+	if [ -n "$$GANDIV5_PERSONAL_ACCESS_TOKEN" ] && [ -n "$$LETSENCRYPT_EMAIL" ] && [ -n "$$DOMAIN" ]; then \
 		CERT_STATUS=$$(sudo certbot certificates 2>/dev/null | grep -A 5 "Certificate Name: $$DOMAIN" | grep "Expiry Date" | sed -n 's/.*VALID: \([0-9]\+\) days.*/\1/p'); \
 		if [ -z "$$CERT_STATUS" ]; then \
 			CERT_STATUS="0"; \
@@ -226,7 +232,7 @@ setup: env-check validate wireguard-check
 		echo ""; \
 		echo "For trusted Let's Encrypt certificates, add to .env:"; \
 		echo "  - DOMAIN=your-domain.com"; \
-		echo "  - ACME_EMAIL=your-email@example.com"; \
+		echo "  - LETSENCRYPT_EMAIL=your-email@example.com"; \
 		echo "  - GANDIV5_PERSONAL_ACCESS_TOKEN=your-gandi-token"; \
 		echo ""; \
 		echo "Then run: make ssl-setup"; \
@@ -393,6 +399,10 @@ wireguard-setup: env-check
 	@echo "  1. Start Docker services:  make start"
 	@echo "  2. Set up VPN routing:     make wireguard-routing  (run after make start)"
 	@echo "  3. Add VPN peers:          sudo ./scripts/wireguard/wireguard-add-peer.sh <peer-name>"
+	@echo ""
+	@echo "Optional — if your public IP is dynamic:"
+	@echo "  Set WIREGUARD_DDNS_SUBDOMAIN=vpn in .env, then:"
+	@echo "  4. Set up automatic DNS:   make ddns-setup"
 
 # Set up iptables rules for VPN clients to access Docker services and LAN
 # Must be run after 'make start' so Docker networks exist for accurate subnet detection
@@ -415,6 +425,37 @@ wireguard-test:
 	@echo "Testing WireGuard routing and connectivity..."
 	@echo ""
 	@./scripts/wireguard/test-wireguard-routing.sh
+
+ddns-setup:
+	@echo "Setting up Gandi LiveDNS dynamic DNS..."
+	@echo ""
+	@sudo ./scripts/ddns/setup-gandi-ddns.sh
+
+ddns-update:
+	@echo "Running Gandi DDNS update check..."
+	@./scripts/ddns/gandi-ddns-update.sh
+
+ddns-status:
+	@set -a; . ./.env; set +a; \
+	CURRENT_IP=$$(curl -sf --max-time 5 ifconfig.me 2>/dev/null \
+	    || curl -sf --max-time 5 ipinfo.io/ip 2>/dev/null \
+	    || echo "unavailable"); \
+	HTTP_STATUS=$$(curl -s -o /tmp/gandi-ddns-status.json -w "%{http_code}" \
+	    -H "Authorization: Bearer $$GANDIV5_PERSONAL_ACCESS_TOKEN" \
+	    "https://api.gandi.net/v5/livedns/domains/$$DOMAIN/records/$$WIREGUARD_DDNS_SUBDOMAIN/A"); \
+	if [ "$$HTTP_STATUS" = "200" ]; then \
+	    GANDI_IP=$$(jq -r '.rrset_values[0]' /tmp/gandi-ddns-status.json); \
+	else \
+	    GANDI_IP="(no record found)"; \
+	fi; \
+	echo "DDNS Status"; \
+	echo "  Current public IP:  $$CURRENT_IP"; \
+	echo "  Gandi DNS record:   $$GANDI_IP ($$WIREGUARD_DDNS_SUBDOMAIN.$$DOMAIN)"; \
+	if [ "$$CURRENT_IP" = "$$GANDI_IP" ]; then \
+	    echo "  Status: in sync"; \
+	else \
+	    echo "  Status: out of sync — run: make ddns-update"; \
+	fi
 
 # Setup SSL certificate storage (for certbot-generated certs)
 setup-certs:
@@ -445,7 +486,7 @@ ssl-setup: env-check
 	@echo ""
 	@echo "Prerequisites:"
 	@echo "  - DOMAIN must be set in .env"
-	@echo "  - ACME_EMAIL must be set in .env"
+	@echo "  - LETSENCRYPT_EMAIL must be set in .env"
 	@echo "  - GANDIV5_PERSONAL_ACCESS_TOKEN must be set in .env"
 	@echo "  - Domain must be hosted on Gandi"
 	@echo ""
