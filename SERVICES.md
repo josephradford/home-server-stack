@@ -95,6 +95,17 @@ Currently deployed and active services.
 - **Purpose:** Container metrics
 - **Port:** 8080 (internal only)
 
+### AI Services
+
+#### OpenClaw
+- **Purpose:** AI assistant accessible via Telegram, with Claude-powered agents
+- **Access:** https://openclaw.${DOMAIN}
+- **Authentication:** OPENCLAW_GATEWAY_TOKEN (Control UI) + Telegram pairing
+- **Features:**
+  - Claude Sonnet model via Anthropic API
+  - Telegram channel with pairing-only DM policy
+  - Traefik-proxied, admin-secure middleware (VPN/LAN only)
+
 ---
 
 ## Quick Reference
@@ -109,6 +120,7 @@ Currently deployed and active services.
 | Grafana | https://grafana.${DOMAIN} | N/A (Traefik only) |
 | Prometheus | https://prometheus.${DOMAIN} | http://IP:9090 |
 | Alertmanager | https://alerts.${DOMAIN} | http://IP:9093 |
+| OpenClaw     | https://openclaw.${DOMAIN} | N/A |
 
 ---
 
@@ -149,7 +161,6 @@ Services that are popular, I have considered, but decided they don't fit my use 
 
 Services that were tested but didn't make the cut.
 
-- **[OpenClaw](https://openclaw.ai)** - AI assistant accessible via Telegram/WhatsApp/Discord. Removed due to complex Docker deployment (Homebrew in container, interactive onboarding wizard incompatible with automated container lifecycle). May be revisited if an official Docker image or env-var-based config is available.
 
 ---
 
