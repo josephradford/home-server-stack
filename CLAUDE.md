@@ -251,7 +251,7 @@ make ssl-renew-test
 
 **Required Environment Variables**:
 - `DOMAIN` - Registered domain name hosted on Gandi
-- `ACME_EMAIL` - Email for Let's Encrypt notifications
+- `LETSENCRYPT_EMAIL` - Email for Let's Encrypt notifications
 - `GANDIV5_PERSONAL_ACCESS_TOKEN` - Gandi API token with "Manage domain name technical configurations" permission
 
 **File Locations**:
@@ -333,7 +333,7 @@ Required variables in `.env`:
 - `DOMAIN` - Registered domain name (e.g., example.com) for Let's Encrypt
 - `TIMEZONE` - System timezone (e.g., America/New_York)
 - `GANDIV5_PERSONAL_ACCESS_TOKEN` - Gandi API token for DNS-01 challenge
-- `ACME_EMAIL` - Email for Let's Encrypt certificate notifications
+- `LETSENCRYPT_EMAIL` - Email for Let's Encrypt certificate notifications
 - `N8N_PASSWORD`, `ADGUARD_PASSWORD`, `GRAFANA_PASSWORD` - Service credentials
 - `WIREGUARD_PORT`, `WIREGUARD_SUBNET`, `WIREGUARD_ALLOWEDIPS` - VPN configuration
 
@@ -414,7 +414,7 @@ For wildcard certificate (only on dashboard router):
   - Handles Ubuntu 24.04 externally-managed Python environment (--break-system-packages)
   - Creates Gandi API credentials file at `/etc/letsencrypt/gandi/gandi.ini`
   - Generates wildcard cert for `*.DOMAIN` and `DOMAIN` using DNS-01 challenge
-  - Requires: `DOMAIN`, `ACME_EMAIL`, `GANDIV5_PERSONAL_ACCESS_TOKEN` in `.env`
+  - Requires: `DOMAIN`, `LETSENCRYPT_EMAIL`, `GANDIV5_PERSONAL_ACCESS_TOKEN` in `.env`
 
 - `scripts/ssl/copy-certs-to-traefik.sh` - Copies certificates from Let's Encrypt to Traefik
   - Copies `/etc/letsencrypt/live/DOMAIN/fullchain.pem` → `./data/traefik/certs/DOMAIN.crt`
