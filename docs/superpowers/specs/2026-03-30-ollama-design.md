@@ -2,6 +2,7 @@
 
 **Date:** 2026-03-30
 **Status:** Approved
+**Depends on:** `feature/openclaw-docker` must be merged first — that branch restructures the Makefile and compose file conventions this spec builds on.
 
 ---
 
