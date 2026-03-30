@@ -28,7 +28,7 @@ help:
 	@echo "Home Server Stack - Available Commands"
 	@echo ""
 	@echo "Server Prerequisites (run once on a brand new machine, requires sudo):"
-	@echo "  sudo ./scripts/system/install-docker-official.sh  - Replace snap Docker with official Docker CE"
+	@echo "  ./scripts/system/install-docker-official.sh       - Replace snap Docker with official Docker CE"
 	@echo "  sudo ./scripts/system/setup-user-permissions.sh   - Add user to docker group (requires logout)"
 	@echo "  sudo ./scripts/system/setup-firewall.sh           - Configure UFW firewall rules"
 	@echo ""
