@@ -82,11 +82,12 @@ else
 fi
 
 # Test 6: Check DOCKER-USER iptables rules for VPN → Docker routing
+# Rules are interface-based (br+ <-> LAN interface), not IP-based
 echo "6️⃣  Checking DOCKER-USER iptables rules..."
-if sudo iptables -L DOCKER-USER -n 2>/dev/null | grep -q "10.13.13.0/24"; then
-    echo "   ✅ DOCKER-USER rules exist for VPN subnet"
+if sudo iptables -L DOCKER-USER -n 2>/dev/null | grep -q "br+"; then
+    echo "   ✅ DOCKER-USER rules exist for Docker bridge routing"
 else
-    echo "   ⚠️  No DOCKER-USER rules for VPN subnet"
+    echo "   ⚠️  No DOCKER-USER rules for Docker bridge routing"
     echo "   Run: make wireguard-routing"
 fi
 
