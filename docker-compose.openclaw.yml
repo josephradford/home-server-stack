@@ -5,6 +5,9 @@ services:
     restart: unless-stopped
     networks:
       - homeserver
+    environment:
+      # Anthropic API key injected as env var — openclaw picks it up for the Anthropic model provider
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
     volumes:
       # All OpenClaw data: rendered config, workspace, runtime state (gitignored)
       - ./data/openclaw:/home/node/.openclaw
