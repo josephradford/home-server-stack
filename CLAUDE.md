@@ -111,16 +111,30 @@ sudo tail -f /var/log/certbot-traefik-reload.log  # View renewal logs
 ```
 
 ### WireGuard VPN Management
+
+**How it all fits together:**
+
+WireGuard runs as a system service (`wg-quick@wg0`), not a Docker container. This ensures VPN access stays up even when the Docker stack is restarted.
+
+There are two distinct setup phases:
+
+**One-time setup** (new server only):
+```
+make wireguard-install       # Install the wireguard apt package
+make wireguard-setup         # Generate server keys, write /etc/wireguard/wg0.conf,
+                             # enable and start wg-quick@wg0
+make start                   # Start the Docker stack first
+make wireguard-routing       # Add iptables rules so VPN clients can reach Docker
+                             # containers and the LAN. Must run AFTER make start
+                             # because it inspects the Docker bridge network.
+sudo ./scripts/wireguard/wireguard-add-peer.sh <name>
+                             # Add a client device. Run once per device.
+                             # Writes to /etc/wireguard/wg0.conf and saves the
+                             # client config + QR code to data/wireguard/peers/<name>/
+```
+
+**Ongoing use:**
 ```bash
-# Install WireGuard package (one-time)
-make wireguard-install
-
-# Create server config and start service
-make wireguard-setup
-
-# Set up Docker bridge forwarding (run after make start)
-make wireguard-routing
-
 # Check WireGuard status
 make wireguard-status
 
@@ -433,27 +447,24 @@ For wildcard certificate (only on dashboard router):
   - Tests renewal with dry run
 
 ### VPN Management (System Service)
-- `scripts/wireguard/install-wireguard.sh` - Installs WireGuard as system service (one-time setup)
-- `scripts/wireguard/setup-wireguard-server.sh` - Creates WireGuard server configuration
-- `scripts/wireguard/wireguard-add-peer.sh` - Adds VPN peers (clients) and generates client configs
-- `scripts/wireguard/setup-wireguard-routing.sh` - Configures iptables DOCKER-USER rules for VPN routing
+- `make wireguard-install` (`scripts/wireguard/install-wireguard.sh`) - Installs WireGuard as system service (one-time setup)
+- `make wireguard-setup` (`scripts/wireguard/setup-wireguard-server.sh`) - Creates WireGuard server configuration
+- `sudo ./scripts/wireguard/wireguard-add-peer.sh <name>` - Adds VPN peers (clients) and generates client configs
+  - No make target — requires a peer name argument
+- `make wireguard-routing` (`scripts/wireguard/setup-wireguard-routing.sh`) - Configures iptables DOCKER-USER rules for VPN routing
   - Detects primary LAN interface and Docker bridge subnet automatically
   - Adds forwarding rules so VPN clients can reach Docker services and the LAN
   - Installs `iptables-persistent` to survive reboots
-  - Run via `make wireguard-routing` **after** `make start` (Docker networks must exist)
+  - Run **after** `make start` (Docker networks must exist)
   - Note: distinct from `wg0.conf` PostUp/PostDown rules — those handle VPN NAT, this handles Docker bridge forwarding
-
-- `scripts/wireguard/test-wireguard-routing.sh` - Tests WireGuard routing configuration
+- `make wireguard-test` (`scripts/wireguard/test-wireguard-routing.sh`) - Tests WireGuard routing configuration
   - Verifies IP forwarding is enabled
   - Checks NAT and DOCKER-USER iptables rules are configured
   - Tests connectivity through VPN
-  - Run via `make wireguard-test`
-
-- `scripts/wireguard/wireguard-peer-management.sh` - Advanced peer management utilities
+- `make wireguard-peers` (`scripts/wireguard/wireguard-peer-management.sh`) - Peer management utilities
   - List all configured peers
   - View peer statistics and connection status
   - Remove or modify existing peers
-  - Run via `make wireguard-peers`
 
 ### System Setup (run manually once on a new machine — not called by any make target)
 - `scripts/system/install-docker-official.sh` - Installs Docker from official repository
