@@ -40,6 +40,16 @@ echo "Press Ctrl+C to cancel, or Enter to continue..."
 read
 
 echo ""
+echo -e "${GREEN}Step 0/7: Installing UFW if not present...${NC}"
+if ! command -v ufw &> /dev/null; then
+    sudo apt-get update -qq
+    sudo apt-get install -y ufw
+    echo -e "${GREEN}✓ UFW installed${NC}"
+else
+    echo -e "${GREEN}✓ UFW already installed${NC}"
+fi
+
+echo ""
 echo -e "${GREEN}Step 1/7: Resetting UFW to default configuration...${NC}"
 sudo ufw --force reset
 sudo ufw default deny incoming
