@@ -42,8 +42,11 @@ PEER_DIR="./data/wireguard/peers"
 if [ -d "$PEER_DIR" ]; then
     for conf in "$PEER_DIR"/*.conf; do
         [ -f "$conf" ] || continue
-        ALLOWED=$(grep "AllowedIPs" "$conf" | cut -d'=' -f2 | xargs)
         PEER_NAME=$(basename "$conf" .conf)
+        if ! ALLOWED=$(sudo grep "AllowedIPs" "$conf" 2>/dev/null | cut -d'=' -f2 | xargs); then
+            echo "   ⚠️  Cannot read $PEER_NAME config (permission denied)"
+            continue
+        fi
         if [[ "$ALLOWED" == *"0.0.0.0/0"* ]]; then
             echo "   ⚠️  Full tunneling in peer $PEER_NAME: $ALLOWED"
         else
@@ -57,8 +60,11 @@ echo "4️⃣  Checking DNS configuration in peer configs..."
 if [ -d "$PEER_DIR" ]; then
     for conf in "$PEER_DIR"/*.conf; do
         [ -f "$conf" ] || continue
-        PEER_DNS=$(grep "^DNS" "$conf" | cut -d'=' -f2 | xargs)
         PEER_NAME=$(basename "$conf" .conf)
+        if ! PEER_DNS=$(sudo grep "^DNS" "$conf" 2>/dev/null | cut -d'=' -f2 | xargs); then
+            echo "   ⚠️  Cannot read $PEER_NAME config (permission denied)"
+            continue
+        fi
         if [ -n "$PEER_DNS" ]; then
             echo "   ✅ $PEER_NAME DNS: $PEER_DNS"
         else
