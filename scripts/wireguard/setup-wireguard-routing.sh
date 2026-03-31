@@ -88,8 +88,9 @@ if ! dpkg -l | grep -q iptables-persistent; then
     sudo DEBIAN_FRONTEND=noninteractive apt-get install -y iptables-persistent
 fi
 
-# Save current iptables rules
-sudo netfilter-persistent save
+# Save current iptables rules directly (works whether or not netfilter-persistent binary is in PATH)
+sudo mkdir -p /etc/iptables
+sudo iptables-save | sudo tee /etc/iptables/rules.v4 > /dev/null
 echo -e "${GREEN}  ✓ Rules saved to /etc/iptables/rules.v4${NC}"
 
 echo ""
