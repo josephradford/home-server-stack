@@ -26,6 +26,8 @@ external/
 .Trashes
 ehthumbs.db
 Thumbs.db
-# Claude Code
-.claude/
+# Claude Code — ignore personal/local config but commit shared skills
+.claude/settings.local.json
+.claude/todos.json
+.claude/*.local
 .worktrees/
