@@ -32,11 +32,11 @@ fi
 echo -e "${YELLOW}Detected LAN interface: ${LAN_INTERFACE}${NC}"
 echo ""
 
-# Get Docker bridge network from WireGuard container
+# Get Docker bridge network subnet (used for DOCKER-USER routing rules)
 DOCKER_NETWORK=$(docker network inspect home-server-stack_homeserver -f '{{(index .IPAM.Config 0).Subnet}}' 2>/dev/null || echo "")
 if [ -z "$DOCKER_NETWORK" ]; then
-    echo -e "${YELLOW}Warning: WireGuard Docker network not found. Will use default 172.18.0.0/16${NC}"
-    echo -e "${YELLOW}Start WireGuard first, then re-run this script for accurate detection.${NC}"
+    echo -e "${YELLOW}Warning: Docker network not found. Will use default 172.18.0.0/16${NC}"
+    echo -e "${YELLOW}Start the stack first (make start), then re-run this script for accurate detection.${NC}"
     DOCKER_NETWORK="172.18.0.0/16"
 fi
 
