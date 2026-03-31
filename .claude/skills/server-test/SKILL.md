@@ -1,14 +1,10 @@
 ---
 name: server-test
 description: >
-  SSH into the home-server-stack test server, deploy a git branch, and run
-  troubleshooting/diagnostic commands. Use this skill whenever the user wants
-  to test changes on the server, troubleshoot a running service, check logs,
-  inspect docker container health, validate configuration, or deploy a branch
-  to the test server. Trigger on phrases like "test on server", "deploy to
-  server", "check the server", "what's wrong on the server", "SSH in and...",
-  "pull the branch on the server", "troubleshoot the stack", or any request
-  that requires running commands on the remote home server.
+  SSH into the home-server-stack test server to deploy a branch and
+  troubleshoot the running stack. Use for any request involving the server:
+  deploying/pulling a branch, checking service health, reading logs, or
+  diagnosing issues.
 ---
 
 # Server Test Skill
@@ -86,49 +82,7 @@ Interpret the output:
 ## Step 5 — Investigate based on what you find
 
 Use your judgment. Run follow-up commands based on what the diagnostics reveal.
-Useful commands (run via ssh, cd ~/home-server-stack first):
-
-**Logs:**
-```bash
-# Last 50 lines for a specific service (non-follow so it completes)
-docker compose -f docker-compose.yml -f docker-compose.network.yml -f docker-compose.monitoring.yml -f docker-compose.dashboard.yml logs --tail=50 <service>
-# All services
-docker compose -f docker-compose.yml -f docker-compose.network.yml -f docker-compose.monitoring.yml -f docker-compose.dashboard.yml logs --tail=30
-```
-
-**Service state:**
-```bash
-docker compose -f docker-compose.yml -f docker-compose.network.yml -f docker-compose.monitoring.yml -f docker-compose.dashboard.yml ps
-docker ps -a  # shows exit codes and restart counts
-```
-
-**WireGuard (system service, not Docker):**
-```bash
-systemctl is-active wg-quick@wg0
-sudo wg show
-```
-
-**SSL certificates:**
-```bash
-ls -la ~/home-server-stack/data/traefik/certs/
-sudo certbot certificates 2>/dev/null | grep -A5 "Certificate Name"
-```
-
-**Disk / system:**
-```bash
-df -h ~
-free -h
-```
-
-**Restart a specific container:**
-```bash
-docker compose -f docker-compose.yml -f docker-compose.network.yml -f docker-compose.monitoring.yml -f docker-compose.dashboard.yml restart <service>
-```
-
-**Re-run setup script after config change:**
-```bash
-make start   # idempotent — safe to re-run
-```
+Read `references/commands.md` for the full command reference.
 
 ## Step 6 — Summarise and suggest next steps
 
