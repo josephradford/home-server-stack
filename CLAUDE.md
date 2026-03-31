@@ -111,16 +111,30 @@ sudo tail -f /var/log/certbot-traefik-reload.log  # View renewal logs
 ```
 
 ### WireGuard VPN Management
+
+**How it all fits together:**
+
+WireGuard runs as a system service (`wg-quick@wg0`), not a Docker container. This ensures VPN access stays up even when the Docker stack is restarted.
+
+There are two distinct setup phases:
+
+**One-time setup** (new server only):
+```
+make wireguard-install       # Install the wireguard apt package
+make wireguard-setup         # Generate server keys, write /etc/wireguard/wg0.conf,
+                             # enable and start wg-quick@wg0
+make start                   # Start the Docker stack first
+make wireguard-routing       # Add iptables rules so VPN clients can reach Docker
+                             # containers and the LAN. Must run AFTER make start
+                             # because it inspects the Docker bridge network.
+sudo ./scripts/wireguard/wireguard-add-peer.sh <name>
+                             # Add a client device. Run once per device.
+                             # Writes to /etc/wireguard/wg0.conf and saves the
+                             # client config + QR code to data/wireguard/peers/<name>/
+```
+
+**Ongoing use:**
 ```bash
-# Install WireGuard package (one-time)
-make wireguard-install
-
-# Create server config and start service
-make wireguard-setup
-
-# Set up Docker bridge forwarding (run after make start)
-make wireguard-routing
-
 # Check WireGuard status
 make wireguard-status
 
