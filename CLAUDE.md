@@ -433,27 +433,24 @@ For wildcard certificate (only on dashboard router):
   - Tests renewal with dry run
 
 ### VPN Management (System Service)
-- `scripts/wireguard/install-wireguard.sh` - Installs WireGuard as system service (one-time setup)
-- `scripts/wireguard/setup-wireguard-server.sh` - Creates WireGuard server configuration
-- `scripts/wireguard/wireguard-add-peer.sh` - Adds VPN peers (clients) and generates client configs
-- `scripts/wireguard/setup-wireguard-routing.sh` - Configures iptables DOCKER-USER rules for VPN routing
+- `make wireguard-install` (`scripts/wireguard/install-wireguard.sh`) - Installs WireGuard as system service (one-time setup)
+- `make wireguard-setup` (`scripts/wireguard/setup-wireguard-server.sh`) - Creates WireGuard server configuration
+- `sudo ./scripts/wireguard/wireguard-add-peer.sh <name>` - Adds VPN peers (clients) and generates client configs
+  - No make target — requires a peer name argument
+- `make wireguard-routing` (`scripts/wireguard/setup-wireguard-routing.sh`) - Configures iptables DOCKER-USER rules for VPN routing
   - Detects primary LAN interface and Docker bridge subnet automatically
   - Adds forwarding rules so VPN clients can reach Docker services and the LAN
   - Installs `iptables-persistent` to survive reboots
-  - Run via `make wireguard-routing` **after** `make start` (Docker networks must exist)
+  - Run **after** `make start` (Docker networks must exist)
   - Note: distinct from `wg0.conf` PostUp/PostDown rules — those handle VPN NAT, this handles Docker bridge forwarding
-
-- `scripts/wireguard/test-wireguard-routing.sh` - Tests WireGuard routing configuration
+- `make wireguard-test` (`scripts/wireguard/test-wireguard-routing.sh`) - Tests WireGuard routing configuration
   - Verifies IP forwarding is enabled
   - Checks NAT and DOCKER-USER iptables rules are configured
   - Tests connectivity through VPN
-  - Run via `make wireguard-test`
-
-- `scripts/wireguard/wireguard-peer-management.sh` - Advanced peer management utilities
+- `make wireguard-peers` (`scripts/wireguard/wireguard-peer-management.sh`) - Peer management utilities
   - List all configured peers
   - View peer statistics and connection status
   - Remove or modify existing peers
-  - Run via `make wireguard-peers`
 
 ### System Setup (run manually once on a new machine — not called by any make target)
 - `scripts/system/install-docker-official.sh` - Installs Docker from official repository
