@@ -22,24 +22,102 @@ A complete self-hosted infrastructure for home automation, AI, and network servi
 
 See [SERVICES.md](SERVICES.md) for the complete catalog including planned services.
 
-## 📋 Quick Start
+## 📋 Fresh Install (New Server)
+
+Follow these steps in order on a fresh Ubuntu Server 24.04 LTS machine.
+
+### Step 1 — Clone the repo
 
 ```bash
-# 1. Clone the repository
 git clone <your-repo-url>
 cd home-server-stack
+```
 
-# 2. Configure environment
+### Step 2 — Install Docker (official repository)
+
+Ubuntu sometimes ships with snap Docker, which lacks the `docker` group needed for rootless access. This script replaces it with Docker CE from Docker's official apt repository.
+
+```bash
+./scripts/system/install-docker-official.sh
+```
+
+### Step 3 — Add user to docker group
+
+Allows running `docker` and `make` targets without `sudo`.
+
+```bash
+./scripts/system/setup-user-permissions.sh
+```
+
+After this script completes, **log out and log back in** for the group change to take effect. Then update `PGID` in your `.env` to match the `docker` group GID printed by the install script.
+
+### Step 4 — Configure environment
+
+```bash
 cp .env.example .env
-nano .env  # Update SERVER_IP, TIMEZONE, passwords
+nano .env
+```
 
-# 3. Run first-time setup (includes all services + monitoring)
+At minimum, set:
+- `SERVER_IP` — the server's local network IP (e.g. `192.168.1.100`)
+- `DOMAIN` — your registered domain name
+- `TIMEZONE` — your timezone (e.g. `Australia/Sydney`)
+- `LETSENCRYPT_EMAIL` and `GANDIV5_PERSONAL_ACCESS_TOKEN` — for SSL certificates
+- All `*_PASSWORD` variables — change every default
+
+### Step 5 — Configure firewall (UFW)
+
+Requires the `.env` file (reads `WIREGUARD_PORT` and `WIREGUARD_SUBNET`).
+
+```bash
+./scripts/system/setup-firewall.sh
+```
+
+This sets default-deny incoming, rate-limits SSH, and opens ports for WireGuard, HTTP, and HTTPS.
+
+### Step 6 — First-time setup (SSL + services)
+
+```bash
 make setup
 ```
 
-**Note:** `make setup` will optionally prompt you to configure Let's Encrypt SSL certificates if your `.env` includes `DOMAIN`, `LETSENCRYPT_EMAIL`, and `GANDIV5_PERSONAL_ACCESS_TOKEN`. Otherwise, services use self-signed certificates (browser warnings expected).
+This runs SSL certificate generation (Let's Encrypt wildcard via certbot + Gandi DNS), configures AdGuard DNS rewrites, and starts all services.
 
-**Using the Makefile:**
+### Step 7 — Install and configure WireGuard VPN
+
+WireGuard runs as a **system service** (not Docker) so VPN access survives Docker restarts.
+
+```bash
+# Install WireGuard package
+make wireguard-install
+
+# Generate server keys and write /etc/wireguard/wg0.conf
+make wireguard-setup
+
+# Configure iptables so VPN clients can reach Docker containers and LAN
+# Must run AFTER make start/setup because it inspects the Docker bridge network
+make wireguard-routing
+```
+
+### Step 8 — Add VPN client devices
+
+Run once per device. Generates a config file and QR code in `data/wireguard/peers/<name>/`.
+
+```bash
+sudo ./scripts/wireguard/wireguard-add-peer.sh <device-name>
+```
+
+### Step 9 — Verify everything is running
+
+```bash
+make status          # All services healthy
+make wireguard-status  # WireGuard system service active
+make test-domain-access  # Domain routing works
+```
+
+---
+
+**Using the Makefile (day-to-day):**
 - `make help` - Show all available commands
 - `make setup` - First time setup (all services + monitoring)
 - `make update` - Update all services to latest versions

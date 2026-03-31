@@ -38,6 +38,7 @@ check_docker_installation() {
 echo "Checking current Docker installation..."
 echo ""
 
+DOCKER_STATUS=0
 check_docker_installation || DOCKER_STATUS=$?
 
 if [ $DOCKER_STATUS -eq 0 ]; then
