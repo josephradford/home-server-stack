@@ -130,7 +130,7 @@ function check_security() {
 
     # Check if 0.0.0.0/0 is configured in any peer client config (full tunneling)
     FULL_TUNNEL=false
-    for conf in "$WIREGUARD_CONFIG_DIR/peers/"*/*.conf 2>/dev/null; do
+    for conf in "$WIREGUARD_CONFIG_DIR/peers/"*/*.conf; do
         [ -f "$conf" ] || continue
         if grep -q "0.0.0.0/0" "$conf"; then
             echo "⚠️  WARNING: Full tunneling (0.0.0.0/0) detected in $(basename "$conf")!"

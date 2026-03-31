@@ -70,6 +70,15 @@ sudo systemctl restart wg-quick@wg0
 | Client configs + QR codes | `data/wireguard/peers/<name>/` |
 | Allowed IPs (split tunnel) | `WIREGUARD_ALLOWEDIPS` in `.env` |
 
+## External access and DDNS
+
+For VPN clients connecting from outside your home network, WireGuard needs a
+stable hostname or IP via `WIREGUARD_SERVERURL` in `.env`, plus a port forward
+on your router (UDP `WIREGUARD_PORT` → `SERVER_IP`).
+
+If your ISP assigns a dynamic public IP, set up DDNS first — see
+[docs/ddns.md](ddns.md).
+
 ## Split tunneling
 
 WireGuard is configured for split tunneling by default — only traffic destined for the home network and VPN subnet is routed through the VPN:

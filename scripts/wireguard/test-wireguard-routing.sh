@@ -40,7 +40,7 @@ fi
 # Check peer client configs if available
 PEER_DIR="./data/wireguard/peers"
 if [ -d "$PEER_DIR" ]; then
-    for conf in "$PEER_DIR"/*/*.conf 2>/dev/null; do
+    for conf in "$PEER_DIR"/*/*.conf; do
         [ -f "$conf" ] || continue
         ALLOWED=$(grep "AllowedIPs" "$conf" | cut -d'=' -f2 | xargs)
         PEER_NAME=$(basename "$(dirname "$conf")")
@@ -55,7 +55,7 @@ fi
 # Test 4: Check DNS configuration in peer configs
 echo "4️⃣  Checking DNS configuration in peer configs..."
 if [ -d "$PEER_DIR" ]; then
-    for conf in "$PEER_DIR"/*/*.conf 2>/dev/null; do
+    for conf in "$PEER_DIR"/*/*.conf; do
         [ -f "$conf" ] || continue
         PEER_DNS=$(grep "^DNS" "$conf" | cut -d'=' -f2 | xargs)
         PEER_NAME=$(basename "$(dirname "$conf")")
