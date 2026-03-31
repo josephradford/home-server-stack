@@ -59,7 +59,7 @@ echo "Press Ctrl+C to cancel, or Enter to continue..."
 read
 
 echo ""
-echo -e "${GREEN}Step 1/3: Adding iptables FORWARD rules...${NC}"
+echo -e "${GREEN}Step 1/3: Adding iptables DOCKER-USER rules...${NC}"
 
 # Remove existing rules if present (to avoid duplicates)
 sudo iptables -D DOCKER-USER -i br+ -o ${LAN_INTERFACE} -j ACCEPT 2>/dev/null || true
@@ -75,38 +75,74 @@ sudo iptables -I DOCKER-USER -i ${LAN_INTERFACE} -o br+ -j ACCEPT
 echo -e "${GREEN}  ✓ Added rule: ${LAN_INTERFACE} → Docker bridge${NC}"
 
 echo ""
-echo -e "${GREEN}Step 2/3: Verifying rules...${NC}"
+echo -e "${GREEN}Step 2/3: Installing systemd service for boot persistence...${NC}"
+echo ""
+echo -e "${YELLOW}Note: iptables-persistent is NOT used here. Docker initialises its${NC}"
+echo -e "${YELLOW}iptables chains at startup, which would overwrite any rules restored${NC}"
+echo -e "${YELLOW}before Docker runs. Instead, a systemd service runs AFTER Docker and${NC}"
+echo -e "${YELLOW}re-applies only these two rules.${NC}"
+echo ""
+
+# Write the rule-apply script
+APPLY_SCRIPT="/usr/local/bin/wireguard-docker-routing.sh"
+sudo tee "$APPLY_SCRIPT" > /dev/null << SCRIPTEOF
+#!/bin/bash
+# Applied by wireguard-docker-routing.service after Docker starts.
+# Managed by setup-wireguard-routing.sh — do not edit manually.
+set -e
+LAN_INTERFACE=\$(ip route | grep default | awk '{print \$5}' | head -n1)
+if [ -z "\$LAN_INTERFACE" ]; then
+    echo "wireguard-docker-routing: could not detect LAN interface" >&2
+    exit 1
+fi
+iptables -D DOCKER-USER -i br+ -o "\${LAN_INTERFACE}" -j ACCEPT 2>/dev/null || true
+iptables -D DOCKER-USER -i "\${LAN_INTERFACE}" -o br+ -j ACCEPT 2>/dev/null || true
+iptables -I DOCKER-USER -i br+ -o "\${LAN_INTERFACE}" -j ACCEPT
+iptables -I DOCKER-USER -i "\${LAN_INTERFACE}" -o br+ -j ACCEPT
+echo "wireguard-docker-routing: rules applied (LAN interface: \${LAN_INTERFACE})"
+SCRIPTEOF
+sudo chmod +x "$APPLY_SCRIPT"
+echo -e "${GREEN}  ✓ Installed ${APPLY_SCRIPT}${NC}"
+
+# Write the systemd unit
+UNIT_FILE="/etc/systemd/system/wireguard-docker-routing.service"
+sudo tee "$UNIT_FILE" > /dev/null << UNITEOF
+[Unit]
+Description=WireGuard Docker bridge routing rules
+# Must run after Docker has initialised its iptables chains
+After=docker.service wg-quick@wg0.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/local/bin/wireguard-docker-routing.sh
+
+[Install]
+WantedBy=multi-user.target
+UNITEOF
+echo -e "${GREEN}  ✓ Installed ${UNIT_FILE}${NC}"
+
+sudo systemctl daemon-reload
+sudo systemctl enable wireguard-docker-routing.service
+echo -e "${GREEN}  ✓ Service enabled (will start automatically on next boot)${NC}"
+
+echo ""
+echo -e "${GREEN}Step 3/3: Verifying rules...${NC}"
 echo ""
 sudo iptables -L DOCKER-USER -v -n --line-numbers
 echo ""
 
-echo -e "${GREEN}Step 3/3: Making rules persistent...${NC}"
-
-# Install iptables-persistent if not already installed
-if ! dpkg -l | grep -q iptables-persistent; then
-    echo -e "${YELLOW}Installing iptables-persistent to save rules across reboots...${NC}"
-    sudo DEBIAN_FRONTEND=noninteractive apt-get install -y iptables-persistent
-fi
-
-# Save current iptables rules directly (works whether or not netfilter-persistent binary is in PATH)
-sudo mkdir -p /etc/iptables
-sudo iptables-save | sudo tee /etc/iptables/rules.v4 > /dev/null
-echo -e "${GREEN}  ✓ Rules saved to /etc/iptables/rules.v4${NC}"
-
-echo ""
 echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 echo -e "${GREEN}✓ WireGuard Routing Setup Complete!${NC}"
 echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-echo ""
-echo -e "${GREEN}Active forwarding rules:${NC}"
-sudo iptables -L DOCKER-USER -v -n
 echo ""
 echo -e "${GREEN}Your VPN clients should now be able to access the local network!${NC}"
 echo ""
 echo -e "${YELLOW}Testing recommendations:${NC}"
 echo "  1. From a VPN-connected device, try: ping 192.168.1.1"
 echo "  2. Try accessing a local service: curl http://192.168.1.101"
-echo "  3. Run WireGuard test script: ./scripts/test-wireguard-routing.sh"
+echo "  3. Run WireGuard test: make wireguard-test"
 echo ""
 echo -e "${YELLOW}To verify rules persist after reboot:${NC}"
 echo "  sudo reboot"

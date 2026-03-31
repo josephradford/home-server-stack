@@ -40,10 +40,10 @@ fi
 # Check peer client configs if available
 PEER_DIR="./data/wireguard/peers"
 if [ -d "$PEER_DIR" ]; then
-    for conf in "$PEER_DIR"/*/*.conf; do
+    for conf in "$PEER_DIR"/*.conf; do
         [ -f "$conf" ] || continue
         ALLOWED=$(grep "AllowedIPs" "$conf" | cut -d'=' -f2 | xargs)
-        PEER_NAME=$(basename "$(dirname "$conf")")
+        PEER_NAME=$(basename "$conf" .conf)
         if [[ "$ALLOWED" == *"0.0.0.0/0"* ]]; then
             echo "   ⚠️  Full tunneling in peer $PEER_NAME: $ALLOWED"
         else
@@ -55,10 +55,10 @@ fi
 # Test 4: Check DNS configuration in peer configs
 echo "4️⃣  Checking DNS configuration in peer configs..."
 if [ -d "$PEER_DIR" ]; then
-    for conf in "$PEER_DIR"/*/*.conf; do
+    for conf in "$PEER_DIR"/*.conf; do
         [ -f "$conf" ] || continue
         PEER_DNS=$(grep "^DNS" "$conf" | cut -d'=' -f2 | xargs)
-        PEER_NAME=$(basename "$(dirname "$conf")")
+        PEER_NAME=$(basename "$conf" .conf)
         if [ -n "$PEER_DNS" ]; then
             echo "   ✅ $PEER_NAME DNS: $PEER_DNS"
         else
@@ -88,6 +88,12 @@ if sudo iptables -L DOCKER-USER -vn 2>/dev/null | grep -q "br+"; then
     echo "   ✅ DOCKER-USER rules exist for Docker bridge routing"
 else
     echo "   ⚠️  No DOCKER-USER rules for Docker bridge routing"
+    echo "   Run: make wireguard-routing"
+fi
+if systemctl is-enabled wireguard-docker-routing.service &>/dev/null; then
+    echo "   ✅ wireguard-docker-routing.service enabled (rules persist across reboots)"
+else
+    echo "   ⚠️  wireguard-docker-routing.service not found — rules won't survive a reboot"
     echo "   Run: make wireguard-routing"
 fi
 
