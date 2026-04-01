@@ -8,7 +8,7 @@
 
 ## Overview
 
-Add Ollama (local LLM inference server) and Open WebUI (chat UI) to the home server stack as a new `docker-compose.ai.yml` compose file. The stack runs CPU-only on ~16GB RAM; target models are 7B and under (starting with `llama3.2:3b`).
+Add Ollama (local LLM inference server) and Open WebUI (chat UI) to the home server stack as a new `docker-compose.ai.yml` compose file. The stack runs CPU-only on ~16GB RAM; target models are 7B and under (starting with `qwen2.5:7b`).
 
 ---
 
@@ -49,7 +49,7 @@ A new `docker-compose.ai.yml` is added alongside the existing four compose files
 - Depends on `ollama` (condition: `service_healthy`)
 - Volume: `./data/ollama:/root/.ollama` — shares model storage with `ollama`
 - Environment: `OLLAMA_HOST: http://ollama:11434` — this is the **client-side** env var used by the Ollama CLI to locate the server (note: includes scheme, unlike the server-side bind address)
-- Command: `ollama pull llama3.2:3b` — `ollama pull` is idempotent; exits 0 immediately if the model is already present
+- Command: `ollama pull qwen2.5:7b` — `ollama pull` is idempotent; exits 0 immediately if the model is already present
 - Networks: `- homeserver`
 
 #### `open-webui`
@@ -117,7 +117,7 @@ All three variables must be added to `.env` before `make validate` will pass, as
 | `./data/ollama` | Ollama models and runtime data |
 | `./data/open-webui` | Open WebUI conversation history and user data |
 
-Note: `llama3.2:3b` is approximately 2GB on disk. Allocate at least 20GB free in `./data/ollama` if planning to pull additional models via the UI.
+Note: `qwen2.5:7b` is approximately 4.4GB on disk. Allocate at least 20GB free in `./data/ollama` if planning to pull additional models via the UI.
 
 ---
 
@@ -125,7 +125,7 @@ Note: `llama3.2:3b` is approximately 2GB on disk. Allocate at least 20GB free in
 
 On first `make start`:
 1. `ollama` starts and passes its healthcheck (API up, ~30s cold start on CPU-only hardware)
-2. `ollama-init` starts and runs `ollama pull llama3.2:3b` — approximately 2GB download, may take several minutes
+2. `ollama-init` starts and runs `ollama pull qwen2.5:7b` — approximately 4.4GB download, may take several minutes
 3. `open-webui` starts as soon as `ollama` is healthy (step 1), before the model pull completes
 
 **Expected UX:** Open WebUI will be accessible at `https://chat.${DOMAIN}` before the model is ready. Users who attempt a chat during the model pull will receive an error or loading state from Open WebUI. This is acceptable — the model will be available once the pull completes.
@@ -218,5 +218,5 @@ Add to `config/homepage/services-template.yaml` under a new "AI" section:
 ## Constraints & Notes
 
 - **CPU-only:** No GPU passthrough configured. GPU can be added later by appending a `deploy.resources.reservations.devices` block to the `ollama` service (no image change needed — `ollama/ollama:latest` bundles CUDA backends).
-- **n8n integration:** n8n's HTTP Request node or Ollama community node can POST to `http://ollama:11434/api/generate` on the shared Docker network. Ollama v0.18+ supports structured JSON output constrained by a schema — useful for automation workflows.
+- **n8n integration:** n8n's HTTP Request node or Ollama community node can POST to `http://ollama:11434/api/generate` on the shared Docker network. Ollama v0.18+ supports structured JSON output constrained by a schema — useful for automation workflows. `qwen2.5:7b` has strong function-calling and structured output support, making it well-suited for n8n and OpenClaw tool-use scenarios.
 - **Model storage:** Running `make validate` will fail if the new env vars are not yet in `.env`. Add them from `.env.example` before validating.

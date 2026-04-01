@@ -48,6 +48,18 @@ Currently deployed and active services.
 - **Port:** 5678
 - **Authentication:** N8N_USER / N8N_PASSWORD from .env
 
+### AI
+
+#### Ollama
+- **Purpose:** Local LLM inference server (CPU-only, qwen2.5:7b)
+- **Access:** Internal only (`http://ollama:11434`) — use Open WebUI or n8n HTTP Request node
+- **Authentication:** N/A (Docker-internal, no external exposure)
+
+#### Open WebUI
+- **Purpose:** Local AI chat interface (ChatGPT alternative)
+- **Access:** https://chat.${DOMAIN}
+- **Authentication:** IP-restricted (local network / VPN only)
+
 ### Dashboard
 
 #### Homepage
@@ -109,6 +121,8 @@ Currently deployed and active services.
 | Grafana | https://grafana.${DOMAIN} | N/A (Traefik only) |
 | Prometheus | https://prometheus.${DOMAIN} | http://IP:9090 |
 | Alertmanager | https://alerts.${DOMAIN} | http://IP:9093 |
+| Open WebUI | https://chat.${DOMAIN} | N/A |
+| Ollama | Internal only | http://ollama:11434 (Docker network) |
 
 ---
 
@@ -129,7 +143,6 @@ Services queued for implementation.
 - [ ] **[Radarr](https://github.com/Radarr/Radarr)** - Movie organizer/manager for usenet and torrent users
 
 ### Infrastructure & Security
-- [ ] **[Ollama](https://github.com/ollama/ollama)** - Run large language models locally
 - [ ] **[Watchtower](https://github.com/containrrr/watchtower)** - A process for automating Docker container base image updates
 - [ ] **[Fail2ban](https://github.com/fail2ban/fail2ban)** - Daemon to ban hosts that cause multiple authentication errors
 - [ ] **[SearXNG](https://github.com/searxng/searxng)** - Free internet metasearch engine which aggregates results from various search services

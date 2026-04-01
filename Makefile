@@ -2,7 +2,7 @@
 # Simplifies deployment and maintenance operations
 
 .PHONY: help setup update start stop restart logs build build-custom pull status clean purge validate env-check
-.PHONY: logs-n8n logs-homepage
+.PHONY: logs-n8n logs-homepage logs-ollama logs-open-webui
 .PHONY: setup-certs test-domain-access
 .PHONY: wireguard-status wireguard-install wireguard-setup wireguard-routing wireguard-test wireguard-peers wireguard-check
 .PHONY: ssl-setup ssl-renew-test
@@ -22,7 +22,7 @@
 # COMPOSE_CORE: Core + Network + Monitoring (used for operations that shouldn't restart dashboard)
 # COMPOSE: All services including dashboard (default for most operations)
 COMPOSE_CORE := docker compose -f docker-compose.yml -f docker-compose.network.yml -f docker-compose.monitoring.yml
-COMPOSE := docker compose -f docker-compose.yml -f docker-compose.network.yml -f docker-compose.monitoring.yml -f docker-compose.dashboard.yml
+COMPOSE := docker compose -f docker-compose.yml -f docker-compose.network.yml -f docker-compose.monitoring.yml -f docker-compose.dashboard.yml -f docker-compose.ai.yml
 
 # Default target - show help
 help:
@@ -53,6 +53,8 @@ help:
 	@echo "  make logs               - Show logs from all services"
 	@echo "  make logs-n8n           - Show n8n logs only"
 	@echo "  make logs-homepage      - Show Homepage logs only"
+	@echo "  make logs-ollama        - Show Ollama LLM server logs"
+	@echo "  make logs-open-webui    - Show Open WebUI chat interface logs"
 	@echo ""
 	@echo "WireGuard VPN Management:"
 	@echo "  make wireguard-install  - Install WireGuard packages (one-time, requires sudo)"
@@ -314,6 +316,12 @@ logs-n8n:
 logs-homepage:
 	@$(COMPOSE) logs -f homepage
 
+logs-ollama:
+	@$(COMPOSE) logs -f ollama
+
+logs-open-webui:
+	@$(COMPOSE) logs -f open-webui
+
 # Clean up all services (preserves ./data/)
 clean:
 	@echo "WARNING: This will remove all containers and volumes!"
@@ -335,6 +343,8 @@ purge:
 	@echo "  - WireGuard VPN configs"
 	@echo "  - All monitoring data (Grafana, Prometheus)"
 	@echo "  - Homepage dashboard configuration"
+	@echo "  - Ollama model data (WARNING: models are large, re-download required)"
+	@echo "  - Open WebUI conversation history and user data"
 	@echo "  - Let's Encrypt SSL certificates and renewal hooks"
 	@echo "  - Generated Traefik SSL configuration (dynamic-certs.yml)"
 	@echo ""

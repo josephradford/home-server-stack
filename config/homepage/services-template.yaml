@@ -241,3 +241,21 @@
                 label: Version
               - field: disk_usage
                 label: Disk Usage
+
+  # AI Services - Local LLM inference and chat
+  - AI:
+      - Ollama:
+          icon: ollama.png
+          href: ""
+          description: Local LLM inference server
+          container: ollama
+          server: my-docker
+          showStats: true
+
+      - Open WebUI:
+          icon: open-webui.png
+          href: https://chat.{{HOMEPAGE_VAR_DOMAIN}}
+          description: Local AI chat interface
+          container: open-webui
+          server: my-docker
+          showStats: true
