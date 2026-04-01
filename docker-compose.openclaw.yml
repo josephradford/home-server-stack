@@ -1,0 +1,35 @@
+services:
+  openclaw-gateway:
+    image: ${OPENCLAW_IMAGE:-ghcr.io/openclaw/openclaw:latest}
+    container_name: openclaw-gateway
+    restart: unless-stopped
+    networks:
+      - homeserver
+    environment:
+      # Anthropic API key injected as env var — openclaw picks it up for the Anthropic model provider
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+    volumes:
+      # All OpenClaw data: rendered config, workspace, runtime state (gitignored)
+      - ./data/openclaw:/home/node/.openclaw
+    # No ports published directly — Traefik proxies via Docker network
+    healthcheck:
+      # Note: Verify /healthz endpoint against official image before deploying.
+      # If unavailable, replace with TCP check:
+      #   test: ["CMD-SHELL", "nc -z localhost 18789 || exit 1"]
+      test: ["CMD-SHELL", "curl -sf http://localhost:18789/healthz || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.openclaw.rule=Host(`openclaw.${DOMAIN}`)"
+      - "traefik.http.routers.openclaw.entrypoints=websecure"
+      - "traefik.http.routers.openclaw.tls=true"
+      # Using file provider certificate (wildcard from certbot)
+      - "traefik.http.services.openclaw.loadbalancer.server.port=18789"
+      # Security: Apply admin-secure middleware (IP whitelist + security headers + rate limiting)
+      - "traefik.http.routers.openclaw.middlewares=admin-secure"
+
+networks:
+  homeserver:
