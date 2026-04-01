@@ -7,6 +7,8 @@
     },
     controlUi: {
       allowedOrigins: ["https://openclaw.${DOMAIN}"],
+      // Device pairing is redundant behind Traefik's IP allowlist + gateway token auth
+      dangerouslyDisableDeviceAuth: true,
     },
     // trustedProxies covers the Docker bridge CIDR (172.16.0.0/12 = full RFC1918 172.x block).
     // This is intentionally broad: admin-secure middleware already enforces IP allowlisting
