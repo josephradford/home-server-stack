@@ -32,7 +32,7 @@ services:
       - ./data/ollama:/root/.ollama
     environment:
       OLLAMA_HOST: http://ollama:11434
-    command: ollama pull qwen2.5:7b
+    command: ollama pull ${OLLAMA_MODEL}
     networks:
       - homeserver
 

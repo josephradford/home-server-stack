@@ -51,7 +51,7 @@ Currently deployed and active services.
 ### AI
 
 #### Ollama
-- **Purpose:** Local LLM inference server (CPU-only, qwen2.5:7b)
+- **Purpose:** Local LLM inference server (CPU-only, model configured via `OLLAMA_MODEL`, default: `qwen2.5:7b`)
 - **Access:** Internal only (`http://ollama:11434`) — use Open WebUI or n8n HTTP Request node
 - **Authentication:** N/A (Docker-internal, no external exposure)
 
