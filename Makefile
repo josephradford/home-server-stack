@@ -2,7 +2,7 @@
 # Simplifies deployment and maintenance operations
 
 .PHONY: help setup update start stop restart logs build build-custom pull status clean purge validate env-check
-.PHONY: logs-n8n logs-homepage logs-openclaw
+.PHONY: logs-n8n logs-homepage
 .PHONY: setup-certs test-domain-access
 .PHONY: wireguard-status wireguard-install wireguard-setup wireguard-routing wireguard-test wireguard-peers wireguard-check
 .PHONY: ssl-setup ssl-renew-test
@@ -14,16 +14,15 @@
 # - docker-compose.network.yml: Network & Security (Traefik, Fail2ban)
 # - docker-compose.monitoring.yml: Monitoring stack (Prometheus, Grafana, Alertmanager, exporters)
 # - docker-compose.dashboard.yml: Dashboard (Homepage, Homepage API)
-# - docker-compose.openclaw.yml: OpenClaw AI assistant
 #
 # NOTE: WireGuard is now a system service, not Docker service
 # Install with: sudo ./scripts/wireguard/install-wireguard.sh
 # Check status: make wireguard-status
 #
-# COMPOSE_CORE: Core + Network + Monitoring (used for operations that shouldn't restart dashboard or OpenClaw gateway)
+# COMPOSE_CORE: Core + Network + Monitoring (used for operations that shouldn't restart dashboard)
 # COMPOSE: All services including dashboard (default for most operations)
 COMPOSE_CORE := docker compose -f docker-compose.yml -f docker-compose.network.yml -f docker-compose.monitoring.yml
-COMPOSE := docker compose -f docker-compose.yml -f docker-compose.network.yml -f docker-compose.monitoring.yml -f docker-compose.dashboard.yml -f docker-compose.openclaw.yml
+COMPOSE := docker compose -f docker-compose.yml -f docker-compose.network.yml -f docker-compose.monitoring.yml -f docker-compose.dashboard.yml
 
 # Default target - show help
 help:
@@ -54,7 +53,6 @@ help:
 	@echo "  make logs               - Show logs from all services"
 	@echo "  make logs-n8n           - Show n8n logs only"
 	@echo "  make logs-homepage      - Show Homepage logs only"
-	@echo "  make logs-openclaw      - Show OpenClaw gateway logs only"
 	@echo ""
 	@echo "WireGuard VPN Management:"
 	@echo "  make wireguard-install  - Install WireGuard packages (one-time, requires sudo)"
@@ -120,35 +118,32 @@ pull: validate
 setup: env-check validate wireguard-check
 	@echo "Starting first-time setup..."
 	@echo ""
-	@echo "Step 1/9: Setting up Traefik dashboard password..."
+	@echo "Step 1/8: Setting up Traefik dashboard password..."
 	@./scripts/traefik/setup-traefik-password.sh
 	@echo ""
-	@echo "Step 2/9: Setting up SSL certificate storage..."
+	@echo "Step 2/8: Setting up SSL certificate storage..."
 	@$(MAKE) setup-certs
 	@echo ""
-	@echo "Step 3/9: Setting up Homepage dashboard config..."
+	@echo "Step 3/8: Setting up Homepage dashboard config..."
 	@./scripts/homepage/configure-homepage.sh
 	@echo ""
-	@echo "Step 4/9: Setting up OpenClaw config..."
-	@./scripts/openclaw/configure-openclaw.sh
-	@echo ""
-	@echo "Step 5/9: Pulling pre-built images..."
+	@echo "Step 4/8: Pulling pre-built images..."
 	@$(COMPOSE) pull --ignore-pull-failures
 	@echo ""
-	@echo "Step 6/9: Building custom services from source..."
+	@echo "Step 5/8: Building custom services from source..."
 	@$(COMPOSE) build homepage-api --progress=plain
 	@echo ""
-	@echo "Step 7/9: Starting services (Docker Compose will create networks)..."
+	@echo "Step 6/8: Starting services (Docker Compose will create networks)..."
 	@$(COMPOSE) up -d
 	@echo ""
-	@echo "Step 8/9: Fixing data directory permissions..."
+	@echo "Step 7/8: Fixing data directory permissions..."
 	@echo "Containers create directories as root, fixing ownership for user access..."
 	@if [ -d "data" ]; then \
 		sudo chown -R $(shell id -u):$(shell getent group docker | cut -d: -f3) data/ && \
 		echo "✓ Data directory permissions fixed"; \
 	fi
 	@echo ""
-	@echo "Step 9/9: Configuring AdGuard DNS rewrites..."
+	@echo "Step 8/8: Configuring AdGuard DNS rewrites..."
 	@./scripts/adguard/setup-adguard-dns.sh
 	@echo ""
 	@echo "Restarting AdGuard to apply configuration..."
@@ -184,7 +179,6 @@ setup: env-check validate wireguard-check
 		echo "    - Grafana:            https://grafana.$$DOMAIN"; \
 		echo "    - Prometheus:         https://prometheus.$$DOMAIN"; \
 		echo "    - Alertmanager:       https://alerts.$$DOMAIN"; \
-		echo "    - OpenClaw AI:        https://openclaw.$$DOMAIN"; \
 	else \
 		echo "  ERROR: DOMAIN not set in .env file"; \
 		echo "  Please set DOMAIN=your-domain.com in .env"; \
@@ -319,10 +313,6 @@ logs-n8n:
 
 logs-homepage:
 	@$(COMPOSE) logs -f homepage
-
-# Show OpenClaw gateway logs
-logs-openclaw:
-	@$(COMPOSE) logs -f openclaw-gateway
 
 # Clean up all services (preserves ./data/)
 clean:

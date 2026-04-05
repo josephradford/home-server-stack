@@ -205,16 +205,15 @@ make purge
 ## Architecture & Key Concepts
 
 ### Multi-File Docker Compose
-The stack uses **five compose files** organized by logical function:
+The stack uses **four compose files** organized by logical function:
 - `docker-compose.yml` - Core services (AdGuard, n8n) - user-facing services that "do stuff"
 - `docker-compose.network.yml` - Network & Security (Traefik, Fail2ban) - infrastructure layer
 - `docker-compose.monitoring.yml` - Monitoring stack (Prometheus, Grafana, Alertmanager, exporters)
 - `docker-compose.dashboard.yml` - Dashboard (Homepage, Homepage API)
-- `docker-compose.openclaw.yml` - OpenClaw AI assistant
 
 **Note on WireGuard VPN**: WireGuard is installed as a **system service** (not Docker) to ensure VPN access remains available when Docker services are restarted or stopped. See "WireGuard VPN Management" section above.
 
-The Makefile combines all files by default: `docker compose -f docker-compose.yml -f docker-compose.network.yml -f docker-compose.monitoring.yml -f docker-compose.dashboard.yml -f docker-compose.openclaw.yml`
+The Makefile combines all files by default: `docker compose -f docker-compose.yml -f docker-compose.network.yml -f docker-compose.monitoring.yml -f docker-compose.dashboard.yml`
 
 This organization provides:
 - **Clear separation of concerns** - Easy to understand what each file contains
@@ -587,21 +586,6 @@ For wildcard certificate (only on dashboard router):
   - **Application widgets** - App-specific metrics via APIs
   - Both are complementary: container stats = infrastructure, widgets = application metrics
 - **Configuration:** See `config/homepage/services-template.yaml` for widget configuration
-
-### OpenClaw AI Assistant
-- **Purpose:** AI assistant accessible via Telegram, powered by Claude via Anthropic API
-- **Image:** `${OPENCLAW_IMAGE:-ghcr.io/openclaw/openclaw:latest}` (official pre-built, no custom Dockerfile)
-- **Container:** `openclaw-gateway`
-- **Internal port:** 18789
-- **Domain access:** `https://openclaw.${DOMAIN}`
-- **Security:** admin-secure middleware (IP whitelist + rate limiting); OPENCLAW_GATEWAY_TOKEN required for Control UI
-- **Config:** `data/openclaw/openclaw.json` — rendered at setup time by `scripts/openclaw/configure-openclaw.sh` using `envsubst` from `config/openclaw/openclaw.json.template`. Contains secrets — gitignored.
-- **Setup pattern:** Unlike `configure-homepage.sh` (which copies templates unchanged for Homepage's runtime `{{VAR}}` resolution), `configure-openclaw.sh` uses `envsubst` to bake values in at setup time. Re-run after changing OpenClaw env vars: `./scripts/openclaw/configure-openclaw.sh && docker compose restart openclaw-gateway`
-- **Data persistence:** `./data/openclaw/` — config, workspace, session data, cron runs (all gitignored)
-- **Compose file:** `docker-compose.openclaw.yml` (5th file, included in `COMPOSE`, excluded from `COMPOSE_CORE`)
-- **Required env vars:** `ANTHROPIC_API_KEY`, `TELEGRAM_BOT_TOKEN`, `OPENCLAW_GATEWAY_TOKEN`
-- **Optional env var:** `OPENCLAW_IMAGE` — pin to a specific image tag
-- **Telegram setup:** After `make setup`, send `/start` to the bot in Telegram to pair
 
 ## Documentation Structure
 
