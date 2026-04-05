@@ -9,6 +9,7 @@ import asyncio
 import json
 import logging
 import os
+import socket
 import subprocess
 import time
 
@@ -52,9 +53,20 @@ def _build_cmd(text: str, session_id: str | None) -> list[str]:
     ]
     if session_id:
         cmd += ["--resume", session_id]
-    if MCP_CONFIG_PATH:
+    if _mcp_available():
         cmd += ["--mcp-config", MCP_CONFIG_PATH]
     return cmd
+
+
+def _mcp_available() -> bool:
+    """Quick TCP check — skip --mcp-config if workspace-mcp is unreachable."""
+    if not MCP_CONFIG_PATH:
+        return False
+    try:
+        with socket.create_connection(("workspace-mcp", 8000), timeout=1):
+            return True
+    except OSError:
+        return False
 
 
 def _pull_vault():
