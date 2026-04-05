@@ -40,24 +40,20 @@ cp bede/CLAUDE.md.example bede/CLAUDE.md
 
 **4. Build and start:**
 ```bash
-docker compose -f docker-compose.ai.yml up -d --build
-docker compose -f docker-compose.ai.yml logs -f bede
+make bede-build
+make bede-start
+make logs-bede
 ```
 
 ## Day-to-day Commands
 
 ```bash
-# Start
-docker compose -f docker-compose.ai.yml up -d
-
-# Stop
-docker compose -f docker-compose.ai.yml down
-
-# View logs
-docker compose -f docker-compose.ai.yml logs -f bede
-
-# Rebuild after code changes
-docker compose -f docker-compose.ai.yml up -d --build
+make bede-start       # Start Bede + workspace-mcp
+make bede-stop        # Stop both containers
+make bede-restart     # Restart both containers
+make bede-status      # Show container status
+make logs-bede        # Tail Bede logs
+make bede-build       # Rebuild after code changes, then make bede-start
 ```
 
 ## Telegram Commands
