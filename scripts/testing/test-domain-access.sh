@@ -199,7 +199,6 @@ test_domain "grafana.${DOMAIN}" "Grafana Monitoring"
 test_domain "prometheus.${DOMAIN}" "Prometheus Monitoring"
 test_domain "alerts.${DOMAIN}" "Alertmanager"
 test_domain "traefik.${DOMAIN}" "Traefik Dashboard"
-test_domain "openclaw.${DOMAIN}" "OpenClaw AI Assistant" || true
 
 # Summary
 echo "========================================"
@@ -224,7 +223,6 @@ if [ $FAILED_TESTS -eq 0 ]; then
     echo "  • Alertmanager: https://alerts.${DOMAIN}"
     echo "  • Traefik:      https://traefik.${DOMAIN}"
     echo "  • Homepage API: https://homepage-api.${DOMAIN}"
-    echo "  • OpenClaw:     https://openclaw.${DOMAIN}"
     echo ""
     echo "Note: You may see certificate warnings if using self-signed certificates."
     exit 0
