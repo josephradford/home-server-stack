@@ -1,8 +1,8 @@
 FROM python:3.12-slim
 
-# System deps: git, curl, supervisor
+# System deps: git, curl, openssh-client, supervisor
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    git curl ca-certificates \
+    git curl ca-certificates openssh-client \
     supervisor \
     && rm -rf /var/lib/apt/lists/*
 
@@ -10,8 +10,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN curl -fsSL https://claude.ai/install.sh | bash && \
     cp /root/.local/bin/claude /usr/local/bin/claude
 
-# Create non-root user
-RUN useradd --system --create-home --uid 1000 --shell /bin/bash bede
+# Create non-root user with SSH directory
+RUN useradd --system --create-home --uid 1000 --shell /bin/bash bede && \
+    mkdir -p /home/bede/.ssh && \
+    chmod 700 /home/bede/.ssh && \
+    chown bede:bede /home/bede/.ssh
 
 WORKDIR /app
 

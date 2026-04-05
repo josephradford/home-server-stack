@@ -9,15 +9,38 @@ services:
       - CLAUDE_WORKDIR=/app
       - SESSION_TIMEOUT_MINUTES=10
       - ANTHROPIC_API_KEY=  # blank out shared .env value — bede uses OAuth, not API key
+      - MCP_CONFIG_PATH=/app/mcp.json
     volumes:
       # Persona file — gitignored (personal). Copy from bede/CLAUDE.md.example and customise.
       - ./bede/CLAUDE.md:/app/CLAUDE.md:ro
       # OAuth credentials — must exist on host before starting.
       # To sync from Mac: security find-generic-password -s "Claude Code-credentials" -w | ssh user@SERVER_IP "cat > ~/.claude/.credentials.json"
       - ${HOME}/.claude/.credentials.json:/home/bede/.claude/.credentials.json:ro
-      # Obsidian vault (Phase 2 — populated by entrypoint when VAULT_REPO is set)
+      # Obsidian vault (populated by entrypoint when VAULT_REPO is set)
       - bede-vault:/vault
+      # SSH key for private vault repos (optional — leave VAULT_SSH_KEY_PATH blank for HTTPS PAT)
+      - ${VAULT_SSH_KEY_PATH:-/dev/null}:/home/bede/.ssh/vault_key:ro
+    depends_on:
+      - workspace-mcp
     # No Traefik labels — bede communicates outbound via Telegram only
+
+  workspace-mcp:
+    build:
+      context: ./bede/workspace-mcp
+    container_name: workspace-mcp
+    restart: unless-stopped
+    environment:
+      - GOOGLE_OAUTH_CLIENT_ID=${GOOGLE_OAUTH_CLIENT_ID}
+      - GOOGLE_OAUTH_CLIENT_SECRET=${GOOGLE_OAUTH_CLIENT_SECRET}
+      - GOOGLE_OAUTH_REDIRECT_URI=${GOOGLE_OAUTH_REDIRECT_URI}
+    volumes:
+      # Persists OAuth tokens across container restarts
+      - workspace-mcp-tokens:/data
+    ports:
+      # Exposed for the one-time OAuth browser flow (accessible via VPN/local network).
+      # After tokens are stored in the volume this port is no longer needed but harmless to leave open.
+      - "8765:8000"
 
 volumes:
   bede-vault:
+  workspace-mcp-tokens:
