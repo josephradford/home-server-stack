@@ -167,8 +167,16 @@ async def handle_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 
+async def post_init(app):
+    from telegram import BotCommand
+    await app.bot.set_my_commands([
+        BotCommand("start", "Start a conversation"),
+        BotCommand("reset", "Clear session and start fresh"),
+    ])
+
+
 def main():
-    app = Application.builder().token(BOT_TOKEN).build()
+    app = Application.builder().token(BOT_TOKEN).post_init(post_init).build()
     app.add_handler(CommandHandler("start", handle_start))
     app.add_handler(CommandHandler("reset", handle_reset))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
