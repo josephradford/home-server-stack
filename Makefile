@@ -330,9 +330,9 @@ logs-bede:
 COMPOSE_AI := docker compose -f docker-compose.ai.yml
 
 bede-build: env-check
-	@echo "Building Bede image..."
-	@$(COMPOSE_AI) build --progress=plain bede
-	@echo "✓ Bede image built"
+	@echo "Building Bede images..."
+	@$(COMPOSE_AI) build --progress=plain
+	@echo "✓ Bede images built"
 
 bede-start: env-check
 	@echo "Starting Bede..."
