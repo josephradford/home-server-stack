@@ -23,7 +23,7 @@ SESSION_TIMEOUT_MINUTES=10
 # Google Workspace MCP
 GOOGLE_OAUTH_CLIENT_ID=
 GOOGLE_OAUTH_CLIENT_SECRET=
-GOOGLE_OAUTH_REDIRECT_URI=http://SERVER_IP:8765/oauth/callback
+GOOGLE_OAUTH_REDIRECT_URI=http://SERVER_IP:8765/oauth2callback
 ```
 
 **2. Sync Claude OAuth credentials from Mac to server:**
@@ -111,7 +111,7 @@ The `workspace-mcp` sidecar provides Bede with access to your Google Workspace v
 3. Enable APIs: **Gmail API**, **Google Calendar API**, **Google Tasks API**
 4. Go to **APIs & Services → Credentials → Create Credentials → OAuth 2.0 Client ID**
 5. Application type: **Web application**
-6. Add authorised redirect URI: `https://mcp.YOUR_DOMAIN/oauth/callback`
+6. Add authorised redirect URI: `https://mcp.YOUR_DOMAIN/oauth2callback`
 7. Copy the **Client ID** and **Client Secret** into `.env`
 
 ### 2. Set env vars
@@ -121,7 +121,7 @@ GOOGLE_OAUTH_CLIENT_ID=...
 GOOGLE_OAUTH_CLIENT_SECRET=...
 ```
 
-The redirect URI (`https://mcp.YOUR_DOMAIN/oauth/callback`) is set automatically from `DOMAIN`.
+The redirect URI (`https://mcp.YOUR_DOMAIN/oauth2callback`) is set automatically from `DOMAIN`.
 
 ### 3. Complete the OAuth flow
 

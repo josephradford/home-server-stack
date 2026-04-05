@@ -34,7 +34,11 @@ services:
     environment:
       - GOOGLE_OAUTH_CLIENT_ID=${GOOGLE_OAUTH_CLIENT_ID}
       - GOOGLE_OAUTH_CLIENT_SECRET=${GOOGLE_OAUTH_CLIENT_SECRET}
-      - GOOGLE_OAUTH_REDIRECT_URI=https://mcp.${DOMAIN}/oauth/callback
+      - GOOGLE_OAUTH_REDIRECT_URI=https://mcp.${DOMAIN}/oauth2callback
+      - GOOGLE_MCP_CREDENTIALS_DIR=/data/credentials
+      - WORKSPACE_MCP_OAUTH_PROXY_STORAGE_BACKEND=disk
+      - WORKSPACE_MCP_OAUTH_PROXY_DISK_DIRECTORY=/data/oauth-proxy
+      - MCP_SINGLE_USER_MODE=true
     volumes:
       # Persists OAuth tokens across container restarts
       - workspace-mcp-tokens:/data
