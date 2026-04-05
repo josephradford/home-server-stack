@@ -346,7 +346,7 @@ bede-stop:
 
 bede-restart: env-check
 	@echo "Restarting Bede..."
-	@$(COMPOSE_AI) restart
+	@$(COMPOSE_AI) up -d
 	@echo "✓ Bede restarted"
 
 bede-status:
