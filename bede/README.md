@@ -63,7 +63,9 @@ make bede-build       # Rebuild after code changes, then make bede-start
 
 ## Re-authenticating (when OAuth token expires)
 
-Tokens last weeks to months. When Bede stops responding or you get an auth error, run from your Mac:
+Claude Code refreshes tokens automatically — the credentials file is mounted read-write so it can write updated tokens back to the host. You should rarely need to re-authenticate manually.
+
+If Bede does stop responding with an auth error (e.g. after a very long gap), run from your Mac:
 
 ```bash
 security find-generic-password -s "Claude Code-credentials" -w | \
