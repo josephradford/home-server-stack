@@ -111,8 +111,7 @@ The `workspace-mcp` sidecar provides Bede with access to your Google Workspace v
 3. Enable APIs: **Gmail API**, **Google Calendar API**, **Google Tasks API**
 4. Go to **APIs & Services → Credentials → Create Credentials → OAuth 2.0 Client ID**
 5. Application type: **Web application**
-6. Add authorised redirect URI: `http://SERVER_IP:8765/oauth/callback`
-   (replace `SERVER_IP` with your server's LAN IP, e.g. `192.168.1.100`)
+6. Add authorised redirect URI: `https://mcp.YOUR_DOMAIN/oauth/callback`
 7. Copy the **Client ID** and **Client Secret** into `.env`
 
 ### 2. Set env vars
@@ -120,22 +119,22 @@ The `workspace-mcp` sidecar provides Bede with access to your Google Workspace v
 ```env
 GOOGLE_OAUTH_CLIENT_ID=...
 GOOGLE_OAUTH_CLIENT_SECRET=...
-GOOGLE_OAUTH_REDIRECT_URI=http://192.168.1.100:8765/oauth/callback
 ```
+
+The redirect URI (`https://mcp.YOUR_DOMAIN/oauth/callback`) is set automatically from `DOMAIN`.
 
 ### 3. Complete the OAuth flow
 
 After starting the stack, from your browser (connected via VPN or local network):
 
-1. Visit `http://SERVER_IP:8765` — workspace-mcp will redirect you to Google's consent screen
+1. Visit `https://mcp.YOUR_DOMAIN` — workspace-mcp will redirect you to Google's consent screen
 2. Sign in with the Google account you want Bede to access
 3. Approve the requested permissions
 4. You'll be redirected back — tokens are saved to the `workspace-mcp-tokens` Docker volume
 
 This is a one-time step. Tokens are refreshed automatically.
 
-> **Note:** Port 8765 is only accessible via VPN or local network (UFW blocks external access).
-> Check the [workspace-mcp README](https://github.com/taylorwilsdon/google_workspace_mcp) for the exact OAuth initiation URL if the root path doesn't redirect automatically.
+> **Note:** `mcp.YOUR_DOMAIN` is protected by `admin-secure-no-ratelimit` middleware — only accessible from your local network or VPN.
 
 ## Architecture
 
