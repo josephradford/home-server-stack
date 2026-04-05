@@ -2,11 +2,12 @@
 # Simplifies deployment and maintenance operations
 
 .PHONY: help setup update start stop restart logs build build-custom pull status clean purge validate env-check
-.PHONY: logs-n8n logs-homepage
+.PHONY: logs-n8n logs-homepage logs-bede
 .PHONY: setup-certs test-domain-access
 .PHONY: wireguard-status wireguard-install wireguard-setup wireguard-routing wireguard-test wireguard-peers wireguard-check
 .PHONY: ssl-setup ssl-renew-test
 .PHONY: ddns-setup ddns-update ddns-status
+.PHONY: bede-start bede-stop bede-restart bede-build bede-status
 
 # Compose file flags
 # Services are organized into logical groups:
@@ -53,6 +54,14 @@ help:
 	@echo "  make logs               - Show logs from all services"
 	@echo "  make logs-n8n           - Show n8n logs only"
 	@echo "  make logs-homepage      - Show Homepage logs only"
+	@echo "  make logs-bede          - Show Bede logs only"
+	@echo ""
+	@echo "Bede AI Assistant:"
+	@echo "  make bede-build         - Build Bede Docker image"
+	@echo "  make bede-start         - Start Bede"
+	@echo "  make bede-stop          - Stop Bede"
+	@echo "  make bede-restart       - Restart Bede"
+	@echo "  make bede-status        - Show Bede container status"
 	@echo ""
 	@echo "WireGuard VPN Management:"
 	@echo "  make wireguard-install  - Install WireGuard packages (one-time, requires sudo)"
@@ -313,6 +322,35 @@ logs-n8n:
 
 logs-homepage:
 	@$(COMPOSE) logs -f homepage
+
+logs-bede:
+	@docker compose -f docker-compose.ai.yml logs -f bede
+
+# Bede AI Assistant (docker-compose.ai.yml)
+COMPOSE_AI := docker compose -f docker-compose.ai.yml
+
+bede-build: env-check
+	@echo "Building Bede image..."
+	@$(COMPOSE_AI) build --progress=plain bede
+	@echo "✓ Bede image built"
+
+bede-start: env-check
+	@echo "Starting Bede..."
+	@$(COMPOSE_AI) up -d
+	@echo "✓ Bede started"
+
+bede-stop:
+	@echo "Stopping Bede..."
+	@$(COMPOSE_AI) down
+	@echo "✓ Bede stopped"
+
+bede-restart: env-check
+	@echo "Restarting Bede..."
+	@$(COMPOSE_AI) restart
+	@echo "✓ Bede restarted"
+
+bede-status:
+	@$(COMPOSE_AI) ps
 
 # Clean up all services (preserves ./data/)
 clean:

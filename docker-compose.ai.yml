@@ -1,0 +1,21 @@
+services:
+  bede:
+    build:
+      context: ./bede
+    container_name: bede
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      - CLAUDE_WORKDIR=/app
+      - SESSION_TIMEOUT_MINUTES=10
+      - ANTHROPIC_API_KEY=  # blank out shared .env value — bede uses OAuth, not API key
+    volumes:
+      # OAuth credentials — must exist on host before starting.
+      # To sync from Mac: security find-generic-password -s "Claude Code-credentials" -w | ssh joe@SERVER "cat > ~/.claude/.credentials.json"
+      - ${HOME}/.claude/.credentials.json:/home/node/.claude/.credentials.json:ro
+      # Obsidian vault (Phase 2 — populated by entrypoint when VAULT_REPO is set)
+      - bede-vault:/vault
+    # No Traefik labels — bede communicates outbound via Telegram only
+
+volumes:
+  bede-vault:
