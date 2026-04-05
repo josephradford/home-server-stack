@@ -1,0 +1,4 @@
+# Scheduled briefings — uncomment and customise when Phase 3 is ready
+# 0 7 * * *     /app/scripts/briefing.sh morning
+# 0 18 * * 1-5  /app/scripts/briefing.sh evening
+# 0 9 * * 0     /app/scripts/briefing.sh weekly
