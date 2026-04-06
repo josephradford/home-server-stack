@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "google-workspace": {
+      "type": "http",
+      "url": "http://workspace-mcp:8000/mcp"
+    }
+  }
+}

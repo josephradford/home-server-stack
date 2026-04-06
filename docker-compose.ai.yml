@@ -14,10 +14,50 @@ services:
       - ./bede/CLAUDE.md:/app/CLAUDE.md:ro
       # OAuth credentials — must exist on host before starting.
       # To sync from Mac: security find-generic-password -s "Claude Code-credentials" -w | ssh user@SERVER_IP "cat > ~/.claude/.credentials.json"
-      - ${HOME}/.claude/.credentials.json:/home/bede/.claude/.credentials.json:ro
-      # Obsidian vault (Phase 2 — populated by entrypoint when VAULT_REPO is set)
+      - ${HOME}/.claude/.credentials.json:/home/bede/.claude/.credentials.json
+      # Obsidian vault (populated by entrypoint when VAULT_REPO is set)
       - bede-vault:/vault
+      # SSH key for private vault repos (optional — leave VAULT_SSH_KEY_PATH blank for HTTPS PAT)
+      - ${VAULT_SSH_KEY_PATH:-/dev/null}:/home/bede/.ssh/vault_key:ro
+    depends_on:
+      - workspace-mcp
+    networks:
+      - default
     # No Traefik labels — bede communicates outbound via Telegram only
+
+  workspace-mcp:
+    build:
+      context: ./bede/workspace-mcp
+    container_name: workspace-mcp
+    restart: unless-stopped
+    environment:
+      - GOOGLE_OAUTH_CLIENT_ID=${GOOGLE_OAUTH_CLIENT_ID}
+      - GOOGLE_OAUTH_CLIENT_SECRET=${GOOGLE_OAUTH_CLIENT_SECRET}
+      - GOOGLE_OAUTH_REDIRECT_URI=https://mcp.${DOMAIN}/oauth2callback
+      - GOOGLE_MCP_CREDENTIALS_DIR=/data/credentials
+      - WORKSPACE_MCP_OAUTH_PROXY_STORAGE_BACKEND=disk
+      - WORKSPACE_MCP_OAUTH_PROXY_DISK_DIRECTORY=/data/oauth-proxy
+      - MCP_SINGLE_USER_MODE=true
+    volumes:
+      # Persists OAuth tokens across container restarts
+      - workspace-mcp-tokens:/data
+    networks:
+      - default
+      - homeserver
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.workspace-mcp.rule=Host(`mcp.${DOMAIN}`)"
+      - "traefik.http.routers.workspace-mcp.entrypoints=websecure"
+      - "traefik.http.routers.workspace-mcp.tls=true"
+      - "traefik.http.routers.workspace-mcp.middlewares=admin-secure-no-ratelimit@docker"
+      - "traefik.http.services.workspace-mcp.loadbalancer.server.port=8000"
 
 volumes:
   bede-vault:
+  workspace-mcp-tokens:
+
+networks:
+  default:
+  homeserver:
+    external: true
+    name: home-server-stack_homeserver

@@ -28,6 +28,7 @@ BOT_TOKEN = os.environ["TELEGRAM_BOT_TOKEN"]
 ALLOWED_USER_ID = int(os.environ["ALLOWED_USER_ID"])
 CLAUDE_WORKDIR = os.environ.get("CLAUDE_WORKDIR", "/app")
 SESSION_TIMEOUT_SECS = int(os.environ.get("SESSION_TIMEOUT_MINUTES", "10")) * 60
+VAULT_REPO = os.environ.get("VAULT_REPO", "")
 
 # {chat_id: {"session_id": str, "ts": float}}
 _sessions: dict[int, dict] = {}
@@ -51,6 +52,20 @@ def _build_cmd(text: str, session_id: str | None) -> list[str]:
     if session_id:
         cmd += ["--resume", session_id]
     return cmd
+
+
+def _pull_vault():
+    """Pull latest vault state before invoking Claude. Fails silently."""
+    if not VAULT_REPO or not os.path.isdir("/vault/.git"):
+        return
+    try:
+        subprocess.run(
+            ["git", "-C", "/vault", "pull", "--ff-only"],
+            capture_output=True,
+            timeout=30,
+        )
+    except Exception:
+        pass
 
 
 def _parse_output(stdout: str) -> tuple[str, str | None]:
@@ -113,6 +128,8 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if session and (now - session["ts"]) < SESSION_TIMEOUT_SECS:
         resume_id = session["session_id"]
 
+    await asyncio.to_thread(_pull_vault)
+
     cmd = _build_cmd(text, resume_id)
     log.info("Running: %s", " ".join(cmd[:4]) + " ...")
 
@@ -125,6 +142,22 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     finally:
         typing_task.cancel()
+
+    # Stale session detection — retry once with a fresh session
+    if resume_id and "no conversation found" in proc.stderr.lower():
+        log.warning("Stale session %s, retrying fresh.", resume_id)
+        _sessions.pop(chat_id, None)
+        await update.message.reply_text("_(Session reset — previous context lost)_", parse_mode="Markdown")
+        cmd = _build_cmd(text, None)
+        typing_task = asyncio.create_task(_keep_typing(context.bot, chat_id))
+        try:
+            proc = await asyncio.to_thread(_run_claude, cmd, CLAUDE_WORKDIR)
+        except subprocess.TimeoutExpired:
+            typing_task.cancel()
+            await update.message.reply_text("Request timed out after 2 minutes.")
+            return
+        finally:
+            typing_task.cancel()
 
     # Auth failure detection
     stderr_lower = proc.stderr.lower()
@@ -141,9 +174,13 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         # Fallback: surface raw output so failures are visible
         result_text = (proc.stdout or proc.stderr or "No response.").strip()[:4096]
 
-    # Update session
+    # Update session — if no new session ID came back, the old one was consumed;
+    # clear it so the next message starts fresh rather than hitting a stale resume.
     if new_session_id:
         _sessions[chat_id] = {"session_id": new_session_id, "ts": now}
+    else:
+        if _sessions.pop(chat_id, None):
+            await update.message.reply_text("_(Session reset — previous context lost)_", parse_mode="Markdown")
 
     # Telegram message limit is 4096 chars
     for chunk in [result_text[i:i + 4096] for i in range(0, len(result_text), 4096)]:
