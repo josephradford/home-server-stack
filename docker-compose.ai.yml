@@ -16,7 +16,7 @@ services:
       # To sync from Mac: security find-generic-password -s "Claude Code-credentials" -w | ssh user@SERVER_IP "cat > ~/.claude/.credentials.json"
       - ${HOME}/.claude/.credentials.json:/home/bede/.claude/.credentials.json
       # Obsidian vault (populated by entrypoint when VAULT_REPO is set)
-      - bede-vault:/vault
+      - ./data/bede/vault:/vault
       # SSH key for private vault repos (optional — leave VAULT_SSH_KEY_PATH blank for HTTPS PAT)
       - ${VAULT_SSH_KEY_PATH:-/dev/null}:/home/bede/.ssh/vault_key:ro
     depends_on:
@@ -53,7 +53,6 @@ services:
       - "traefik.http.services.workspace-mcp.loadbalancer.server.port=8000"
 
 volumes:
-  bede-vault:
   workspace-mcp-tokens:
 
 networks:
