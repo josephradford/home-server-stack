@@ -158,6 +158,21 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     finally:
         typing_task.cancel()
 
+    # Stale session detection — retry once with a fresh session
+    if resume_id and "no conversation found" in proc.stderr.lower():
+        log.warning("Stale session %s, retrying fresh.", resume_id)
+        _sessions.pop(chat_id, None)
+        cmd = _build_cmd(text, None)
+        typing_task = asyncio.create_task(_keep_typing(context.bot, chat_id))
+        try:
+            proc = await asyncio.to_thread(_run_claude, cmd, CLAUDE_WORKDIR)
+        except subprocess.TimeoutExpired:
+            typing_task.cancel()
+            await update.message.reply_text("Request timed out after 2 minutes.")
+            return
+        finally:
+            typing_task.cancel()
+
     # Auth failure detection
     stderr_lower = proc.stderr.lower()
     if proc.returncode != 0 and any(
