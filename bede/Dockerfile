@@ -10,11 +10,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN curl -fsSL https://claude.ai/install.sh | bash && \
     cp /root/.local/bin/claude /usr/local/bin/claude
 
-# Create non-root user with SSH directory
+# Create non-root user with SSH and Claude config directories
+# .claude must be pre-created here so the credentials bind mount doesn't
+# cause Docker to create it as root, which would prevent Claude Code from
+# writing sessions and other runtime state.
 RUN useradd --system --create-home --uid 1000 --shell /bin/bash bede && \
-    mkdir -p /home/bede/.ssh && \
+    mkdir -p /home/bede/.ssh /home/bede/.claude && \
     chmod 700 /home/bede/.ssh && \
-    chown bede:bede /home/bede/.ssh
+    chown -R bede:bede /home/bede/.ssh /home/bede/.claude
 
 WORKDIR /app
 
