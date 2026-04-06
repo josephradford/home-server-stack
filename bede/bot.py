@@ -188,9 +188,12 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         # Fallback: surface raw output so failures are visible
         result_text = (proc.stdout or proc.stderr or "No response.").strip()[:4096]
 
-    # Update session
+    # Update session — if no new session ID came back, the old one was consumed;
+    # clear it so the next message starts fresh rather than hitting a stale resume.
     if new_session_id:
         _sessions[chat_id] = {"session_id": new_session_id, "ts": now}
+    else:
+        _sessions.pop(chat_id, None)
 
     # Telegram message limit is 4096 chars
     for chunk in [result_text[i:i + 4096] for i in range(0, len(result_text), 4096)]:
