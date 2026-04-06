@@ -196,7 +196,7 @@ If OAuth tokens are missing or expired, repeat the OAuth browser flow (step 3 ab
 | Phase | Status | Description |
 |---|---|---|
 | 1 | ✅ Done | Docker container, Telegram bot, Claude Code integration |
-| 2 | ✅ Done | Obsidian vault via git, Google Workspace MCP (Gmail, Calendar, Tasks) |
+| 2 | ✅ Done | Obsidian vault via git, Google Workspace MCP (Gmail, Calendar, Tasks), multi-turn sessions |
 | 3 | Planned | Scheduled briefings via supercronic cron jobs |
 
 See `docs/bede-assistant-plan.md` for the full build plan.
