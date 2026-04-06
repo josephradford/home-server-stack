@@ -9,6 +9,14 @@ if [ ! -f /app/CLAUDE.md ]; then
     exit 1
 fi
 
+# Configure SSH key for private vault repos
+if [ -f "/home/bede/.ssh/vault_key" ] && [ -s "/home/bede/.ssh/vault_key" ]; then
+    chmod 600 /home/bede/.ssh/vault_key
+    # Populate known_hosts for common git hosts so StrictHostKeyChecking doesn't block
+    ssh-keyscan github.com gitlab.com bitbucket.org >> /home/bede/.ssh/known_hosts 2>/dev/null || true
+    export GIT_SSH_COMMAND="ssh -i /home/bede/.ssh/vault_key -o StrictHostKeyChecking=no"
+fi
+
 # Pull Obsidian vault if VAULT_REPO is configured (Phase 2)
 if [ -n "${VAULT_REPO}" ]; then
     if [ -d "/vault/.git" ]; then

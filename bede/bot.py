@@ -9,6 +9,7 @@ import asyncio
 import json
 import logging
 import os
+import socket
 import subprocess
 import time
 
@@ -28,6 +29,8 @@ BOT_TOKEN = os.environ["TELEGRAM_BOT_TOKEN"]
 ALLOWED_USER_ID = int(os.environ["ALLOWED_USER_ID"])
 CLAUDE_WORKDIR = os.environ.get("CLAUDE_WORKDIR", "/app")
 SESSION_TIMEOUT_SECS = int(os.environ.get("SESSION_TIMEOUT_MINUTES", "10")) * 60
+MCP_CONFIG_PATH = os.environ.get("MCP_CONFIG_PATH")
+VAULT_REPO = os.environ.get("VAULT_REPO", "")
 
 # {chat_id: {"session_id": str, "ts": float}}
 _sessions: dict[int, dict] = {}
@@ -50,7 +53,34 @@ def _build_cmd(text: str, session_id: str | None) -> list[str]:
     ]
     if session_id:
         cmd += ["--resume", session_id]
+    if _mcp_available():
+        cmd += ["--mcp-config", MCP_CONFIG_PATH]
     return cmd
+
+
+def _mcp_available() -> bool:
+    """Quick TCP check — skip --mcp-config if workspace-mcp is unreachable."""
+    if not MCP_CONFIG_PATH:
+        return False
+    try:
+        with socket.create_connection(("workspace-mcp", 8000), timeout=1):
+            return True
+    except OSError:
+        return False
+
+
+def _pull_vault():
+    """Pull latest vault state before invoking Claude. Fails silently."""
+    if not VAULT_REPO or not os.path.isdir("/vault/.git"):
+        return
+    try:
+        subprocess.run(
+            ["git", "-C", "/vault", "pull", "--ff-only"],
+            capture_output=True,
+            timeout=30,
+        )
+    except Exception:
+        pass
 
 
 def _parse_output(stdout: str) -> tuple[str, str | None]:
@@ -112,6 +142,8 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     resume_id = None
     if session and (now - session["ts"]) < SESSION_TIMEOUT_SECS:
         resume_id = session["session_id"]
+
+    await asyncio.to_thread(_pull_vault)
 
     cmd = _build_cmd(text, resume_id)
     log.info("Running: %s", " ".join(cmd[:4]) + " ...")

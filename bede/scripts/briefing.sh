@@ -25,7 +25,12 @@ case "${TYPE}" in
         ;;
 esac
 
-OUTPUT=$(claude -p "${PROMPT}" --dangerously-skip-permissions --output-format json < /dev/null 2>&1)
+MCP_ARGS=()
+if [ -n "${MCP_CONFIG_PATH}" ] && [ -f "${MCP_CONFIG_PATH}" ]; then
+    MCP_ARGS=(--mcp-config "${MCP_CONFIG_PATH}")
+fi
+
+OUTPUT=$(claude -p "${PROMPT}" --dangerously-skip-permissions --output-format json "${MCP_ARGS[@]}" < /dev/null 2>&1)
 
 # Extract result from JSONL output
 RESULT=$(echo "${OUTPUT}" | python3 -c "
