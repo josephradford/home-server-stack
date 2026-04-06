@@ -52,8 +52,9 @@ def _build_cmd(text: str, session_id: str | None) -> list[str]:
         "--output-format", "json",
     ]
     if session_id:
+        # --resume is incompatible with --mcp-config; omit MCP on follow-ups
         cmd += ["--resume", session_id]
-    if _mcp_available():
+    elif _mcp_available():
         cmd += ["--mcp-config", MCP_CONFIG_PATH]
     return cmd
 
