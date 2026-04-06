@@ -336,6 +336,7 @@ bede-build: env-check
 
 bede-start: env-check
 	@echo "Starting Bede..."
+	@mkdir -p data/bede/vault
 	@$(COMPOSE_AI) up -d
 	@echo "✓ Bede started"
 
