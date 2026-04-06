@@ -95,6 +95,24 @@ Currently deployed and active services.
 - **Purpose:** Container metrics
 - **Port:** 8080 (internal only)
 
+### AI Services
+
+#### Bede
+- **Purpose:** Personal AI assistant accessible via Telegram
+- **Access:** Telegram bot (@your_bot_name)
+- **Port:** Outbound only (no web interface)
+- **Features:**
+  - Multi-turn conversations with session continuity
+  - Obsidian vault integration for personal knowledge
+  - Google Workspace access (Gmail, Calendar, Tasks)
+  - Voice message support
+
+#### workspace-mcp
+- **Purpose:** MCP server providing Google Workspace APIs for Bede
+- **Access:** https://mcp.${DOMAIN} (OAuth flow only, VPN/local network required)
+- **Port:** 8000 (internal)
+- **Authentication:** OAuth 2.0 with Google
+
 ---
 
 ## Quick Reference
@@ -109,6 +127,8 @@ Currently deployed and active services.
 | Grafana | https://grafana.${DOMAIN} | N/A (Traefik only) |
 | Prometheus | https://prometheus.${DOMAIN} | http://IP:9090 |
 | Alertmanager | https://alerts.${DOMAIN} | http://IP:9093 |
+| Bede | Telegram bot | N/A |
+| workspace-mcp | https://mcp.${DOMAIN} | N/A |
 
 ---
 
