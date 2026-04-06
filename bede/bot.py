@@ -162,6 +162,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if resume_id and "no conversation found" in proc.stderr.lower():
         log.warning("Stale session %s, retrying fresh.", resume_id)
         _sessions.pop(chat_id, None)
+        await update.message.reply_text("_(Session reset — previous context lost)_", parse_mode="Markdown")
         cmd = _build_cmd(text, None)
         typing_task = asyncio.create_task(_keep_typing(context.bot, chat_id))
         try:
@@ -193,7 +194,8 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if new_session_id:
         _sessions[chat_id] = {"session_id": new_session_id, "ts": now}
     else:
-        _sessions.pop(chat_id, None)
+        if _sessions.pop(chat_id, None):
+            await update.message.reply_text("_(Session reset — previous context lost)_", parse_mode="Markdown")
 
     # Telegram message limit is 4096 chars
     for chunk in [result_text[i:i + 4096] for i in range(0, len(result_text), 4096)]:
