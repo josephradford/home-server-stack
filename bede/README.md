@@ -153,7 +153,7 @@ docker-compose.ai.yml
     └── /data               — OAuth tokens (named volume, persisted)
 ```
 
-Claude Code connects to workspace-mcp via `--mcp-config /app/mcp.json`, which points to `http://workspace-mcp:8000/mcp` on the internal Docker network.
+Claude Code auto-discovers workspace-mcp via `.mcp.json` in the working directory, which points to `http://workspace-mcp:8000/mcp` on the internal Docker network. Sessions are resumable because MCP is configured via the project file rather than the `--mcp-config` flag (which makes sessions unresumable in Claude Code 2.1.x).
 
 ## Troubleshooting
 
@@ -173,6 +173,17 @@ Stale session from a previous container run. Send `/reset` on Telegram to clear 
 ### Bede stops responding after weeks
 
 OAuth token has expired. Run the re-auth one-liner above from your Mac.
+
+### OAuth callback says "this site can't be reached"
+
+Your browser resolved `mcp.YOUR_DOMAIN` via external DNS instead of AdGuard. This happens if your machine isn't using AdGuard as its DNS server, and your public DNS has a stale or incorrect record for that subdomain (e.g. pointing to `127.0.0.1`).
+
+**Quick fix** — add a hosts entry on your Mac:
+```bash
+sudo sh -c "echo '192.168.1.SERVER_IP mcp.YOUR_DOMAIN' >> /etc/hosts"
+```
+
+**Proper fix** — either remove the public DNS record for `mcp.YOUR_DOMAIN` in Gandi (the wildcard `*.YOUR_DOMAIN` entry in AdGuard handles local resolution), or make sure your Mac uses AdGuard (`SERVER_IP`) as its DNS server.
 
 ### workspace-mcp not connecting
 
