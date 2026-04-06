@@ -9,7 +9,6 @@ services:
       - CLAUDE_WORKDIR=/app
       - SESSION_TIMEOUT_MINUTES=10
       - ANTHROPIC_API_KEY=  # blank out shared .env value — bede uses OAuth, not API key
-      - MCP_CONFIG_PATH=/app/mcp.json
     volumes:
       # Persona file — gitignored (personal). Copy from bede/CLAUDE.md.example and customise.
       - ./bede/CLAUDE.md:/app/CLAUDE.md:ro

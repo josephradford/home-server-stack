@@ -26,6 +26,12 @@ COPY . .
 RUN chmod +x scripts/entrypoint.sh scripts/briefing.sh \
     && chown -R bede:bede /app
 
+# Claude Code user settings — configures workspace-mcp as a permanent MCP server
+# so --resume works (incompatible with --mcp-config flag)
+RUN mkdir -p /home/bede/.claude \
+    && cp /app/settings.json /home/bede/.claude/settings.json \
+    && chown -R bede:bede /home/bede/.claude
+
 USER bede
 
 ENTRYPOINT ["scripts/entrypoint.sh"]

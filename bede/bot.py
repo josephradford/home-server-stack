@@ -9,7 +9,6 @@ import asyncio
 import json
 import logging
 import os
-import socket
 import subprocess
 import time
 
@@ -29,7 +28,6 @@ BOT_TOKEN = os.environ["TELEGRAM_BOT_TOKEN"]
 ALLOWED_USER_ID = int(os.environ["ALLOWED_USER_ID"])
 CLAUDE_WORKDIR = os.environ.get("CLAUDE_WORKDIR", "/app")
 SESSION_TIMEOUT_SECS = int(os.environ.get("SESSION_TIMEOUT_MINUTES", "10")) * 60
-MCP_CONFIG_PATH = os.environ.get("MCP_CONFIG_PATH")
 VAULT_REPO = os.environ.get("VAULT_REPO", "")
 
 # {chat_id: {"session_id": str, "ts": float}}
@@ -52,22 +50,8 @@ def _build_cmd(text: str, session_id: str | None) -> list[str]:
         "--output-format", "json",
     ]
     if session_id:
-        # --resume is incompatible with --mcp-config; omit MCP on follow-ups
         cmd += ["--resume", session_id]
-    elif _mcp_available():
-        cmd += ["--mcp-config", MCP_CONFIG_PATH]
     return cmd
-
-
-def _mcp_available() -> bool:
-    """Quick TCP check — skip --mcp-config if workspace-mcp is unreachable."""
-    if not MCP_CONFIG_PATH:
-        return False
-    try:
-        with socket.create_connection(("workspace-mcp", 8000), timeout=1):
-            return True
-    except OSError:
-        return False
 
 
 def _pull_vault():
