@@ -12,9 +12,12 @@ import os
 import subprocess
 import time
 
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from dotenv import load_dotenv
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
+
+from scheduler import reload as scheduler_reload, setup_scheduler
 
 load_dotenv()
 
@@ -29,6 +32,8 @@ ALLOWED_USER_ID = int(os.environ["ALLOWED_USER_ID"])
 CLAUDE_WORKDIR = os.environ.get("CLAUDE_WORKDIR", "/app")
 SESSION_TIMEOUT_SECS = int(os.environ.get("SESSION_TIMEOUT_MINUTES", "10")) * 60
 VAULT_REPO = os.environ.get("VAULT_REPO", "")
+
+_scheduler: AsyncIOScheduler | None = None
 
 # {chat_id: {"session_id": str, "ts": float}}
 _sessions: dict[int, dict] = {}
@@ -211,9 +216,21 @@ async def post_init(app):
         BotCommand("reset", "Clear session and start fresh"),
     ])
 
+    global _scheduler
+    _scheduler = setup_scheduler(app.bot, ALLOWED_USER_ID)
+    _scheduler.start()
+    await scheduler_reload(_scheduler)
+    log.info("Scheduler started.")
+
+
+async def post_shutdown(app):
+    if _scheduler and _scheduler.running:
+        _scheduler.shutdown(wait=False)
+        log.info("Scheduler stopped.")
+
 
 def main():
-    app = Application.builder().token(BOT_TOKEN).post_init(post_init).build()
+    app = Application.builder().token(BOT_TOKEN).post_init(post_init).post_shutdown(post_shutdown).build()
     app.add_handler(CommandHandler("start", handle_start))
     app.add_handler(CommandHandler("reset", handle_reset))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
