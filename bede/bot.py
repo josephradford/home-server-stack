@@ -187,9 +187,12 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if _sessions.pop(chat_id, None):
             await update.message.reply_text("_(Session reset — previous context lost)_", parse_mode="Markdown")
 
-    # Telegram message limit is 4096 chars
+    # Telegram message limit is 4096 chars; try Markdown formatting, fall back to plain text
     for chunk in [result_text[i:i + 4096] for i in range(0, len(result_text), 4096)]:
-        await update.message.reply_text(chunk)
+        try:
+            await update.message.reply_text(chunk, parse_mode="Markdown")
+        except Exception:
+            await update.message.reply_text(chunk)
 
 
 async def handle_reset(update: Update, context: ContextTypes.DEFAULT_TYPE):
