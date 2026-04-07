@@ -90,6 +90,7 @@ make logs
 # View specific service logs
 make logs-n8n
 make logs-homepage
+make logs-bede
 
 # View logs directly (useful for other services)
 docker compose -f docker-compose.yml -f docker-compose.monitoring.yml logs -f [service-name]
@@ -178,6 +179,32 @@ make logs-homepage  # View Homepage logs only
 make status   # Check all service health
 ```
 
+### AI Services Management (Bede Assistant)
+
+AI services can be managed separately from the main stack:
+
+```bash
+# Start AI services only (includes Bede and workspace-mcp)
+make bede-start
+
+# Stop AI services only
+make bede-stop
+
+# Restart AI services only
+make bede-restart
+
+# Build AI services from source
+make bede-build
+
+# Check AI services status
+make bede-status
+
+# View AI service logs
+make logs-bede
+```
+
+**Note**: AI services are included in main stack commands by default. Use individual AI targets for development or troubleshooting specific AI components.
+
 ### Testing & Validation
 ```bash
 # Test domain-based access for all services
@@ -205,15 +232,16 @@ make purge
 ## Architecture & Key Concepts
 
 ### Multi-File Docker Compose
-The stack uses **four compose files** organized by logical function:
+The stack uses **five compose files** organized by logical function:
 - `docker-compose.yml` - Core services (AdGuard, n8n) - user-facing services that "do stuff"
 - `docker-compose.network.yml` - Network & Security (Traefik, Fail2ban) - infrastructure layer
 - `docker-compose.monitoring.yml` - Monitoring stack (Prometheus, Grafana, Alertmanager, exporters)
 - `docker-compose.dashboard.yml` - Dashboard (Homepage, Homepage API)
+- `docker-compose.ai.yml` - AI services (Bede assistant, workspace-mcp)
 
 **Note on WireGuard VPN**: WireGuard is installed as a **system service** (not Docker) to ensure VPN access remains available when Docker services are restarted or stopped. See "WireGuard VPN Management" section above.
 
-The Makefile combines all files by default: `docker compose -f docker-compose.yml -f docker-compose.network.yml -f docker-compose.monitoring.yml -f docker-compose.dashboard.yml`
+The Makefile combines all files by default: `docker compose -f docker-compose.yml -f docker-compose.network.yml -f docker-compose.monitoring.yml -f docker-compose.dashboard.yml -f docker-compose.ai.yml`
 
 This organization provides:
 - **Clear separation of concerns** - Easy to understand what each file contains
@@ -358,6 +386,15 @@ Required variables in `.env`:
 - `TRAFFIC_ROUTE_*` - Traffic route configurations with origin/destination and schedules
 - `BOM_LOCATION` - Australian suburb name for Bureau of Meteorology weather
 - `GOOGLE_CALENDAR_ICAL_URL` - Google Calendar iCal URL for calendar widget
+
+**Bede AI Assistant Variables:**
+- `TELEGRAM_BOT_TOKEN` - Telegram bot token from @BotFather
+- `ALLOWED_USER_ID` - Your Telegram user ID (get from @userinfobot)
+- `VAULT_REPO` - Git repository URL for Obsidian vault (HTTPS with PAT or SSH)
+- `VAULT_SSH_KEY_PATH` - Host path to SSH private key for vault access (optional)
+- `SESSION_TIMEOUT_MINUTES` - Session continuity window (default: 10)
+- `GOOGLE_OAUTH_CLIENT_ID` - Google Cloud OAuth client ID for workspace-mcp
+- `GOOGLE_OAUTH_CLIENT_SECRET` - Google Cloud OAuth client secret for workspace-mcp
 
 See `.env.example` for complete variable list with descriptions and defaults.
 

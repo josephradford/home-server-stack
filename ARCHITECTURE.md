@@ -50,6 +50,16 @@ graph TB
         :5678"]
     end
 
+    subgraph AI["AI Services
+    docker-compose.ai.yml"]
+        Bede["Bede
+        Telegram Bot
+        (outbound only)"]
+        WorkspaceMCP["workspace-mcp
+        Google Workspace API
+        :8000"]
+    end
+
     subgraph Monitoring["Monitoring Stack
     docker-compose.monitoring.yml"]
         Prometheus["Prometheus
@@ -109,6 +119,7 @@ graph TB
     Traefik -->|*.domain routing| Prometheus
     Traefik -->|*.domain routing| Alertmanager
     Traefik -->|*.domain routing| Homepage
+    Traefik -->|mcp.domain routing| WorkspaceMCP
 
     %% DNS resolution
     AdGuard -.->|DNS Rewrites| Traefik
@@ -125,6 +136,12 @@ graph TB
     Homepage -->|API Calls| HomepageAPI
     HomepageAPI -->|Docker Stats| Core
     HomepageAPI -->|Docker Stats| Monitoring
+
+    %% AI service connections
+    Bede -->|Claude API| Internet
+    Bede -->|Telegram Bot API| Internet
+    Bede -.->|MCP Protocol| WorkspaceMCP
+    WorkspaceMCP -->|Google Workspace APIs| Internet
 
     %% Certificate management
     Certbot -->|Copies Certs| TraefikData
@@ -143,6 +160,7 @@ graph TB
     classDef core fill:#51cf66,stroke:#2b8a3e,stroke-width:2px,color:#fff
     classDef monitoring fill:#ffd43b,stroke:#f08c00,stroke-width:2px,color:#000
     classDef dashboard fill:#da77f2,stroke:#9c36b5,stroke-width:2px,color:#fff
+    classDef ai fill:#845ef7,stroke:#6741d9,stroke-width:2px,color:#fff
     classDef data fill:#868e96,stroke:#495057,stroke-width:2px,color:#fff
     classDef system fill:#ff922b,stroke:#e67700,stroke-width:2px,color:#fff
 
@@ -151,6 +169,7 @@ graph TB
     class AdGuard,N8N core
     class Prometheus,Grafana,Alertmanager,NodeExporter,CAdvisor monitoring
     class Homepage,HomepageAPI dashboard
+    class Bede,WorkspaceMCP ai
     class AdGuardData,N8NData,TraefikData,GrafanaData,PrometheusData,WireGuardData data
     class Certbot system
 ```

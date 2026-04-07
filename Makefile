@@ -13,17 +13,18 @@
 # Services are organized into logical groups:
 # - docker-compose.yml: Core services (AdGuard, n8n)
 # - docker-compose.network.yml: Network & Security (Traefik, Fail2ban)
-# - docker-compose.monitoring.yml: Monitoring stack (Prometheus, Grafana, Alertmanager, exporters)
+# - docker-compose.monitoring.yml: Monitoring stack (Prometheus, Grafana, Alertmanager, exporters)  
 # - docker-compose.dashboard.yml: Dashboard (Homepage, Homepage API)
+# - docker-compose.ai.yml: AI services (Bede, workspace-mcp)
 #
 # NOTE: WireGuard is now a system service, not Docker service
 # Install with: sudo ./scripts/wireguard/install-wireguard.sh
 # Check status: make wireguard-status
 #
-# COMPOSE_CORE: Core + Network + Monitoring (used for operations that shouldn't restart dashboard)
-# COMPOSE: All services including dashboard (default for most operations)
+# COMPOSE_CORE: Core + Network + Monitoring (used for operations that shouldn't restart dashboard or AI)
+# COMPOSE: All services including dashboard and AI (default for most operations)
 COMPOSE_CORE := docker compose -f docker-compose.yml -f docker-compose.network.yml -f docker-compose.monitoring.yml
-COMPOSE := docker compose -f docker-compose.yml -f docker-compose.network.yml -f docker-compose.monitoring.yml -f docker-compose.dashboard.yml
+COMPOSE := docker compose -f docker-compose.yml -f docker-compose.network.yml -f docker-compose.monitoring.yml -f docker-compose.dashboard.yml -f docker-compose.ai.yml
 
 # Default target - show help
 help:
@@ -56,12 +57,12 @@ help:
 	@echo "  make logs-homepage      - Show Homepage logs only"
 	@echo "  make logs-bede          - Show Bede logs only"
 	@echo ""
-	@echo "Bede AI Assistant:"
+	@echo "Bede AI Assistant (Individual Service Management):"
 	@echo "  make bede-build         - Build Bede Docker image"
-	@echo "  make bede-start         - Start Bede"
-	@echo "  make bede-stop          - Stop Bede"
-	@echo "  make bede-restart       - Restart Bede"
-	@echo "  make bede-status        - Show Bede container status"
+	@echo "  make bede-start         - Start Bede AI services only"
+	@echo "  make bede-stop          - Stop Bede AI services only"
+	@echo "  make bede-restart       - Restart Bede AI services only"
+	@echo "  make bede-status        - Show Bede AI container status"
 	@echo ""
 	@echo "WireGuard VPN Management:"
 	@echo "  make wireguard-install  - Install WireGuard packages (one-time, requires sudo)"
@@ -293,6 +294,7 @@ update: env-check validate wireguard-check
 # Start all services
 start: env-check wireguard-check
 	@echo "Starting all services..."
+	@mkdir -p data/bede/vault
 	@$(COMPOSE) up -d
 	@echo "✓ All services started"
 
@@ -324,7 +326,7 @@ logs-homepage:
 	@$(COMPOSE) logs -f homepage
 
 logs-bede:
-	@docker compose -f docker-compose.ai.yml logs -f bede
+	@$(COMPOSE) logs -f bede
 
 # Bede AI Assistant (docker-compose.ai.yml)
 COMPOSE_AI := docker compose -f docker-compose.ai.yml
