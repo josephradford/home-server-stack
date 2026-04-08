@@ -96,12 +96,16 @@ async def _send(text: str):
         log.error("Failed to send scheduled message: %s", e)
 
 
+DEFAULT_TASK_TIMEOUT = 300  # seconds
+
+
 async def _run_task(task: dict):
     """Run a single scheduled task and send the result via Telegram."""
     name = task.get("name", "Scheduled Task")
     prompt = task.get("prompt", "")
+    timeout = int(task.get("timeout", DEFAULT_TASK_TIMEOUT))
 
-    log.info("Running scheduled task: %s", name)
+    log.info("Running scheduled task: %s (timeout: %ds)", name, timeout)
 
     tz = ZoneInfo(TIMEZONE)
     now_str = datetime.now(tz).strftime("%H:%M")
@@ -118,10 +122,11 @@ async def _run_task(task: dict):
             subprocess.run, cmd,
             capture_output=True, text=True,
             stdin=subprocess.DEVNULL, cwd=CLAUDE_WORKDIR,
-            timeout=120,
+            timeout=timeout,
         )
     except subprocess.TimeoutExpired:
-        await _send(f"📅 *{name}*\n⚠️ Timed out after 2 minutes.")
+        mins = timeout // 60
+        await _send(f"📅 *{name}*\n⚠️ Timed out after {mins} minutes.")
         return
     except Exception as e:
         await _send(f"📅 *{name}*\n⚠️ Error: {e}")
