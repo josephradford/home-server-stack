@@ -92,7 +92,12 @@ def _parse_tasks() -> list[dict]:
 async def _send(text: str):
     """Send a message to the user's Telegram chat."""
     try:
-        await _bot.send_message(chat_id=_chat_id, text=md_to_html(text), parse_mode="HTML")
+        await _bot.send_message(
+            chat_id=_chat_id,
+            text=md_to_html(text),
+            parse_mode="HTML",
+            disable_web_page_preview=True,
+        )
     except Exception as e:
         log.error("Failed to send scheduled message: %s", e)
 
