@@ -9,7 +9,6 @@ import asyncio
 import json
 import logging
 import os
-import re
 import subprocess
 import time
 
@@ -19,27 +18,11 @@ from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 
 from scheduler import reload as scheduler_reload, setup_scheduler, _parse_tasks, _run_task
+from utils import md_to_html
 
 load_dotenv()
 
 
-def _md_to_html(text: str) -> str:
-    """Convert CommonMark-style markdown to Telegram HTML."""
-    # Escape HTML entities first
-    text = text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
-    # Fenced code blocks (``` ... ```)
-    text = re.sub(r"```(?:\w+\n)?(.*?)```", r"<pre>\1</pre>", text, flags=re.DOTALL)
-    # Inline code
-    text = re.sub(r"`([^`\n]+)`", r"<code>\1</code>", text)
-    # Bold italic (*** or ___)
-    text = re.sub(r"\*\*\*(.*?)\*\*\*", r"<b><i>\1</i></b>", text, flags=re.DOTALL)
-    # Bold (** or __)
-    text = re.sub(r"\*\*(.*?)\*\*", r"<b>\1</b>", text, flags=re.DOTALL)
-    text = re.sub(r"__(.*?)__", r"<b>\1</b>", text, flags=re.DOTALL)
-    # Italic (* or _)
-    text = re.sub(r"\*(.*?)\*", r"<i>\1</i>", text, flags=re.DOTALL)
-    text = re.sub(r"(?<!\w)_([^_\n]+)_(?!\w)", r"<i>\1</i>", text)
-    return text
 
 logging.basicConfig(
     format="%(asctime)s %(levelname)s %(message)s",
@@ -210,7 +193,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # Telegram message limit is 4096 chars; convert markdown to HTML, fall back to plain text
     for chunk in [result_text[i:i + 4096] for i in range(0, len(result_text), 4096)]:
         try:
-            await update.message.reply_text(_md_to_html(chunk), parse_mode="HTML")
+            await update.message.reply_text(md_to_html(chunk), parse_mode="HTML")
         except Exception:
             await update.message.reply_text(chunk)
 

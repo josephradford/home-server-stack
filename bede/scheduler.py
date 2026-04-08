@@ -32,6 +32,8 @@ import yaml
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 
+from utils import md_to_html
+
 log = logging.getLogger(__name__)
 
 VAULT_PATH = "/vault"
@@ -89,7 +91,7 @@ def _parse_tasks() -> list[dict]:
 async def _send(text: str):
     """Send a message to the user's Telegram chat."""
     try:
-        await _bot.send_message(chat_id=_chat_id, text=text, parse_mode="Markdown")
+        await _bot.send_message(chat_id=_chat_id, text=md_to_html(text), parse_mode="HTML")
     except Exception as e:
         log.error("Failed to send scheduled message: %s", e)
 
