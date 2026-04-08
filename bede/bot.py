@@ -9,14 +9,37 @@ import asyncio
 import json
 import logging
 import os
+import re
 import subprocess
 import time
 
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from dotenv import load_dotenv
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 
+from scheduler import reload as scheduler_reload, setup_scheduler
+
 load_dotenv()
+
+
+def _md_to_html(text: str) -> str:
+    """Convert CommonMark-style markdown to Telegram HTML."""
+    # Escape HTML entities first
+    text = text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+    # Fenced code blocks (``` ... ```)
+    text = re.sub(r"```(?:\w+\n)?(.*?)```", r"<pre>\1</pre>", text, flags=re.DOTALL)
+    # Inline code
+    text = re.sub(r"`([^`\n]+)`", r"<code>\1</code>", text)
+    # Bold italic (*** or ___)
+    text = re.sub(r"\*\*\*(.*?)\*\*\*", r"<b><i>\1</i></b>", text, flags=re.DOTALL)
+    # Bold (** or __)
+    text = re.sub(r"\*\*(.*?)\*\*", r"<b>\1</b>", text, flags=re.DOTALL)
+    text = re.sub(r"__(.*?)__", r"<b>\1</b>", text, flags=re.DOTALL)
+    # Italic (* or _)
+    text = re.sub(r"\*(.*?)\*", r"<i>\1</i>", text, flags=re.DOTALL)
+    text = re.sub(r"(?<!\w)_([^_\n]+)_(?!\w)", r"<i>\1</i>", text)
+    return text
 
 logging.basicConfig(
     format="%(asctime)s %(levelname)s %(message)s",
@@ -29,6 +52,8 @@ ALLOWED_USER_ID = int(os.environ["ALLOWED_USER_ID"])
 CLAUDE_WORKDIR = os.environ.get("CLAUDE_WORKDIR", "/app")
 SESSION_TIMEOUT_SECS = int(os.environ.get("SESSION_TIMEOUT_MINUTES", "10")) * 60
 VAULT_REPO = os.environ.get("VAULT_REPO", "")
+
+_scheduler: AsyncIOScheduler | None = None
 
 # {chat_id: {"session_id": str, "ts": float}}
 _sessions: dict[int, dict] = {}
@@ -182,9 +207,12 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if _sessions.pop(chat_id, None):
             await update.message.reply_text("_(Session reset — previous context lost)_", parse_mode="Markdown")
 
-    # Telegram message limit is 4096 chars
+    # Telegram message limit is 4096 chars; convert markdown to HTML, fall back to plain text
     for chunk in [result_text[i:i + 4096] for i in range(0, len(result_text), 4096)]:
-        await update.message.reply_text(chunk)
+        try:
+            await update.message.reply_text(_md_to_html(chunk), parse_mode="HTML")
+        except Exception:
+            await update.message.reply_text(chunk)
 
 
 async def handle_reset(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -211,9 +239,21 @@ async def post_init(app):
         BotCommand("reset", "Clear session and start fresh"),
     ])
 
+    global _scheduler
+    _scheduler = setup_scheduler(app.bot, ALLOWED_USER_ID)
+    _scheduler.start()
+    await scheduler_reload(_scheduler)
+    log.info("Scheduler started.")
+
+
+async def post_shutdown(app):
+    if _scheduler and _scheduler.running:
+        _scheduler.shutdown(wait=False)
+        log.info("Scheduler stopped.")
+
 
 def main():
-    app = Application.builder().token(BOT_TOKEN).post_init(post_init).build()
+    app = Application.builder().token(BOT_TOKEN).post_init(post_init).post_shutdown(post_shutdown).build()
     app.add_handler(CommandHandler("start", handle_start))
     app.add_handler(CommandHandler("reset", handle_reset))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
