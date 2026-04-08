@@ -33,6 +33,7 @@ log = logging.getLogger(__name__)
 BOT_TOKEN = os.environ["TELEGRAM_BOT_TOKEN"]
 ALLOWED_USER_ID = int(os.environ["ALLOWED_USER_ID"])
 CLAUDE_WORKDIR = os.environ.get("CLAUDE_WORKDIR", "/app")
+CLAUDE_MODEL = os.environ.get("CLAUDE_MODEL", "claude-haiku-4-5-20251001")
 SESSION_TIMEOUT_SECS = int(os.environ.get("SESSION_TIMEOUT_MINUTES", "10")) * 60
 VAULT_REPO = os.environ.get("VAULT_REPO", "")
 
@@ -51,9 +52,10 @@ REAUTH_NOTICE = (
 )
 
 
-def _build_cmd(text: str, session_id: str | None) -> list[str]:
+def _build_cmd(text: str, session_id: str | None, model: str | None = None) -> list[str]:
     cmd = [
         "claude", "-p", text,
+        "--model", model or CLAUDE_MODEL,
         "--dangerously-skip-permissions",
         "--output-format", "json",
     ]

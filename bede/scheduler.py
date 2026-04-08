@@ -40,6 +40,7 @@ VAULT_PATH = "/vault"
 TASKS_REL_PATH = os.environ.get("BEDE_TASKS_PATH", "Bede/scheduled-tasks.md")
 TIMEZONE = os.environ.get("TIMEZONE", "UTC")
 CLAUDE_WORKDIR = os.environ.get("CLAUDE_WORKDIR", "/app")
+CLAUDE_MODEL = os.environ.get("CLAUDE_MODEL", "claude-haiku-4-5-20251001")
 RELOAD_INTERVAL_MINUTES = 5
 
 _bot = None
@@ -104,8 +105,9 @@ async def _run_task(task: dict):
     name = task.get("name", "Scheduled Task")
     prompt = task.get("prompt", "")
     timeout = int(task.get("timeout", DEFAULT_TASK_TIMEOUT))
+    model = task.get("model", CLAUDE_MODEL)
 
-    log.info("Running scheduled task: %s (timeout: %ds)", name, timeout)
+    log.info("Running scheduled task: %s (timeout: %ds, model: %s)", name, timeout, model)
 
     tz = ZoneInfo(TIMEZONE)
     now_str = datetime.now(tz).strftime("%H:%M")
@@ -113,6 +115,7 @@ async def _run_task(task: dict):
 
     cmd = [
         "claude", "-p", prompt,
+        "--model", model,
         "--dangerously-skip-permissions",
         "--output-format", "json",
     ]
