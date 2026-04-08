@@ -106,12 +106,29 @@ async def _run_task(task: dict):
     prompt = task.get("prompt", "")
     timeout = int(task.get("timeout", DEFAULT_TASK_TIMEOUT))
     model = task.get("model", CLAUDE_MODEL)
+    cron = task.get("schedule", "")
 
     log.info("Running scheduled task: %s (timeout: %ds, model: %s)", name, timeout, model)
 
     tz = ZoneInfo(TIMEZONE)
-    now_str = datetime.now(tz).strftime("%H:%M")
-    header = f"📅 *{name}* ({now_str})\n---\n"
+    now = datetime.now(tz)
+    now_str = now.strftime("%H:%M")
+
+    # Calculate next run time
+    next_str = ""
+    if cron:
+        try:
+            trigger = CronTrigger.from_crontab(cron, timezone=tz)
+            next_run = trigger.get_next_fire_time(None, now)
+            if next_run:
+                next_str = next_run.strftime("%a %H:%M")
+        except Exception as e:
+            log.warning("Could not calculate next run time for '%s': %s", name, e)
+
+    header = f"📅 *{name}* ({now_str})"
+    if next_str:
+        header += f"\n↻ Next: {next_str}"
+    header += "\n---\n"
 
     cmd = [
         "claude", "-p", prompt,
