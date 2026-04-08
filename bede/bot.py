@@ -245,12 +245,14 @@ async def handle_runtasks(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def post_init(app):
-    from telegram import BotCommand
-    await app.bot.set_my_commands([
+    from telegram import BotCommand, BotCommandScopeAllPrivateChats
+    commands = [
         BotCommand("start", "Start a conversation"),
         BotCommand("reset", "Clear session and start fresh"),
         BotCommand("runtasks", "Fire all scheduled tasks immediately"),
-    ])
+    ]
+    await app.bot.set_my_commands(commands)
+    await app.bot.set_my_commands(commands, scope=BotCommandScopeAllPrivateChats())
 
     global _scheduler
     _scheduler = setup_scheduler(app.bot, ALLOWED_USER_ID)
