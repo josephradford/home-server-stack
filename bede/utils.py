@@ -11,6 +11,8 @@ def md_to_html(text: str) -> str:
     text = re.sub(r"```(?:\w+\n)?(.*?)```", r"<pre>\1</pre>", text, flags=re.DOTALL)
     # Inline code
     text = re.sub(r"`([^`\n]+)`", r"<code>\1</code>", text)
+    # Markdown links [text](url)
+    text = re.sub(r"\[([^\]]+)\]\(([^)]+)\)", r'<a href="\2">\1</a>', text)
     # Headings (# / ## / ###) — Telegram has no heading tags, render as bold
     text = re.sub(r"^#{1,3} (.+)$", r"<b>\1</b>", text, flags=re.MULTILINE)
     # Bold italic (*** or ___)
