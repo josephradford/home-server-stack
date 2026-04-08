@@ -138,6 +138,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if session and (now - session["ts"]) < SESSION_TIMEOUT_SECS:
         resume_id = session["session_id"]
 
+    reset_sent = False
     await asyncio.to_thread(_pull_vault)
 
     cmd = _build_cmd(text, resume_id)
@@ -158,6 +159,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         log.warning("Stale session %s, retrying fresh.", resume_id)
         _sessions.pop(chat_id, None)
         await update.message.reply_text("_(Session reset — previous context lost)_", parse_mode="Markdown")
+        reset_sent = True
         cmd = _build_cmd(text, None)
         typing_task = asyncio.create_task(_keep_typing(context.bot, chat_id))
         try:
@@ -188,6 +190,9 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # clear it so the next message starts fresh rather than hitting a stale resume.
     if new_session_id:
         _sessions[chat_id] = {"session_id": new_session_id, "ts": now}
+        # Notify on new context (but not if we already sent a reset message)
+        if not resume_id and not reset_sent:
+            await update.message.reply_text("_(New context started)_", parse_mode="Markdown")
     else:
         if _sessions.pop(chat_id, None):
             await update.message.reply_text("_(Session reset — previous context lost)_", parse_mode="Markdown")
