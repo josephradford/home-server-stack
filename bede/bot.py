@@ -18,7 +18,7 @@ from dotenv import load_dotenv
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 
-from scheduler import reload as scheduler_reload, setup_scheduler
+from scheduler import reload as scheduler_reload, setup_scheduler, _parse_tasks, _run_task
 
 load_dotenv()
 
@@ -232,11 +232,24 @@ async def handle_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 
+async def handle_runtasks(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if update.effective_user.id != ALLOWED_USER_ID:
+        return
+    tasks = _parse_tasks()
+    if not tasks:
+        await update.message.reply_text("No tasks found in scheduled-tasks.md.")
+        return
+    names = ", ".join(t.get("name", "?") for t in tasks)
+    await update.message.reply_text(f"Running {len(tasks)} task(s): {names}")
+    await asyncio.gather(*[_run_task(t) for t in tasks])
+
+
 async def post_init(app):
     from telegram import BotCommand
     await app.bot.set_my_commands([
         BotCommand("start", "Start a conversation"),
         BotCommand("reset", "Clear session and start fresh"),
+        BotCommand("runtasks", "Fire all scheduled tasks immediately"),
     ])
 
     global _scheduler
@@ -256,6 +269,7 @@ def main():
     app = Application.builder().token(BOT_TOKEN).post_init(post_init).post_shutdown(post_shutdown).build()
     app.add_handler(CommandHandler("start", handle_start))
     app.add_handler(CommandHandler("reset", handle_reset))
+    app.add_handler(CommandHandler("runtasks", handle_runtasks))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
     log.info("Bede is running.")
     app.run_polling(drop_pending_updates=True)
