@@ -32,12 +32,15 @@ import yaml
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 
+from utils import md_to_html
+
 log = logging.getLogger(__name__)
 
 VAULT_PATH = "/vault"
 TASKS_REL_PATH = os.environ.get("BEDE_TASKS_PATH", "Bede/scheduled-tasks.md")
 TIMEZONE = os.environ.get("TIMEZONE", "UTC")
 CLAUDE_WORKDIR = os.environ.get("CLAUDE_WORKDIR", "/app")
+CLAUDE_MODEL = os.environ.get("CLAUDE_MODEL", "claude-haiku-4-5-20251001")
 RELOAD_INTERVAL_MINUTES = 5
 
 _bot = None
@@ -89,24 +92,52 @@ def _parse_tasks() -> list[dict]:
 async def _send(text: str):
     """Send a message to the user's Telegram chat."""
     try:
-        await _bot.send_message(chat_id=_chat_id, text=text, parse_mode="Markdown")
+        await _bot.send_message(
+            chat_id=_chat_id,
+            text=md_to_html(text),
+            parse_mode="HTML",
+            disable_web_page_preview=True,
+        )
     except Exception as e:
         log.error("Failed to send scheduled message: %s", e)
+
+
+DEFAULT_TASK_TIMEOUT = 300  # seconds
 
 
 async def _run_task(task: dict):
     """Run a single scheduled task and send the result via Telegram."""
     name = task.get("name", "Scheduled Task")
     prompt = task.get("prompt", "")
+    timeout = int(task.get("timeout", DEFAULT_TASK_TIMEOUT))
+    model = task.get("model", CLAUDE_MODEL)
+    cron = task.get("schedule", "")
 
-    log.info("Running scheduled task: %s", name)
+    log.info("Running scheduled task: %s (timeout: %ds, model: %s)", name, timeout, model)
 
     tz = ZoneInfo(TIMEZONE)
-    now_str = datetime.now(tz).strftime("%H:%M")
-    header = f"📅 *{name}* ({now_str})\n---\n"
+    now = datetime.now(tz)
+    now_str = now.strftime("%H:%M")
+
+    # Calculate next run time
+    next_str = ""
+    if cron:
+        try:
+            trigger = CronTrigger.from_crontab(cron, timezone=tz)
+            next_run = trigger.get_next_fire_time(None, now)
+            if next_run:
+                next_str = next_run.strftime("%a %H:%M")
+        except Exception as e:
+            log.warning("Could not calculate next run time for '%s': %s", name, e)
+
+    header = f"📅 *{name}* ({now_str})"
+    if next_str:
+        header += f"\n↻ Next: {next_str}"
+    header += "\n---\n"
 
     cmd = [
         "claude", "-p", prompt,
+        "--model", model,
         "--dangerously-skip-permissions",
         "--output-format", "json",
     ]
@@ -116,10 +147,11 @@ async def _run_task(task: dict):
             subprocess.run, cmd,
             capture_output=True, text=True,
             stdin=subprocess.DEVNULL, cwd=CLAUDE_WORKDIR,
-            timeout=120,
+            timeout=timeout,
         )
     except subprocess.TimeoutExpired:
-        await _send(f"📅 *{name}*\n⚠️ Timed out after 2 minutes.")
+        mins = timeout // 60
+        await _send(f"📅 *{name}*\n⚠️ Timed out after {mins} minutes.")
         return
     except Exception as e:
         await _send(f"📅 *{name}*\n⚠️ Error: {e}")
