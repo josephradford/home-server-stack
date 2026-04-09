@@ -90,7 +90,7 @@ LAST_OCTET=2  # Start from .2 (server is .1)
 
 # Check existing peers for highest IP
 if [ -f "$WG_CONF" ]; then
-    EXISTING_IPS=$(grep -oP "Address = $SUBNET_BASE\.\K[0-9]+" "$WG_CONF" 2>/dev/null || true)
+    EXISTING_IPS=$(grep -oP "AllowedIPs = $SUBNET_BASE\.\K[0-9]+" "$WG_CONF" 2>/dev/null || true)
     if [ ! -z "$EXISTING_IPS" ]; then
         LAST_OCTET=$(($(echo "$EXISTING_IPS" | sort -rn | head -1) + 1))
     fi
