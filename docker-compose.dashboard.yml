@@ -25,6 +25,9 @@ services:
       - homeserver
     volumes:
       - ./data/homepage-api:/data
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /sys/class/net:/sys/class/net:ro
+      - /etc/wireguard:/etc/wireguard:ro
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5000/api/health"]
       interval: 30s

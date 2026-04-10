@@ -241,3 +241,19 @@
                 label: Version
               - field: disk_usage
                 label: Disk Usage
+
+  # AI Services - Bede assistant and workspace integrations
+  - AI Services:
+      - Bede:
+          icon: mdi-robot
+          description: Personal AI assistant (Telegram)
+          container: bede
+          server: my-docker
+          showStats: true
+
+      - Workspace MCP:
+          icon: mdi-google
+          description: Google Workspace MCP server
+          container: workspace-mcp
+          server: my-docker
+          showStats: true
