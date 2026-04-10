@@ -118,6 +118,8 @@ async def _run_task(task: dict):
     tz = ZoneInfo(TIMEZONE)
     now = datetime.now(tz)
     now_str = now.strftime("%H:%M")
+    now_date_str = now.strftime("%A, %d %B %Y")
+    prompt = f"Today is {now_date_str}.\n\n{prompt}"
 
     # Calculate next run time
     next_str = ""
