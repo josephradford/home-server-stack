@@ -447,8 +447,14 @@ def active_routes():
 # =============================================================================
 
 def _wg_interface_up():
-    """Return True if the wg0 network interface exists in the host sysfs."""
-    return os.path.isdir('/sys/class/net/wg0')
+    """Return True if the wg0 network interface exists in the host sysfs.
+    Uses os.listdir rather than os.path.isdir because sysfs symlinks don't
+    resolve correctly inside a container with a bind-mounted /sys/class/net.
+    """
+    try:
+        return 'wg0' in os.listdir('/sys/class/net')
+    except Exception:
+        return False
 
 
 def _wg_peer_count():
