@@ -457,19 +457,10 @@ def _wg_interface_up():
         return False
 
 
-def _wg_peer_count():
-    """Count [Peer] blocks in wg0.conf. Returns 0 if the file is unreadable."""
-    try:
-        with open('/etc/wireguard/wg0.conf') as f:
-            return f.read().count('[Peer]')
-    except Exception:
-        return 0
-
-
 @app.route('/api/wireguard/status')
 def wireguard_status():
     """
-    Get WireGuard VPN status by inspecting the host sysfs and wg0.conf.
+    Get WireGuard VPN status by inspecting the host sysfs.
     No systemctl or wg CLI required — works inside a container.
     """
     try:
@@ -477,17 +468,13 @@ def wireguard_status():
         if not up:
             return jsonify({
                 'status': 'Inactive',
-                'peers': 0,
                 'interface': 'wg0 (down)',
                 'service_status': 'inactive',
                 'updated': datetime.now().isoformat()
             })
 
-        peer_count = _wg_peer_count()
-        status_text = 'Active (no peers)' if peer_count == 0 else f'Active ({peer_count} peers)'
         return jsonify({
-            'status': status_text,
-            'peers': peer_count,
+            'status': 'Active',
             'interface': 'wg0 (up)',
             'service_status': 'active',
             'updated': datetime.now().isoformat()

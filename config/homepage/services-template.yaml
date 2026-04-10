@@ -213,8 +213,6 @@
             mappings:
               - field: status
                 label: Status
-              - field: peers
-                label: Connected Peers
               - field: interface
                 label: Interface
 
