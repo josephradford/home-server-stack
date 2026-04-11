@@ -23,8 +23,12 @@ services:
     restart: unless-stopped
     networks:
       - homeserver
+    group_add:
+      - "988"  # host docker group GID — grants access to /var/run/docker.sock
     volumes:
       - ./data/homepage-api:/data
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /sys/class/net:/sys/class/net:ro
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5000/api/health"]
       interval: 30s

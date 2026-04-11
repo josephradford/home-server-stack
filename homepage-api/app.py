@@ -446,100 +446,40 @@ def active_routes():
 # WIREGUARD VPN STATUS
 # =============================================================================
 
+def _wg_interface_up():
+    """Return True if the wg0 network interface exists in the host sysfs.
+    Uses os.listdir rather than os.path.isdir because sysfs symlinks don't
+    resolve correctly inside a container with a bind-mounted /sys/class/net.
+    """
+    try:
+        return 'wg0' in os.listdir('/sys/class/net')
+    except Exception:
+        return False
+
+
 @app.route('/api/wireguard/status')
 def wireguard_status():
     """
-    Get WireGuard VPN status from system service
-    Returns interface status, connected peers, and basic stats
+    Get WireGuard VPN status by inspecting the host sysfs.
+    No systemctl or wg CLI required — works inside a container.
     """
     try:
-        import subprocess
-        
-        # Check if WireGuard service is running
-        try:
-            service_result = subprocess.run(
-                ['systemctl', 'is-active', 'wg-quick@wg0'],
-                capture_output=True,
-                text=True,
-                timeout=5
-            )
-            service_status = service_result.stdout.strip()
-            service_running = service_status == 'active'
-        except subprocess.TimeoutExpired:
-            return jsonify({'error': 'Service check timed out'}), 500
-        except Exception:
-            service_running = False
-            service_status = 'unknown'
-        
-        if not service_running:
+        up = _wg_interface_up()
+        if not up:
             return jsonify({
-                'status': f'Inactive ({service_status})',
-                'peers': 0,
+                'status': 'Inactive',
                 'interface': 'wg0 (down)',
-                'service_status': service_status,
+                'service_status': 'inactive',
                 'updated': datetime.now().isoformat()
             })
-        
-        # Get WireGuard interface details
-        try:
-            wg_result = subprocess.run(
-                ['wg', 'show', 'wg0'],
-                capture_output=True,
-                text=True,
-                timeout=5
-            )
-            
-            if wg_result.returncode != 0:
-                return jsonify({
-                    'status': 'Error',
-                    'peers': 0,
-                    'interface': 'wg0 (error)',
-                    'error': 'Failed to query WireGuard interface',
-                    'updated': datetime.now().isoformat()
-                })
-            
-            wg_output = wg_result.stdout
-            
-            # Parse output to count peers
-            peer_count = 0
-            active_peers = 0
-            
-            lines = wg_output.split('\n')
-            for line in lines:
-                if line.strip().startswith('peer:'):
-                    peer_count += 1
-                elif 'latest handshake:' in line.lower():
-                    # Check if handshake is recent (within last 5 minutes)
-                    if 'minute' in line or 'second' in line:
-                        active_peers += 1
-            
-            status_text = 'Active'
-            if peer_count == 0:
-                status_text = 'Active (no peers)'
-            elif active_peers > 0:
-                status_text = f'Active ({active_peers}/{peer_count} connected)'
-            else:
-                status_text = f'Active ({peer_count} peers configured)'
-            
-            return jsonify({
-                'status': status_text,
-                'peers': f'{active_peers}/{peer_count}' if peer_count > 0 else '0',
-                'interface': 'wg0 (up)',
-                'service_status': 'active',
-                'updated': datetime.now().isoformat()
-            })
-            
-        except subprocess.TimeoutExpired:
-            return jsonify({'error': 'WireGuard query timed out'}), 500
-        except Exception as e:
-            return jsonify({
-                'status': 'Error',
-                'peers': 0,
-                'interface': 'wg0 (error)',
-                'error': f'Failed to query WireGuard: {str(e)}',
-                'updated': datetime.now().isoformat()
-            })
-    
+
+        return jsonify({
+            'status': 'Active',
+            'interface': 'wg0 (up)',
+            'service_status': 'active',
+            'updated': datetime.now().isoformat()
+        })
+
     except Exception as e:
         return jsonify({'error': f'Unexpected error: {str(e)}'}), 500
 
@@ -548,117 +488,80 @@ def wireguard_status():
 # DOCKER DAEMON STATUS
 # =============================================================================
 
+def _docker_api(path):
+    """
+    Make a GET request to the Docker daemon via its Unix socket.
+    No docker CLI or SDK required.
+    """
+    import http.client
+    import socket as _socket
+
+    class _UnixConn(http.client.HTTPConnection):
+        def connect(self):
+            self.sock = _socket.socket(_socket.AF_UNIX, _socket.SOCK_STREAM)
+            self.sock.connect('/var/run/docker.sock')
+
+    conn = _UnixConn('localhost')
+    try:
+        conn.request('GET', path)
+        resp = conn.getresponse()
+        return json.loads(resp.read())
+    finally:
+        conn.close()
+
+
+def _fmt_bytes(n):
+    """Format a byte count as a human-readable string."""
+    for unit in ('B', 'KB', 'MB', 'GB', 'TB'):
+        if n < 1024:
+            return f'{n:.1f} {unit}'
+        n /= 1024
+    return f'{n:.1f} PB'
+
+
 @app.route('/api/docker/status')
 def docker_status():
     """
-    Get Docker daemon status and basic system information
-    Returns service status, container counts, and resource info
+    Get Docker daemon status via the Unix socket.
+    No systemctl or docker CLI required — works inside a container.
     """
     try:
-        import subprocess
-        
-        # Check if Docker service is running
+        info = _docker_api('/info')
+        version_info = _docker_api('/version')
+
+        running = info.get('ContainersRunning', 0)
+        total = info.get('Containers', 0)
+        docker_version = version_info.get('Version', 'Unknown')
+
+        # Disk usage: sum image sizes from /system/df
+        disk_usage = 'Unknown'
         try:
-            service_result = subprocess.run(
-                ['systemctl', 'is-active', 'docker'],
-                capture_output=True,
-                text=True,
-                timeout=5
-            )
-            service_status = service_result.stdout.strip()
-            service_running = service_status == 'active'
-        except subprocess.TimeoutExpired:
-            return jsonify({'error': 'Service check timed out'}), 500
+            df = _docker_api('/system/df')
+            total_bytes = sum(img.get('Size', 0) for img in df.get('Images', []))
+            disk_usage = _fmt_bytes(total_bytes)
         except Exception:
-            service_running = False
-            service_status = 'unknown'
-        
-        if not service_running:
-            return jsonify({
-                'status': f'Inactive ({service_status})',
-                'containers': 'N/A',
-                'version': 'N/A',
-                'service_status': service_status,
-                'updated': datetime.now().isoformat()
-            })
-        
-        # Get Docker info
-        try:
-            # Get container counts
-            containers_result = subprocess.run(
-                ['docker', 'ps', '-q'],
-                capture_output=True,
-                text=True,
-                timeout=10
-            )
-            running_containers = len([line for line in containers_result.stdout.strip().split('\n') if line])
-            
-            containers_all_result = subprocess.run(
-                ['docker', 'ps', '-aq'],
-                capture_output=True,
-                text=True,
-                timeout=10
-            )
-            total_containers = len([line for line in containers_all_result.stdout.strip().split('\n') if line])
-            
-            # Get Docker version
-            version_result = subprocess.run(
-                ['docker', 'version', '--format', '{{.Server.Version}}'],
-                capture_output=True,
-                text=True,
-                timeout=5
-            )
-            docker_version = version_result.stdout.strip() if version_result.returncode == 0 else 'Unknown'
-            
-            # Get basic system stats
-            info_result = subprocess.run(
-                ['docker', 'system', 'df', '--format', 'table'],
-                capture_output=True,
-                text=True,
-                timeout=10
-            )
-            
-            # Parse docker system df output for basic disk usage
-            disk_usage = 'Unknown'
-            if info_result.returncode == 0:
-                lines = info_result.stdout.strip().split('\n')
-                if len(lines) > 1:  # Skip header
-                    # Look for "Images" line which contains total space used
-                    for line in lines[1:]:
-                        if 'Images' in line:
-                            # Extract size (usually 3rd or 4th column)
-                            parts = line.split()
-                            if len(parts) >= 3:
-                                disk_usage = parts[2] if parts[2] != '0B' else parts[3] if len(parts) > 3 else 'Unknown'
-                            break
-            
-            status_text = f'Active ({running_containers} running)'
-            if total_containers > running_containers:
-                status_text = f'Active ({running_containers}/{total_containers} running)'
-            
-            return jsonify({
-                'status': status_text,
-                'containers': f'{running_containers}/{total_containers}',
-                'version': f'v{docker_version}',
-                'disk_usage': disk_usage,
-                'service_status': 'active',
-                'updated': datetime.now().isoformat()
-            })
-            
-        except subprocess.TimeoutExpired:
-            return jsonify({'error': 'Docker query timed out'}), 500
-        except Exception as e:
-            return jsonify({
-                'status': 'Error',
-                'containers': 'N/A',
-                'version': 'N/A', 
-                'disk_usage': 'N/A',
-                'error': f'Failed to query Docker: {str(e)}',
-                'updated': datetime.now().isoformat()
-            })
-    
+            pass
+
+        status_text = f'Active ({running}/{total} running)'
+        return jsonify({
+            'status': status_text,
+            'containers': f'{running}/{total}',
+            'version': f'v{docker_version}',
+            'disk_usage': disk_usage,
+            'service_status': 'active',
+            'updated': datetime.now().isoformat()
+        })
+
     except Exception as e:
-        return jsonify({'error': f'Unexpected error: {str(e)}'}), 500
+        return jsonify({
+            'status': 'Inactive',
+            'containers': 'N/A',
+            'version': 'N/A',
+            'disk_usage': 'N/A',
+            'service_status': 'unknown',
+            'error': str(e),
+            'updated': datetime.now().isoformat()
+        })
 
 
 if __name__ == '__main__':
