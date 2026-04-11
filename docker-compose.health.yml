@@ -1,0 +1,58 @@
+---
+# Health Services
+# This file contains Apple Health data ingestion and storage services.
+# - hae-mongo: MongoDB database for Health Auto Export data
+# - hae-server: REST API server that receives Health Auto Export POSTs and serves read API
+#
+# iPhone setup: In Health Auto Export app, set destination to:
+#   URL:    https://hae.DOMAIN/api/data
+#   Header: api-key: HAE_WRITE_TOKEN
+
+services:
+  hae-mongo:
+    image: mongo:7
+    container_name: hae-mongo
+    restart: unless-stopped
+    volumes:
+      - ./data/hae-mongo:/data/db
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${HAE_MONGO_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${HAE_MONGO_PASSWORD}
+      MONGO_INITDB_DATABASE: health-auto-export
+    networks:
+      - homeserver
+
+  hae-server:
+    build:
+      context: ./hae-server/server
+      dockerfile: Dockerfile
+    container_name: hae-server
+    restart: unless-stopped
+    expose:
+      - 3001
+    environment:
+      - NODE_ENV=production
+      - MONGO_HOST=hae-mongo
+      - MONGO_PORT=27017
+      - MONGO_DB=health-auto-export
+      - MONGO_USERNAME=${HAE_MONGO_USERNAME}
+      - MONGO_PASSWORD=${HAE_MONGO_PASSWORD}
+      - READ_TOKEN=${HAE_READ_TOKEN}
+      - WRITE_TOKEN=${HAE_WRITE_TOKEN}
+    depends_on:
+      - hae-mongo
+    networks:
+      - homeserver
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.hae-server.rule=Host(`hae.${DOMAIN}`)"
+      - "traefik.http.routers.hae-server.entrypoints=websecure"
+      - "traefik.http.routers.hae-server.tls=true"
+      - "traefik.http.services.hae-server.loadbalancer.server.port=3001"
+      # Security: VPN/Local access only — health data should never be public
+      - "traefik.http.routers.hae-server.middlewares=admin-secure@docker"
+
+networks:
+  homeserver:
+    external: true
+    name: home-server-stack_homeserver

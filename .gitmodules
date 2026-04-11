@@ -1,0 +1,3 @@
+[submodule "hae-server"]
+	path = hae-server
+	url = https://github.com/HealthyApps/health-auto-export-server
