@@ -1,0 +1,37 @@
+---
+# Location Services
+# This file contains location tracking services.
+# - owntracks-recorder: Receives OwnTracks HTTP POSTs and exposes a REST read API.
+#                       No MQTT/Mosquitto — the iOS app POSTs directly over HTTP.
+#
+# iPhone setup: In OwnTracks app, set mode to HTTP and destination to:
+#   URL:  https://owntracks.DOMAIN/pub
+#   (no authentication required by default)
+#
+# Read API: GET https://owntracks.DOMAIN/api/0/locations?from=...&to=...
+#           Returns raw lat/lng points. Resolve place names via Nominatim at query time.
+
+services:
+  owntracks-recorder:
+    image: owntracks/recorder
+    container_name: owntracks-recorder
+    restart: unless-stopped
+    volumes:
+      - ./data/owntracks/store:/store
+      - ./data/owntracks/config:/config
+    expose:
+      - 8083
+    networks:
+      - homeserver
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.owntracks.rule=Host(`owntracks.${DOMAIN}`)"
+      - "traefik.http.routers.owntracks.entrypoints=websecure"
+      - "traefik.http.routers.owntracks.tls=true"
+      - "traefik.http.services.owntracks.loadbalancer.server.port=8083"
+      - "traefik.http.routers.owntracks.middlewares=admin-secure@docker"
+
+networks:
+  homeserver:
+    external: true
+    name: home-server-stack_homeserver
