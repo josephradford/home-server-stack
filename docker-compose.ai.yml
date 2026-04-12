@@ -23,6 +23,7 @@ services:
       - workspace-mcp
     networks:
       - default
+      - homeserver
     # No Traefik labels — bede communicates outbound via Telegram only
 
   workspace-mcp:
