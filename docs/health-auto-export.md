@@ -1,6 +1,6 @@
 # Health Auto Export Setup
 
-This document covers setting up `hae-server` and `hae-mongo` to receive Apple Health
+This document covers setting up `hae-server` and `hae-influxdb` to receive Apple Health
 data from the [Health Auto Export](https://apple.co/3iqbU2d) iOS app, and how to
 configure the iPhone automations to push data to your server.
 
@@ -8,13 +8,9 @@ configure the iPhone automations to push data to your server.
 
 The health stack (`docker-compose.health.yml`) consists of two services:
 
-- **hae-mongo** — MongoDB 7 database that stores all incoming health data
-- **hae-server** — Node.js REST API that receives POSTs from the iOS app (`/api/data`)
-  and exposes read endpoints (`/api/metrics/:name`, `/api/workouts`) for Bede or other
-  consumers
-
-The upstream project is [HealthyApps/health-auto-export-server](https://github.com/HealthyApps/health-auto-export-server),
-vendored here as a git submodule at `./hae-server`.
+- **hae-influxdb** — InfluxDB 2 time-series database that stores all incoming health data
+- **hae-server** — [irvinlim/apple-health-ingester](https://github.com/irvinlim/apple-health-ingester)
+  receives POSTs from the iOS app and writes them to InfluxDB
 
 ---
 
@@ -22,43 +18,38 @@ vendored here as a git submodule at `./hae-server`.
 
 ### 1. Generate API tokens
 
-Tokens must start with `sk-`. Generate two (one for writing, one for reading):
+Generate a write token for the iOS app and a separate admin token for InfluxDB:
 
 ```bash
-echo "sk-$(openssl rand -hex 32)"   # run twice
+openssl rand -hex 32   # HAE_WRITE_TOKEN — iOS app uses this to POST data
+openssl rand -hex 32   # HAE_INFLUXDB_TOKEN — InfluxDB admin token
+openssl rand -hex 32   # HAE_INFLUXDB_PASSWORD — InfluxDB admin password
 ```
 
 ### 2. Add environment variables to `.env`
 
 ```bash
-HAE_MONGO_USERNAME=admin
-HAE_MONGO_PASSWORD=your_secure_mongo_password
+# iOS app write token
+HAE_WRITE_TOKEN=your-secure-hae-write-token
 
-# Token the iOS app sends when POSTing data
-HAE_WRITE_TOKEN=sk-your-write-token
-
-# Token Bede (or Grafana) uses when reading data
-HAE_READ_TOKEN=sk-your-read-token
+# InfluxDB credentials
+HAE_INFLUXDB_USERNAME=admin
+HAE_INFLUXDB_PASSWORD=your-secure-influxdb-password
+HAE_INFLUXDB_TOKEN=your-secure-influxdb-admin-token
+HAE_INFLUXDB_ORG=health
+HAE_INFLUXDB_METRICS_BUCKET=metrics
+HAE_INFLUXDB_WORKOUTS_BUCKET=workouts
 ```
-
-Both token values **must start with `sk-`** — the server's auth middleware enforces
-this and will return 401 for any token without the prefix.
 
 ### 3. Build and start
 
-The `hae-server` image is built from source (git submodule). Initialise the submodule
-if you haven't already:
-
 ```bash
-git submodule update --init hae-server
-make hae-build
 make hae-start
 ```
 
 Or it's included in the full stack:
 
 ```bash
-make build   # builds all custom images including hae-server
 make start   # starts everything
 ```
 
@@ -66,27 +57,18 @@ make start   # starts everything
 
 ```bash
 make hae-status     # both containers should show Up
-make logs-hae       # hae-server should print "Connected successfully to health-auto-export"
+make logs-hae       # hae-server should show it connected to InfluxDB
 ```
 
-Test the write endpoint from the server:
+Test the write endpoint:
 
 ```bash
-docker exec hae-server wget -q -O- \
-  --post-data='{"data":[]}' \
-  --header='Content-Type: application/json' \
-  --header='api-key: sk-your-write-token' \
-  http://localhost:3001/api/data
-# Expected: {"metrics":{"success":true,...},"workouts":{"success":true,...}}
-```
-
-Test a read endpoint:
-
-```bash
-docker exec hae-server wget -q -O- \
-  --header='api-key: sk-your-read-token' \
-  'http://localhost:3001/api/metrics/step_count'
-# Expected: [] (empty until data has been synced from iPhone)
+curl -s -o /dev/null -w "%{http_code}" \
+  -H "Authorization: Bearer your-write-token" \
+  -H "Content-Type: application/json" \
+  -d '{"data":[]}' \
+  https://hae.YOUR_DOMAIN/api/healthautoexport/v1/influxdb/ingest
+# Expected: 200
 ```
 
 ---
@@ -102,9 +84,9 @@ to trigger a first sync.
 | Setting | Value |
 |---|---|
 | Automation Type | REST API |
-| URL | `https://hae.YOUR_DOMAIN/api/data` |
-| Header key | `api-key` |
-| Header value | `HAE_WRITE_TOKEN` value from `.env` |
+| URL | `https://hae.YOUR_DOMAIN/api/healthautoexport/v1/influxdb/ingest` |
+| Header key | `Authorization` |
+| Header value | `Bearer <HAE_WRITE_TOKEN value from .env>` |
 | Data Type | Health Metrics |
 | Export Format | JSON |
 | Aggregate Data | On |
@@ -114,20 +96,20 @@ to trigger a first sync.
 
 Recommended metrics to enable (maps to what Bede uses in the journal):
 
-| Metric name in app | Enum value (read API) |
-|---|---|
-| Sleep Analysis | `sleep_analysis` |
-| Step Count | `step_count` |
-| Heart Rate Variability | `heart_rate_variability` |
-| Resting Heart Rate | `resting_heart_rate` |
-| Active Energy | `active_energy` |
-| Apple Exercise Time | `apple_exercise_time` |
-| Apple Stand Time | `apple_stand_time` |
-| Apple Move Time | `apple_move_time` |
-| Mindful Minutes | `mindful_minutes` |
-| State of Mind | `state_of_mind` |
+| Metric name in app |
+|---|
+| Sleep Analysis |
+| Step Count |
+| Heart Rate Variability |
+| Resting Heart Rate |
+| Active Energy |
+| Apple Exercise Time |
+| Apple Stand Time |
+| Apple Move Time |
+| Mindful Minutes |
+| State of Mind |
 
-You can enable additional metrics freely — they are stored in MongoDB and can be
+You can enable additional metrics freely — they are stored in InfluxDB and can be
 queried later without any server changes.
 
 ### Automation 2 — Workouts
@@ -155,26 +137,13 @@ before Bede runs.
 
 ---
 
-## Read API Reference
+## Querying data
 
-All read endpoints require the header `api-key: sk-your-read-token`.
+Health data is stored in InfluxDB and accessible via:
 
-| Endpoint | Description |
-|---|---|
-| `GET /api/metrics/:name` | Returns stored data for a named metric (see enum values above) |
-| `GET /api/workouts` | Returns stored workout records |
-| `POST /api/data` | Write endpoint — used by the iOS app only |
-
-The full list of supported metric names is defined in
-[`server/src/models/MetricName.ts`](https://github.com/HealthyApps/health-auto-export-server/blob/main/server/src/models/MetricName.ts)
-in the upstream repo.
-
-### Example: query yesterday's step count
-
-```bash
-curl -H 'api-key: sk-your-read-token' \
-  https://hae.YOUR_DOMAIN/api/metrics/step_count
-```
+- **InfluxDB UI**: `https://influxdb.YOUR_DOMAIN` — interactive query builder and dashboards
+- **Flux queries**: query via the InfluxDB API using `HAE_INFLUXDB_TOKEN`
+- **Bede**: reads directly from InfluxDB using the admin token
 
 ---
 
@@ -183,7 +152,7 @@ curl -H 'api-key: sk-your-read-token' \
 | Target | Description |
 |---|---|
 | `make hae-build` | Build the hae-server image from source |
-| `make hae-start` | Start hae-server and hae-mongo |
+| `make hae-start` | Start hae-server and hae-influxdb |
 | `make hae-stop` | Stop health services |
 | `make hae-restart` | Restart health services |
 | `make hae-status` | Show container status |

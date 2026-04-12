@@ -125,7 +125,6 @@ build: validate
 # Build only custom services (faster rebuild during development)
 build-custom: validate
 	@echo "Building custom services from source..."
-	@git submodule update --init hae-server
 	@$(COMPOSE) build homepage-api hae-server --progress=plain
 	@echo "✓ Custom services built"
 
@@ -152,7 +151,6 @@ setup: env-check validate wireguard-check
 	@$(COMPOSE) pull --ignore-pull-failures
 	@echo ""
 	@echo "Step 5/8: Building custom services from source..."
-	@git submodule update --init hae-server
 	@$(COMPOSE) build homepage-api hae-server --progress=plain
 	@echo ""
 	@echo "Step 6/8: Starting services (Docker Compose will create networks)..."
@@ -294,7 +292,6 @@ update: env-check validate wireguard-check
 	@$(COMPOSE) pull --ignore-pull-failures
 	@echo ""
 	@echo "Step 2/3: Building custom services from source..."
-	@git submodule update --init hae-server
 	@$(COMPOSE) build homepage-api hae-server --progress=plain
 	@echo ""
 	@echo "Step 3/3: Restarting services with new images..."
@@ -376,13 +373,11 @@ COMPOSE_HEALTH := docker compose -f docker-compose.health.yml
 
 hae-build: env-check
 	@echo "Building hae-server image..."
-	@git submodule update --init hae-server
 	@$(COMPOSE_HEALTH) build --progress=plain
 	@echo "✓ hae-server image built"
 
 hae-start: env-check
 	@echo "Starting health services..."
-	@git submodule update --init hae-server
 	@$(COMPOSE_HEALTH) up -d
 	@echo "✓ Health services started"
 
