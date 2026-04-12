@@ -49,8 +49,8 @@ services:
       - "traefik.http.routers.hae-server.entrypoints=websecure"
       - "traefik.http.routers.hae-server.tls=true"
       - "traefik.http.services.hae-server.loadbalancer.server.port=8080"
-      # Security: VPN/Local access only — health data should never be public
-      - "traefik.http.routers.hae-server.middlewares=admin-secure@docker"
+      # Security: webhook-secure (public access, bearer token auth handled by ingester)
+      - "traefik.http.routers.hae-server.middlewares=webhook-secure@docker"
 
 networks:
   homeserver:
