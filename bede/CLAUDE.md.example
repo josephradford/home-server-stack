@@ -52,6 +52,24 @@ Apple Health metrics are stored in InfluxDB, populated by the Health Auto Export
 
 **Key metrics available:** step_count, sleep_analysis, heart_rate_variability, resting_heart_rate, active_energy, apple_exercise_time, apple_stand_time, apple_move_time, mindful_minutes, state_of_mind, and workouts (in the workouts bucket).
 
+## Location Data
+
+OwnTracks Recorder stores GPS history from the OwnTracks iOS app.
+
+**Connection:**
+- URL: `http://owntracks-recorder:8083`
+- Read API: `GET /api/0/locations?from=YYYY-MM-DD&to=YYYY-MM-DD`
+- Returns raw lat/lng points. Resolve place names via Nominatim reverse geocoding (`https://nominatim.openstreetmap.org/reverse?lat=LAT&lon=LON&format=json`).
+
+## Homepage API
+
+Internal backend providing system metrics and integrations.
+
+**Connection:**
+- URL: `http://homepage-api:5000`
+- Weather: `GET /api/weather` — current conditions for the configured location
+- Health check: `GET /api/health`
+
 ## Google Account
 
 - Email: your-google-account@gmail.com
