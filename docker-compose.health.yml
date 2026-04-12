@@ -24,6 +24,13 @@ services:
       DOCKER_INFLUXDB_INIT_ADMIN_TOKEN: ${HAE_INFLUXDB_TOKEN}
     networks:
       - homeserver
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.hae-influxdb.rule=Host(`influxdb.${DOMAIN}`)"
+      - "traefik.http.routers.hae-influxdb.entrypoints=websecure"
+      - "traefik.http.routers.hae-influxdb.tls=true"
+      - "traefik.http.services.hae-influxdb.loadbalancer.server.port=8086"
+      - "traefik.http.routers.hae-influxdb.middlewares=admin-secure@docker"
 
   hae-server:
     image: irvinlim/apple-health-ingester:v0.5.0
