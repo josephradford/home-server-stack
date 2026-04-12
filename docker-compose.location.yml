@@ -1,0 +1,55 @@
+---
+# Location Services
+# This file contains location tracking services.
+# - mosquitto:          Minimal MQTT broker required internally by owntracks-recorder.
+#                       Not exposed outside the stack. iOS app does NOT use MQTT.
+# - owntracks-recorder: Receives OwnTracks HTTP POSTs and exposes a REST read API.
+#                       iOS app POSTs directly over HTTP — no MQTT config on iPhone.
+#
+# iPhone setup: In OwnTracks app, set mode to HTTP and destination to:
+#   URL:  https://owntracks.DOMAIN/pub
+#   (no authentication required by default)
+#
+# Read API: GET https://owntracks.DOMAIN/api/0/locations?from=...&to=...
+#           Returns raw lat/lng points. Resolve place names via Nominatim at query time.
+
+services:
+  mosquitto:
+    image: eclipse-mosquitto
+    container_name: mosquitto
+    restart: unless-stopped
+    # No config needed — default settings allow anonymous connections on 1883
+    networks:
+      - location
+
+  owntracks-recorder:
+    image: owntracks/recorder
+    container_name: owntracks-recorder
+    restart: unless-stopped
+    environment:
+      OTR_HOST: mosquitto
+    volumes:
+      - ./data/owntracks/store:/store
+      - ./data/owntracks/config:/config
+    expose:
+      - 8083
+    depends_on:
+      - mosquitto
+    networks:
+      - location
+      - homeserver
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.owntracks.rule=Host(`owntracks.${DOMAIN}`)"
+      - "traefik.http.routers.owntracks.entrypoints=websecure"
+      - "traefik.http.routers.owntracks.tls=true"
+      - "traefik.http.services.owntracks.loadbalancer.server.port=8083"
+      - "traefik.http.routers.owntracks.middlewares=admin-secure@docker"
+      - "traefik.docker.network=home-server-stack_homeserver"
+
+networks:
+  location:
+    name: home-server-stack_location
+  homeserver:
+    external: true
+    name: home-server-stack_homeserver

@@ -2,13 +2,14 @@
 # Simplifies deployment and maintenance operations
 
 .PHONY: help setup update start stop restart logs build build-custom pull status clean purge validate env-check
-.PHONY: logs-n8n logs-homepage logs-bede logs-hae
+.PHONY: logs-n8n logs-homepage logs-bede logs-hae logs-owntracks
 .PHONY: setup-certs test-domain-access
 .PHONY: wireguard-status wireguard-install wireguard-setup wireguard-routing wireguard-test wireguard-peers wireguard-check
 .PHONY: ssl-setup ssl-renew-test
 .PHONY: ddns-setup ddns-update ddns-status
 .PHONY: bede-start bede-stop bede-restart bede-build bede-status
 .PHONY: hae-start hae-stop hae-restart hae-build hae-status
+.PHONY: location-start location-stop location-restart location-status
 
 # Compose file flags
 # Services are organized into logical groups:
@@ -17,7 +18,8 @@
 # - docker-compose.monitoring.yml: Monitoring stack (Prometheus, Grafana, Alertmanager, exporters)  
 # - docker-compose.dashboard.yml: Dashboard (Homepage, Homepage API)
 # - docker-compose.ai.yml: AI services (Bede, workspace-mcp)
-# - docker-compose.health.yml: Health services (hae-server, hae-mongo)
+# - docker-compose.health.yml: Health services (hae-server, hae-influxdb)
+# - docker-compose.location.yml: Location services (owntracks-recorder)
 #
 # NOTE: WireGuard is now a system service, not Docker service
 # Install with: sudo ./scripts/wireguard/install-wireguard.sh
@@ -26,7 +28,7 @@
 # COMPOSE_CORE: Core + Network + Monitoring (used for operations that shouldn't restart dashboard or AI)
 # COMPOSE: All services including dashboard and AI (default for most operations)
 COMPOSE_CORE := docker compose -f docker-compose.yml -f docker-compose.network.yml -f docker-compose.monitoring.yml
-COMPOSE := docker compose -f docker-compose.yml -f docker-compose.network.yml -f docker-compose.monitoring.yml -f docker-compose.dashboard.yml -f docker-compose.ai.yml -f docker-compose.health.yml
+COMPOSE := docker compose -f docker-compose.yml -f docker-compose.network.yml -f docker-compose.monitoring.yml -f docker-compose.dashboard.yml -f docker-compose.ai.yml -f docker-compose.health.yml -f docker-compose.location.yml
 
 # Default target - show help
 help:
@@ -58,7 +60,8 @@ help:
 	@echo "  make logs-n8n           - Show n8n logs only"
 	@echo "  make logs-homepage      - Show Homepage logs only"
 	@echo "  make logs-bede          - Show Bede logs only"
-	@echo "  make logs-hae           - Show hae-server and hae-mongo logs only"
+	@echo "  make logs-hae           - Show hae-server and hae-influxdb logs only"
+	@echo "  make logs-owntracks     - Show OwnTracks Recorder logs only"
 	@echo ""
 	@echo "Health Auto Export (Individual Service Management):"
 	@echo "  make hae-build          - Build hae-server Docker image"
@@ -66,6 +69,12 @@ help:
 	@echo "  make hae-stop           - Stop health services only"
 	@echo "  make hae-restart        - Restart health services only"
 	@echo "  make hae-status         - Show health container status"
+	@echo ""
+	@echo "OwnTracks Location (Individual Service Management):"
+	@echo "  make location-start     - Start OwnTracks Recorder only"
+	@echo "  make location-stop      - Stop OwnTracks Recorder only"
+	@echo "  make location-restart   - Restart OwnTracks Recorder only"
+	@echo "  make location-status    - Show OwnTracks container status"
 	@echo ""
 	@echo "Bede AI Assistant (Individual Service Management):"
 	@echo "  make bede-build         - Build Bede Docker image"
@@ -339,7 +348,10 @@ logs-bede:
 	@$(COMPOSE) logs -f bede
 
 logs-hae:
-	@$(COMPOSE) logs -f hae-server hae-mongo
+	@$(COMPOSE) logs -f hae-server hae-influxdb
+
+logs-owntracks:
+	@$(COMPOSE) logs -f owntracks-recorder mosquitto
 
 # Bede AI Assistant (docker-compose.ai.yml)
 COMPOSE_AI := docker compose -f docker-compose.ai.yml
@@ -393,6 +405,27 @@ hae-restart: env-check
 
 hae-status:
 	@$(COMPOSE_HEALTH) ps
+
+# Location services (docker-compose.location.yml)
+COMPOSE_LOCATION := docker compose -f docker-compose.location.yml
+
+location-start: env-check
+	@echo "Starting location services..."
+	@$(COMPOSE_LOCATION) up -d
+	@echo "✓ Location services started"
+
+location-stop:
+	@echo "Stopping location services..."
+	@$(COMPOSE_LOCATION) down
+	@echo "✓ Location services stopped"
+
+location-restart: env-check
+	@echo "Restarting location services..."
+	@$(COMPOSE_LOCATION) up -d
+	@echo "✓ Location services restarted"
+
+location-status:
+	@$(COMPOSE_LOCATION) ps
 
 # Clean up all services (preserves ./data/)
 clean:
