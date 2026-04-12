@@ -351,7 +351,7 @@ logs-hae:
 	@$(COMPOSE) logs -f hae-server hae-influxdb
 
 logs-owntracks:
-	@$(COMPOSE) logs -f owntracks-recorder
+	@$(COMPOSE) logs -f owntracks-recorder mosquitto
 
 # Bede AI Assistant (docker-compose.ai.yml)
 COMPOSE_AI := docker compose -f docker-compose.ai.yml
