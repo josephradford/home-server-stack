@@ -45,6 +45,7 @@ services:
       - "traefik.http.routers.owntracks.tls=true"
       - "traefik.http.services.owntracks.loadbalancer.server.port=8083"
       - "traefik.http.routers.owntracks.middlewares=admin-secure@docker"
+      - "traefik.docker.network=home-server-stack_homeserver"
 
 networks:
   location:
