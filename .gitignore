@@ -14,6 +14,12 @@ external/
 # Logs
 *.log
 
+# Python virtual environments
+.venv/
+venv/
+__pycache__/
+*.pyc
+
 # Temporary files
 *.tmp
 *.temp
