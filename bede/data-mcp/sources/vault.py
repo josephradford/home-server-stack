@@ -1,14 +1,37 @@
 """Vault-based tools: reads daily-raw files from the Obsidian vault."""
 
 import csv
+import logging
 import os
+import subprocess
 from datetime import date
 from pathlib import Path
 
 from .common import DEFAULT_TZ, resolve_date
 
+logger = logging.getLogger(__name__)
+
 VAULT_PATH = Path(os.environ.get("VAULT_PATH", "/vault"))
 DAILY_RAW = VAULT_PATH / "data" / "daily-raw"
+_VAULT_SSH_KEY = os.environ.get("VAULT_SSH_KEY_PATH", "")
+
+
+def _pull_vault() -> None:
+    """Pull the latest vault commits before reading. Fails silently."""
+    if not (VAULT_PATH / ".git").exists():
+        return
+    env = os.environ.copy()
+    if _VAULT_SSH_KEY and Path(_VAULT_SSH_KEY).stat().st_size > 0:
+        env["GIT_SSH_COMMAND"] = f"ssh -i {_VAULT_SSH_KEY} -o StrictHostKeyChecking=no"
+    result = subprocess.run(
+        ["git", "-C", str(VAULT_PATH), "pull", "--ff-only"],
+        env=env,
+        capture_output=True,
+        text=True,
+        timeout=15,
+    )
+    if result.returncode != 0:
+        logger.warning("vault pull failed: %s", result.stderr.strip())
 
 
 def _daily_dir(local_date: date) -> Path:
@@ -40,6 +63,7 @@ def get_screen_time(
         top_n: Return only the top N entries by duration.
         timezone: Olson timezone name (default: DEFAULT_TIMEZONE env var).
     """
+    _pull_vault()
     tz = timezone or DEFAULT_TZ
     local_date = resolve_date(date_str, tz)
     d = _daily_dir(local_date)
@@ -101,6 +125,7 @@ def get_safari_history(
         top_n: Limit results.
         timezone: Olson timezone name.
     """
+    _pull_vault()
     tz = timezone or DEFAULT_TZ
     local_date = resolve_date(date_str, tz)
     d = _daily_dir(local_date)
@@ -143,6 +168,7 @@ def get_youtube_history(
         date_str: Local date ('YYYY-MM-DD', 'today', or 'yesterday').
         timezone: Olson timezone name.
     """
+    _pull_vault()
     tz = timezone or DEFAULT_TZ
     local_date = resolve_date(date_str, tz)
     d = _daily_dir(local_date)
@@ -178,6 +204,7 @@ def get_podcasts(
         date_str: Local date ('YYYY-MM-DD', 'today', or 'yesterday').
         timezone: Olson timezone name.
     """
+    _pull_vault()
     tz = timezone or DEFAULT_TZ
     local_date = resolve_date(date_str, tz)
     d = _daily_dir(local_date)
@@ -213,6 +240,7 @@ def get_vault_changes(
         date_str: Local date ('YYYY-MM-DD', 'today', or 'yesterday').
         timezone: Olson timezone name.
     """
+    _pull_vault()
     tz = timezone or DEFAULT_TZ
     local_date = resolve_date(date_str, tz)
     d = _daily_dir(local_date)
@@ -261,6 +289,7 @@ def get_claude_sessions(
         date_str: Local date ('YYYY-MM-DD', 'today', or 'yesterday').
         timezone: Olson timezone name.
     """
+    _pull_vault()
     tz = timezone or DEFAULT_TZ
     local_date = resolve_date(date_str, tz)
     d = _daily_dir(local_date)

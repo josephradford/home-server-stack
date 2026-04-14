@@ -60,10 +60,14 @@ services:
     container_name: data-mcp
     restart: unless-stopped
     volumes:
-      # Obsidian vault — read-only; data-mcp never writes to the vault
-      - ./data/bede/vault:/vault:ro
+      # Obsidian vault — needs write access so git pull can update refs
+      - ./data/bede/vault:/vault
+      # SSH key for private vault repos (optional — leave VAULT_SSH_KEY_PATH blank for HTTPS PAT)
+      - ${VAULT_SSH_KEY_PATH:-/dev/null}:/root/.ssh/vault_key:ro
     environment:
       VAULT_PATH: /vault
+      VAULT_REPO: ${VAULT_REPO:-}
+      VAULT_SSH_KEY_PATH: /root/.ssh/vault_key
       OWNTRACKS_URL: http://owntracks-recorder:8083
       OWNTRACKS_USER: ${OWNTRACKS_USER}
       OWNTRACKS_DEVICE: ${OWNTRACKS_DEVICE}
