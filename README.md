@@ -2,6 +2,13 @@
 
 A complete self-hosted infrastructure for home automation, AI, and network services using Docker Compose.
 
+## 🆕 Recent Changes (late March → mid April 2026)
+
+- Added **data-mcp** so Bede can query personal data from OwnTracks, Apple Health (InfluxDB), and vault git history.
+- Added **OwnTracks location services** (`owntracks-recorder` + internal `mosquitto`) in `docker-compose.location.yml`.
+- Added **Apple Health stack** (`hae-server` + `hae-influxdb`) in `docker-compose.health.yml`.
+- Removed **OpenClaw** and standardized AI assistant workflows on Bede.
+
 ## 🚀 Services
 
 **Core Services:**
@@ -9,6 +16,8 @@ A complete self-hosted infrastructure for home automation, AI, and network servi
 - **[n8n](https://github.com/n8n-io/n8n)** - Workflow automation platform
 - **[WireGuard](https://github.com/wireguard)** - VPN for secure remote access
 - **[Traefik](https://github.com/traefik/traefik)** - Reverse proxy for domain-based service access
+- **OwnTracks Recorder** - Location timeline ingestion and query API
+- **HAE Server + InfluxDB** - Apple Health ingestion and time-series storage
 
 **Monitoring Stack:**
 - **[Grafana](https://github.com/grafana/grafana)** - Metrics visualization and dashboards
@@ -137,6 +146,10 @@ All services are accessible via domain names on your local network:
 - **Prometheus:** `https://prometheus.${DOMAIN}` (Metrics)
 - **Alertmanager:** `https://alerts.${DOMAIN}` (Alerts)
 - **Homepage:** `https://homepage.${DOMAIN}` (Dashboard)
+- **OwnTracks Recorder:** `https://owntracks.${DOMAIN}` (Location history API)
+- **Health Auto Export endpoint:** `https://hae.${DOMAIN}` (Apple Health ingest)
+- **InfluxDB:** `https://influxdb.${DOMAIN}` (Health data UI/API)
+- **Workspace MCP OAuth:** `https://mcp.${DOMAIN}` (Google Workspace MCP OAuth callback/UI)
 
 **Note:** Services are accessible via domain names thanks to Traefik reverse proxy and AdGuard Home DNS. Your devices must use AdGuard Home as their DNS server (configured automatically if DHCP points to the server).
 
