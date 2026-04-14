@@ -24,7 +24,7 @@ def _pull_vault() -> None:
     if _VAULT_SSH_KEY and Path(_VAULT_SSH_KEY).stat().st_size > 0:
         env["GIT_SSH_COMMAND"] = f"ssh -i {_VAULT_SSH_KEY} -o StrictHostKeyChecking=no"
     result = subprocess.run(
-        ["git", "-C", str(VAULT_PATH), "pull", "--ff-only"],
+        ["git", "-C", str(VAULT_PATH), "-c", f"safe.directory={VAULT_PATH}", "pull", "--ff-only"],
         env=env,
         capture_output=True,
         text=True,
