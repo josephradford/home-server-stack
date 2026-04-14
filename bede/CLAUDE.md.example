@@ -71,8 +71,9 @@ OwnTracks Recorder stores GPS history from the OwnTracks iOS app.
 - `GET /api/0/locations?user=<user>&device=<device>&from=YYYY-MM-DD&to=YYYY-MM-DD`
 - `user` and `device` are **required** — the API returns an error without them
 - Returns raw lat/lng points in `data[]` array
-- Date range parameters are interpreted as **UTC dates**. Joe's timezone is `Your/Timezone`. To query a full local day, adjust the range to account for the UTC offset.
+- Date range parameters are interpreted as **UTC dates**. The user's timezone is `Your/Timezone`. A single local day spans two UTC dates, so always query one day before and one day after the target local date to capture the full day, then filter results by converting timestamps to local time.
 - All timestamps in the response (`tst`, `isotst`, `isorcv`) are **UTC**. Always convert to the user's local timezone before displaying times or dates.
+- The user/device `owntracks/phone` is a test artifact created by OwnTracks Recorder on first run (timestamp 1234567890 = Feb 2009, coordinates are a default placeholder). Ignore it — the user's real data is under the device discovered via `/api/0/list`.
 
 **Reverse geocoding:** Resolve place names via Nominatim (`https://nominatim.openstreetmap.org/reverse?lat=LAT&lon=LON&format=json`).
 
