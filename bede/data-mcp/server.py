@@ -219,6 +219,20 @@ async def get_wellbeing(
     return await health.get_wellbeing(date, timezone=timezone)
 
 
+@mcp.tool()
+async def get_medications(
+    date: str,
+    timezone: str | None = None,
+) -> list[dict]:
+    """Return medications logged on a given local date.
+
+    Args:
+        date: Local date — 'YYYY-MM-DD', 'today', or 'yesterday'.
+        timezone: Olson timezone name.
+    """
+    return await health.get_medications(date, timezone=timezone)
+
+
 # ---------------------------------------------------------------------------
 # Entrypoint
 # ---------------------------------------------------------------------------
