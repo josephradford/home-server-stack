@@ -32,6 +32,11 @@ Currently deployed and active services.
   - Check SSL certificates
   - View access logs
 
+#### Fail2ban
+- **Purpose:** Intrusion prevention (brute-force/scanner detection, automated bans)
+- **Access:** No web UI (runs as security sidecar)
+- **Authentication:** N/A
+
 ### Core Services
 
 #### AdGuard Home
@@ -113,6 +118,39 @@ Currently deployed and active services.
 - **Port:** 8000 (internal)
 - **Authentication:** OAuth 2.0 with Google
 
+#### data-mcp
+- **Purpose:** MCP server for personal data tools used by Bede
+- **Access:** Internal only (container-to-container)
+- **Authentication:** Environment token/config based access to upstream systems
+- **Data Sources:**
+  - Obsidian vault git history
+  - OwnTracks Recorder API
+  - Apple Health InfluxDB buckets
+
+### Location Services
+
+#### owntracks-recorder
+- **Purpose:** Receives OwnTracks phone HTTP posts and serves location history API
+- **Access:** https://owntracks.${DOMAIN}
+- **Authentication:** IP-restricted via Traefik `admin-secure`
+
+#### mosquitto
+- **Purpose:** Internal MQTT broker sidecar required by owntracks-recorder
+- **Access:** Internal only
+- **Authentication:** Internal network-only usage in this stack
+
+### Health Services
+
+#### hae-server
+- **Purpose:** Apple Health Auto Export ingest API
+- **Access:** https://hae.${DOMAIN}
+- **Authentication:** Bearer token (`HAE_WRITE_TOKEN`)
+
+#### hae-influxdb
+- **Purpose:** Time-series storage for health metrics/workouts
+- **Access:** https://influxdb.${DOMAIN}
+- **Authentication:** InfluxDB credentials + token
+
 ---
 
 ## Quick Reference
@@ -129,6 +167,10 @@ Currently deployed and active services.
 | Alertmanager | https://alerts.${DOMAIN} | http://IP:9093 |
 | Bede | Telegram bot | N/A |
 | workspace-mcp | https://mcp.${DOMAIN} | N/A |
+| data-mcp | Internal only | N/A |
+| owntracks-recorder | https://owntracks.${DOMAIN} | N/A |
+| hae-server | https://hae.${DOMAIN} | N/A |
+| hae-influxdb | https://influxdb.${DOMAIN} | N/A |
 
 ---
 
@@ -151,7 +193,6 @@ Services queued for implementation.
 ### Infrastructure & Security
 - [ ] **[Ollama](https://github.com/ollama/ollama)** - Run large language models locally
 - [ ] **[Watchtower](https://github.com/containrrr/watchtower)** - A process for automating Docker container base image updates
-- [ ] **[Fail2ban](https://github.com/fail2ban/fail2ban)** - Daemon to ban hosts that cause multiple authentication errors
 - [ ] **[SearXNG](https://github.com/searxng/searxng)** - Free internet metasearch engine which aggregates results from various search services
 - [ ] **[CrowdSec](https://github.com/crowdsecurity/crowdsec)** - Open-source and participative security solution with crowdsourced protection against malicious IPs
 - [ ] **[Nginx Proxy Manager](https://github.com/NginxProxyManager/nginx-proxy-manager)** - Docker container for managing Nginx proxy hosts with a simple, powerful interface (alternative to Traefik)
