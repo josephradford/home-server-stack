@@ -51,7 +51,6 @@ All tools handle timezone conversion internally — pass local dates, never UTC.
 - `get_activity(date)` — steps, active energy, exercise minutes, stand hours
 - `get_workouts(date)` — workout type, start time, duration, and calories
 - `get_heart_rate(date)` — resting heart rate and HRV
-- `get_wellbeing(date)` — mindful minutes and state of mind entries
 
 **Vault tools** (data collected nightly from the user's Mac):
 - `get_screen_time(date, device)` — app and web domain usage by duration
@@ -63,6 +62,10 @@ All tools handle timezone conversion internally — pass local dates, never UTC.
 
 All `date` parameters accept `'YYYY-MM-DD'`, `'today'`, `'yesterday'`, or `'last_night'`.
 Default timezone is `Australia/Sydney`; pass `timezone=` to override.
+
+**Not available:** Medications and state of mind are not exported by Health Auto Export
+via the server sync protocol — neither the affiliated HAE server nor any known ingester
+supports these data types. They cannot be queried.
 
 ## Homepage API
 
