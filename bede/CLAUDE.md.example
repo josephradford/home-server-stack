@@ -58,8 +58,21 @@ OwnTracks Recorder stores GPS history from the OwnTracks iOS app.
 
 **Connection:**
 - URL: `http://owntracks-recorder:8083`
-- Read API: `GET /api/0/locations?from=YYYY-MM-DD&to=YYYY-MM-DD`
-- Returns raw lat/lng points. Resolve place names via Nominatim reverse geocoding (`https://nominatim.openstreetmap.org/reverse?lat=LAT&lon=LON&format=json`).
+
+**Discovery (do this first):**
+- `GET /api/0/list` → returns list of users
+- `GET /api/0/list?user=<user>` → returns list of devices for that user
+
+**Your user/device** (find these by calling `/api/0/list`):
+- user: `<YOUR_OWNTRACKS_USER>`
+- device: `<YOUR_OWNTRACKS_DEVICE_ID>`
+
+**Fetching locations:**
+- `GET /api/0/locations?user=<user>&device=<device>&from=YYYY-MM-DD&to=YYYY-MM-DD`
+- `user` and `device` are **required** — the API returns an error without them
+- Returns raw lat/lng points in `data[]` array
+
+**Reverse geocoding:** Resolve place names via Nominatim (`https://nominatim.openstreetmap.org/reverse?lat=LAT&lon=LON&format=json`).
 
 ## Homepage API
 
