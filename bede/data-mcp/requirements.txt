@@ -1,0 +1,3 @@
+fastmcp>=2.0
+httpx>=0.27
+influxdb-client[async]>=1.44
