@@ -21,6 +21,7 @@ services:
       - ${VAULT_SSH_KEY_PATH:-/dev/null}:/home/bede/.ssh/vault_key:ro
     depends_on:
       - workspace-mcp
+      - data-mcp
     networks:
       - default
       - homeserver
@@ -53,6 +54,36 @@ services:
       - "traefik.http.routers.workspace-mcp.middlewares=admin-secure-no-ratelimit@docker"
       - "traefik.http.services.workspace-mcp.loadbalancer.server.port=8000"
 
+  data-mcp:
+    build:
+      context: ./bede/data-mcp
+    container_name: data-mcp
+    restart: unless-stopped
+    volumes:
+      # Obsidian vault — needs write access so git pull can update refs
+      - ./data/bede/vault:/vault
+      # SSH key for private vault repos (optional — leave VAULT_SSH_KEY_PATH blank for HTTPS PAT)
+      - ${VAULT_SSH_KEY_PATH:-/dev/null}:/root/.ssh/vault_key:ro
+    environment:
+      VAULT_PATH: /vault
+      VAULT_REPO: ${VAULT_REPO:-}
+      VAULT_SSH_KEY_PATH: /root/.ssh/vault_key
+      OWNTRACKS_URL: http://owntracks-recorder:8083
+      OWNTRACKS_USER: ${OWNTRACKS_USER}
+      OWNTRACKS_DEVICE: ${OWNTRACKS_DEVICE}
+      INFLUXDB_URL: http://hae-influxdb:8086
+      INFLUXDB_TOKEN: ${HAE_INFLUXDB_TOKEN}
+      INFLUXDB_ORG: ${HAE_INFLUXDB_ORG}
+      INFLUXDB_METRICS_BUCKET: ${HAE_INFLUXDB_METRICS_BUCKET}
+      INFLUXDB_WORKOUTS_BUCKET: ${HAE_INFLUXDB_WORKOUTS_BUCKET}
+      DEFAULT_TIMEZONE: Australia/Sydney
+    expose:
+      - 8000
+    networks:
+      - default
+      - homeserver
+      - location
+
 volumes:
   workspace-mcp-tokens:
 
@@ -61,3 +92,6 @@ networks:
   homeserver:
     external: true
     name: home-server-stack_homeserver
+  location:
+    external: true
+    name: home-server-stack_location
