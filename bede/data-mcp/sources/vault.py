@@ -7,7 +7,7 @@ import subprocess
 from datetime import date
 from pathlib import Path
 
-from .common import DEFAULT_TZ, resolve_date
+from .common import DEFAULT_TZ, local_date_to_utc_range, resolve_date
 
 logger = logging.getLogger(__name__)
 
@@ -236,38 +236,47 @@ def get_vault_changes(
 ) -> dict:
     """Return a summary of Obsidian vault commits for a given local date.
 
+    Queries git log directly on the vault repo — no pre-generated file needed.
+
     Args:
         date_str: Local date ('YYYY-MM-DD', 'today', or 'yesterday').
         timezone: Olson timezone name.
     """
     _pull_vault()
-    tz = timezone or DEFAULT_TZ
-    local_date = resolve_date(date_str, tz)
-    d = _daily_dir(local_date)
+    tz_name = timezone or DEFAULT_TZ
+    local_date = resolve_date(date_str, tz_name)
 
-    txt_path = d / "vault-changes.txt"
-    if not txt_path.exists():
+    if not (VAULT_PATH / ".git").exists():
         return {"date": local_date.isoformat(), "commits": []}
 
-    import re
+    start, end = local_date_to_utc_range(local_date, tz_name)
+    after = start.strftime("%Y-%m-%dT%H:%M:%SZ")
+    before = end.strftime("%Y-%m-%dT%H:%M:%SZ")
+
+    result = subprocess.run(
+        [
+            "git", "-C", str(VAULT_PATH),
+            "-c", f"safe.directory={VAULT_PATH}",
+            "log",
+            f"--after={after}",
+            f"--before={before}",
+            "--format=%h\t%ai\t%s",
+            "--name-only",
+        ],
+        capture_output=True, text=True, timeout=15,
+    )
+
     commits: list[dict] = []
     current: dict | None = None
 
-    # Format: "<hash>  <datetime+tz>  <message>\n\nfile1\nfile2\n\n<hash> ..."
-    # File lines may be prefixed with "N. " (e.g. "1. Journal/2026-04-12.md")
-    header_re = re.compile(r'^([0-9a-f]{7,})\s{2}(\S+\s+\S+)\s{2}(.+)$')
-
-    for line in txt_path.read_text(encoding="utf-8").splitlines():
-        m = header_re.match(line)
-        if m:
+    for line in result.stdout.splitlines():
+        if "\t" in line:
             if current:
                 commits.append(current)
-            current = {"hash": m.group(1), "time": m.group(2), "message": m.group(3), "files": []}
-        elif current is not None and line.strip():
-            # Strip leading "N. " numbering if present
-            fname = re.sub(r'^\d+\.\s+', '', line.strip())
-            if fname:
-                current["files"].append(fname)
+            parts = line.split("\t", 2)
+            current = {"hash": parts[0], "time": parts[1], "message": parts[2], "files": []}
+        elif line.strip() and current is not None:
+            current["files"].append(line.strip())
 
     if current:
         commits.append(current)
