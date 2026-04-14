@@ -265,8 +265,15 @@ graph TB
     subgraph L5["Layer 5: Application Services"]
         direction LR
         Admin["Admin Interfaces
-        n8n, AdGuard
-        Grafana, Prometheus"]
+        Traefik Dashboard, AdGuard, n8n
+        Homepage, Homepage API
+        Grafana, Prometheus, Alertmanager
+        workspace-mcp, owntracks-recorder
+        hae-server, hae-influxdb"]
+        Internal["Internal-Only Services
+        bede (Telegram outbound)
+        data-mcp, mosquitto
+        node-exporter, cadvisor"]
         Webhooks["Public Webhooks
         Future"]
     end
@@ -296,6 +303,7 @@ graph TB
     Traefik -->|Apply Middleware| AdminSecure
     Traefik -->|Apply Middleware| WebhookSecure
     AdminSecure -->|IP Check Pass| Admin
+    AdminSecure -->|IP Check Pass| Internal
     WebhookSecure -->|No IP Restriction| Webhooks
 
     %% Security monitoring
@@ -320,7 +328,7 @@ graph TB
     class WG,VPNSubnet layer2
     class Traefik,AdminSecure,WebhookSecure layer3
     class Fail2ban layer4
-    class Admin,Webhooks layer5
+    class Admin,Internal,Webhooks layer5
     class PromAlerts,Alertmanager layer6
 ```
 
