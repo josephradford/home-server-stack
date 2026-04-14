@@ -80,7 +80,7 @@ def get_screen_time(
     for dev_label, filename in sources:
         rows = _read_csv(d / filename)
         for row in rows:
-            name = row.get("app") or row.get("bundle_id") or row.get("name", "")
+            identifier = row.get("identifier") or row.get("app") or row.get("bundle_id") or row.get("name", "")
             try:
                 seconds = int(float(row.get("seconds", row.get("duration", 0))))
             except (ValueError, TypeError):
@@ -88,11 +88,11 @@ def get_screen_time(
 
             if row.get("type") == "web" or "domain" in row:
                 web_domains.append({
-                    "domain": row.get("domain", name),
+                    "domain": row.get("domain", identifier),
                     "seconds": seconds,
                 })
             else:
-                apps.append({"name": name, "seconds": seconds, "device": dev_label})
+                apps.append({"name": identifier, "seconds": seconds, "device": dev_label})
 
     apps.sort(key=lambda x: x["seconds"], reverse=True)
     web_domains.sort(key=lambda x: x["seconds"], reverse=True)
@@ -249,25 +249,25 @@ def get_vault_changes(
     if not txt_path.exists():
         return {"date": local_date.isoformat(), "commits": []}
 
+    import re
     commits: list[dict] = []
     current: dict | None = None
 
+    # Format: "<hash>  <datetime+tz>  <message>\n\nfile1\nfile2\n\n<hash> ..."
+    # File lines may be prefixed with "N. " (e.g. "1. Journal/2026-04-12.md")
+    header_re = re.compile(r'^([0-9a-f]{7,})\s{2}(\S+\s+\S+)\s{2}(.+)$')
+
     for line in txt_path.read_text(encoding="utf-8").splitlines():
-        if line.startswith("commit "):
+        m = header_re.match(line)
+        if m:
             if current:
                 commits.append(current)
-            current = {"hash": line.split()[1][:7], "time": "", "message": "", "files": []}
-        elif current is not None:
-            if line.startswith("Date:"):
-                # e.g. "Date:   Mon Apr 14 22:15:00 2026 +1000"
-                current["time"] = line.replace("Date:", "").strip()
-            elif line.startswith("    ") and not current["message"]:
-                current["message"] = line.strip()
-            elif line.startswith("\t") or (line and not line.startswith(" ")):
-                # diff --stat file lines
-                fname = line.strip().split("|")[0].strip()
-                if fname:
-                    current["files"].append(fname)
+            current = {"hash": m.group(1), "time": m.group(2), "message": m.group(3), "files": []}
+        elif current is not None and line.strip():
+            # Strip leading "N. " numbering if present
+            fname = re.sub(r'^\d+\.\s+', '', line.strip())
+            if fname:
+                current["files"].append(fname)
 
     if current:
         commits.append(current)
