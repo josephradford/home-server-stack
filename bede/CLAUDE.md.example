@@ -52,6 +52,40 @@ Apple Health metrics are stored in InfluxDB, populated by the Health Auto Export
 
 **Key metrics available:** step_count, sleep_analysis, heart_rate_variability, resting_heart_rate, active_energy, apple_exercise_time, apple_stand_time, apple_move_time, mindful_minutes, state_of_mind, and workouts (in the workouts bucket).
 
+## Location Data
+
+OwnTracks Recorder stores GPS history from the OwnTracks iOS app.
+
+**Connection:**
+- URL: `http://owntracks-recorder:8083`
+
+**Discovery (do this first):**
+- `GET /api/0/list` → returns list of users
+- `GET /api/0/list?user=<user>` → returns list of devices for that user
+
+**Your user/device** (find these by calling `/api/0/list`):
+- user: `<YOUR_OWNTRACKS_USER>`
+- device: `<YOUR_OWNTRACKS_DEVICE_ID>`
+
+**Fetching locations:**
+- `GET /api/0/locations?user=<user>&device=<device>&from=YYYY-MM-DD&to=YYYY-MM-DD`
+- `user` and `device` are **required** — the API returns an error without them
+- Returns raw lat/lng points in `data[]` array
+- Date range parameters are interpreted as **UTC dates**. The user's timezone is `Your/Timezone`. A single local day spans two UTC dates, so always query one day before and one day after the target local date to capture the full day, then filter results by converting timestamps to local time.
+- All timestamps in the response (`tst`, `isotst`, `isorcv`) are **UTC**. Always convert to the user's local timezone before displaying times or dates.
+- The user/device `owntracks/phone` is a test artifact created by OwnTracks Recorder on first run (timestamp 1234567890 = Feb 2009, coordinates are a default placeholder). Ignore it — the user's real data is under the device discovered via `/api/0/list`.
+
+**Reverse geocoding:** Resolve place names via Nominatim (`https://nominatim.openstreetmap.org/reverse?lat=LAT&lon=LON&format=json`).
+
+## Homepage API
+
+Internal backend providing system metrics and integrations.
+
+**Connection:**
+- URL: `http://homepage-api:5000`
+- Weather: `GET /api/weather` — current conditions for the configured location
+- Health check: `GET /api/health`
+
 ## Google Account
 
 - Email: your-google-account@gmail.com

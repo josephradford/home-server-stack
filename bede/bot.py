@@ -234,12 +234,25 @@ async def handle_runtasks(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await asyncio.gather(*[_run_task(t) for t in tasks])
 
 
+async def handle_nightjournal(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if update.effective_user.id != ALLOWED_USER_ID:
+        return
+    tasks = _parse_tasks()
+    task = next((t for t in tasks if t.get("name") == "Night Journal"), None)
+    if not task:
+        await update.message.reply_text("Night Journal task not found in scheduled-tasks.md.")
+        return
+    await update.message.reply_text("Running Night Journal...")
+    await _run_task(task)
+
+
 async def post_init(app):
     from telegram import BotCommand, BotCommandScopeAllPrivateChats
     commands = [
         BotCommand("start", "Start a conversation"),
         BotCommand("reset", "Clear session and start fresh"),
         BotCommand("runtasks", "Fire all scheduled tasks immediately"),
+        BotCommand("nightjournal", "Run the Night Journal task immediately"),
     ]
     await app.bot.set_my_commands(commands)
     await app.bot.set_my_commands(commands, scope=BotCommandScopeAllPrivateChats())
@@ -262,6 +275,7 @@ def main():
     app.add_handler(CommandHandler("start", handle_start))
     app.add_handler(CommandHandler("reset", handle_reset))
     app.add_handler(CommandHandler("runtasks", handle_runtasks))
+    app.add_handler(CommandHandler("nightjournal", handle_nightjournal))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
     log.info("Bede is running.")
     app.run_polling(drop_pending_updates=True)
