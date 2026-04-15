@@ -67,9 +67,10 @@ def _ingest_screentime(db: sqlite3.Connection, date: str, device: str, content: 
         except (ValueError, TypeError):
             seconds = 0
 
-        if row.get("type") == "web" or "domain" in row:
+        domain_val = (row.get("domain") or "").strip()
+        if row.get("type") == "web" or domain_val:
             entry_type = "web"
-            identifier = row.get("domain", identifier)
+            identifier = domain_val or identifier
         else:
             entry_type = "app"
 
