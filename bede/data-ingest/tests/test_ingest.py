@@ -1,31 +1,9 @@
-"""Tests for ingest server endpoints (Phase 1: stub behavior)."""
-
-import os
-import tempfile
-
-# Point to a temp database before importing
-_tmp = tempfile.NamedTemporaryFile(suffix=".db", delete=False)
-_tmp.close()
-os.environ["SQLITE_DB_PATH"] = _tmp.name
-os.environ["INGEST_WRITE_TOKEN"] = "test-token-123"
+"""Tests for ingest server endpoints."""
 
 import pytest
 from starlette.testclient import TestClient
 
 from server import app
-from db import init_db
-
-
-@pytest.fixture(autouse=True)
-def _fresh_db():
-    if os.path.exists(_tmp.name):
-        os.unlink(_tmp.name)
-    for ext in ("-wal", "-shm"):
-        p = _tmp.name + ext
-        if os.path.exists(p):
-            os.unlink(p)
-    init_db()
-    yield
 
 
 @pytest.fixture

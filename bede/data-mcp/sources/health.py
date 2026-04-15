@@ -1,90 +1,22 @@
-"""Health tools: InfluxDB / Apple Health Auto Export client.
+"""Health tools: SQLite-backed Apple Health data queries.
 
-Schema notes (discovered from live data):
-- metrics bucket: all measurements use _field="qty" for values, _field="source" for device
-  Measurement names are snake_case with unit suffixes, e.g.:
-    sleep_phases, step_count_count, active_energy_kJ, resting_heart_rate_count/min
-  sleep_phases has a "value" tag per stage (core/deep/rem/awake); _value = aggregate hours;
-  _time = wake time
-- workouts bucket: _measurement="workout", workout_name tag, one row per metric per session
-  Fields: duration_min, activeEnergyBurned_kJ, avgHeartRate_bpm, maxHeartRate_bpm, etc.
-  heart_rate_data_bpm and heart_rate_recovery_bpm hold per-second HR during the workout.
-- state_of_mind and medications: expected in metrics bucket once synced from HAE app;
-  measurement names are guesses based on HAE conventions — update when data lands.
+Reads from the shared SQLite database populated by data-ingest.
+All timestamps stored as UTC ISO8601; converted to local time for display.
 """
 
-import os
-from datetime import date, datetime, timedelta
+import json
+from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
-import httpx
-
-from .common import DEFAULT_TZ, local_date_to_utc_range, resolve_date
-
-INFLUXDB_URL = os.environ.get("INFLUXDB_URL", "http://hae-influxdb:8086")
-INFLUXDB_TOKEN = os.environ.get("INFLUXDB_TOKEN", "")
-INFLUXDB_ORG = os.environ.get("INFLUXDB_ORG", "health")
-INFLUXDB_METRICS_BUCKET = os.environ.get("INFLUXDB_METRICS_BUCKET", "metrics")
-INFLUXDB_WORKOUTS_BUCKET = os.environ.get("INFLUXDB_WORKOUTS_BUCKET", "workouts")
+from .common import DEFAULT_TZ, resolve_date
+from .db import get_db
 
 KJ_PER_KCAL = 4.184
 
 
-def _auth_headers() -> dict:
-    return {"Authorization": f"Token {INFLUXDB_TOKEN}", "Content-Type": "application/vnd.flux"}
-
-
-async def _flux_query(flux: str) -> list[dict]:
-    """Execute a Flux query and return rows as a list of dicts."""
-    url = f"{INFLUXDB_URL}/api/v2/query"
-    params = {"org": INFLUXDB_ORG}
-    async with httpx.AsyncClient(timeout=30) as client:
-        r = await client.post(
-            url,
-            params=params,
-            headers=_auth_headers(),
-            content=flux.encode(),
-        )
-        r.raise_for_status()
-        return _parse_flux_csv(r.text)
-
-
-def _parse_flux_csv(text: str) -> list[dict]:
-    """Parse InfluxDB annotated CSV into a list of dicts."""
-    import csv
-
-    rows: list[dict] = []
-    headers: list[str] = []
-
-    for line in text.splitlines():
-        if not line or line.startswith("#"):
-            continue
-        parts = next(csv.reader([line]))
-        if not headers:
-            headers = parts
-            continue
-        if len(parts) == len(headers):
-            rows.append(dict(zip(headers, parts)))
-
-    return rows
-
-
-def _utc_range_flux(local_date: date, tz_name: str) -> tuple[str, str]:
-    """Return Flux-formatted UTC start/stop strings for a full local calendar day."""
-    start, end = local_date_to_utc_range(local_date, tz_name)
-    return start.strftime("%Y-%m-%dT%H:%M:%SZ"), end.strftime("%Y-%m-%dT%H:%M:%SZ")
-
-
-def _val(row: dict, default: float = 0.0) -> float:
-    try:
-        return float(row.get("_value", default))
-    except (ValueError, TypeError):
-        return default
-
-
-def _local_time(t_str: str, tz: ZoneInfo) -> str:
+def _local_time(utc_iso: str, tz: ZoneInfo) -> str:
     """Parse a UTC ISO timestamp and return HH:MM in local timezone."""
-    dt = datetime.fromisoformat(t_str.replace("Z", "+00:00"))
+    dt = datetime.fromisoformat(utc_iso.replace("Z", "+00:00"))
     return dt.astimezone(tz).strftime("%H:%M")
 
 
@@ -92,54 +24,48 @@ def _local_time(t_str: str, tz: ZoneInfo) -> str:
 # Sleep
 # ---------------------------------------------------------------------------
 
-async def get_sleep(date_str: str, timezone: str | None = None) -> dict:
-    """Return sleep summary for the night ending on the given local date.
-
-    Args:
-        date_str: Local date ('YYYY-MM-DD', 'today', or 'last_night').
-        timezone: Olson timezone name.
-    """
+def get_sleep(date_str: str, timezone: str | None = None) -> dict:
+    """Return sleep summary for the night ending on the given local date."""
     tz_name = timezone or DEFAULT_TZ
     tz = ZoneInfo(tz_name)
     local_date = resolve_date(date_str, tz_name)
 
-    prev_day = local_date - timedelta(days=1)
-    sleep_start = datetime(prev_day.year, prev_day.month, prev_day.day, 18, 0, tzinfo=tz)
-    sleep_end = datetime(local_date.year, local_date.month, local_date.day, 12, 0, tzinfo=tz)
-    utc = ZoneInfo("UTC")
-    start = sleep_start.astimezone(utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-    stop = sleep_end.astimezone(utc).strftime("%Y-%m-%dT%H:%M:%SZ")
-
-    rows = await _flux_query(f"""
-from(bucket: "{INFLUXDB_METRICS_BUCKET}")
-  |> range(start: {start}, stop: {stop})
-  |> filter(fn: (r) => r._measurement == "sleep_phases" and r._field == "qty")
-""")
+    db = get_db()
+    rows = db.execute(
+        "SELECT stage, hours, sleep_start, sleep_end, source FROM sleep_phases WHERE date = ?",
+        (local_date.isoformat(),),
+    ).fetchall()
 
     if not rows:
         return {"date": local_date.isoformat(), "bedtime": None, "wake_time": None, "duration_hours": 0}
 
-    stage_hours: dict[str, float] = {}
-    wake_dt: datetime | None = None
+    sleep_stages = {}
+    sleep_start_utc = None
+    sleep_end_utc = None
 
     for row in rows:
-        stage = row.get("value", "")
-        stage_hours[stage] = stage_hours.get(stage, 0) + _val(row)
-        if wake_dt is None and row.get("_time"):
-            try:
-                wake_dt = datetime.fromisoformat(row["_time"].replace("Z", "+00:00"))
-            except ValueError:
-                pass
+        stage = row["stage"]
+        if stage not in ("awake", "asleep", "inBed"):
+            sleep_stages[stage] = row["hours"]
+        if row["sleep_start"] and not sleep_start_utc:
+            sleep_start_utc = row["sleep_start"]
+        if row["sleep_end"] and not sleep_end_utc:
+            sleep_end_utc = row["sleep_end"]
 
-    sleep_stages = {s: h for s, h in stage_hours.items() if s not in ("awake", "asleep", "inBed")}
     total_hours = round(sum(sleep_stages.values()), 1)
 
-    wake_time_str = bedtime_str = None
-    if wake_dt:
-        wake_local = wake_dt.astimezone(tz)
-        wake_time_str = wake_local.strftime("%H:%M")
-        awake_hours = stage_hours.get("awake", 0)
-        bedtime_str = (wake_local - timedelta(hours=total_hours + awake_hours)).strftime("%H:%M")
+    bedtime_str = wake_time_str = None
+    if sleep_start_utc:
+        bedtime_str = _local_time(sleep_start_utc, tz)
+    if sleep_end_utc:
+        wake_time_str = _local_time(sleep_end_utc, tz)
+
+    # Fallback: derive bedtime from wake_time - total sleep - awake hours
+    if not bedtime_str and wake_time_str and sleep_end_utc:
+        awake_hours = sum(r["hours"] for r in rows if r["stage"] == "awake")
+        wake_dt = datetime.fromisoformat(sleep_end_utc.replace("Z", "+00:00"))
+        bed_dt = wake_dt - timedelta(hours=total_hours + awake_hours)
+        bedtime_str = bed_dt.astimezone(tz).strftime("%H:%M")
 
     return {
         "date": local_date.isoformat(),
@@ -154,53 +80,40 @@ from(bucket: "{INFLUXDB_METRICS_BUCKET}")
 # Activity
 # ---------------------------------------------------------------------------
 
-async def get_activity(date_str: str, timezone: str | None = None) -> dict:
-    """Return daily activity summary for a given local date.
-
-    Args:
-        date_str: Local date ('YYYY-MM-DD', 'today', or 'yesterday').
-        timezone: Olson timezone name.
-    """
+def get_activity(date_str: str, timezone: str | None = None) -> dict:
+    """Return daily activity summary for a given local date."""
     tz_name = timezone or DEFAULT_TZ
     local_date = resolve_date(date_str, tz_name)
-    start, stop = _utc_range_flux(local_date, tz_name)
-    b = INFLUXDB_METRICS_BUCKET
 
-    rows = await _flux_query(f"""
-union(tables: [
-  from(bucket: "{b}")
-    |> range(start: {start}, stop: {stop})
-    |> filter(fn: (r) => r._measurement == "step_count_count" and r._field == "qty")
-    |> sum() |> map(fn: (r) => ({{r with _measurement: "steps"}})),
+    db = get_db()
+    rows = db.execute(
+        """SELECT metric, SUM(value) as total
+           FROM health_metrics
+           WHERE date = ? AND metric IN ('step_count', 'active_energy', 'active_energy_kJ',
+                                          'apple_exercise_time', 'apple_exercise_time_min',
+                                          'apple_stand_hour', 'apple_stand_hour_count',
+                                          'apple_move_time', 'apple_move_time_min')
+           GROUP BY metric""",
+        (local_date.isoformat(),),
+    ).fetchall()
 
-  from(bucket: "{b}")
-    |> range(start: {start}, stop: {stop})
-    |> filter(fn: (r) => r._measurement == "active_energy_kJ" and r._field == "qty")
-    |> sum() |> map(fn: (r) => ({{r with _measurement: "active_energy_kJ"}})),
+    result = {
+        "date": local_date.isoformat(),
+        "steps": 0,
+        "active_energy_kcal": 0,
+        "exercise_minutes": 0,
+        "stand_hours": 0,
+    }
 
-  from(bucket: "{b}")
-    |> range(start: {start}, stop: {stop})
-    |> filter(fn: (r) => r._measurement == "apple_exercise_time_min" and r._field == "qty")
-    |> sum() |> map(fn: (r) => ({{r with _measurement: "exercise_min"}})),
-
-  from(bucket: "{b}")
-    |> range(start: {start}, stop: {stop})
-    |> filter(fn: (r) => r._measurement == "apple_stand_hour_count" and r._field == "qty")
-    |> sum() |> map(fn: (r) => ({{r with _measurement: "stand_hours"}})),
-])
-""")
-
-    result = {"date": local_date.isoformat(), "steps": 0, "active_energy_kcal": 0,
-               "exercise_minutes": 0, "stand_hours": 0}
     for row in rows:
-        m, val = row.get("_measurement", ""), _val(row)
-        if m == "steps":
+        m, val = row["metric"], row["total"]
+        if "step_count" in m:
             result["steps"] = int(val)
-        elif m == "active_energy_kJ":
+        elif "active_energy" in m:
             result["active_energy_kcal"] = round(val / KJ_PER_KCAL)
-        elif m == "exercise_min":
+        elif "exercise_time" in m:
             result["exercise_minutes"] = round(val)
-        elif m == "stand_hours":
+        elif "stand_hour" in m:
             result["stand_hours"] = int(val)
 
     return result
@@ -210,46 +123,28 @@ union(tables: [
 # Workouts
 # ---------------------------------------------------------------------------
 
-async def get_workouts(date_str: str, timezone: str | None = None) -> list[dict]:
-    """Return workouts for a given local date.
-
-    Schema: workouts bucket, _measurement="workout", workout_name tag.
-    One row per metric per session; _time = session start time (UTC).
-    Fields: duration_min, activeEnergyBurned_kJ, avgHeartRate_bpm, maxHeartRate_bpm.
-
-    Args:
-        date_str: Local date ('YYYY-MM-DD', 'today', or 'yesterday').
-        timezone: Olson timezone name.
-    """
+def get_workouts(date_str: str, timezone: str | None = None) -> list[dict]:
+    """Return workouts for a given local date."""
     tz_name = timezone or DEFAULT_TZ
     tz = ZoneInfo(tz_name)
     local_date = resolve_date(date_str, tz_name)
-    start, stop = _utc_range_flux(local_date, tz_name)
 
-    rows = await _flux_query(f"""
-from(bucket: "{INFLUXDB_WORKOUTS_BUCKET}")
-  |> range(start: {start}, stop: {stop})
-  |> filter(fn: (r) => r._measurement == "workout")
-  |> filter(fn: (r) => r._field == "duration_min" or
-                       r._field == "activeEnergyBurned_kJ" or
-                       r._field == "avgHeartRate_bpm" or
-                       r._field == "maxHeartRate_bpm")
-  |> pivot(rowKey: ["_time", "workout_name"], columnKey: ["_field"], valueColumn: "_value")
-""")
+    db = get_db()
+    rows = db.execute(
+        "SELECT * FROM workouts WHERE date = ? ORDER BY start_time",
+        (local_date.isoformat(),),
+    ).fetchall()
 
-    results: list[dict] = []
+    results = []
     for row in rows:
-        t_str = row.get("_time", "")
-        start_time = _local_time(t_str, tz) if t_str else ""
-
-        energy_kj = float(row.get("activeEnergyBurned_kJ", 0) or 0)
+        energy_kj = row["active_energy_kj"] or 0
         results.append({
-            "type": row.get("workout_name", "Unknown"),
-            "start_time": start_time,
-            "duration_minutes": round(float(row.get("duration_min", 0) or 0), 1),
-            "energy_kcal": round(energy_kj / KJ_PER_KCAL),
-            "avg_heart_rate_bpm": round(float(row.get("avgHeartRate_bpm", 0) or 0)) or None,
-            "max_heart_rate_bpm": round(float(row.get("maxHeartRate_bpm", 0) or 0)) or None,
+            "type": row["workout_name"],
+            "start_time": _local_time(row["start_time"], tz) if row["start_time"] else "",
+            "duration_minutes": round(row["duration_min"], 1) if row["duration_min"] else None,
+            "energy_kcal": round(energy_kj / KJ_PER_KCAL) if energy_kj else None,
+            "avg_heart_rate_bpm": round(row["avg_heart_rate_bpm"]) if row["avg_heart_rate_bpm"] else None,
+            "max_heart_rate_bpm": round(row["max_heart_rate_bpm"]) if row["max_heart_rate_bpm"] else None,
         })
 
     return results
@@ -259,41 +154,30 @@ from(bucket: "{INFLUXDB_WORKOUTS_BUCKET}")
 # Heart rate
 # ---------------------------------------------------------------------------
 
-async def get_heart_rate(date_str: str, timezone: str | None = None) -> dict:
-    """Return resting heart rate and HRV for a given local date.
-
-    Args:
-        date_str: Local date ('YYYY-MM-DD', 'today', or 'yesterday').
-        timezone: Olson timezone name.
-    """
+def get_heart_rate(date_str: str, timezone: str | None = None) -> dict:
+    """Return resting heart rate and HRV for a given local date."""
     tz_name = timezone or DEFAULT_TZ
     local_date = resolve_date(date_str, tz_name)
-    start, stop = _utc_range_flux(local_date, tz_name)
-    b = INFLUXDB_METRICS_BUCKET
 
-    rows = await _flux_query(f"""
-union(tables: [
-  from(bucket: "{b}")
-    |> range(start: {start}, stop: {stop})
-    |> filter(fn: (r) => r._measurement == "resting_heart_rate_count/min" and r._field == "qty")
-    |> mean() |> map(fn: (r) => ({{r with _measurement: "rhr"}})),
-
-  from(bucket: "{b}")
-    |> range(start: {start}, stop: {stop})
-    |> filter(fn: (r) => r._measurement == "heart_rate_variability_ms" and r._field == "qty")
-    |> mean() |> map(fn: (r) => ({{r with _measurement: "hrv"}})),
-])
-""")
+    db = get_db()
+    rows = db.execute(
+        """SELECT metric, AVG(value) as avg_val
+           FROM health_metrics
+           WHERE date = ? AND metric IN ('resting_heart_rate', 'resting_heart_rate_count/min',
+                                          'heart_rate_variability', 'heart_rate_variability_ms')
+           GROUP BY metric""",
+        (local_date.isoformat(),),
+    ).fetchall()
 
     result: dict = {"date": local_date.isoformat(), "resting_heart_rate_bpm": None, "hrv_ms": None}
     for row in rows:
-        val = _val(row)
+        val = row["avg_val"]
         if not val:
             continue
-        m = row.get("_measurement", "")
-        if m == "rhr":
+        m = row["metric"]
+        if "resting_heart_rate" in m:
             result["resting_heart_rate_bpm"] = round(val)
-        elif m == "hrv":
+        elif "heart_rate_variability" in m:
             result["hrv_ms"] = round(val)
 
     return result
@@ -303,52 +187,48 @@ union(tables: [
 # Wellbeing — state of mind + mindfulness
 # ---------------------------------------------------------------------------
 
-async def get_wellbeing(date_str: str, timezone: str | None = None) -> dict:
-    """Return mindfulness and state of mind data for a given local date.
-
-    Schema (expected — HAE naming convention):
-      _measurement="state_of_mind", _field="valence", tag "label"
-      _measurement="mindful_minutes", _field="qty"
-    Returns empty lists if data hasn't synced from HAE yet.
-
-    Args:
-        date_str: Local date ('YYYY-MM-DD', 'today', or 'yesterday').
-        timezone: Olson timezone name.
-    """
+def get_wellbeing(date_str: str, timezone: str | None = None) -> dict:
+    """Return mindfulness and state of mind data for a given local date."""
     tz_name = timezone or DEFAULT_TZ
     tz = ZoneInfo(tz_name)
     local_date = resolve_date(date_str, tz_name)
-    start, stop = _utc_range_flux(local_date, tz_name)
-    b = INFLUXDB_METRICS_BUCKET
 
-    rows = await _flux_query(f"""
-from(bucket: "{b}")
-  |> range(start: {start}, stop: {stop})
-  |> filter(fn: (r) => r._measurement =~ /state_of_mind|mindful/)
-""")
+    db = get_db()
 
-    mindful_minutes = 0
-    state_of_mind: list[dict] = []
+    # Mindful minutes from health_metrics
+    mindful_row = db.execute(
+        """SELECT SUM(value) as total
+           FROM health_metrics
+           WHERE date = ? AND metric LIKE '%mindful%'""",
+        (local_date.isoformat(),),
+    ).fetchone()
+    mindful_minutes = round(mindful_row["total"]) if mindful_row and mindful_row["total"] else None
 
-    for row in rows:
-        m = row.get("_measurement", "")
-        val = _val(row)
-        t_str = row.get("_time", "")
-        if "mindful" in m:
-            mindful_minutes += val
-        elif "state_of_mind" in m:
-            entry: dict = {}
-            if t_str:
-                entry["time"] = _local_time(t_str, tz)
-            entry["valence"] = val
-            label = row.get("label") or row.get("labels") or row.get("kindLabel") or ""
-            if label:
-                entry["labels"] = [l.strip() for l in label.split(",") if l.strip()]
-            state_of_mind.append(entry)
+    # State of mind entries
+    som_rows = db.execute(
+        "SELECT recorded_at, valence, labels, context FROM state_of_mind WHERE date = ? ORDER BY recorded_at",
+        (local_date.isoformat(),),
+    ).fetchall()
+
+    state_of_mind = []
+    for row in som_rows:
+        entry: dict = {}
+        if row["recorded_at"]:
+            entry["time"] = _local_time(row["recorded_at"], tz)
+        if row["valence"] is not None:
+            entry["valence"] = row["valence"]
+        if row["labels"]:
+            try:
+                entry["labels"] = json.loads(row["labels"])
+            except (json.JSONDecodeError, TypeError):
+                entry["labels"] = [l.strip() for l in row["labels"].split(",") if l.strip()]
+        if row["context"]:
+            entry["context"] = row["context"]
+        state_of_mind.append(entry)
 
     return {
         "date": local_date.isoformat(),
-        "mindful_minutes": round(mindful_minutes) or None,
+        "mindful_minutes": mindful_minutes,
         "state_of_mind": state_of_mind,
     }
 
@@ -357,37 +237,24 @@ from(bucket: "{b}")
 # Medications
 # ---------------------------------------------------------------------------
 
-async def get_medications(date_str: str, timezone: str | None = None) -> list[dict]:
-    """Return medications logged on a given local date.
-
-    Schema (expected — HAE naming convention):
-      _measurement="medications" or "medication_dose", _field="qty",
-      tag "name" = medication name.
-    Returns empty list if data hasn't synced from HAE yet.
-
-    Args:
-        date_str: Local date ('YYYY-MM-DD', 'today', or 'yesterday').
-        timezone: Olson timezone name.
-    """
+def get_medications(date_str: str, timezone: str | None = None) -> list[dict]:
+    """Return medications logged on a given local date."""
     tz_name = timezone or DEFAULT_TZ
     tz = ZoneInfo(tz_name)
     local_date = resolve_date(date_str, tz_name)
-    start, stop = _utc_range_flux(local_date, tz_name)
 
-    rows = await _flux_query(f"""
-from(bucket: "{INFLUXDB_METRICS_BUCKET}")
-  |> range(start: {start}, stop: {stop})
-  |> filter(fn: (r) => r._measurement =~ /[Mm]edication/)
-""")
+    db = get_db()
+    rows = db.execute(
+        "SELECT name, quantity, unit, recorded_at FROM medications WHERE date = ? ORDER BY recorded_at",
+        (local_date.isoformat(),),
+    ).fetchall()
 
-    results: list[dict] = []
-    for row in rows:
-        t_str = row.get("_time", "")
-        results.append({
-            "name": row.get("name") or row.get("medication") or row.get("_measurement", ""),
-            "time": _local_time(t_str, tz) if t_str else "",
-            "qty": _val(row),
-            "unit": row.get("unit") or row.get("_field", ""),
-        })
-
-    return results
+    return [
+        {
+            "name": row["name"],
+            "time": _local_time(row["recorded_at"], tz) if row["recorded_at"] else "",
+            "qty": row["quantity"],
+            "unit": row["unit"],
+        }
+        for row in rows
+    ]

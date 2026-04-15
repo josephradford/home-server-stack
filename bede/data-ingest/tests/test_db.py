@@ -1,32 +1,10 @@
 """Tests for SQLite schema initialization and basic operations."""
 
 import sqlite3
-import tempfile
-import os
 
 import pytest
 
-# Point to a temp database before importing db module
-_tmp = tempfile.NamedTemporaryFile(suffix=".db", delete=False)
-_tmp.close()
-os.environ["SQLITE_DB_PATH"] = _tmp.name
-
-from db import get_db, init_db, SCHEMA_VERSION
-
-
-@pytest.fixture(autouse=True)
-def _fresh_db():
-    """Re-initialize database before each test."""
-    # Remove and recreate
-    if os.path.exists(_tmp.name):
-        os.unlink(_tmp.name)
-    # Also remove WAL files
-    for ext in ("-wal", "-shm"):
-        p = _tmp.name + ext
-        if os.path.exists(p):
-            os.unlink(p)
-    init_db()
-    yield
+from db import get_db, SCHEMA_VERSION
 
 
 def test_schema_version():
