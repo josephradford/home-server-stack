@@ -155,6 +155,68 @@ docker-compose.ai.yml
 
 Claude Code auto-discovers workspace-mcp via `.mcp.json` in the working directory, which points to `http://workspace-mcp:8000/mcp` on the internal Docker network. Sessions are resumable because MCP is configured via the project file rather than the `--mcp-config` flag (which makes sessions unresumable in Claude Code 2.1.x).
 
+## Data Flow
+
+```mermaid
+flowchart TD
+    User(["Joe\n(Telegram)"])
+
+    subgraph bede["bede container"]
+        direction TB
+        bot["bot.py\nTelegram handler"]
+        sched["scheduler.py\nAPScheduler cron"]
+        claude["claude CLI\n(-p, --dangerously-skip-permissions)"]
+        vault_clone["/vault\nObsidian git clone"]
+    end
+
+    subgraph mcps["MCP Servers"]
+        data_mcp["data-mcp\npersonal-data tools"]
+        ws_mcp["workspace-mcp\nGoogle Workspace"]
+    end
+
+    subgraph services["Sidecar / Internal Services"]
+        influx["InfluxDB\nhae-influxdb:8086"]
+        google["Google APIs\nGmail · Calendar · Tasks"]
+        homepage_api["homepage-api\nweather / system"]
+    end
+
+    subgraph mac["Nightly sync (Mac)"]
+        hae["Health Auto Export\nsync to InfluxDB"]
+        obsidian_sync["Obsidian vault\nnightly git push"]
+    end
+
+    vault_repo[("Vault repo\nGitHub")]
+
+    User -- "text message" --> bot
+    bot -- "git pull\nbefore each call" --> vault_clone
+    vault_clone -- "scheduled-tasks.md\n(reload every 5 min)" --> sched
+    sched -- "claude -p\n(on cron)" --> claude
+    bot -- "claude -p\n(--resume session_id)" --> claude
+
+    claude -- "MCP calls" --> data_mcp
+    claude -- "MCP calls" --> ws_mcp
+    claude -- "HTTP GET" --> homepage_api
+
+    data_mcp -- "Flux queries\nsleep · activity · HR · location" --> influx
+    data_mcp -- "reads CSV files\nscreen time · Safari · podcasts · vault changes" --> vault_clone
+
+    ws_mcp -- "OAuth 2.0" --> google
+
+    vault_clone <-. "git pull" .-> vault_repo
+    obsidian_sync -. "git push nightly" .-> vault_repo
+    hae -. "HTTP POST" .-> influx
+
+    claude -- "JSON {result, session_id}" --> bot
+    claude -- "JSON result" --> sched
+    bot -- "reply" --> User
+    sched -- "proactive message" --> User
+```
+
+Two parallel data-ingestion pipelines feed into Claude's tools:
+
+- **Health & location** — Health Auto Export on the Mac pushes Apple Watch/iPhone metrics to InfluxDB over HTTP. The `data-mcp` health and location tools query InfluxDB directly with Flux.
+- **Obsidian vault** — The Mac pushes a nightly git commit to the vault repo containing daily-raw CSV exports (screen time, Safari history, podcasts, Claude session summaries). The `/vault` clone inside the container is pulled before every Claude invocation, and the `data-mcp` vault tools read those CSV files directly from disk.
+
 ## Troubleshooting
 
 ### "Credit balance is too low"
