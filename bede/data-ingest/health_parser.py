@@ -316,6 +316,8 @@ def parse_health_payload(payload: dict) -> int:
         log.info("  Processing metric: %s", name)
 
         if name == _SLEEP_METRIC or metric.get("aggregatedSleepAnalyses") or metric.get("sleepAnalyses"):
+            log.info("  Sleep metric keys: %s", list(metric.keys()))
+            log.info("  Sleep metric sample: %s", json.dumps(metric, default=str)[:1000])
             total_rows += _process_sleep(db, metric)
         elif _STATE_OF_MIND_PATTERNS.search(name):
             total_rows += _process_state_of_mind(db, metric)
