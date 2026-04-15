@@ -98,12 +98,20 @@ def _insert_health_metric(db: sqlite3.Connection, date: str, metric: str, value:
 
 
 def _process_sleep(db: sqlite3.Connection, metric: dict) -> int:
-    """Process sleep_analysis metric with aggregatedSleepAnalyses."""
+    """Process sleep_analysis metric.
+
+    HAE sends sleep data in one of three locations:
+    - aggregatedSleepAnalyses[] (aggregated format)
+    - sleepAnalyses[] (non-aggregated format)
+    - data[] (inline format — stage hours as fields on each entry)
+    """
     rows = 0
     analyses = metric.get("aggregatedSleepAnalyses", [])
     if not analyses:
-        # Try non-aggregated sleep analyses
         analyses = metric.get("sleepAnalyses", [])
+    if not analyses:
+        # HAE sends sleep data inline in the regular data[] array
+        analyses = metric.get("data", [])
 
     for analysis in analyses:
         # Parse sleep start/end times
@@ -316,8 +324,6 @@ def parse_health_payload(payload: dict) -> int:
         log.info("  Processing metric: %s", name)
 
         if name == _SLEEP_METRIC or metric.get("aggregatedSleepAnalyses") or metric.get("sleepAnalyses"):
-            log.info("  Sleep metric keys: %s", list(metric.keys()))
-            log.info("  Sleep metric sample: %s", json.dumps(metric, default=str)[:1000])
             total_rows += _process_sleep(db, metric)
         elif _STATE_OF_MIND_PATTERNS.search(name):
             total_rows += _process_state_of_mind(db, metric)

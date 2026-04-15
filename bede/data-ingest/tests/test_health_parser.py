@@ -171,6 +171,45 @@ class TestSleep:
         assert phases[0]["sleep_start"] is not None
         assert phases[0]["sleep_end"] is not None
 
+    def test_inline_data_sleep(self):
+        """HAE sends sleep data in data[] with stage hours as inline fields."""
+        payload = {
+            "data": {
+                "metrics": [
+                    {
+                        "name": "sleep_analysis",
+                        "units": "hr",
+                        "data": [
+                            {
+                                "date": "2026-04-14 00:00:00 +1000",
+                                "sleepStart": "2026-04-13 23:44:00 +1000",
+                                "sleepEnd": "2026-04-14 06:25:00 +1000",
+                                "core": 4.42,
+                                "deep": 0.31,
+                                "rem": 1.82,
+                                "awake": 0.15,
+                                "totalSleep": 6.54,
+                                "source": "Apple Watch",
+                            }
+                        ],
+                    }
+                ],
+                "workouts": [],
+            }
+        }
+        rows = parse_health_payload(payload)
+        assert rows >= 4  # core, deep, rem, awake
+
+        db = get_db()
+        phases = db.execute("SELECT * FROM sleep_phases WHERE date = '2026-04-14' ORDER BY stage").fetchall()
+        stages = {p["stage"]: p["hours"] for p in phases}
+        assert stages["core"] == 4.42
+        assert stages["deep"] == 0.31
+        assert stages["rem"] == 1.82
+        assert stages["awake"] == 0.15
+        assert phases[0]["sleep_start"] is not None
+        assert phases[0]["sleep_end"] is not None
+
     def test_sleep_uses_wake_date(self):
         """Sleep that starts on the 13th and ends on the 14th should use the 14th as the date."""
         payload = {
