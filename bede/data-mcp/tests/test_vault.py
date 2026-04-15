@@ -148,16 +148,24 @@ class TestGetPodcasts:
 
 
 class TestGetClaudeSessions:
-    def test_returns_content(self, fresh_db):
-        fresh_db.execute(
-            "INSERT INTO claude_sessions (date, content) VALUES (?, ?)",
-            ("2026-04-14", "## Session 1\nDid some work."),
+    def test_returns_structured_sessions(self, fresh_db):
+        fresh_db.executemany(
+            "INSERT INTO claude_sessions (date, project, start_time, end_time, duration_min, turns, summary) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            [
+                ("2026-04-14", "home/server/stack", "2026-04-14 08:00", "2026-04-14 12:00", 240, 42, "Worked on SQLite migration."),
+                ("2026-04-14", "dotfiles", "2026-04-14 13:00", "2026-04-14 14:30", 90, 25, "Fixed script timing."),
+            ],
         )
         fresh_db.commit()
 
         result = get_claude_sessions("2026-04-14", timezone="Australia/Sydney")
-        assert "Session 1" in result
+        assert len(result) == 2
+        assert result[0]["project"] == "home/server/stack"
+        assert result[0]["duration_minutes"] == 240
+        assert result[0]["turns"] == 42
+        assert "SQLite" in result[0]["summary"]
+        assert result[1]["project"] == "dotfiles"
 
-    def test_no_data_returns_message(self, fresh_db):
+    def test_no_data_returns_empty(self, fresh_db):
         result = get_claude_sessions("2026-04-14", timezone="Australia/Sydney")
-        assert "No Claude session data" in result
+        assert result == []

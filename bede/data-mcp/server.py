@@ -87,8 +87,11 @@ def get_podcasts(
 def get_claude_sessions(
     date: str,
     timezone: str | None = None,
-) -> str:
-    """Return pre-generated Claude Code session summaries for a given local date.
+) -> list[dict]:
+    """Return Claude Code session summaries for a given local date.
+
+    Each session includes project name, start/end times, duration, turn count,
+    and an AI-generated summary with conclusions and loose ends.
 
     Args:
         date: Local date — 'YYYY-MM-DD', 'today', or 'yesterday'.

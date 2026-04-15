@@ -160,14 +160,99 @@ def _ingest_podcasts(db: sqlite3.Connection, date: str, content: str) -> int:
 
 
 def _ingest_claude_sessions(db: sqlite3.Connection, date: str, content: str) -> int:
-    """Insert or replace claude sessions markdown."""
+    """Parse claude-sessions.md into individual session rows.
+
+    Expected format per session:
+        ## Project Name
+        - **Time:** HH:MM–HH:MM (Xm) | **Turns:** N
+        or
+        - **Time:** YYYY-MM-DD HH:MM–YYYY-MM-DD HH:MM (Xm) | **Turns:** N
+
+        Summary paragraph(s) and bullet points...
+    """
+    import re
+
     if not content.strip():
         return 0
-    db.execute(
-        "INSERT OR REPLACE INTO claude_sessions (date, content) VALUES (?, ?)",
-        (date, content),
-    )
-    return 1
+
+    # Delete existing sessions for this date (full daily replacement)
+    db.execute("DELETE FROM claude_sessions WHERE date = ?", (date,))
+
+    # Split into sections by ## headings
+    sections = re.split(r"^## ", content, flags=re.MULTILINE)
+    count = 0
+
+    for section in sections:
+        section = section.strip()
+        if not section:
+            continue
+
+        lines = section.split("\n")
+        project = lines[0].strip()
+        if not project or project.startswith("#"):
+            continue  # skip the title line "# Claude Code Sessions — ..."
+
+        # Parse time and turns from the metadata line
+        start_time = end_time = None
+        duration_min = turns = None
+
+        for line in lines[1:3]:
+            time_match = re.search(
+                r"\*\*Time:\*\*\s*(.+?)\s*\|\s*\*\*Turns:\*\*\s*(\d+)",
+                line,
+            )
+            if time_match:
+                time_str = time_match.group(1).strip()
+                turns = int(time_match.group(2))
+
+                # Extract duration from parentheses
+                dur_match = re.search(r"\((\d+)m\)", time_str)
+                if dur_match:
+                    duration_min = int(dur_match.group(1))
+
+                # Parse start–end times
+                # Format: "HH:MM–HH:MM" or "YYYY-MM-DD HH:MM–YYYY-MM-DD HH:MM"
+                # Split on en-dash (–) only, not hyphen (-) which appears in dates
+                time_range = re.sub(r"\s*\(\d+m\)", "", time_str).strip()
+                parts = time_range.split("–", 1)
+                if len(parts) == 2:
+                    start_raw = parts[0].strip()
+                    end_raw = parts[1].strip()
+                    # If just HH:MM, prepend the date
+                    if len(start_raw) <= 5:
+                        start_time = f"{date} {start_raw}"
+                    else:
+                        start_time = start_raw
+                    if len(end_raw) <= 5:
+                        end_time = f"{date} {end_raw}"
+                    else:
+                        end_time = end_raw
+                break
+
+        # Everything after the metadata line is the summary
+        summary_lines = []
+        past_metadata = False
+        for line in lines[1:]:
+            if not past_metadata:
+                if line.strip().startswith("- **Time:**"):
+                    past_metadata = True
+                    continue
+                if not line.strip():
+                    continue
+            else:
+                summary_lines.append(line)
+        summary = "\n".join(summary_lines).strip() or None
+
+        try:
+            db.execute(
+                "INSERT OR IGNORE INTO claude_sessions (date, project, start_time, end_time, duration_min, turns, summary) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                (date, project, start_time, end_time, duration_min, turns, summary),
+            )
+            count += 1
+        except Exception as e:
+            log.warning("Failed to insert claude session %s: %s", project, e)
+
+    return count
 
 
 def parse_vault_payload(payload: dict) -> int:

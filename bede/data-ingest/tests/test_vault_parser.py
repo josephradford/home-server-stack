@@ -187,31 +187,57 @@ class TestPodcasts:
 
 
 class TestClaudeSessions:
-    def test_inserts_markdown(self):
-        payload = {
-            "date": "2026-04-14",
-            "files": {
-                "claude-sessions.md": "## Session 1\nWorked on SQLite migration.\n## Session 2\nMore work.",
-            },
-        }
+    def test_parses_sessions_into_rows(self):
+        md = """# Claude Code Sessions — 2026-04-14
+
+_2 session(s)_
+
+## home/server/stack
+- **Time:** 08:00–12:00 (240m) | **Turns:** 42
+
+Worked on SQLite migration. Built data-ingest service.
+
+- **Conclusions:** Phase 1 complete.
+- **Loose ends:** Phase 2 not started.
+
+## dotfiles
+- **Time:** 2026-04-13 22:00–2026-04-14 01:30 (210m) | **Turns:** 100
+
+Fixed daily-raw-collect script timing.
+
+- **Conclusions:** Script now runs correctly.
+"""
+        payload = {"date": "2026-04-14", "files": {"claude-sessions.md": md}}
         rows = parse_vault_payload(payload)
-        assert rows == 1
+        assert rows == 2
 
         db = get_db()
-        row = db.execute("SELECT * FROM claude_sessions").fetchone()
-        assert row["date"] == "2026-04-14"
-        assert "Session 2" in row["content"]
+        results = db.execute("SELECT * FROM claude_sessions ORDER BY start_time").fetchall()
+        assert len(results) == 2
+
+        # dotfiles sorts first (start_time 2026-04-13 22:00 < 2026-04-14 08:00)
+        assert results[0]["project"] == "dotfiles"
+        assert results[0]["start_time"] == "2026-04-13 22:00"
+        assert results[0]["duration_min"] == 210
+        assert results[0]["turns"] == 100
+
+        assert results[1]["project"] == "home/server/stack"
+        assert results[1]["start_time"] == "2026-04-14 08:00"
+        assert results[1]["end_time"] == "2026-04-14 12:00"
+        assert results[1]["duration_min"] == 240
+        assert results[1]["turns"] == 42
+        assert "SQLite migration" in results[1]["summary"]
 
     def test_replaces_on_re_ingest(self):
-        payload1 = {"date": "2026-04-14", "files": {"claude-sessions.md": "v1"}}
-        payload2 = {"date": "2026-04-14", "files": {"claude-sessions.md": "v2"}}
-        parse_vault_payload(payload1)
-        parse_vault_payload(payload2)
+        md1 = "## ProjectA\n- **Time:** 08:00–09:00 (60m) | **Turns:** 10\n\nFirst run."
+        md2 = "## ProjectB\n- **Time:** 10:00–11:00 (60m) | **Turns:** 20\n\nSecond run."
+        parse_vault_payload({"date": "2026-04-14", "files": {"claude-sessions.md": md1}})
+        parse_vault_payload({"date": "2026-04-14", "files": {"claude-sessions.md": md2}})
 
         db = get_db()
-        row = db.execute("SELECT * FROM claude_sessions").fetchone()
-        assert row["content"] == "v2"
-        assert db.execute("SELECT COUNT(*) FROM claude_sessions").fetchone()[0] == 1
+        results = db.execute("SELECT * FROM claude_sessions WHERE date = '2026-04-14'").fetchall()
+        assert len(results) == 1
+        assert results[0]["project"] == "ProjectB"
 
     def test_empty_content_skipped(self):
         payload = {"date": "2026-04-14", "files": {"claude-sessions.md": "  "}}
@@ -228,7 +254,7 @@ class TestMixedPayload:
                 "safari-pages.csv": "visited_at,domain,title,url\n2026-04-14T03:00:00Z,github.com,GH,https://github.com",
                 "youtube.csv": "visited_at,title,url\n2026-04-14T10:00:00Z,Video,https://youtube.com/v",
                 "podcasts.csv": "episode,podcast,duration_seconds,played_at\nEp1,Show,1200,2026-04-14T07:00:00Z",
-                "claude-sessions.md": "## Session",
+                "claude-sessions.md": "## MyProject\n- **Time:** 08:00–09:00 (60m) | **Turns:** 10\n\nDid work.",
             },
         }
         rows = parse_vault_payload(payload)

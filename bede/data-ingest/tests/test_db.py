@@ -125,23 +125,17 @@ def test_screen_time_insert():
     db.close()
 
 
-def test_claude_sessions_insert_and_replace():
+def test_claude_sessions_insert():
     db = get_db()
     db.execute(
-        "INSERT INTO claude_sessions (date, content) VALUES (?, ?)",
-        ("2026-04-14", "## Session 1\nDid some work."),
-    )
-    db.commit()
-    # Replace with updated content
-    db.execute(
-        "INSERT OR REPLACE INTO claude_sessions (date, content) VALUES (?, ?)",
-        ("2026-04-14", "## Session 1\nDid some work.\n## Session 2\nMore work."),
+        "INSERT INTO claude_sessions (date, project, start_time, end_time, duration_min, turns, summary) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        ("2026-04-14", "my/project", "2026-04-14 08:00", "2026-04-14 12:00", 240, 42, "Did some work."),
     )
     db.commit()
     row = db.execute("SELECT * FROM claude_sessions WHERE date = '2026-04-14'").fetchone()
-    assert "Session 2" in row["content"]
-    count = db.execute("SELECT COUNT(*) FROM claude_sessions").fetchone()[0]
-    assert count == 1
+    assert row["project"] == "my/project"
+    assert row["turns"] == 42
+    assert row["duration_min"] == 240
     db.close()
 
 

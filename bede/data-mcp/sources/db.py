@@ -124,9 +124,16 @@ CREATE INDEX IF NOT EXISTS idx_podcasts_date ON podcasts(date);
 
 CREATE TABLE IF NOT EXISTS claude_sessions (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    date TEXT NOT NULL UNIQUE,
-    content TEXT NOT NULL
+    date TEXT NOT NULL,
+    project TEXT NOT NULL,
+    start_time TEXT,
+    end_time TEXT,
+    duration_min INTEGER,
+    turns INTEGER,
+    summary TEXT,
+    UNIQUE(date, project, start_time)
 );
+CREATE INDEX IF NOT EXISTS idx_claude_date ON claude_sessions(date);
 """
 
 _db: sqlite3.Connection | None = None

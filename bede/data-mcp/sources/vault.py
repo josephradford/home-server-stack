@@ -175,19 +175,27 @@ def get_podcasts(
 def get_claude_sessions(
     date_str: str,
     timezone: str | None = None,
-) -> str:
-    """Return pre-generated Claude Code session summaries for a given local date."""
+) -> list[dict]:
+    """Return Claude Code session summaries for a given local date."""
     tz = timezone or DEFAULT_TZ
     local_date = resolve_date(date_str, tz)
     date_iso = local_date.isoformat()
 
     db = get_db()
-    row = db.execute(
-        "SELECT content FROM claude_sessions WHERE date = ?",
+    rows = db.execute(
+        "SELECT project, start_time, end_time, duration_min, turns, summary "
+        "FROM claude_sessions WHERE date = ? ORDER BY start_time",
         (date_iso,),
-    ).fetchone()
+    ).fetchall()
 
-    if not row:
-        return f"No Claude session data found for {date_iso}."
-
-    return row["content"]
+    return [
+        {
+            "project": r["project"],
+            "start_time": r["start_time"],
+            "end_time": r["end_time"],
+            "duration_minutes": r["duration_min"],
+            "turns": r["turns"],
+            "summary": r["summary"],
+        }
+        for r in rows
+    ]

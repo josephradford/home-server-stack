@@ -8,7 +8,7 @@ log = logging.getLogger(__name__)
 
 SQLITE_DB_PATH = os.environ.get("SQLITE_DB_PATH", "/data/bede.db")
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 
 SCHEMA_SQL = """
 CREATE TABLE IF NOT EXISTS schema_version (
@@ -121,9 +121,16 @@ CREATE INDEX IF NOT EXISTS idx_podcasts_date ON podcasts(date);
 
 CREATE TABLE IF NOT EXISTS claude_sessions (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    date TEXT NOT NULL UNIQUE,
-    content TEXT NOT NULL
+    date TEXT NOT NULL,
+    project TEXT NOT NULL,
+    start_time TEXT,                   -- local datetime YYYY-MM-DD HH:MM
+    end_time TEXT,                     -- local datetime YYYY-MM-DD HH:MM
+    duration_min INTEGER,
+    turns INTEGER,
+    summary TEXT,
+    UNIQUE(date, project, start_time)
 );
+CREATE INDEX IF NOT EXISTS idx_claude_date ON claude_sessions(date);
 """
 
 
