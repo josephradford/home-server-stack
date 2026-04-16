@@ -138,32 +138,32 @@ pull: validate
 setup: env-check validate wireguard-check
 	@echo "Starting first-time setup..."
 	@echo ""
-	@echo "Step 1/8: Setting up Traefik dashboard password..."
+	@echo "Step 1/9: Setting up Traefik dashboard password..."
 	@./scripts/traefik/setup-traefik-password.sh
 	@echo ""
-	@echo "Step 2/8: Setting up SSL certificate storage..."
+	@echo "Step 2/9: Setting up SSL certificate storage..."
 	@$(MAKE) setup-certs
 	@echo ""
-	@echo "Step 3/8: Setting up Homepage dashboard config..."
+	@echo "Step 3/9: Setting up Homepage dashboard config..."
 	@./scripts/homepage/configure-homepage.sh
 	@echo ""
-	@echo "Step 4/8: Pulling pre-built images..."
+	@echo "Step 4/9: Pulling pre-built images..."
 	@$(COMPOSE) pull --ignore-pull-failures
 	@echo ""
-	@echo "Step 5/8: Building custom services from source..."
+	@echo "Step 5/9: Building custom services from source..."
 	@$(COMPOSE) build homepage-api --progress=plain
 	@echo ""
-	@echo "Step 6/8: Starting services (Docker Compose will create networks)..."
+	@echo "Step 6/9: Starting services (Docker Compose will create networks)..."
 	@$(COMPOSE) up -d
 	@echo ""
-	@echo "Step 7/8: Fixing data directory permissions..."
+	@echo "Step 7/9: Fixing data directory permissions..."
 	@echo "Containers create directories as root, fixing ownership for user access..."
 	@if [ -d "data" ]; then \
 		sudo chown -R $(shell id -u):$(shell getent group docker | cut -d: -f3) data/ && \
 		echo "✓ Data directory permissions fixed"; \
 	fi
 	@echo ""
-	@echo "Step 8/8: Configuring AdGuard DNS rewrites..."
+	@echo "Step 8/9: Configuring AdGuard DNS rewrites..."
 	@./scripts/adguard/setup-adguard-dns.sh
 	@echo ""
 	@echo "Restarting AdGuard to apply configuration..."
@@ -171,6 +171,16 @@ setup: env-check validate wireguard-check
 	@echo ""
 	@echo "✓ AdGuard DNS setup complete!"
 	@echo ""
+	@set -a; . ./.env; set +a; \
+	if [ -n "$$WIREGUARD_DDNS_SUBDOMAIN" ]; then \
+		echo "Step 9/9: Setting up dynamic DNS for WireGuard VPN..."; \
+		echo ""; \
+		sudo ./scripts/ddns/setup-gandi-ddns.sh; \
+		echo ""; \
+	else \
+		echo "Step 9/9: Skipping dynamic DNS (WIREGUARD_DDNS_SUBDOMAIN not set in .env)"; \
+		echo ""; \
+	fi
 	@echo "Testing DNS resolution..."
 	@sleep 3
 	@set -a; . ./.env; set +a; \

@@ -156,7 +156,7 @@ sudo systemctl status wg-quick@wg0
 
 ### Service Configuration
 
-AdGuard DNS rewrites and Traefik password are configured automatically by `make setup`. To reconfigure manually:
+AdGuard DNS rewrites, Traefik password, and dynamic DNS (if `WIREGUARD_DDNS_SUBDOMAIN` is set) are configured automatically by `make setup`. To reconfigure manually:
 
 ```bash
 # Configure AdGuard DNS rewrites
