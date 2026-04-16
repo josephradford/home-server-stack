@@ -187,9 +187,10 @@ async def reload(scheduler: AsyncIOScheduler):
     await asyncio.to_thread(_pull_vault)
     tasks = _parse_tasks()
 
-    # Remove all task jobs, keep the reload watcher itself
+    # Remove vault-defined task jobs; keep built-in jobs (reload_watcher, collect_bede_sessions)
+    _builtin_jobs = {"reload_watcher", "collect_bede_sessions"}
     for job in scheduler.get_jobs():
-        if job.id != "reload_watcher":
+        if job.id not in _builtin_jobs:
             job.remove()
 
     tz = ZoneInfo(TIMEZONE)
