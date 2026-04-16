@@ -84,19 +84,6 @@ def _parse_hae_timestamp(ts_str: str) -> tuple[str, str] | None:
         return None
 
 
-def _insert_health_metric(db: sqlite3.Connection, date: str, metric: str, value: float, source: str | None, recorded_at: str) -> int:
-    """Insert a single health metric row. Returns 1 if inserted, 0 if duplicate."""
-    try:
-        db.execute(
-            "INSERT OR IGNORE INTO health_metrics (date, metric, value, source, recorded_at) VALUES (?, ?, ?, ?, ?)",
-            (date, metric, value, source, recorded_at),
-        )
-        return db.total_changes  # will be checked via delta
-    except sqlite3.Error as e:
-        log.warning("Failed to insert health metric %s: %s", metric, e)
-        return 0
-
-
 def _process_sleep(db: sqlite3.Connection, metric: dict) -> int:
     """Process sleep_analysis metric.
 
