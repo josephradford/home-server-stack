@@ -3,12 +3,16 @@
 from fastmcp import FastMCP
 
 from sources import health, location, vault
+from sources.db import init_db
 
 mcp = FastMCP("personal-data")
 
+# Initialize SQLite schema on import (idempotent)
+init_db()
+
 
 # ---------------------------------------------------------------------------
-# Vault-based tools
+# Vault-based tools (SQLite)
 # ---------------------------------------------------------------------------
 
 @mcp.tool()
@@ -80,25 +84,14 @@ def get_podcasts(
 
 
 @mcp.tool()
-def get_vault_changes(
-    date: str,
-    timezone: str | None = None,
-) -> dict:
-    """Return a summary of Obsidian vault git commits for a given local date.
-
-    Args:
-        date: Local date — 'YYYY-MM-DD', 'today', or 'yesterday'.
-        timezone: Olson timezone name.
-    """
-    return vault.get_vault_changes(date, timezone=timezone)
-
-
-@mcp.tool()
 def get_claude_sessions(
     date: str,
     timezone: str | None = None,
-) -> str:
-    """Return pre-generated Claude Code session summaries for a given local date.
+) -> list[dict]:
+    """Return Claude Code session summaries for a given local date.
+
+    Each session includes project name, start/end times, duration, turn count,
+    and an AI-generated summary with conclusions and loose ends.
 
     Args:
         date: Local date — 'YYYY-MM-DD', 'today', or 'yesterday'.
@@ -146,11 +139,11 @@ async def get_location_raw(
 
 
 # ---------------------------------------------------------------------------
-# Live API tools — health
+# Health tools (SQLite)
 # ---------------------------------------------------------------------------
 
 @mcp.tool()
-async def get_sleep(
+def get_sleep(
     date: str,
     timezone: str | None = None,
 ) -> dict:
@@ -160,11 +153,11 @@ async def get_sleep(
         date: Local date — 'YYYY-MM-DD', 'today', or 'last_night'.
         timezone: Olson timezone name.
     """
-    return await health.get_sleep(date, timezone=timezone)
+    return health.get_sleep(date, timezone=timezone)
 
 
 @mcp.tool()
-async def get_activity(
+def get_activity(
     date: str,
     timezone: str | None = None,
 ) -> dict:
@@ -174,11 +167,11 @@ async def get_activity(
         date: Local date — 'YYYY-MM-DD', 'today', or 'yesterday'.
         timezone: Olson timezone name.
     """
-    return await health.get_activity(date, timezone=timezone)
+    return health.get_activity(date, timezone=timezone)
 
 
 @mcp.tool()
-async def get_workouts(
+def get_workouts(
     date: str,
     timezone: str | None = None,
 ) -> list[dict]:
@@ -188,11 +181,11 @@ async def get_workouts(
         date: Local date — 'YYYY-MM-DD', 'today', or 'yesterday'.
         timezone: Olson timezone name.
     """
-    return await health.get_workouts(date, timezone=timezone)
+    return health.get_workouts(date, timezone=timezone)
 
 
 @mcp.tool()
-async def get_heart_rate(
+def get_heart_rate(
     date: str,
     timezone: str | None = None,
 ) -> dict:
@@ -202,7 +195,35 @@ async def get_heart_rate(
         date: Local date — 'YYYY-MM-DD', 'today', or 'yesterday'.
         timezone: Olson timezone name.
     """
-    return await health.get_heart_rate(date, timezone=timezone)
+    return health.get_heart_rate(date, timezone=timezone)
+
+
+@mcp.tool()
+def get_wellbeing(
+    date: str,
+    timezone: str | None = None,
+) -> dict:
+    """Return mindfulness and state of mind data for a given local date.
+
+    Args:
+        date: Local date — 'YYYY-MM-DD', 'today', or 'yesterday'.
+        timezone: Olson timezone name.
+    """
+    return health.get_wellbeing(date, timezone=timezone)
+
+
+@mcp.tool()
+def get_medications(
+    date: str,
+    timezone: str | None = None,
+) -> list[dict]:
+    """Return medications logged on a given local date.
+
+    Args:
+        date: Local date — 'YYYY-MM-DD', 'today', or 'yesterday'.
+        timezone: Olson timezone name.
+    """
+    return health.get_medications(date, timezone=timezone)
 
 
 # ---------------------------------------------------------------------------

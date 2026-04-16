@@ -2,13 +2,12 @@
 # Simplifies deployment and maintenance operations
 
 .PHONY: help setup update start stop restart logs build build-custom pull status clean purge validate env-check
-.PHONY: logs-n8n logs-homepage logs-bede logs-hae logs-owntracks
+.PHONY: logs-n8n logs-homepage logs-bede logs-owntracks
 .PHONY: setup-certs test-domain-access
 .PHONY: wireguard-status wireguard-install wireguard-setup wireguard-routing wireguard-test wireguard-peers wireguard-check
 .PHONY: ssl-setup ssl-renew-test
 .PHONY: ddns-setup ddns-update ddns-status
 .PHONY: bede-start bede-stop bede-restart bede-build bede-status
-.PHONY: hae-start hae-stop hae-restart hae-build hae-status
 .PHONY: location-start location-stop location-restart location-status
 
 # Compose file flags
@@ -18,7 +17,7 @@
 # - docker-compose.monitoring.yml: Monitoring stack (Prometheus, Grafana, Alertmanager, exporters)  
 # - docker-compose.dashboard.yml: Dashboard (Homepage, Homepage API)
 # - docker-compose.ai.yml: AI services (Bede, workspace-mcp)
-# - docker-compose.health.yml: Health services (hae-server, hae-influxdb)
+# - docker-compose.health.yml: REMOVED (replaced by data-ingest in docker-compose.ai.yml)
 # - docker-compose.location.yml: Location services (owntracks-recorder)
 #
 # NOTE: WireGuard is now a system service, not Docker service
@@ -28,7 +27,7 @@
 # COMPOSE_CORE: Core + Network + Monitoring (used for operations that shouldn't restart dashboard or AI)
 # COMPOSE: All services including dashboard and AI (default for most operations)
 COMPOSE_CORE := docker compose -f docker-compose.yml -f docker-compose.network.yml -f docker-compose.monitoring.yml
-COMPOSE := docker compose -f docker-compose.yml -f docker-compose.network.yml -f docker-compose.monitoring.yml -f docker-compose.dashboard.yml -f docker-compose.ai.yml -f docker-compose.health.yml -f docker-compose.location.yml
+COMPOSE := docker compose -f docker-compose.yml -f docker-compose.network.yml -f docker-compose.monitoring.yml -f docker-compose.dashboard.yml -f docker-compose.ai.yml -f docker-compose.location.yml
 
 # Default target - show help
 help:
@@ -60,15 +59,7 @@ help:
 	@echo "  make logs-n8n           - Show n8n logs only"
 	@echo "  make logs-homepage      - Show Homepage logs only"
 	@echo "  make logs-bede          - Show Bede logs only"
-	@echo "  make logs-hae           - Show hae-server and hae-influxdb logs only"
 	@echo "  make logs-owntracks     - Show OwnTracks Recorder logs only"
-	@echo ""
-	@echo "Health Auto Export (Individual Service Management):"
-	@echo "  make hae-build          - Build hae-server Docker image"
-	@echo "  make hae-start          - Start health services only"
-	@echo "  make hae-stop           - Stop health services only"
-	@echo "  make hae-restart        - Restart health services only"
-	@echo "  make hae-status         - Show health container status"
 	@echo ""
 	@echo "OwnTracks Location (Individual Service Management):"
 	@echo "  make location-start     - Start OwnTracks Recorder only"
@@ -134,7 +125,7 @@ build: validate
 # Build only custom services (faster rebuild during development)
 build-custom: validate
 	@echo "Building custom services from source..."
-	@$(COMPOSE) build homepage-api hae-server --progress=plain
+	@$(COMPOSE) build homepage-api --progress=plain
 	@echo "✓ Custom services built"
 
 # Pull latest images for services using pre-built images
@@ -160,7 +151,7 @@ setup: env-check validate wireguard-check
 	@$(COMPOSE) pull --ignore-pull-failures
 	@echo ""
 	@echo "Step 5/8: Building custom services from source..."
-	@$(COMPOSE) build homepage-api hae-server --progress=plain
+	@$(COMPOSE) build homepage-api --progress=plain
 	@echo ""
 	@echo "Step 6/8: Starting services (Docker Compose will create networks)..."
 	@$(COMPOSE) up -d
@@ -301,7 +292,7 @@ update: env-check validate wireguard-check
 	@$(COMPOSE) pull --ignore-pull-failures
 	@echo ""
 	@echo "Step 2/3: Building custom services from source..."
-	@$(COMPOSE) build homepage-api hae-server --progress=plain
+	@$(COMPOSE) build homepage-api --progress=plain
 	@echo ""
 	@echo "Step 3/3: Restarting services with new images..."
 	@$(COMPOSE) up -d
@@ -313,7 +304,7 @@ update: env-check validate wireguard-check
 # Start all services
 start: env-check wireguard-check
 	@echo "Starting all services..."
-	@mkdir -p data/bede/vault
+	@mkdir -p data/bede/vault data/bede/sqlite
 	@$(COMPOSE) up -d
 	@echo "✓ All services started"
 
@@ -347,9 +338,6 @@ logs-homepage:
 logs-bede:
 	@$(COMPOSE) logs -f bede
 
-logs-hae:
-	@$(COMPOSE) logs -f hae-server hae-influxdb
-
 logs-owntracks:
 	@$(COMPOSE) logs -f owntracks-recorder mosquitto
 
@@ -363,7 +351,7 @@ bede-build: env-check
 
 bede-start: env-check
 	@echo "Starting Bede..."
-	@mkdir -p data/bede/vault
+	@mkdir -p data/bede/vault data/bede/sqlite
 	@$(COMPOSE_AI) up -d
 	@echo "✓ Bede started"
 
@@ -379,32 +367,6 @@ bede-restart: env-check
 
 bede-status:
 	@$(COMPOSE_AI) ps
-
-# Health Auto Export services (docker-compose.health.yml)
-COMPOSE_HEALTH := docker compose -f docker-compose.health.yml
-
-hae-build: env-check
-	@echo "Building hae-server image..."
-	@$(COMPOSE_HEALTH) build --progress=plain
-	@echo "✓ hae-server image built"
-
-hae-start: env-check
-	@echo "Starting health services..."
-	@$(COMPOSE_HEALTH) up -d
-	@echo "✓ Health services started"
-
-hae-stop:
-	@echo "Stopping health services..."
-	@$(COMPOSE_HEALTH) down
-	@echo "✓ Health services stopped"
-
-hae-restart: env-check
-	@echo "Restarting health services..."
-	@$(COMPOSE_HEALTH) up -d
-	@echo "✓ Health services restarted"
-
-hae-status:
-	@$(COMPOSE_HEALTH) ps
 
 # Location services (docker-compose.location.yml)
 COMPOSE_LOCATION := docker compose -f docker-compose.location.yml
