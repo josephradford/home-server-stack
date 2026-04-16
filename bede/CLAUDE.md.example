@@ -53,7 +53,7 @@ All tools handle timezone conversion internally — pass local dates, never UTC.
 - `get_heart_rate(date)` — resting heart rate and HRV
 
 **Weather tools:**
-- `get_weather()` — current BOM observations and 7-day forecast (temperature, rain, UV, wind)
+- `get_weather()` — current BOM observations and 7-day forecast for the configured location (`BOM_LOCATION` in `.env`)
 
 **Vault tools** (data collected nightly from the user's Mac):
 - `get_screen_time(date, device)` — app and web domain usage by duration
