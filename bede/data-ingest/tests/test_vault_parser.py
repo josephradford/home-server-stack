@@ -245,6 +245,65 @@ Fixed daily-raw-collect script timing.
         assert rows == 0
 
 
+class TestBedeSessions:
+    def test_parses_sessions_into_rows(self):
+        md = """# Bede Sessions — 2026-04-14
+
+_1 session(s)_
+
+## app
+- **Time:** 14:00–14:30 (30m) | **Turns:** 12
+
+Joe asked about weather and calendar. Bede retrieved data from MCP tools.
+
+- **Conclusions:** Provided weather summary and upcoming events.
+- **Loose ends:** none
+"""
+        payload = {"date": "2026-04-14", "files": {"bede-sessions.md": md}}
+        rows = parse_vault_payload(payload)
+        assert rows == 1
+
+        db = get_db()
+        results = db.execute("SELECT * FROM bede_sessions WHERE date = '2026-04-14'").fetchall()
+        assert len(results) == 1
+        assert results[0]["project"] == "app"
+        assert results[0]["start_time"] == "2026-04-14 14:00"
+        assert results[0]["duration_min"] == 30
+        assert results[0]["turns"] == 12
+        assert "weather" in results[0]["summary"]
+
+    def test_replaces_on_re_ingest(self):
+        md1 = "## app\n- **Time:** 08:00–09:00 (60m) | **Turns:** 10\n\nFirst run."
+        md2 = "## app\n- **Time:** 10:00–11:00 (60m) | **Turns:** 20\n\nSecond run."
+        parse_vault_payload({"date": "2026-04-14", "files": {"bede-sessions.md": md1}})
+        parse_vault_payload({"date": "2026-04-14", "files": {"bede-sessions.md": md2}})
+
+        db = get_db()
+        results = db.execute("SELECT * FROM bede_sessions WHERE date = '2026-04-14'").fetchall()
+        assert len(results) == 1
+        assert "Second run" in results[0]["summary"]
+
+    def test_does_not_affect_claude_sessions(self):
+        """bede-sessions.md goes to bede_sessions table, not claude_sessions."""
+        payload = {
+            "date": "2026-04-14",
+            "files": {
+                "claude-sessions.md": "## project-a\n- **Time:** 08:00–09:00 (60m) | **Turns:** 10\n\nClaude work.",
+                "bede-sessions.md": "## app\n- **Time:** 14:00–15:00 (60m) | **Turns:** 5\n\nBede work.",
+            },
+        }
+        rows = parse_vault_payload(payload)
+        assert rows == 2
+
+        db = get_db()
+        claude = db.execute("SELECT * FROM claude_sessions").fetchall()
+        bede = db.execute("SELECT * FROM bede_sessions").fetchall()
+        assert len(claude) == 1
+        assert len(bede) == 1
+        assert claude[0]["project"] == "project-a"
+        assert bede[0]["project"] == "app"
+
+
 class TestMixedPayload:
     def test_multiple_files_in_one_payload(self):
         payload = {

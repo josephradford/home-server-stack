@@ -7,7 +7,7 @@
 .PHONY: wireguard-status wireguard-install wireguard-setup wireguard-routing wireguard-test wireguard-peers wireguard-check
 .PHONY: ssl-setup ssl-renew-test
 .PHONY: ddns-setup ddns-update ddns-status
-.PHONY: bede-start bede-stop bede-restart bede-build bede-status
+.PHONY: bede-start bede-stop bede-restart bede-build bede-status collect-bede-sessions
 .PHONY: location-start location-stop location-restart location-status
 
 # Compose file flags
@@ -73,6 +73,7 @@ help:
 	@echo "  make bede-stop          - Stop Bede AI services only"
 	@echo "  make bede-restart       - Restart Bede AI services only"
 	@echo "  make bede-status        - Show Bede AI container status"
+	@echo "  make collect-bede-sessions        - Collect Bede session summaries (DATE=YYYY-MM-DD)"
 	@echo ""
 	@echo "WireGuard VPN Management:"
 	@echo "  make wireguard-install  - Install WireGuard packages (one-time, requires sudo)"
@@ -377,6 +378,14 @@ bede-restart: env-check
 
 bede-status:
 	@$(COMPOSE_AI) ps
+
+# Collect Bede session summaries and POST to data-ingest
+# Runs automatically at 02:00 inside the Bede container via APScheduler.
+# This target is for manual/ad-hoc runs:
+#   make collect-bede-sessions                    # today
+#   make collect-bede-sessions DATE=2026-04-15    # specific date
+collect-bede-sessions:
+	@docker exec bede python3 collect_sessions.py $(DATE)
 
 # Location services (docker-compose.location.yml)
 COMPOSE_LOCATION := docker compose -f docker-compose.location.yml

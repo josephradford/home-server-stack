@@ -223,3 +223,32 @@ def get_claude_sessions(
         }
         for r in rows
     ]
+
+
+def get_bede_sessions(
+    date_str: str,
+    timezone: str | None = None,
+) -> list[dict]:
+    """Return Bede session summaries for a given local date."""
+    tz = timezone or DEFAULT_TZ
+    local_date = resolve_date(date_str, tz)
+    date_iso = local_date.isoformat()
+
+    db = get_db()
+    rows = db.execute(
+        "SELECT project, start_time, end_time, duration_min, turns, summary "
+        "FROM bede_sessions WHERE date = ? ORDER BY start_time",
+        (date_iso,),
+    ).fetchall()
+
+    return [
+        {
+            "project": r["project"],
+            "start_time": r["start_time"],
+            "end_time": r["end_time"],
+            "duration_minutes": r["duration_min"],
+            "turns": r["turns"],
+            "summary": r["summary"],
+        }
+        for r in rows
+    ]
