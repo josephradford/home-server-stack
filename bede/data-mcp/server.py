@@ -2,7 +2,7 @@
 
 from fastmcp import FastMCP
 
-from sources import health, location, vault
+from sources import health, location, vault, weather
 from sources.db import init_db
 
 mcp = FastMCP("personal-data")
@@ -224,6 +224,21 @@ def get_medications(
         timezone: Olson timezone name.
     """
     return health.get_medications(date, timezone=timezone)
+
+
+# ---------------------------------------------------------------------------
+# Weather tools
+# ---------------------------------------------------------------------------
+
+@mcp.tool()
+async def get_weather() -> dict:
+    """Return current weather observations and forecast for the configured location.
+
+    Includes current temperature, conditions, wind, humidity, and a 7-day
+    daily forecast with rain chance, UV index, and sunrise/sunset times.
+    Data sourced from the Australian Bureau of Meteorology.
+    """
+    return await weather.get_weather()
 
 
 # ---------------------------------------------------------------------------

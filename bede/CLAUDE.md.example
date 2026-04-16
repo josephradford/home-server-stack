@@ -52,6 +52,9 @@ All tools handle timezone conversion internally — pass local dates, never UTC.
 - `get_workouts(date)` — workout type, start time, duration, and calories
 - `get_heart_rate(date)` — resting heart rate and HRV
 
+**Weather tools:**
+- `get_weather()` — current BOM observations and 7-day forecast for the configured location (`BOM_LOCATION` in `.env`)
+
 **Vault tools** (data collected nightly from the user's Mac):
 - `get_screen_time(date, device)` — app and web domain usage by duration
 - `get_safari_history(date, device, domain_filter)` — Safari page visits
@@ -66,15 +69,6 @@ Default timezone is `Australia/Sydney`; pass `timezone=` to override.
 **Not available:** Medications and state of mind are not exported by Health Auto Export
 via the server sync protocol — neither the affiliated HAE server nor any known ingester
 supports these data types. They cannot be queried.
-
-## Homepage API
-
-Internal backend providing system metrics and integrations.
-
-**Connection:**
-- URL: `http://homepage-api:5000`
-- Weather: `GET /api/weather` — current conditions for the configured location
-- Health check: `GET /api/health`
 
 ## Google Account
 
