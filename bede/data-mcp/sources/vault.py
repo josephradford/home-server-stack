@@ -5,11 +5,32 @@ are ingested by data-ingest and queried here via SQL.
 """
 
 import logging
+from datetime import datetime
+from zoneinfo import ZoneInfo
 
 from .common import DEFAULT_TZ, resolve_date
 from .db import get_db
 
 logger = logging.getLogger(__name__)
+
+
+def _to_local(utc_str: str, tz: ZoneInfo) -> str:
+    """Convert a UTC datetime string to local ISO8601.
+
+    Handles both 'YYYY-MM-DD HH:MM:SS' (no offset, assumed UTC) and
+    'YYYY-MM-DDTHH:MM:SSZ' formats.
+    """
+    if not utc_str:
+        return utc_str
+    try:
+        cleaned = utc_str.replace("Z", "+00:00")
+        # Handle space-separated format without offset (assumed UTC)
+        if "T" not in cleaned and "+" not in cleaned and "-" not in cleaned[10:]:
+            cleaned = cleaned.replace(" ", "T") + "+00:00"
+        dt = datetime.fromisoformat(cleaned)
+        return dt.astimezone(tz).strftime("%Y-%m-%d %H:%M")
+    except (ValueError, TypeError):
+        return utc_str
 
 
 # ---------------------------------------------------------------------------
@@ -71,8 +92,9 @@ def get_safari_history(
     timezone: str | None = None,
 ) -> list[dict]:
     """Return Safari page visits for a given local date."""
-    tz = timezone or DEFAULT_TZ
-    local_date = resolve_date(date_str, tz)
+    tz_name = timezone or DEFAULT_TZ
+    tz = ZoneInfo(tz_name)
+    local_date = resolve_date(date_str, tz_name)
     date_iso = local_date.isoformat()
 
     db = get_db()
@@ -99,7 +121,7 @@ def get_safari_history(
 
     return [
         {
-            "visited_at": r["visited_at"],
+            "visited_at": _to_local(r["visited_at"], tz),
             "domain": r["domain"],
             "title": r["title"],
             "url": r["url"],
@@ -118,8 +140,9 @@ def get_youtube_history(
     timezone: str | None = None,
 ) -> list[dict]:
     """Return YouTube page visits for a given local date."""
-    tz = timezone or DEFAULT_TZ
-    local_date = resolve_date(date_str, tz)
+    tz_name = timezone or DEFAULT_TZ
+    tz = ZoneInfo(tz_name)
+    local_date = resolve_date(date_str, tz_name)
     date_iso = local_date.isoformat()
 
     db = get_db()
@@ -128,11 +151,11 @@ def get_youtube_history(
         (date_iso,),
     ).fetchall()
 
-    results = [{"visited_at": r["visited_at"], "title": r["title"], "url": r["url"]} for r in rows]
+    results = [{"visited_at": _to_local(r["visited_at"], tz), "title": r["title"], "url": r["url"]} for r in rows]
 
     # Fall back to Safari history filtered to YouTube if youtube_history is empty
     if not results:
-        safari = get_safari_history(date_str, device="both", domain_filter="youtube.com", timezone=tz)
+        safari = get_safari_history(date_str, device="both", domain_filter="youtube.com", timezone=tz_name)
         results = [{"visited_at": r["visited_at"], "title": r["title"], "url": r["url"]} for r in safari]
 
     return results
@@ -147,8 +170,9 @@ def get_podcasts(
     timezone: str | None = None,
 ) -> list[dict]:
     """Return podcast episodes played on a given local date."""
-    tz = timezone or DEFAULT_TZ
-    local_date = resolve_date(date_str, tz)
+    tz_name = timezone or DEFAULT_TZ
+    tz = ZoneInfo(tz_name)
+    local_date = resolve_date(date_str, tz_name)
     date_iso = local_date.isoformat()
 
     db = get_db()
@@ -162,7 +186,7 @@ def get_podcasts(
             "episode": r["episode"],
             "podcast": r["podcast"],
             "duration_minutes": round(r["duration_seconds"] / 60, 1) if r["duration_seconds"] else 0,
-            "played_at": r["played_at"],
+            "played_at": _to_local(r["played_at"], tz),
         }
         for r in rows
     ]
