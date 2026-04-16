@@ -380,10 +380,12 @@ bede-status:
 	@$(COMPOSE_AI) ps
 
 # Collect Bede session summaries and POST to data-ingest
-# Usage: make collect-bede-sessions [DATE=2026-04-15]
-# Nightly cron: 0 2 * * * cd /path/to/home-server-stack && make collect-bede-sessions >> /var/log/collect-bede-sessions.log 2>&1
-collect-bede-sessions: env-check
-	@DATE=$(DATE) ./scripts/bede/collect-bede-sessions.sh
+# Runs automatically at 02:00 inside the Bede container via APScheduler.
+# This target is for manual/ad-hoc runs:
+#   make collect-bede-sessions                    # today
+#   make collect-bede-sessions DATE=2026-04-15    # specific date
+collect-bede-sessions:
+	@docker exec bede python3 collect_sessions.py $(DATE)
 
 # Location services (docker-compose.location.yml)
 COMPOSE_LOCATION := docker compose -f docker-compose.location.yml

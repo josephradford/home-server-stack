@@ -213,11 +213,22 @@ async def reload(scheduler: AsyncIOScheduler):
             log.error("Invalid schedule for '%s': %s", name, e)
 
 
+async def _collect_sessions_job():
+    """Built-in nightly job: collect and POST Bede session summaries."""
+    from collect_sessions import collect_and_post
+    try:
+        await asyncio.to_thread(collect_and_post)
+    except Exception as e:
+        log.error("Session collection failed: %s", e)
+
+
 def setup_scheduler(bot, chat_id: int) -> AsyncIOScheduler:
     """Create and configure the scheduler. Call start() and await reload() after."""
     global _bot, _chat_id
     _bot = bot
     _chat_id = chat_id
+
+    tz = ZoneInfo(TIMEZONE)
 
     scheduler = AsyncIOScheduler()
     scheduler.add_job(
@@ -228,4 +239,12 @@ def setup_scheduler(bot, chat_id: int) -> AsyncIOScheduler:
         id="reload_watcher",
         name="Task reload watcher",
     )
+    scheduler.add_job(
+        _collect_sessions_job,
+        CronTrigger(hour=2, minute=0, timezone=tz),
+        id="collect_bede_sessions",
+        name="Collect Bede session summaries",
+        replace_existing=True,
+    )
+    log.info("Built-in job: collect_bede_sessions scheduled at 02:00 %s", TIMEZONE)
     return scheduler
