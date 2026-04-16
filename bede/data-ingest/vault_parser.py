@@ -159,8 +159,10 @@ def _ingest_podcasts(db: sqlite3.Connection, date: str, content: str) -> int:
     return count
 
 
-def _ingest_claude_sessions(db: sqlite3.Connection, date: str, content: str) -> int:
-    """Parse claude-sessions.md into individual session rows.
+def _parse_session_sections(content: str, date: str) -> list[tuple]:
+    """Parse session markdown into (project, start_time, end_time, duration_min, turns, summary) tuples.
+
+    Shared by claude-sessions.md and bede-sessions.md — identical markdown format.
 
     Expected format per session:
         ## Project Name
@@ -173,14 +175,10 @@ def _ingest_claude_sessions(db: sqlite3.Connection, date: str, content: str) -> 
     import re
 
     if not content.strip():
-        return 0
+        return []
 
-    # Delete existing sessions for this date (full daily replacement)
-    db.execute("DELETE FROM claude_sessions WHERE date = ?", (date,))
-
-    # Split into sections by ## headings
     sections = re.split(r"^## ", content, flags=re.MULTILINE)
-    count = 0
+    results = []
 
     for section in sections:
         section = section.strip()
@@ -190,9 +188,8 @@ def _ingest_claude_sessions(db: sqlite3.Connection, date: str, content: str) -> 
         lines = section.split("\n")
         project = lines[0].strip()
         if not project or project.startswith("#"):
-            continue  # skip the title line "# Claude Code Sessions — ..."
+            continue
 
-        # Parse time and turns from the metadata line
         start_time = end_time = None
         duration_min = turns = None
 
@@ -205,20 +202,16 @@ def _ingest_claude_sessions(db: sqlite3.Connection, date: str, content: str) -> 
                 time_str = time_match.group(1).strip()
                 turns = int(time_match.group(2))
 
-                # Extract duration from parentheses
                 dur_match = re.search(r"\((\d+)m\)", time_str)
                 if dur_match:
                     duration_min = int(dur_match.group(1))
 
-                # Parse start–end times
-                # Format: "HH:MM–HH:MM" or "YYYY-MM-DD HH:MM–YYYY-MM-DD HH:MM"
                 # Split on en-dash (–) only, not hyphen (-) which appears in dates
                 time_range = re.sub(r"\s*\(\d+m\)", "", time_str).strip()
                 parts = time_range.split("–", 1)
                 if len(parts) == 2:
                     start_raw = parts[0].strip()
                     end_raw = parts[1].strip()
-                    # If just HH:MM, prepend the date
                     if len(start_raw) <= 5:
                         start_time = f"{date} {start_raw}"
                     else:
@@ -229,7 +222,6 @@ def _ingest_claude_sessions(db: sqlite3.Connection, date: str, content: str) -> 
                         end_time = end_raw
                 break
 
-        # Everything after the metadata line is the summary
         summary_lines = []
         past_metadata = False
         for line in lines[1:]:
@@ -243,6 +235,21 @@ def _ingest_claude_sessions(db: sqlite3.Connection, date: str, content: str) -> 
                 summary_lines.append(line)
         summary = "\n".join(summary_lines).strip() or None
 
+        results.append((project, start_time, end_time, duration_min, turns, summary))
+
+    return results
+
+
+def _ingest_claude_sessions(db: sqlite3.Connection, date: str, content: str) -> int:
+    """Parse claude-sessions.md into individual session rows."""
+    sessions = _parse_session_sections(content, date)
+    if not sessions:
+        return 0
+
+    db.execute("DELETE FROM claude_sessions WHERE date = ?", (date,))
+
+    count = 0
+    for project, start_time, end_time, duration_min, turns, summary in sessions:
         try:
             db.execute(
                 "INSERT OR IGNORE INTO claude_sessions (date, project, start_time, end_time, duration_min, turns, summary) VALUES (?, ?, ?, ?, ?, ?, ?)",
@@ -251,6 +258,28 @@ def _ingest_claude_sessions(db: sqlite3.Connection, date: str, content: str) -> 
             count += 1
         except Exception as e:
             log.warning("Failed to insert claude session %s: %s", project, e)
+
+    return count
+
+
+def _ingest_bede_sessions(db: sqlite3.Connection, date: str, content: str) -> int:
+    """Parse bede-sessions.md into individual session rows."""
+    sessions = _parse_session_sections(content, date)
+    if not sessions:
+        return 0
+
+    db.execute("DELETE FROM bede_sessions WHERE date = ?", (date,))
+
+    count = 0
+    for project, start_time, end_time, duration_min, turns, summary in sessions:
+        try:
+            db.execute(
+                "INSERT OR IGNORE INTO bede_sessions (date, project, start_time, end_time, duration_min, turns, summary) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                (date, project, start_time, end_time, duration_min, turns, summary),
+            )
+            count += 1
+        except Exception as e:
+            log.warning("Failed to insert bede session %s: %s", project, e)
 
     return count
 
@@ -297,6 +326,11 @@ def parse_vault_payload(payload: dict) -> int:
 
         elif filename == "claude-sessions.md":
             n = _ingest_claude_sessions(db, date, content)
+            log.info("  %s: %d row(s)", filename, n)
+            total_rows += n
+
+        elif filename == "bede-sessions.md":
+            n = _ingest_bede_sessions(db, date, content)
             log.info("  %s: %d row(s)", filename, n)
             total_rows += n
 

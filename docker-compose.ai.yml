@@ -15,6 +15,8 @@ services:
       # OAuth credentials — must exist on host before starting.
       # To sync from Mac: security find-generic-password -s "Claude Code-credentials" -w | ssh user@SERVER_IP "cat > ~/.claude/.credentials.json"
       - ${HOME}/.claude/.credentials.json:/home/bede/.claude/.credentials.json
+      # Claude session files — persisted so collect-bede-sessions.sh can summarise them
+      - ./data/bede/claude-projects:/home/bede/.claude/projects
       # Obsidian vault (populated by entrypoint when VAULT_REPO is set)
       - ./data/bede/vault:/vault
       # SSH key for private vault repos (optional — leave VAULT_SSH_KEY_PATH blank for HTTPS PAT)

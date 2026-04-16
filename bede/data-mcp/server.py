@@ -100,6 +100,23 @@ def get_claude_sessions(
     return vault.get_claude_sessions(date, timezone=timezone)
 
 
+@mcp.tool()
+def get_bede_sessions(
+    date: str,
+    timezone: str | None = None,
+) -> list[dict]:
+    """Return Bede (Telegram AI assistant) session summaries for a given local date.
+
+    Each session includes project name, start/end times, duration, turn count,
+    and an AI-generated summary with conclusions and loose ends.
+
+    Args:
+        date: Local date — 'YYYY-MM-DD', 'today', or 'yesterday'.
+        timezone: Olson timezone name.
+    """
+    return vault.get_bede_sessions(date, timezone=timezone)
+
+
 # ---------------------------------------------------------------------------
 # Live API tools — location
 # ---------------------------------------------------------------------------
