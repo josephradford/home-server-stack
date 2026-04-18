@@ -181,25 +181,19 @@ make status   # Check all service health
 
 ### AI Services Management (Bede Assistant)
 
-AI services can be managed separately from the main stack:
+Bede runs as a single prebuilt container from `ghcr.io/josephradford/bede`. Source code is in the separate `josephradford/bede` repo.
 
 ```bash
-# Start AI services only (includes Bede and workspace-mcp)
+# Pull latest Bede image
+make bede-pull
+
+# Start/stop/restart Bede
 make bede-start
-
-# Stop AI services only
 make bede-stop
-
-# Restart AI services only
 make bede-restart
 
-# Build AI services from source
-make bede-build
-
-# Check AI services status
+# Check status and logs
 make bede-status
-
-# View AI service logs
 make logs-bede
 ```
 
@@ -237,7 +231,7 @@ The stack uses **five compose files** organized by logical function:
 - `docker-compose.network.yml` - Network & Security (Traefik, Fail2ban) - infrastructure layer
 - `docker-compose.monitoring.yml` - Monitoring stack (Prometheus, Grafana, Alertmanager, exporters)
 - `docker-compose.dashboard.yml` - Dashboard (Homepage, Homepage API)
-- `docker-compose.ai.yml` - AI services (Bede assistant, workspace-mcp)
+- `docker-compose.ai.yml` - AI services (Bede — prebuilt image from `ghcr.io/josephradford/bede`)
 
 **Note on WireGuard VPN**: WireGuard is installed as a **system service** (not Docker) to ensure VPN access remains available when Docker services are restarted or stopped. See "WireGuard VPN Management" section above.
 
