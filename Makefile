@@ -7,7 +7,7 @@
 .PHONY: wireguard-status wireguard-install wireguard-setup wireguard-routing wireguard-test wireguard-peers wireguard-check
 .PHONY: ssl-setup ssl-renew-test
 .PHONY: ddns-setup ddns-update ddns-status
-.PHONY: bede-start bede-stop bede-restart bede-build bede-status collect-bede-sessions
+.PHONY: bede-start bede-stop bede-restart bede-pull bede-status collect-bede-sessions
 .PHONY: location-start location-stop location-restart location-status
 
 # Compose file flags
@@ -68,7 +68,7 @@ help:
 	@echo "  make location-status    - Show OwnTracks container status"
 	@echo ""
 	@echo "Bede AI Assistant (Individual Service Management):"
-	@echo "  make bede-build         - Build Bede Docker image"
+	@echo "  make bede-pull          - Pull latest Bede image from GHCR"
 	@echo "  make bede-start         - Start Bede AI services only"
 	@echo "  make bede-stop          - Stop Bede AI services only"
 	@echo "  make bede-restart       - Restart Bede AI services only"
@@ -355,14 +355,14 @@ logs-owntracks:
 # Bede AI Assistant (docker-compose.ai.yml)
 COMPOSE_AI := docker compose -f docker-compose.ai.yml
 
-bede-build: env-check
-	@echo "Building Bede images..."
-	@$(COMPOSE_AI) build --progress=plain
-	@echo "✓ Bede images built"
+bede-pull: env-check
+	@echo "Pulling Bede image..."
+	@docker pull ghcr.io/josephradford/bede:latest
+	@echo "✓ Bede image pulled"
 
 bede-start: env-check
 	@echo "Starting Bede..."
-	@mkdir -p data/bede/vault data/bede/sqlite
+	@mkdir -p data/bede/vault data/bede/sqlite data/bede/workspace-mcp/credentials data/bede/workspace-mcp/oauth-proxy data/bede/claude-projects
 	@$(COMPOSE_AI) up -d
 	@echo "✓ Bede started"
 
