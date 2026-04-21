@@ -244,14 +244,7 @@
   - AI Services:
       - Bede:
           icon: mdi-robot
-          description: Personal AI assistant (Telegram)
+          description: Personal AI assistant with data & workspace services
           container: bede
-          server: my-docker
-          showStats: true
-
-      - Workspace MCP:
-          icon: mdi-google
-          description: Google Workspace MCP server
-          container: workspace-mcp
           server: my-docker
           showStats: true
