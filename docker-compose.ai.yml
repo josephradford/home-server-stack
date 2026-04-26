@@ -6,7 +6,7 @@ services:
     env_file: .env
     environment:
       - CLAUDE_WORKDIR=/app
-      - SESSION_TIMEOUT_MINUTES=10
+      - SESSION_TIMEOUT_MINUTES=120
       - ANTHROPIC_API_KEY=
       - SQLITE_DB_PATH=/data/sqlite/bede.db
       - INGEST_URL=http://localhost:8001/ingest/vault
@@ -22,6 +22,7 @@ services:
       - WORKSPACE_MCP_OAUTH_PROXY_STORAGE_BACKEND=disk
       - WORKSPACE_MCP_OAUTH_PROXY_DISK_DIRECTORY=/data/workspace-mcp/oauth-proxy
       - MCP_SINGLE_USER_MODE=true
+      - USER_GOOGLE_EMAIL=${USER_GOOGLE_EMAIL}
     volumes:
       # Persona file (personal, not committed — copy from CLAUDE.md.example in bede repo)
       - ./data/bede/CLAUDE.md:/app/CLAUDE.md:ro
