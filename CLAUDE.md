@@ -61,9 +61,9 @@ Uses certbot with Gandi DNS plugin because Traefik v3.2's Lego library has a bug
 Runs as a **system service** (`wg-quick@wg0`), not Docker — stays up when Docker restarts. Split tunneling only routes home network and VPN subnet traffic. **Do not use `0.0.0.0/0` for AllowedIPs** unless full tunneling is explicitly required.
 
 ### Security Model (Defense in Depth)
-1. **UFW firewall** — default deny, allow SSH/HTTP/HTTPS/WireGuard + local/VPN subnets
+1. **UFW firewall** — default deny, allow SSH/HTTP/HTTPS/WireGuard + local/VPN subnets (`scripts/system/setup-firewall.sh`)
 2. **Traefik middleware** — `admin-secure` chain: RFC1918 IP whitelist + security headers + rate limiting on all admin UIs; `webhook-secure` chain for public endpoints
-3. **Fail2ban** — auto-bans on auth failures, scanner patterns, rate limit abuse (config in `config/fail2ban/`)
+3. **Fail2ban** — two layers: system-level sshd jail (`scripts/system/setup-fail2ban.sh`, whitelists local/VPN subnets) + Docker-level for Traefik auth failures, scanner patterns, rate limit abuse (`config/fail2ban/`)
 4. **Prometheus alerts** — monitors 401s, 404s, 429s, 5xx errors (rules in `monitoring/prometheus/alert_rules.yml`)
 
 ### Data Persistence
