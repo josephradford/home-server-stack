@@ -58,7 +58,9 @@ sudo ufw default allow outgoing
 echo ""
 echo -e "${GREEN}Step 2/7: Allowing SSH (port 22)...${NC}"
 sudo ufw allow 22/tcp comment 'SSH'
-sudo ufw limit ssh/tcp comment 'SSH rate limiting'
+# SSH brute-force protection handled by system fail2ban (setup-fail2ban.sh)
+# which supports ignoreip for local/VPN subnets. UFW limit is too blunt
+# (hardcoded 6 conns/30s, no whitelist).
 
 echo ""
 echo -e "${GREEN}Step 3/7: Allowing WireGuard VPN (port ${WIREGUARD_PORT})...${NC}"
@@ -90,7 +92,7 @@ echo -e "${GREEN}Current UFW Status:${NC}"
 sudo ufw status verbose
 echo ""
 echo -e "${YELLOW}Security Notes:${NC}"
-echo "  • SSH access is rate-limited to prevent brute force"
+echo "  • SSH brute-force protection via system fail2ban (run setup-fail2ban.sh)"
 echo "  • Only WireGuard (UDP ${WIREGUARD_PORT}) is exposed to the internet"
 echo "  • HTTP/HTTPS (80/443) are open for Traefik reverse proxy"
 echo "  • Local network and VPN clients have full access"

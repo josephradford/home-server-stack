@@ -37,6 +37,7 @@ help:
 	@echo "  ./scripts/system/install-docker-official.sh       - Replace snap Docker with official Docker CE"
 	@echo "  ./scripts/system/setup-user-permissions.sh        - Add user to docker group (requires logout)"
 	@echo "  ./scripts/system/setup-firewall.sh               - Configure UFW firewall rules"
+	@echo "  ./scripts/system/setup-fail2ban.sh               - Install system fail2ban for SSH protection"
 	@echo ""
 	@echo "Setup & Deployment:"
 	@echo "  make setup              - First time setup (core + monitoring + dashboard)"
