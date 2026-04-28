@@ -14,8 +14,8 @@ Manage the preference files that drive Bede's Deal Scout.
 
 ## Preference files
 
-All files live in the Obsidian vault at:
-`/Users/joeradford/Library/Mobile Documents/iCloud~md~obsidian/Documents/JoeVault/Bede/`
+Read CLAUDE.local.md for the Obsidian vault path. The preference files live
+in the `Bede/` subdirectory of the vault:
 
 | File | Scout category |
 |------|---------------|
