@@ -1,0 +1,43 @@
+# CLAUDE.local.md
+
+Cross-project context for working across your ecosystem from within home-server-stack. These paths are machine-specific and must not be committed.
+
+Copy this file to `CLAUDE.local.md` and fill in your paths.
+
+## Paths
+
+| Name | Path |
+|------|------|
+| Bede repo | `/path/to/bede` |
+| Dotfiles repo | `/path/to/dotfiles` |
+| Obsidian vault | `/path/to/your/obsidian/vault` |
+| Bede preferences | `<vault>/Bede` |
+
+## Bede Repo
+
+Standalone repo for the Bede AI assistant. Contains the Claude CLI entrypoint, data-ingest server, data-mcp server, and CLAUDE.md.example template. Deployed as a prebuilt GHCR image referenced by `docker-compose.ai.yml`.
+
+## Dotfiles
+
+Scripts and launchd agents that collect data from the Mac and push it to Bede's data pipeline on the home server.
+
+Key scripts:
+- `scripts/daily-raw-collect.sh` — collects screen time, safari history, podcasts; POSTs to data-ingest
+- `scripts/claude-sessions.py` — summarises Claude Code sessions for the daily journal
+- `scripts/obsidian-git-backup.sh` — syncs Obsidian vault to git every 2 minutes
+- `scripts/bede-db.sh` — downloads Bede's SQLite DB from server for local inspection
+
+Launchd agents are in `launchd/` and symlinked to `~/Library/LaunchAgents/` via `install.sh`.
+
+## Obsidian Vault (PARA)
+
+Your PARA-organized Obsidian vault. Bede reads from and writes to this vault when deployed on the server (via git clone). Locally, it syncs via iCloud and the `obsidian-git-backup.sh` launchd job.
+
+## Bede Scheduling & Preferences
+
+Lives in the `Bede/` subdirectory of the vault. Contains:
+- `scheduled-tasks.md` — APScheduler job definitions that Bede runs on the server
+- `digest-sources.md` — sources for Bede's daily digest
+- Preference files (clothing, events, staples, vacuum, camping gear, etc.)
+
+When modifying Bede's scheduling or preferences, edit these vault files. They sync to the server via the vault git pipeline (Mac push every 2 min → server pull on Bede container start and vault task reload).
