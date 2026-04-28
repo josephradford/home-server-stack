@@ -13,6 +13,7 @@ services:
       - INGEST_WRITE_TOKEN=${INGEST_WRITE_TOKEN}
       - DEFAULT_TIMEZONE=${TIMEZONE:-Australia/Sydney}
       - OWNTRACKS_URL=http://owntracks-recorder:8083
+      - HOMEPAGE_API_URL=http://homepage-api:5000
       - OWNTRACKS_USER=${OWNTRACKS_USER}
       - OWNTRACKS_DEVICE=${OWNTRACKS_DEVICE}
       - GOOGLE_OAUTH_CLIENT_ID=${GOOGLE_OAUTH_CLIENT_ID}
