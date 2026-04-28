@@ -2,13 +2,19 @@
 name: bede-deploy
 description: >
   Commit, PR, merge, wait for GHCR build, and deploy Bede changes to the
-  server. Use when changes have been made in the bede repo and need to be
-  shipped.
+  server. Use whenever changes have been made in the bede repo
+  (/Users/joeradford/dev/bede) and need to be shipped — including "deploy
+  bede", "ship the bot changes", "push bede to the server", or any request
+  to get bede repo code onto production.
 ---
 
 # Bede Deploy Skill
 
 End-to-end deployment of bede repo changes to the home server.
+
+The bede repo lives at `/Users/joeradford/dev/bede`. The GitHub remote is
+`josephradford/bede`. The server deploys from GHCR images built by GitHub
+Actions on merge to main.
 
 ## Prerequisites
 
@@ -24,18 +30,16 @@ git -C /Users/joeradford/dev/bede log --oneline -5
 git -C /Users/joeradford/dev/bede diff --stat
 ```
 
-If there are uncommitted changes, ask the user if they want to commit them.
-If there are no changes and HEAD is already on main with nothing ahead of
-origin, tell the user there's nothing to deploy.
+Determine the current situation:
+- **On main, no changes:** nothing to deploy — tell the user.
+- **On main, uncommitted changes:** create a feature branch, then commit.
+- **On a feature branch, uncommitted changes:** commit to the current branch.
+- **On a feature branch, clean:** check if there's already a PR open for it.
 
-## Step 2 — Create branch and commit (if needed)
+## Step 2 — Commit (if needed)
 
-If on `main` with uncommitted changes, create a feature branch:
-```bash
-git -C /Users/joeradford/dev/bede checkout -b feat/<descriptive-name>
-```
-
-Stage and commit the changes. Follow the repo's commit style.
+Stage and commit the changes. Follow the repo's commit style (conventional
+commits: `feat:`, `fix:`, `docs:`).
 
 ## Step 3 — Push and create PR
 
@@ -43,8 +47,16 @@ Stage and commit the changes. Follow the repo's commit style.
 git -C /Users/joeradford/dev/bede push -u origin <branch>
 ```
 
-Create a PR using `gh pr create --repo josephradford/bede`. Include a summary
-of what changed and a test plan.
+Check for an existing PR first:
+```bash
+gh pr list --repo josephradford/bede --head <branch>
+```
+
+If a PR already exists, show it and ask if the user wants to update it or
+merge it. If no PR exists, create one:
+```bash
+gh pr create --repo josephradford/bede --title "<title>" --body "<body>"
+```
 
 ## Step 4 — Merge the PR
 
@@ -55,13 +67,12 @@ gh pr merge <number> --repo josephradford/bede --squash --delete-branch
 
 ## Step 5 — Wait for GHCR image build
 
-Check the GitHub Actions build status:
+Use `gh run watch` which blocks until the run completes:
 ```bash
-gh run list --repo josephradford/bede --limit 1 --json status,conclusion,headSha
+gh run watch --repo josephradford/bede $(gh run list --repo josephradford/bede --limit 1 --json databaseId --jq '.[0].databaseId')
 ```
 
-Poll every 30 seconds until the build completes. If it fails, show the logs
-and stop.
+If the build fails, show the logs and stop.
 
 ## Step 6 — Deploy to server
 

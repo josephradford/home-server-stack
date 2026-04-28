@@ -4,7 +4,8 @@ description: >
   Add, remove, or update tracked items in Bede's Deal Scout preference files
   (clothing, camping gear, groceries, vacuum, events). Use when the user wants
   to track a new product, change a deal threshold, or remove something from
-  the scout.
+  the scout. Also triggers for "add X to the scout", "stop tracking Y", or
+  "change the price target for Z".
 ---
 
 # Bede Scout Config Skill
@@ -23,6 +24,10 @@ All files live in the Obsidian vault at:
 | `clothing-preferences.md` | Clothing |
 | `camping-gear.md` | Camping Gear |
 | `event-preferences.md` | Events |
+
+Search methodology and shared rules are in `scout-rules.md` — read it if the
+user's request involves how items are searched (e.g. which sites to check,
+stock verification rules).
 
 ## Step 1 — Identify the category
 
@@ -52,8 +57,8 @@ Add retailer URLs if the user provides them.
 ## Step 4 — Confirm
 
 Show the user the change you made (the specific lines added/modified) and
-which file was updated. Remind them the vault will sync to the server
-automatically.
+which file was updated. The vault syncs to the server via the
+obsidian-git-backup launchd job every 2 minutes when the MacBook is open.
 
 ## Rules
 
