@@ -31,7 +31,7 @@ Coaching means ongoing, not reactive. Bede should check in regularly, notice whe
 
 The coaching relationship must be configurable — The user controls the tone, the boundaries, and what topics are in scope. If the user says "back off on this topic," Bede must respect that immediately and durably.
 
-**Success looks like:** The user feels like someone is genuinely watching out for him and will say something honest when patterns emerge — not just echoing data back.
+**Success looks like:** The user feels like someone is genuinely watching out for them and will say something honest when patterns emerge — not just echoing data back.
 
 **Measurable indicator:** Bede surfaces a concern about a negative pattern within 48 hours of the pattern emerging (e.g., 3 consecutive poor sleeps flagged by day 4).
 
@@ -41,7 +41,7 @@ The coaching relationship must be configurable — The user controls the tone, t
 
 Bede must know the user's current goals (professional certifications, hobbies like camping/piano/reading, fitness targets, career direction) and track progress toward them. It must notice when effort is drifting — too much mindless device time, skipped practice sessions, stalled projects — and call it out.
 
-Accountability means measuring reality against intention. Bede must know what the user said he would do (goals, weekly schedule) and what he actually did (screen time, media consumption, activity, location, calendar, task completion, vault edits). The gap between those is what matters.
+Accountability means measuring reality against intention. Bede must know what the user said they would do (goals, weekly schedule) and what they actually did (screen time, media consumption, activity, location, calendar, task completion, vault edits). The gap between those is what matters.
 
 This is closely linked to R1 — poor mental health often causes goal drift, and goal drift often worsens mental health. Bede must understand this connection and not treat them as independent.
 
@@ -53,11 +53,11 @@ This is closely linked to R1 — poor mental health often causes goal drift, and
 
 **I want to stay current in my professional and personal interests without having to go looking.**
 
-Bede must curate and deliver relevant content from the user's areas of interest — professional (software engineering, AI, cloud) and personal (music, camping, whatever The user defines). The user should not have to seek out this information himself; Bede should bring it to him in a digestible format.
+Bede must curate and deliver relevant content from the user's areas of interest — professional (software engineering, AI, cloud) and personal (music, camping, whatever The user defines). The user should not have to seek out this information; Bede should bring it to them in a digestible format.
 
 The sources, topics, and delivery cadence must be configurable by the user. Bede must be able to distinguish signal from noise — a curated summary is valuable, a firehose is not.
 
-**Success looks like:** The user learns about things that matter to him without opening a browser to go looking.
+**Success looks like:** The user learns about things that matter to them without opening a browser to go looking.
 
 **Measurable indicator:** The user receives at least one curated content delivery per configured topic per week.
 
@@ -73,7 +73,7 @@ If the user does not respond to the interactive prompt, Bede retries up to three
 
 **Success looks like:** The user starts each day and week knowing exactly what's ahead, with no unprocessed email creating background anxiety.
 
-**Measurable indicator:** The user receives a day briefing before his day starts on 90%+ of weekdays.
+**Measurable indicator:** The user receives a day briefing before their day starts on 90%+ of weekdays.
 
 ### R5. Personal knowledge base
 
@@ -83,7 +83,7 @@ Bede must integrate with the user's personal knowledge base (currently an Obsidi
 
 "Grow naturally" means low friction — capturing a thought should take seconds, not minutes of formatting and filing. Bede should suggest where to file things and how to organise them, but the user makes the final decision. Bede does not file autonomously.
 
-"Easy to search" means the user can ask Bede a question and get an answer that draws on his own notes, not just the AI's training data. The knowledge base must be the first place Bede looks for personal context.
+"Easy to search" means the user can ask Bede a question and get an answer that draws on their own notes, not just the model's training data. The knowledge base must be the first place Bede looks for personal context.
 
 The knowledge base must be stored as files the user owns and controls (Markdown preferred). It must be accessible from multiple devices (Mac, iPhone) and must not depend on any single vendor's sync service for its integrity.
 
@@ -101,7 +101,7 @@ Monitoring must run on a configurable schedule. Reports should only surface when
 
 Bede must be able to browse the web to check prices and availability, since many retailers don't offer APIs.
 
-**Success looks like:** The user gets timely alerts about deals he cares about without manually checking websites.
+**Success looks like:** The user gets timely alerts about deals they care about without manually checking websites.
 
 **Measurable indicator:** Price alerts are delivered within 24 hours of a price change on a monitored item.
 
@@ -115,7 +115,7 @@ Multi-turn conversations must be supported — Bede must remember what was discu
 
 This must not be limited to any specific domain. If the user asks about cooking, travel planning, or how to fix a shelf, Bede should help.
 
-**Success looks like:** The user uses Bede instead of a generic chat assistant because the answers are better — they account for his schedule, his health, his goals, and his history.
+**Success looks like:** The user uses Bede instead of a generic chat assistant because the answers are better — they account for their schedule, their health, their goals, and their history.
 
 **Measurable indicator:** Bede incorporates personal context (calendar, health, goals, or vault) in responses where relevant, without the user having to ask for it.
 
@@ -125,11 +125,11 @@ This must not be limited to any specific domain. If the user asks about cooking,
 
 Bede must support voice input and voice output as a secondary interaction mode. The primary use case is hands-free situations: driving, walking, cooking. The user speaks a message, Bede responds with audio. Walkie-talkie style (speak, wait, receive response) is acceptable — real-time phone-call-style conversation is not required.
 
-Voice must support the same capabilities as text — it's an alternative input/output mode, not a separate feature set. If the user can ask it in text, he can ask it by voice.
+Voice must support the same capabilities as text — it's an alternative input/output mode, not a separate feature set. If the user can ask it in text, they can ask it by voice.
 
 Creating tasks, capturing thoughts, and asking quick questions are the primary voice use cases.
 
-**Success looks like:** The user can interact with Bede while driving or doing chores, without reaching for his phone to type.
+**Success looks like:** The user can interact with Bede while driving or doing chores, without reaching for their phone to type.
 
 ### R9. Memory and continuity
 
@@ -145,7 +145,7 @@ What Bede remembers must be transparent — The user should be able to see and e
 
 When Bede gets something wrong based on its memory, The user must be able to correct it, and the correction must stick. Bede must not repeat a corrected mistake.
 
-**Success looks like:** Bede feels like it knows the user — not because it's guessing, but because it genuinely remembers past conversations, corrections, and context. The user never has to re-explain something he's already told Bede.
+**Success looks like:** Bede feels like it knows the user — not because it's guessing, but because it genuinely remembers past conversations, corrections, and context. The user never has to re-explain something they've already told Bede.
 
 ---
 
@@ -155,11 +155,11 @@ These are non-negotiable boundaries the system must operate within.
 
 ### C1. Own hardware
 
-The system must run on hardware the user owns and controls, in his home. No cloud-hosted compute for the assistant itself. The server runs Linux or Windows. Cloud services may be used for specific functions (e.g., AI inference, DNS, email APIs) but the assistant's core logic, data, and state must reside on the user's hardware.
+The system must run on hardware the user owns and controls, in their home. No cloud-hosted compute for the assistant itself. The server runs Linux or Windows. Cloud services may be used for specific functions (e.g., AI inference, DNS, email APIs) but the assistant's core logic, data, and state must reside on the user's hardware.
 
 ### C2. Data sovereignty
 
-All personal data — health, location, screen time, calendar, email content, conversation history, knowledge base — must be stored on the user's own infrastructure. Data may transit third-party services for processing (e.g., sending a prompt to Claude for inference) but must not be stored by third parties beyond what is necessary for the service to function. The user must be able to delete all his data by deleting files on his own server.
+All personal data — health, location, screen time, calendar, email content, conversation history, knowledge base — must be stored on the user's own infrastructure. Data may transit third-party services for processing (e.g., sending a prompt to Claude for inference) but must not be stored by third parties beyond what is necessary for the service to function. The user must be able to delete all their data by deleting files on their own server.
 
 ### C3. Claude subscription
 
