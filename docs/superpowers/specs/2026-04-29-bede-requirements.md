@@ -79,7 +79,7 @@ If the user does not respond to the interactive prompt, Bede retries up to three
 
 **I want my personal knowledge base to grow naturally and be easy to search.**
 
-Bede must integrate with the user's personal knowledge base (currently an Obsidian vault organised using the PARA method). It must be able to read from and write to the knowledge base. Writing includes: journal entries, meeting notes, captured ideas, task outcomes, and any other structured or unstructured content the user asks it to record.
+Bede must integrate with the user's personal knowledge base. It must be able to read from and write to the knowledge base. Writing includes: journal entries, meeting notes, captured ideas, task outcomes, and any other structured or unstructured content the user asks it to record.
 
 "Grow naturally" means low friction — capturing a thought should take seconds, not minutes of formatting and filing. Bede should suggest where to file things and how to organise them, but the user makes the final decision. Bede does not file autonomously.
 
@@ -91,21 +91,7 @@ The knowledge base must be stored as files the user owns and controls (Markdown 
 
 **Measurable indicator:** The user can capture a thought in under 10 seconds (voice or text). Bede can answer a question using vault content when relevant notes exist.
 
-### R6. Deal and price monitoring
-
-**I want deals and prices monitored on things I care about.**
-
-Bede must track prices and availability for products and events the user specifies. Categories include clothing, household staples, outdoor gear, event tickets, and whatever the user adds in future. The user defines what to watch, what retailers to check, and what constitutes a deal worth reporting.
-
-Monitoring must run on a configurable schedule. Reports should only surface when something actionable has changed — a price drop, a restock, a new event announced. No-change reports are noise.
-
-Bede must be able to browse the web to check prices and availability, since many retailers don't offer APIs.
-
-**Success looks like:** The user gets timely alerts about deals they care about without manually checking websites.
-
-**Measurable indicator:** Price alerts are delivered within 24 hours of a price change on a monitored item.
-
-### R7. Conversational assistant
+### R6. Conversational assistant
 
 **I want a conversational assistant I can ask anything, with full context on my life.**
 
@@ -119,7 +105,7 @@ This must not be limited to any specific domain. If the user asks about cooking,
 
 **Measurable indicator:** Bede incorporates personal context (calendar, health, goals, or vault) in responses where relevant, without the user having to ask for it.
 
-### R8. Voice interaction
+### R7. Voice interaction
 
 **I want to talk to Bede by voice, and have Bede talk back — especially on the go.**
 
@@ -131,7 +117,7 @@ Creating tasks, capturing thoughts, and asking quick questions are the primary v
 
 **Success looks like:** The user can interact with Bede while driving or doing chores, without reaching for their phone to type.
 
-### R9. Memory and continuity
+### R8. Memory and continuity
 
 **Bede must remember what matters across conversations and over time.**
 
@@ -146,6 +132,20 @@ What Bede remembers must be transparent — The user should be able to see and e
 When Bede gets something wrong based on its memory, The user must be able to correct it, and the correction must stick. Bede must not repeat a corrected mistake.
 
 **Success looks like:** Bede feels like it knows the user — not because it's guessing, but because it genuinely remembers past conversations, corrections, and context. The user never has to re-explain something they've already told Bede.
+
+### R9. Deal and price monitoring
+
+**I want deals and prices monitored on things I care about.**
+
+Bede must track prices and availability for products and events the user specifies. Categories include clothing, household staples, outdoor gear, event tickets, and whatever the user adds in future. The user defines what to watch, what retailers to check, and what constitutes a deal worth reporting.
+
+Monitoring must run on a configurable schedule. Reports should only surface when something actionable has changed — a price drop, a restock, a new event announced. No-change reports are noise.
+
+Bede must be able to browse the web to check prices and availability, since many retailers don't offer APIs.
+
+**Success looks like:** The user gets timely alerts about deals they care about without manually checking websites.
+
+**Measurable indicator:** Price alerts are delivered within 24 hours of a price change on a monitored item.
 
 ---
 
@@ -169,7 +169,7 @@ The system must use a Claude subscription (flat monthly cost), not per-token API
 
 The interface must be usable from an iPhone using only apps available from the App Store, with no custom app development or App Store deployment required. Server-side setup should be achievable in under an hour for someone with the user's technical skills.
 
-Text is the primary interaction mode. Voice is secondary (R8).
+Text is the primary interaction mode. Voice is secondary (R7).
 
 ### C5. File-based knowledge
 
@@ -253,7 +253,7 @@ Bede's value depends on having context about the user's life. These are the cate
 ### Conversation history
 - Bede's own prior conversations with the user
 - Prior corrections the user has made to Bede's behaviour or interpretations
-- Supports R1 (pattern tracking), R2 (accountability continuity), R7 (multi-turn), R9 (memory)
+- Supports R1 (pattern tracking), R2 (accountability continuity), R6 (multi-turn), R8 (memory)
 - Source: Bede's own conversation logs
 
 ### Data freshness expectations
@@ -301,8 +301,8 @@ These apply across all functional requirements.
 - Conversation history must be reviewable.
 
 ### Responsiveness
-- Text conversations (R7): Bede should respond within 30 seconds. Longer delays should show a "thinking" indicator.
-- Voice interactions (R8): same latency tolerance as text — walkie-talkie style, not real-time.
+- Text conversations (R6): Bede should respond within 30 seconds. Longer delays should show a "thinking" indicator.
+- Voice interactions (R7): same latency tolerance as text — walkie-talkie style, not real-time.
 - Scheduled tasks: no hard latency requirement, but must complete within a reasonable window (minutes, not hours).
 
 ### Extensibility
@@ -352,21 +352,24 @@ R3 (Stay current) → R5 (Knowledge base)
 R4 (Day planning) ← all data inputs
   Planning requires the broadest view: calendar, email, weather, tasks, health, goals.
 
-R7 (Conversational) ← all data inputs + R5 (Knowledge base)
+R6 (Conversational) ← all data inputs + R5 (Knowledge base)
   The conversational assistant is most valuable when it has full context.
 
-R8 (Voice) → R4 (Day planning), R5 (Knowledge base)
+R7 (Voice) → R4 (Day planning), R5 (Knowledge base)
   Voice enables quick task creation and thought capture on the go.
-  Voice is an alternative I/O mode for R7 in hands-free situations.
+  Voice is an alternative I/O mode for R6 in hands-free situations.
 
-R9 (Memory) ← R1, R2, R5, R7
+R8 (Memory) ← R1, R2, R5, R6
   Memory is foundational infrastructure. R1 needs pattern history.
   R2 needs goal tracking continuity. R5 needs to be searchable.
-  R7 needs multi-turn and cross-conversation context.
+  R6 needs multi-turn and cross-conversation context.
+
+R9 (Deal monitoring) — standalone
+  Loosely connected: deals may surface in R4 briefings. Otherwise independent.
 
 Implementation dependency note:
   R1 and R2 are highest *value* priority, but R4 (planning), R5 (knowledge
-  base), and R9 (memory) are foundational *infrastructure* that R1 and R2
+  base), and R8 (memory) are foundational *infrastructure* that R1 and R2
   depend on. A design must address this — either build infrastructure first,
   or deliver R1/R2 in reduced form initially and enhance as infrastructure
   matures.
