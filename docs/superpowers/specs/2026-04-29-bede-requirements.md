@@ -278,6 +278,9 @@ Not all data needs to arrive in real-time. Approximate expectations:
 
 These apply across all functional requirements.
 
+### Temporal awareness
+- Bede must always know the current date, time, and the user's timezone. All references to "today", "this week", "tomorrow" must resolve correctly. Scheduled tasks must fire at the right local time.
+
 ### Privacy and security
 - The system must not expose personal data to unauthorized parties.
 - External-facing endpoints must be authenticated and access-restricted to the user's network.
