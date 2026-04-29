@@ -29,11 +29,11 @@ Bede must have access to signals relevant to mental health: sleep quality and du
 
 Coaching means ongoing, not reactive. Bede should check in regularly, notice when things are slipping before the user does, and connect dots across days and weeks. A single bad night's sleep is not a concern; three in a row alongside dropping exercise is.
 
-The coaching relationship must be configurable — The user controls the tone, the boundaries, and what topics are in scope. If the user says "back off on this topic," Bede must respect that immediately and durably.
+The coaching relationship must be configurable — the user controls the tone, the boundaries, and what topics are in scope. If the user says "back off on this topic," Bede must respect that immediately and durably.
 
 **Success looks like:** The user feels like someone is genuinely watching out for them and will say something honest when patterns emerge — not just echoing data back.
 
-**Measurable indicator:** Bede surfaces a concern about a negative pattern within 48 hours of the pattern emerging (e.g., 3 consecutive poor sleeps flagged by day 4).
+**Measurable indicator:** Bede surfaces a concern about a negative pattern within 48 hours of the pattern emerging (e.g., 3 consecutive poor sleeps flagged by day 4). What constitutes a negative pattern varies by signal and must be configurable.
 
 ### R2. Goal accountability
 
@@ -53,7 +53,7 @@ This is closely linked to R1 — poor mental health often causes goal drift, and
 
 **I want to stay current in my professional and personal interests without having to go looking.**
 
-Bede must curate and deliver relevant content from the user's areas of interest — professional (software engineering, AI, cloud) and personal (music, camping, whatever The user defines). The user should not have to seek out this information; Bede should bring it to them in a digestible format.
+Bede must curate and deliver relevant content from the user's areas of interest — professional (software engineering, AI, cloud) and personal (music, camping, whatever the user defines). The user should not have to seek out this information; Bede should bring it to them in a digestible format.
 
 The sources, topics, and delivery cadence must be configurable by the user. Bede must be able to distinguish signal from noise — a curated summary is valuable, a firehose is not.
 
@@ -69,7 +69,7 @@ Bede must prepare a view of the upcoming day (and week, at appropriate cadence) 
 
 This must be delivered proactively before the day/week starts, not on demand. The delivery must be interactive — Bede asks questions, the user provides input, then Bede delivers the final view. The user must be able to correct, reprioritise, or add items during the interaction.
 
-If the user does not respond to the interactive prompt, Bede retries up to three times total. If there is still no response, Bede sends a non-interactive version (best-effort summary without the user's input) so the information is not lost entirely.
+If the user does not respond, the fallback behaviour in C7 applies.
 
 **Success looks like:** The user starts each day and week knowing exactly what's ahead, with no unprocessed email creating background anxiety.
 
@@ -81,7 +81,7 @@ If the user does not respond to the interactive prompt, Bede retries up to three
 
 Bede must integrate with the user's personal knowledge base. It must be able to read from and write to the knowledge base. Writing includes: journal entries, meeting notes, captured ideas, task outcomes, and any other structured or unstructured content the user asks it to record.
 
-"Grow naturally" means low friction — capturing a thought should take seconds, not minutes of formatting and filing. Bede should suggest where to file things and how to organise them, but the user makes the final decision. Bede does not file autonomously.
+"Grow naturally" means low friction — capturing a thought should take seconds, not minutes of formatting and filing. Bede should suggest where to file things and how to organise them, but the user makes the final decision. Bede does not decide where to file content autonomously — it suggests, the user confirms.
 
 "Easy to search" means the user can ask Bede a question and get an answer that draws on their own notes, not just the model's training data. The knowledge base must be the first place Bede looks for personal context.
 
@@ -117,6 +117,8 @@ Creating tasks, capturing thoughts, and asking quick questions are the primary v
 
 **Success looks like:** The user can interact with Bede while driving or doing chores, without reaching for their phone to type.
 
+**Measurable indicator:** The user can complete a voice interaction (ask a question or capture a thought) without needing to repeat themselves or fall back to text on 90%+ of attempts.
+
 ### R8. Memory and continuity
 
 **Bede must remember what matters across conversations and over time.**
@@ -127,9 +129,9 @@ Bede must maintain context beyond a single conversation. This includes:
 - **Across conversations:** Bede must remember significant facts, preferences, corrections, and commitments the user has made, even days or weeks later. If the user says "I'm training for a half marathon" in March, Bede should still know that in June.
 - **Pattern recognition over time:** R1 (coaching) and R2 (accountability) require Bede to detect trends across days and weeks — sleep patterns, exercise consistency, goal progress. This requires access to historical data, not just today's snapshot.
 
-What Bede remembers must be transparent — The user should be able to see and edit what Bede has stored about them. Bede must not silently build an internal model The user can't inspect.
+What Bede remembers must be transparent — the user should be able to see and edit what Bede has stored about them. Bede must not silently build an internal model the user can't inspect.
 
-When Bede gets something wrong based on its memory, The user must be able to correct it, and the correction must stick. Bede must not repeat a corrected mistake.
+When Bede gets something wrong based on its memory, the user must be able to correct it, and the correction must stick. Bede must not repeat a corrected mistake.
 
 **Success looks like:** Bede feels like it knows the user — not because it's guessing, but because it genuinely remembers past conversations, corrections, and context. The user never has to re-explain something they've already told Bede.
 
@@ -163,11 +165,13 @@ All personal data — health, location, screen time, calendar, email content, co
 
 ### C3. Claude subscription
 
-The system must use a Claude subscription (flat monthly cost), not per-token API billing. This constrains how the system interacts with Claude — it must use mechanisms covered by the subscription, not the commercial API.
+The system must use a Claude subscription (flat monthly cost), not per-token API billing. The subscription provides interactive chat sessions (text in, text out) with tool-use capabilities, not batch or embedding endpoints. This constrains how the system interacts with Claude — it must use mechanisms covered by the subscription, not the commercial API.
 
 ### C4. Minimal-setup interface
 
-The interface must be usable from an iPhone using only apps available from the App Store, with no custom app development or App Store deployment required. Server-side setup should be achievable in under an hour for someone with the user's technical skills.
+The interface must be usable from an iPhone using only apps available from the App Store, with no custom app development or App Store deployment required. Server-side setup should be achievable in under an hour for someone comfortable with Docker, SSH, and Linux system administration.
+
+The interface must support push delivery — Bede must be able to reach the user without the user opening the app first.
 
 Text is the primary interaction mode. Voice is secondary (R7).
 
@@ -284,6 +288,7 @@ These apply across all functional requirements.
 ### Configurability
 - The user must be able to change Bede's personality, tone, and boundaries.
 - Scheduled tasks, monitored items, interest topics, and goal definitions must all be editable by the user without code changes.
+- The user must be able to make routine configuration changes (tone, schedules, monitored items, corrections) through conversation with Bede, not only by editing files.
 - Configuration should be stored as human-readable files, not in databases or admin UIs.
 
 ### Auditability
@@ -357,11 +362,4 @@ R8 (Memory) ← R1, R2, R5, R6
 
 R9 (Deal monitoring) — standalone
   Loosely connected: deals may surface in R4 briefings. Otherwise independent.
-
-Implementation dependency note:
-  R1 and R2 are highest *value* priority, but R4 (planning), R5 (knowledge
-  base), and R8 (memory) are foundational *infrastructure* that R1 and R2
-  depend on. A design must address this — either build infrastructure first,
-  or deliver R1/R2 in reduced form initially and enhance as infrastructure
-  matures.
 ```
