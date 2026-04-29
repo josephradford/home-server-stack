@@ -31,9 +31,11 @@ Coaching means ongoing, not reactive. Bede should check in regularly, notice whe
 
 The coaching relationship must be configurable — the user controls the tone, the boundaries, and what topics are in scope. If the user says "back off on this topic," Bede must respect that immediately and durably.
 
+Bede is not a substitute for professional mental health support. If it detects signals of serious distress or crisis, it must recommend professional resources and not attempt to manage the situation itself.
+
 **Success looks like:** The user feels like someone is genuinely watching out for them and will say something honest when patterns emerge — not just echoing data back.
 
-**Measurable indicator:** Bede surfaces a concern about a negative pattern within 48 hours of the pattern emerging (e.g., 3 consecutive poor sleeps flagged by day 4). What constitutes a negative pattern varies by signal and must be configurable.
+**Measurable indicator:** Bede surfaces a concern about a negative pattern within 48 hours of the pattern becoming detectable (e.g., 3 consecutive poor sleeps flagged by day 4). What constitutes a negative pattern varies by signal and must be configurable.
 
 ### R2. Goal accountability
 
@@ -65,7 +67,9 @@ The sources, topics, and delivery cadence must be configurable by the user. Bede
 
 **I want to know what my day and week look like before they start — including emails triaged into tasks, events, or dismissed.**
 
-Bede must prepare a view of the upcoming day (and week, at appropriate cadence) that includes: calendar events, weather, air quality, relevant reminders and tasks, and any actions extracted from email. Email triage follows a strict pattern: each email becomes a task, becomes an event, or is dismissed as requiring no action. Bede proposes the classification; the user confirms or corrects.
+Bede must prepare a view of the upcoming day (and week, at appropriate cadence) that includes: calendar events, weather, air quality, relevant reminders and tasks, and any actions extracted from email. Email triage follows a strict pattern: each email becomes a task, becomes an event, or is dismissed as requiring no action. Bede should pre-filter obvious noise (automated notifications, marketing) and only present emails that plausibly require action or attention. Bede proposes the classification; the user confirms or corrects.
+
+The work calendar is not accessible (see Section 4) — the day job is a black box. Day planning covers personal calendars, professional development, and personal projects. Bede is not expected to plan around work meetings.
 
 This must be delivered proactively before the day/week starts, not on demand. The delivery must be interactive — Bede asks questions, the user provides input, then Bede delivers the final view. The user must be able to correct, reprioritise, or add items during the interaction.
 
@@ -125,7 +129,7 @@ Creating tasks, capturing thoughts, and asking quick questions are the primary v
 
 Bede must maintain context beyond a single conversation. This includes:
 
-- **Within a conversation:** multi-turn context so Bede doesn't forget what was just discussed.
+- **Within a conversation:** see R6.
 - **Across conversations:** Bede must remember significant facts, preferences, corrections, and commitments the user has made, even days or weeks later. If the user says "I'm training for a half marathon" in March, Bede should still know that in June.
 - **Pattern recognition over time:** R1 (coaching) and R2 (accountability) require Bede to detect trends across days and weeks — sleep patterns, exercise consistency, goal progress. This requires access to historical data, not just today's snapshot.
 
@@ -169,7 +173,7 @@ The system must use a Claude subscription (flat monthly cost), not per-token API
 
 ### C4. Minimal-setup interface
 
-The interface must be usable from an iPhone using only apps available from the App Store, with no custom app development or App Store deployment required. Server-side setup should be achievable in under an hour for someone comfortable with Docker, SSH, and Linux system administration.
+The interface must be usable from an iPhone using only widely available apps from the App Store, with no custom app development or App Store deployment required. Server-side setup should be achievable in under an hour for someone comfortable with Docker, SSH, and Linux system administration.
 
 The interface must support push delivery — Bede must be able to reach the user without the user opening the app first.
 
@@ -181,7 +185,10 @@ The knowledge base must be stored as Markdown files that the user owns. It must 
 
 ### C6. Maintenance budget
 
-The system must run unattended on weeknights without manual intervention. Maintenance and feature work happens on weekends (target: a couple of hours). The system must not require more than one manual intervention per week on average. When things break, failures must be visible — not silent.
+- **Availability:** The system must run unattended on weeknights without manual intervention.
+- **Development effort:** Maintenance and feature work happens on weekends (target: a couple of hours).
+- **Operational reliability:** The system must not require more than one manual intervention per week on average.
+- **Failure visibility:** When things break, failures must be visible — not silent.
 
 ### C7. Scheduled interaction style
 
@@ -254,13 +261,13 @@ Not all data needs to arrive in real-time. Approximate expectations:
 
 | Category | Freshness | Rationale |
 |----------|-----------|-----------|
-| Calendar, email, tasks | Near real-time (minutes) | Day planning needs current state |
+| Calendar, email, tasks | Within 15 minutes | Day planning needs current state |
 | Location | Near real-time when queried | "Where am I?" must be accurate now |
 | Weather and air quality | Hourly | Forecasts don't change faster |
 | Health (sleep, activity, HR) | Daily | Collected overnight or end-of-day |
 | Screen time, browsing history | Daily | Batch collection is sufficient |
 | Media consumption | Daily | Batch collection is sufficient |
-| Knowledge base | Minutes | Captures should appear quickly |
+| Knowledge base | Under 1 minute | Captures should appear quickly |
 | Conversation history | Immediate | Must be available within the same session |
 | Goals and schedule | On change | Only updates when the user edits them |
 
@@ -288,7 +295,7 @@ These apply across all functional requirements.
 ### Configurability
 - The user must be able to change Bede's personality, tone, and boundaries.
 - Scheduled tasks, monitored items, interest topics, and goal definitions must all be editable by the user without code changes.
-- The user must be able to make routine configuration changes (tone, schedules, monitored items, corrections) through conversation with Bede, not only by editing files.
+- The user must be able to make routine configuration changes (tone, schedules, monitored items, corrections) through conversation with Bede, not only by editing files. When the user requests a change, Bede updates the underlying config files on their behalf — conversation is the input method, files are the storage.
 - Configuration should be stored as human-readable files, not in databases or admin UIs.
 
 ### Auditability
