@@ -77,7 +77,7 @@ If the user does not respond, the fallback behaviour in C7 applies.
 
 **Success looks like:** The user starts each day and week knowing exactly what's ahead, with no unprocessed email creating background anxiety.
 
-**Measurable indicator:** The user receives a day briefing before their day starts on 90%+ of weekdays.
+**Measurable indicator:** The user receives a day briefing (interactive or fallback) before their day starts on 90%+ of weekdays.
 
 ### R5. Personal knowledge base
 
@@ -93,7 +93,7 @@ The knowledge base must be stored as files the user owns and controls (Markdown 
 
 **Success looks like:** the user's notes are useful because they're findable, and growing because capture is effortless.
 
-**Measurable indicator:** The user can capture a thought in under 10 seconds (voice or text). Bede can answer a question using vault content when relevant notes exist.
+**Measurable indicator:** The user can capture a thought in under 10 seconds of effort (time from intent to message sent, not including Bede's response time). Bede can answer a question using vault content when relevant notes exist.
 
 ### R6. Conversational assistant
 
@@ -117,7 +117,7 @@ Bede must support voice input and voice output as a secondary interaction mode. 
 
 Voice must support the same capabilities as text — it's an alternative input/output mode, not a separate feature set. If the user can ask it in text, they can ask it by voice.
 
-Creating tasks, capturing thoughts, and asking quick questions are the primary voice use cases.
+Creating tasks, capturing thoughts, and asking quick questions are the primary voice use cases. When voice input cannot be understood, Bede must indicate the failure clearly. No message should be silently lost. The user must always be able to fall back to text.
 
 **Success looks like:** The user can interact with Bede while driving or doing chores, without reaching for their phone to type.
 
@@ -277,6 +277,9 @@ Not all data needs to arrive in real-time. Approximate expectations:
 
 These apply across all functional requirements.
 
+### Onboarding
+- Bede must build its understanding of the user progressively through data observation and natural conversation. There is no formal onboarding process. Bede starts with whatever data is available and fills gaps by asking questions naturally as they become relevant. Bede must be useful from day one with incomplete knowledge, improving as it learns more.
+
 ### Temporal awareness
 - Bede must always know the current date, time, and the user's timezone. All references to "today", "this week", "tomorrow" must resolve correctly. Scheduled tasks must fire at the right local time.
 
@@ -289,6 +292,7 @@ These apply across all functional requirements.
 ### Reliability
 - Individual component failures must not take down the entire system. If one data source is unavailable, Bede must still function with the data it has.
 - Failures must be surfaced to the user, not swallowed silently.
+- When a data source is unavailable, Bede must tell the user what's missing and proceed with what it has, rather than blocking or producing incomplete output silently.
 - The system must recover gracefully from restarts without data loss.
 - If the underlying language model is unavailable, Bede should queue incoming messages and process them when service resumes rather than dropping them silently.
 
@@ -296,6 +300,7 @@ These apply across all functional requirements.
 - The user must be able to change Bede's personality, tone, and boundaries.
 - Scheduled tasks, monitored items, interest topics, and goal definitions must all be editable by the user without code changes.
 - The user must be able to make routine configuration changes (tone, schedules, monitored items, corrections) through conversation with Bede, not only by editing files. When the user requests a change, Bede updates the underlying config files on their behalf — conversation is the input method, files are the storage.
+- Specific thresholds and cadences mentioned in requirements (e.g., retry counts, detection windows, gap thresholds) are defaults, not fixed contracts. All should be configurable.
 - Configuration should be stored as human-readable files, not in databases or admin UIs.
 
 ### Auditability
@@ -342,8 +347,7 @@ Requirements are not independent — they share data, reinforce each other, and 
 
 ```
 R1 (Mental health) ←→ R2 (Goal accountability)
-  Poor mental health causes goal drift; goal drift worsens mental health.
-  Share data: sleep, activity, screen time, media consumption, location.
+  Bidirectional — share data signals and reinforce each other.
 
 R2 (Goal accountability) ← R4 (Day planning)
   Planning sets intentions; accountability measures follow-through.
