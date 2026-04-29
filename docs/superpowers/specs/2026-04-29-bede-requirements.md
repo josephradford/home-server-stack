@@ -198,63 +198,51 @@ Bede's value depends on having context about the user's life. These are the cate
 - Heart rate: resting heart rate, heart rate variability
 - Medications: adherence tracking
 - Mood/wellbeing: state of mind entries, mindfulness minutes
-- Source: Apple Health (iPhone/Apple Watch)
 
 ### Location
 - Where the user has been during the day (GPS-based)
 - Clustered into meaningful places (home, work, gym, etc.)
-- Source: iPhone location tracking
 
 ### Screen time and browsing history
-- App usage duration by app (Mac and iPhone)
+- App usage duration by app
 - Web domain usage duration
-- Safari browsing history (URLs, not just domains) — useful for R2 (what the user actually reads) and R3 (interest tracking)
-- Source: macOS and iOS system data
+- Browsing history (URLs, not just domains) — useful for R2 (what the user actually reads) and R3 (interest tracking)
 
 ### Calendar
 - Events across personal calendars
 - Work calendar is not available (locked down, Bede cannot access it)
-- Source: Google Calendar
 
 ### Email
 - Inbox contents for triage
 - Ability to search, read, and (with permission) send/reply
-- Source: Gmail
 
 ### Reminders and tasks
 - Active reminders and tasks, and their completion status
 - Bede must be able to create tasks/reminders (e.g., captured via voice while driving)
-- Source: Google Tasks or equivalent task system
 
 ### Media consumption
 - YouTube watch history
 - Podcast listening history (episodes, duration)
 - Music listening history
-- Source: macOS and iOS system data, streaming service history
 
 ### Weather and air quality
 - Current conditions and forecast for the user's location
 - Air quality index and alerts
-- Source: Bureau of Meteorology (Australia), NSW government air quality API
 
 ### Knowledge base
 - All notes, journal entries, and structured files in the personal vault
-- Source: Obsidian vault (Markdown files)
 
 ### Goals and schedule
-- the user's current goals (professional, personal, health)
-- the user's intended weekly schedule/routine
-- Source: defined by the user (not necessarily in the knowledge base — could be configured separately)
+- The user's current goals (professional, personal, health)
+- The user's intended weekly schedule/routine
 
 ### Browsing
 - Ability to obtain information from websites regardless of whether they offer structured APIs (for deal monitoring, interest curation)
-- Source: the open web
 
 ### Conversation history
 - Bede's own prior conversations with the user
 - Prior corrections the user has made to Bede's behaviour or interpretations
 - Supports R1 (pattern tracking), R2 (accountability continuity), R6 (multi-turn), R8 (memory)
-- Source: Bede's own conversation logs
 
 ### Data freshness expectations
 
