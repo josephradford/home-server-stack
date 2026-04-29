@@ -38,3 +38,4 @@ CLAUDE.local.md
 .claude/todos.json
 .claude/*.local
 .worktrees/
+.superpowers/
