@@ -11,7 +11,9 @@ This document defines what Bede must do and the constraints it must operate with
 
 ## 1. What is Bede?
 
-Bede is a personal assistant for one person: Joe Radford. It knows about Joe's health, activity, location, calendar, email, screen time, goals, and knowledge base. It uses this context to coach, inform, remind, and assist — proactively on a schedule and reactively on demand.
+Bede is a personal assistant for one person: Joe Radford ("Joe" throughout this document). It knows about Joe's health, activity, location, calendar, email, screen time, goals, and knowledge base. It uses this context to coach, inform, remind, and assist — proactively on a schedule and reactively on demand.
+
+Bede is powered by Claude (Anthropic's large language model) via a subscription. This is a pragmatic constraint — Claude is the reasoning engine, but Bede is not a thin wrapper around it. Bede is the product; Claude is a dependency.
 
 ---
 
@@ -31,6 +33,8 @@ The coaching relationship must be configurable — Joe controls the tone, the bo
 
 **Success looks like:** Joe feels like someone is genuinely watching out for him and will say something honest when patterns emerge — not just echoing data back.
 
+**Measurable indicator:** Bede surfaces a concern about a negative pattern within 48 hours of the pattern emerging (e.g., 3 consecutive poor sleeps flagged by day 4).
+
 ### R2. Goal accountability
 
 **I want to be held accountable to my personal and professional goals.**
@@ -43,6 +47,8 @@ This is closely linked to R1 — poor mental health often causes goal drift, and
 
 **Success looks like:** Joe can't quietly let a goal slide for two weeks without Bede noticing and raising it.
 
+**Measurable indicator:** No active goal goes unmentioned for more than 14 days without progress.
+
 ### R3. Stay current without effort
 
 **I want to stay current in my professional and personal interests without having to go looking.**
@@ -53,15 +59,21 @@ The sources, topics, and delivery cadence must be configurable by Joe. Bede must
 
 **Success looks like:** Joe learns about things that matter to him without opening a browser to go looking.
 
+**Measurable indicator:** Joe receives at least one curated content delivery per configured topic per week.
+
 ### R4. Day and week planning
 
 **I want to know what my day and week look like before they start — including emails triaged into tasks, events, or dismissed.**
 
-Bede must prepare a view of the upcoming day (and week, at appropriate cadence) that includes: calendar events, weather, relevant reminders, and any actions extracted from email. Email triage follows a strict pattern: each email becomes a task, becomes an event, or is dismissed as requiring no action.
+Bede must prepare a view of the upcoming day (and week, at appropriate cadence) that includes: calendar events, weather, air quality, relevant reminders and tasks, and any actions extracted from email. Email triage follows a strict pattern: each email becomes a task, becomes an event, or is dismissed as requiring no action. Bede proposes the classification; Joe confirms or corrects.
 
 This must be delivered proactively before the day/week starts, not on demand. The delivery must be interactive — Bede asks questions, Joe provides input, then Bede delivers the final view. Joe must be able to correct, reprioritise, or add items during the interaction.
 
+If Joe does not respond to the interactive prompt, Bede retries up to three times total. If there is still no response, Bede sends a non-interactive version (best-effort summary without Joe's input) so the information is not lost entirely.
+
 **Success looks like:** Joe starts each day and week knowing exactly what's ahead, with no unprocessed email creating background anxiety.
+
+**Measurable indicator:** Joe receives a day briefing before his day starts on 90%+ of weekdays.
 
 ### R5. Personal knowledge base
 
@@ -69,13 +81,15 @@ This must be delivered proactively before the day/week starts, not on demand. Th
 
 Bede must integrate with Joe's personal knowledge base (currently an Obsidian vault organised using the PARA method). It must be able to read from and write to the knowledge base. Writing includes: journal entries, meeting notes, captured ideas, task outcomes, and any other structured or unstructured content Joe asks it to record.
 
-"Grow naturally" means low friction — capturing a thought should take seconds, not minutes of formatting and filing. Bede should handle the organisation.
+"Grow naturally" means low friction — capturing a thought should take seconds, not minutes of formatting and filing. Bede should suggest where to file things and how to organise them, but Joe makes the final decision. Bede does not file autonomously.
 
 "Easy to search" means Joe can ask Bede a question and get an answer that draws on his own notes, not just the AI's training data. The knowledge base must be the first place Bede looks for personal context.
 
 The knowledge base must be stored as files Joe owns and controls (Markdown preferred). It must be accessible from multiple devices (Mac, iPhone) and must not depend on any single vendor's sync service for its integrity.
 
 **Success looks like:** Joe's notes are useful because they're findable, and growing because capture is effortless.
+
+**Measurable indicator:** Joe can capture a thought in under 10 seconds (voice or text). Bede can answer a question using vault content when relevant notes exist.
 
 ### R6. Deal and price monitoring
 
@@ -89,6 +103,8 @@ Bede must be able to browse the web to check prices and availability, since many
 
 **Success looks like:** Joe gets timely alerts about deals he cares about without manually checking websites.
 
+**Measurable indicator:** Price alerts are delivered within 24 hours of a price change on a monitored item.
+
 ### R7. Conversational assistant
 
 **I want a conversational assistant I can ask anything, with full context on my life.**
@@ -100,6 +116,8 @@ Multi-turn conversations must be supported — Bede must remember what was discu
 This must not be limited to any specific domain. If Joe asks about cooking, travel planning, or how to fix a shelf, Bede should help.
 
 **Success looks like:** Joe uses Bede instead of a generic chat assistant because the answers are better — they account for his schedule, his health, his goals, and his history.
+
+**Measurable indicator:** Bede incorporates personal context (calendar, health, goals, or vault) in responses where relevant, without Joe having to ask for it.
 
 ### R8. Voice interaction
 
@@ -113,6 +131,22 @@ Creating tasks, capturing thoughts, and asking quick questions are the primary v
 
 **Success looks like:** Joe can interact with Bede while driving or doing chores, without reaching for his phone to type.
 
+### R9. Memory and continuity
+
+**Bede must remember what matters across conversations and over time.**
+
+Bede must maintain context beyond a single conversation. This includes:
+
+- **Within a conversation:** multi-turn context so Bede doesn't forget what was just discussed.
+- **Across conversations:** Bede must remember significant facts, preferences, corrections, and commitments Joe has made, even days or weeks later. If Joe says "I'm training for a half marathon" in March, Bede should still know that in June.
+- **Pattern recognition over time:** R1 (coaching) and R2 (accountability) require Bede to detect trends across days and weeks — sleep patterns, exercise consistency, goal progress. This requires access to historical data, not just today's snapshot.
+
+What Bede remembers must be transparent — Joe should be able to see and edit what Bede has stored about him. Bede must not silently build an internal model Joe can't inspect.
+
+When Bede gets something wrong based on its memory, Joe must be able to correct it, and the correction must stick. Bede must not repeat a corrected mistake.
+
+**Success looks like:** Bede feels like it knows Joe — not because it's guessing, but because it genuinely remembers past conversations, corrections, and context. Joe never has to re-explain something he's already told Bede.
+
 ---
 
 ## 3. Constraints
@@ -121,7 +155,7 @@ These are non-negotiable boundaries the system must operate within.
 
 ### C1. Own hardware
 
-The system must run on hardware Joe owns and controls, in his home. No cloud-hosted compute for the assistant itself. The server runs Linux or Windows (macOS would be ideal but is not in budget). Cloud services may be used for specific functions (e.g., AI inference, DNS, email APIs) but the assistant's core logic, data, and state must reside on Joe's hardware.
+The system must run on hardware Joe owns and controls, in his home. No cloud-hosted compute for the assistant itself. The server runs Linux or Windows. Cloud services may be used for specific functions (e.g., AI inference, DNS, email APIs) but the assistant's core logic, data, and state must reside on Joe's hardware.
 
 ### C2. Data sovereignty
 
@@ -133,7 +167,7 @@ The system must use a Claude subscription (flat monthly cost), not per-token API
 
 ### C4. Minimal-setup interface
 
-The interface must be easy to set up on Joe's server hardware and on an iPhone. "Easy" means: no custom app development, no App Store deployment, no complex client-side configuration. The interface should use existing apps or protocols that work on iPhone out of the box.
+The interface must be usable from an iPhone using only apps available from the App Store, with no custom app development or App Store deployment required. Server-side setup should be achievable in under an hour for someone with Joe's technical skills.
 
 Text is the primary interaction mode. Voice is secondary (R8).
 
@@ -143,11 +177,13 @@ The knowledge base must be stored as Markdown files that Joe owns. It must be ed
 
 ### C6. Maintenance budget
 
-The system must be stable enough to run unattended on weeknights. Maintenance and feature work happens on weekends (target: a couple of hours). The system must not require regular firefighting or manual intervention to keep running. When things break, failures must be visible — not silent.
+The system must run unattended on weeknights without manual intervention. Maintenance and feature work happens on weekends (target: a couple of hours). The system must not require more than one manual intervention per week on average. When things break, failures must be visible — not silent.
 
 ### C7. Scheduled interaction style
 
-Scheduled outputs (briefings, coaching check-ins, reflections) must be interactive: Bede initiates, asks Joe questions, Joe responds, then Bede produces the output. This is not optional — read-only delivery or "reply if you want" delivery does not meet the requirement.
+Scheduled outputs (briefings, coaching check-ins, reflections) must be interactive: Bede initiates, asks Joe questions, Joe responds, then Bede produces the output. This is the preferred mode — read-only delivery is a fallback, not the default.
+
+If Joe does not respond, Bede retries up to three times total. After three unanswered attempts, Bede sends a non-interactive version (best-effort output without Joe's input). The information must not be lost simply because Joe was unavailable.
 
 ---
 
@@ -169,9 +205,10 @@ Bede's value depends on having context about Joe's life. These are the categorie
 - Clustered into meaningful places (home, work, gym, etc.)
 - Source: iPhone location tracking
 
-### Screen time
+### Screen time and browsing history
 - App usage duration by app (Mac and iPhone)
 - Web domain usage duration
+- Safari browsing history (URLs, not just domains) — useful for R2 (what Joe actually reads) and R3 (interest tracking)
 - Source: macOS and iOS system data
 
 ### Calendar
@@ -210,8 +247,30 @@ Bede's value depends on having context about Joe's life. These are the categorie
 - Source: defined by Joe (not necessarily in the knowledge base — could be configured separately)
 
 ### Browsing
-- Ability to visit web pages and extract information (for deal monitoring, interest curation)
+- Ability to obtain information from websites regardless of whether they offer structured APIs (for deal monitoring, interest curation)
 - Source: the open web
+
+### Conversation history
+- Bede's own prior conversations with Joe
+- Prior corrections Joe has made to Bede's behaviour or interpretations
+- Supports R1 (pattern tracking), R2 (accountability continuity), R7 (multi-turn), R9 (memory)
+- Source: Bede's own conversation logs
+
+### Data freshness expectations
+
+Not all data needs to arrive in real-time. Approximate expectations:
+
+| Category | Freshness | Rationale |
+|----------|-----------|-----------|
+| Calendar, email, tasks | Near real-time (minutes) | Day planning needs current state |
+| Location | Near real-time when queried | "Where am I?" must be accurate now |
+| Weather and air quality | Hourly | Forecasts don't change faster |
+| Health (sleep, activity, HR) | Daily | Collected overnight or end-of-day |
+| Screen time, browsing history | Daily | Batch collection is sufficient |
+| Media consumption | Daily | Batch collection is sufficient |
+| Knowledge base | Minutes | Captures should appear quickly |
+| Conversation history | Immediate | Must be available within the same session |
+| Goals and schedule | On change | Only updates when Joe edits them |
 
 ---
 
@@ -226,9 +285,10 @@ These apply across all functional requirements.
 - Secrets and credentials must never be committed to version control.
 
 ### Reliability
-- Individual component failures must not take down the entire system.
+- Individual component failures must not take down the entire system. If one data source is unavailable, Bede must still function with the data it has.
 - Failures must be surfaced to Joe, not swallowed silently.
 - The system must recover gracefully from restarts without data loss.
+- If the underlying language model is unavailable, Bede should queue incoming messages and process them when service resumes rather than dropping them silently.
 
 ### Configurability
 - Joe must be able to change Bede's personality, tone, and boundaries.
@@ -240,9 +300,24 @@ These apply across all functional requirements.
 - Scheduled task executions must be logged with enough detail to diagnose failures.
 - Conversation history must be reviewable.
 
+### Responsiveness
+- Text conversations (R7): Bede should respond within 30 seconds. Longer delays should show a "thinking" indicator.
+- Voice interactions (R8): same latency tolerance as text — walkie-talkie style, not real-time.
+- Scheduled tasks: no hard latency requirement, but must complete within a reasonable window (minutes, not hours).
+
 ### Extensibility
 - Adding new data sources, new scheduled tasks, or new capabilities should not require rewriting existing functionality.
 - The system should be modular enough that components can be added, removed, or replaced independently.
+
+### Backup and recovery
+- Joe must be able to back up the entire system (data, configuration, state) and restore it on new hardware.
+- The backup process should be simple enough to automate (e.g., a single directory or a script).
+- Given that this runs on home hardware, hardware failure is a realistic scenario — recovery must be documented and tested.
+
+### Data retention
+- Operational data (logs, raw data exports, task execution records) should have a configurable retention period. It must not grow unboundedly.
+- Conversation history and knowledge base content should be retained indefinitely unless Joe explicitly deletes it.
+- The system should make it easy to see how much storage is being used and by what.
 
 ---
 
@@ -283,4 +358,16 @@ R7 (Conversational) ← all data inputs + R5 (Knowledge base)
 R8 (Voice) → R4 (Day planning), R5 (Knowledge base)
   Voice enables quick task creation and thought capture on the go.
   Voice is an alternative I/O mode for R7 in hands-free situations.
+
+R9 (Memory) ← R1, R2, R5, R7
+  Memory is foundational infrastructure. R1 needs pattern history.
+  R2 needs goal tracking continuity. R5 needs to be searchable.
+  R7 needs multi-turn and cross-conversation context.
+
+Implementation dependency note:
+  R1 and R2 are highest *value* priority, but R4 (planning), R5 (knowledge
+  base), and R9 (memory) are foundational *infrastructure* that R1 and R2
+  depend on. A design must address this — either build infrastructure first,
+  or deliver R1/R2 in reduced form initially and enhance as infrastructure
+  matures.
 ```
