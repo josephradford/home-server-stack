@@ -118,14 +118,16 @@ Currently deployed and active services.
 - **Port:** 8000 (internal)
 - **Authentication:** OAuth 2.0 with Google
 
-#### data-mcp
-- **Purpose:** MCP server for personal data tools used by Bede
-- **Access:** Internal only (container-to-container)
-- **Authentication:** Environment token/config based access to upstream systems
-- **Data Sources:**
-  - Obsidian vault git history
-  - OwnTracks Recorder API
-  - Apple Health InfluxDB buckets
+#### bede-data
+- **Purpose:** Data layer for Bede — REST API serving health, location, vault, memory, goal, analytics, and config data from SQLite
+- **Access:** https://data.${DOMAIN} (ingest endpoints), internal API on port 8001
+- **Image:** `ghcr.io/josephradford/bede-data:latest`
+- **Authentication:** `INGEST_WRITE_TOKEN` for write endpoints
+
+#### bede-data-mcp
+- **Purpose:** Thin MCP proxy (42 tools) forwarding to bede-data's HTTP API — how Claude inside bede-core discovers and calls personal data tools
+- **Access:** Internal only (container-to-container, port 8002)
+- **Image:** `ghcr.io/josephradford/bede-data-mcp:latest`
 
 ### Location Services
 
