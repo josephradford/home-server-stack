@@ -47,7 +47,7 @@ services:
       - "traefik.http.services.workspace-mcp.loadbalancer.server.port=8003"
 
   bede-data:
-    image: bede-data:latest
+    image: ghcr.io/josephradford/bede-data:latest
     container_name: bede-data
     restart: unless-stopped
     environment:
