@@ -73,6 +73,24 @@ services:
       - "traefik.http.routers.data-ingest.service=data-ingest"
       - "traefik.http.services.data-ingest.loadbalancer.server.port=8001"
 
+  bede-data-mcp:
+    image: ghcr.io/josephradford/bede-data-mcp:latest
+    container_name: bede-data-mcp
+    restart: unless-stopped
+    environment:
+      - BEDE_DATA_URL=http://bede-data:8001
+      - DATA_MCP_PORT=8002
+    networks:
+      - homeserver
+    depends_on:
+      bede-data:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import socket; s=socket.create_connection(('localhost', 8002), timeout=5); s.close()"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
 networks:
   homeserver:
     external: true
