@@ -3,13 +3,15 @@ services:
     image: ghcr.io/josephradford/bede:latest
     container_name: bede
     restart: unless-stopped
+    profiles:
+      - disabled
     env_file: .env
     environment:
       - CLAUDE_WORKDIR=/app
       - SESSION_TIMEOUT_MINUTES=120
       - ANTHROPIC_API_KEY=
       - SQLITE_DB_PATH=/data/sqlite/bede.db
-      - INGEST_URL=http://localhost:8001/ingest/vault
+      - INGEST_URL=http://bede-data:8001/ingest/vault
       - INGEST_WRITE_TOKEN=${INGEST_WRITE_TOKEN}
       - DEFAULT_TIMEZONE=${TIMEZONE:-Australia/Sydney}
       - OWNTRACKS_URL=http://owntracks-recorder:8083
@@ -25,30 +27,17 @@ services:
       - MCP_SINGLE_USER_MODE=true
       - USER_GOOGLE_EMAIL=${USER_GOOGLE_EMAIL}
     volumes:
-      # Persona file (personal, not committed — copy from CLAUDE.md.example in bede repo)
       - ./data/bede/CLAUDE.md:/app/CLAUDE.md:ro
-      # Claude OAuth credentials
       - ${HOME}/.claude/.credentials.json:/home/bede/.claude/.credentials.json
-      # Claude session persistence
       - ./data/bede/claude-projects:/home/bede/.claude/projects
-      # Obsidian vault (cloned/pulled by entrypoint)
       - ./data/bede/vault:/vault
-      # SSH key for private vault repos (optional)
       - ${VAULT_SSH_KEY_PATH:-/dev/null}:/home/bede/.ssh/vault_key:ro
-      # Consolidated data volume (SQLite + workspace-mcp tokens)
       - ./data/bede:/data
     networks:
       - homeserver
       - location
     labels:
       - "traefik.enable=true"
-      # data-ingest: data.DOMAIN -> port 8001
-      - "traefik.http.routers.data-ingest.rule=Host(`data.${DOMAIN}`)"
-      - "traefik.http.routers.data-ingest.entrypoints=websecure"
-      - "traefik.http.routers.data-ingest.tls=true"
-      - "traefik.http.routers.data-ingest.middlewares=admin-secure@docker"
-      - "traefik.http.routers.data-ingest.service=data-ingest"
-      - "traefik.http.services.data-ingest.loadbalancer.server.port=8001"
       # workspace-mcp: mcp.DOMAIN -> port 8003
       - "traefik.http.routers.workspace-mcp.rule=Host(`mcp.${DOMAIN}`)"
       - "traefik.http.routers.workspace-mcp.entrypoints=websecure"
@@ -56,6 +45,33 @@ services:
       - "traefik.http.routers.workspace-mcp.middlewares=admin-secure-no-ratelimit@docker"
       - "traefik.http.routers.workspace-mcp.service=workspace-mcp"
       - "traefik.http.services.workspace-mcp.loadbalancer.server.port=8003"
+
+  bede-data:
+    image: bede-data:latest
+    container_name: bede-data
+    restart: unless-stopped
+    environment:
+      - SQLITE_DB_PATH=/data/sqlite/bede.db
+      - INGEST_WRITE_TOKEN=${INGEST_WRITE_TOKEN}
+      - TIMEZONE=${TIMEZONE:-Australia/Sydney}
+    volumes:
+      - ./data/bede/sqlite:/data/sqlite
+    networks:
+      - homeserver
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8001/health')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    labels:
+      - "traefik.enable=true"
+      # data-ingest: data.DOMAIN -> port 8001
+      - "traefik.http.routers.data-ingest.rule=Host(`data.${DOMAIN}`)"
+      - "traefik.http.routers.data-ingest.entrypoints=websecure"
+      - "traefik.http.routers.data-ingest.tls=true"
+      - "traefik.http.routers.data-ingest.middlewares=webhook-secure@docker"
+      - "traefik.http.routers.data-ingest.service=data-ingest"
+      - "traefik.http.services.data-ingest.loadbalancer.server.port=8001"
 
 networks:
   homeserver:
