@@ -45,7 +45,7 @@ Add peers: `sudo ./scripts/wireguard/wireguard-add-peer.sh <name>`
 - `docker-compose.network.yml` — Network & security (Traefik, Fail2ban)
 - `docker-compose.monitoring.yml` — Monitoring (Prometheus, Grafana, Alertmanager, exporters)
 - `docker-compose.dashboard.yml` — Dashboard (Homepage, Homepage API)
-- `docker-compose.ai.yml` — AI services (Bede — prebuilt GHCR image from josephradford/bede)
+- `docker-compose.ai.yml` — AI services (bede + bede-data — prebuilt GHCR images from josephradford/bede)
 
 The Makefile combines all five files by default.
 
