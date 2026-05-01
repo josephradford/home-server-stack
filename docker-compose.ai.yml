@@ -98,7 +98,7 @@ services:
     env_file: .env
     environment:
       - CLAUDE_WORKDIR=/app
-      - CLAUDE_MODEL=${CLAUDE_MODEL:-claude-sonnet-4-5-20250514}
+      - CLAUDE_MODEL=${CLAUDE_MODEL:-claude-sonnet-4-6}
       - CLAUDE_TIMEOUT_SECONDS=300
       - SESSION_TIMEOUT_MINUTES=120
       - INTERACTIVE_IDLE_TIMEOUT_MINUTES=30
