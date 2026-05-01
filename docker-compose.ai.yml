@@ -54,10 +54,14 @@ services:
       - SQLITE_DB_PATH=/data/sqlite/bede.db
       - INGEST_WRITE_TOKEN=${INGEST_WRITE_TOKEN}
       - TIMEZONE=${TIMEZONE:-Australia/Sydney}
+      - OWNTRACKS_URL=http://owntracks-recorder:8083
+      - OWNTRACKS_USER=${OWNTRACKS_USER}
+      - OWNTRACKS_DEVICE=${OWNTRACKS_DEVICE}
     volumes:
       - ./data/bede/sqlite:/data/sqlite
     networks:
       - homeserver
+      - location
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8001/health')"]
       interval: 30s
