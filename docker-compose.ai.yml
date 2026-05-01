@@ -91,6 +91,42 @@ services:
       timeout: 5s
       retries: 3
 
+  bede-core:
+    image: ghcr.io/josephradford/bede-core:latest
+    container_name: bede-core
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      - CLAUDE_WORKDIR=/app
+      - CLAUDE_MODEL=${CLAUDE_MODEL:-claude-sonnet-4-5-20250514}
+      - CLAUDE_TIMEOUT_SECONDS=300
+      - SESSION_TIMEOUT_MINUTES=120
+      - INTERACTIVE_IDLE_TIMEOUT_MINUTES=30
+      - INTERACTIVE_MAX_AGE_HOURS=2
+      - ANTHROPIC_API_KEY=
+      - BEDE_DATA_URL=http://bede-data:8001
+      - TIMEZONE=${TIMEZONE:-Australia/Sydney}
+      - VAULT_REPO=${VAULT_REPO}
+      - VAULT_PATH=/vault
+    volumes:
+      - ./data/bede/CLAUDE.md:/app/CLAUDE.md:ro
+      - ${HOME}/.claude/.credentials.json:/home/bede/.claude/.credentials.json
+      - ./data/bede/claude-projects:/home/bede/.claude/projects
+      - ./data/bede/vault:/vault
+      - ${VAULT_SSH_KEY_PATH:-/dev/null}:/home/bede/.ssh/vault_key:ro
+    networks:
+      - homeserver
+    depends_on:
+      bede-data:
+        condition: service_healthy
+      bede-data-mcp:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
 networks:
   homeserver:
     external: true

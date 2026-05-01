@@ -102,27 +102,22 @@ Currently deployed and active services.
 
 ### AI Services
 
-#### Bede
-- **Purpose:** Personal AI assistant accessible via Telegram
-- **Access:** Telegram bot (@your_bot_name)
-- **Port:** Outbound only (no web interface)
-- **Features:**
-  - Multi-turn conversations with session continuity
-  - Obsidian vault integration for personal knowledge
-  - Google Workspace access (Gmail, Calendar, Tasks)
-  - Voice message support
-
-#### workspace-mcp
-- **Purpose:** MCP server providing Google Workspace APIs for Bede
-- **Access:** https://mcp.${DOMAIN} (OAuth flow only, VPN/local network required)
-- **Port:** 8000 (internal)
-- **Authentication:** OAuth 2.0 with Google
+#### Bede (prototype — disabled)
+- **Purpose:** Original Bede prototype (replaced by bede-core)
+- **Access:** Disabled via docker-compose profile
+- **Status:** Superseded by bede-core
 
 #### bede-data
 - **Purpose:** Data layer for Bede — REST API serving health, location, vault, memory, goal, analytics, and config data from SQLite
 - **Access:** https://data.${DOMAIN} (ingest endpoints), internal API on port 8001
 - **Image:** `ghcr.io/josephradford/bede-data:latest`
 - **Authentication:** `INGEST_WRITE_TOKEN` for write endpoints
+
+#### bede-core
+- **Purpose:** Bede's brain — Telegram bot, APScheduler task runner, Claude CLI session manager, and memory manager
+- **Access:** Telegram bot (@your_bot_name), health endpoint on port 8080 (internal)
+- **Image:** `ghcr.io/josephradford/bede-core:latest`
+- **Depends on:** bede-data (HTTP API), bede-data-mcp (MCP tools)
 
 #### bede-data-mcp
 - **Purpose:** Thin MCP proxy (42 tools) forwarding to bede-data's HTTP API — how Claude inside bede-core discovers and calls personal data tools
@@ -167,9 +162,9 @@ Currently deployed and active services.
 | Grafana | https://grafana.${DOMAIN} | N/A (Traefik only) |
 | Prometheus | https://prometheus.${DOMAIN} | http://IP:9090 |
 | Alertmanager | https://alerts.${DOMAIN} | http://IP:9093 |
-| Bede | Telegram bot | N/A |
-| workspace-mcp | https://mcp.${DOMAIN} | N/A |
-| data-mcp | Internal only | N/A |
+| bede-core | Telegram bot | N/A |
+| bede-data | https://data.${DOMAIN} | N/A |
+| bede-data-mcp | Internal only | N/A |
 | owntracks-recorder | https://owntracks.${DOMAIN} | N/A |
 | hae-server | https://hae.${DOMAIN} | N/A |
 | hae-influxdb | https://influxdb.${DOMAIN} | N/A |
