@@ -117,23 +117,12 @@ Currently deployed and active services.
 - **Purpose:** Bede's brain — Telegram bot, APScheduler task runner, Claude CLI session manager, and memory manager
 - **Access:** Telegram bot (@your_bot_name), health endpoint on port 8080 (internal)
 - **Image:** `ghcr.io/josephradford/bede-core:latest`
-- **Depends on:** bede-data (HTTP API), bede-data-mcp (MCP tools), bede-workspace-mcp (Google Workspace), bede-browser-mcp (web browsing)
+- **Depends on:** bede-data (HTTP API), bede-data-mcp (MCP tools)
 
 #### bede-data-mcp
 - **Purpose:** Thin MCP proxy (42 tools) forwarding to bede-data's HTTP API — how Claude inside bede-core discovers and calls personal data tools
 - **Access:** Internal only (container-to-container, port 8002)
 - **Image:** `ghcr.io/josephradford/bede-data-mcp:latest`
-
-#### bede-workspace-mcp
-- **Purpose:** MCP server providing Google Workspace APIs (Gmail, Calendar, Tasks) for Bede
-- **Access:** https://mcp.${DOMAIN} (OAuth flow only, VPN/local network required)
-- **Port:** 8003 (internal)
-- **Image:** `ghcr.io/josephradford/bede-workspace-mcp:latest`
-
-#### bede-browser-mcp
-- **Purpose:** MCP server providing web browsing capabilities via Playwright for Bede
-- **Access:** Internal only (container-to-container)
-- **Image:** `ghcr.io/josephradford/bede-browser-mcp:latest`
 
 ### Location Services
 
@@ -176,8 +165,6 @@ Currently deployed and active services.
 | bede-core | Telegram bot | N/A |
 | bede-data | https://data.${DOMAIN} | N/A |
 | bede-data-mcp | Internal only | N/A |
-| bede-workspace-mcp | https://mcp.${DOMAIN} | N/A |
-| bede-browser-mcp | Internal only | N/A |
 | owntracks-recorder | https://owntracks.${DOMAIN} | N/A |
 | hae-server | https://hae.${DOMAIN} | N/A |
 | hae-influxdb | https://influxdb.${DOMAIN} | N/A |
