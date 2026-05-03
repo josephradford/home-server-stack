@@ -242,9 +242,40 @@
 
   # AI Services - Bede assistant and workspace integrations
   - AI Services:
-      - Bede:
+      - Bede Core:
           icon: mdi-robot
-          description: Personal AI assistant with data & workspace services
-          container: bede
+          description: Personal assistant
+          container: bede-core
+          server: my-docker
+          showStats: true
+
+      - Bede Data:
+          icon: mdi-database
+          description: Data ingest & query API
+          container: bede-data
+          server: my-docker
+          showStats: true
+
+      - Bede Data MCP:
+          icon: mdi-connection
+          description: MCP server for Bede data access
+          container: bede-data-mcp
+          server: my-docker
+          showStats: true
+
+  # Location Services - Location tracking
+  - Location:
+      - OwnTracks:
+          icon: mdi-map-marker
+          href: https://owntracks.{{HOMEPAGE_VAR_DOMAIN}}
+          description: Location tracking recorder
+          container: owntracks-recorder
+          server: my-docker
+          showStats: true
+
+      - Mosquitto:
+          icon: mdi-access-point
+          description: MQTT broker (internal)
+          container: mosquitto
           server: my-docker
           showStats: true
