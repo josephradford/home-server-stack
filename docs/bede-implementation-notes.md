@@ -87,36 +87,6 @@ changes. The Makefile does not do this automatically.
 
 ---
 
-## Google Workspace MCP OAuth
-
-### Credentials are per-account
-
-workspace-mcp stores OAuth tokens in `GOOGLE_MCP_CREDENTIALS_DIR` as
-`{email}.json`. If Bede's Claude account (ai.joeradford) has Google connectors
-attached in the claude.ai UI, those will be used instead of workspace-mcp —
-and they'll authenticate as a different Google account (joeradford@gmail.com
-vs whatever ai.joeradford is linked to).
-
-**Fix:** Remove Google connectors from the claude.ai account so all Google
-access goes exclusively through workspace-mcp.
-
-### OAuth callback DNS
-
-The workspace-mcp OAuth callback (`mcp.{DOMAIN}/oauth2callback`) must resolve
-to the server IP, not a public DNS record. If your domain's public DNS has a
-stale record for that subdomain (e.g. `mcp.example.com → 127.0.0.1` from
-a previous setup), the browser will follow public DNS instead of AdGuard.
-
-**Quick fix** — add a hosts entry on the client machine:
-```bash
-sudo sh -c "echo '192.168.1.SERVER_IP mcp.DOMAIN' >> /etc/hosts"
-```
-
-**Proper fix** — remove the conflicting public DNS record (Gandi or equivalent).
-AdGuard's wildcard `*.DOMAIN → SERVER_IP` rewrite handles local resolution.
-
----
-
 ## Container restart loop on vault clone failure
 
 If `git clone` fails (e.g. bad credentials, missing permissions) and
