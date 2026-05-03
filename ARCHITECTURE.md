@@ -55,9 +55,6 @@ graph TB
         Bede["Bede
         Telegram Bot
         (outbound only)"]
-        WorkspaceMCP["workspace-mcp
-        Google Workspace API
-        :8000"]
         DataMCP["data-mcp
         Personal Data MCP
         :8000 (internal)"]
@@ -71,16 +68,6 @@ graph TB
         Mosquitto["mosquitto
         MQTT sidecar
         :1883 (internal)"]
-    end
-
-    subgraph Health["Health Services
-    docker-compose.health.yml"]
-        HAEServer["hae-server
-        Health ingest API
-        :8080"]
-        InfluxDB["hae-influxdb
-        InfluxDB v2
-        :8086"]
     end
 
     subgraph Monitoring["Monitoring Stack
@@ -121,7 +108,6 @@ graph TB
         PrometheusData[(Prometheus TSDB)]
         WireGuardData[(WireGuard Configs)]
         OwnTracksData[(OwnTracks Store)]
-        InfluxData[(Health InfluxDB)]
         BedeVault[(Bede Vault Data)]
     end
 
@@ -145,10 +131,7 @@ graph TB
     Traefik -->|*.domain routing| Prometheus
     Traefik -->|*.domain routing| Alertmanager
     Traefik -->|*.domain routing| Homepage
-    Traefik -->|mcp.domain routing| WorkspaceMCP
     Traefik -->|owntracks.domain routing| OwnTracks
-    Traefik -->|hae.domain routing| HAEServer
-    Traefik -->|influxdb.domain routing| InfluxDB
 
     %% DNS resolution
     AdGuard -.->|DNS Rewrites| Traefik
@@ -169,13 +152,9 @@ graph TB
     %% AI service connections
     Bede -->|Claude API| Internet
     Bede -->|Telegram Bot API| Internet
-    Bede -.->|MCP Protocol| WorkspaceMCP
     Bede -.->|MCP Protocol| DataMCP
-    WorkspaceMCP -->|Google Workspace APIs| Internet
     DataMCP -->|Reads| OwnTracks
-    DataMCP -->|Reads| InfluxDB
     OwnTracks -->|Publishes via sidecar| Mosquitto
-    HAEServer -->|Writes metrics/workouts| InfluxDB
 
     %% Certificate management
     Certbot -->|Copies Certs| TraefikData
@@ -189,7 +168,6 @@ graph TB
     Prometheus -.->|Stores| PrometheusData
     VPN -.->|Stores| WireGuardData
     OwnTracks -.->|Stores| OwnTracksData
-    InfluxDB -.->|Stores| InfluxData
     Bede -.->|Stores| BedeVault
 
     classDef external fill:#ff6b6b,stroke:#c92a2a,stroke-width:2px,color:#fff
@@ -206,7 +184,7 @@ graph TB
     class AdGuard,N8N core
     class Prometheus,Grafana,Alertmanager,NodeExporter,CAdvisor monitoring
     class Homepage,HomepageAPI dashboard
-    class Bede,WorkspaceMCP,DataMCP ai
+    class Bede,DataMCP ai
     class AdGuardData,N8NData,TraefikData,GrafanaData,PrometheusData,WireGuardData,OwnTracksData,InfluxData,BedeVault data
     class Certbot system
 ```
@@ -268,8 +246,7 @@ graph TB
         Traefik Dashboard, AdGuard, n8n
         Homepage, Homepage API
         Grafana, Prometheus, Alertmanager
-        workspace-mcp, owntracks-recorder
-        hae-server, hae-influxdb"]
+        owntracks-recorder"]
         Internal["Internal-Only Services
         bede (Telegram outbound)
         data-mcp, mosquitto
@@ -382,21 +359,15 @@ graph TD
     Homepage["Homepage
     Dashboard UI"]
 
-    %% AI / data / health / location services
+    %% AI / data / location services
     Bede["Bede
     Telegram Assistant"]
-    WorkspaceMCP["workspace-mcp
-    Google Workspace MCP"]
     DataMCP["data-mcp
     Personal Data MCP"]
     OwnTracks["owntracks-recorder
     Location API"]
     Mosquitto["mosquitto
     MQTT sidecar"]
-    HAEServer["hae-server
-    Health ingest API"]
-    InfluxDB["hae-influxdb
-    Time-series DB"]
 
     %% Dependencies
     Docker --> Traefik
@@ -411,22 +382,16 @@ graph TD
     Docker --> HomepageAPI
     Docker --> Homepage
     Docker --> Bede
-    Docker --> WorkspaceMCP
     Docker --> DataMCP
     Docker --> OwnTracks
     Docker --> Mosquitto
-    Docker --> HAEServer
-    Docker --> InfluxDB
 
     Traefik --> N8N
     Traefik --> Grafana
     Traefik --> Prometheus
     Traefik --> Alertmanager
     Traefik --> Homepage
-    Traefik --> WorkspaceMCP
     Traefik --> OwnTracks
-    Traefik --> HAEServer
-    Traefik --> InfluxDB
 
     N8NInit --> N8N
 
@@ -437,10 +402,7 @@ graph TD
 
     HomepageAPI --> Homepage
     Mosquitto --> OwnTracks
-    InfluxDB --> HAEServer
-    InfluxDB --> DataMCP
     OwnTracks --> DataMCP
-    WorkspaceMCP --> Bede
     DataMCP --> Bede
 
     Certbot -.->|Provides Certs| Traefik
@@ -462,7 +424,7 @@ graph TD
     class AdGuard,N8NInit,N8N core
     class Prometheus,NodeExporter,CAdvisor,Grafana,Alertmanager monitoring
     class HomepageAPI,Homepage dashboard
-    class Bede,WorkspaceMCP,DataMCP,OwnTracks,Mosquitto,HAEServer,InfluxDB ai
+    class Bede,DataMCP,OwnTracks,Mosquitto ai
 ```
 
 ---
@@ -591,9 +553,8 @@ The stack uses multiple compose files for logical separation:
 - **docker-compose.network.yml**: Network & Security (Traefik, Fail2ban)
 - **docker-compose.monitoring.yml**: Monitoring stack (Prometheus, Grafana, Alertmanager, exporters)
 - **docker-compose.dashboard.yml**: Dashboard (Homepage, Homepage API)
-- **docker-compose.ai.yml**: AI assistant services (Bede, workspace-mcp, data-mcp)
+- **docker-compose.ai.yml**: AI assistant services (Bede, data-mcp)
 - **docker-compose.location.yml**: Location stack (owntracks-recorder, mosquitto)
-- **docker-compose.health.yml**: Health ingestion stack (hae-server, hae-influxdb)
 
 ### Domain-Based Routing
 All services accessible via `https://<service>.${DOMAIN}`:
@@ -645,10 +606,7 @@ tar -czf backup.tar.gz data/ .env
 - **Alertmanager** - https://alerts.${DOMAIN}
 - **Homepage** - https://homepage.${DOMAIN}
 - **Traefik Dashboard** - https://traefik.${DOMAIN}
-- **Workspace MCP** - https://mcp.${DOMAIN}
 - **OwnTracks Recorder** - https://owntracks.${DOMAIN}
-- **HAE Server** - https://hae.${DOMAIN}
-- **InfluxDB** - https://influxdb.${DOMAIN}
 
 ### Direct Access (monitoring, not exposed externally)
 - **9090** - Prometheus (metrics)
