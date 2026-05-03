@@ -69,7 +69,7 @@ help:
 	@echo "  make location-status    - Show OwnTracks container status"
 	@echo ""
 	@echo "Bede AI Assistant (Individual Service Management):"
-	@echo "  make bede-pull          - Pull latest Bede image from GHCR"
+	@echo "  make bede-pull          - Pull latest Bede images from GHCR"
 	@echo "  make bede-start         - Start Bede AI services only"
 	@echo "  make bede-stop          - Stop Bede AI services only"
 	@echo "  make bede-restart       - Restart Bede AI services only"
@@ -357,9 +357,12 @@ logs-owntracks:
 COMPOSE_AI := docker compose -f docker-compose.ai.yml
 
 bede-pull: env-check
-	@echo "Pulling Bede image..."
+	@echo "Pulling Bede images..."
 	@docker pull ghcr.io/josephradford/bede:latest
-	@echo "✓ Bede image pulled"
+	@docker pull ghcr.io/josephradford/bede-data:latest
+	@docker pull ghcr.io/josephradford/bede-data-mcp:latest
+	@docker pull ghcr.io/josephradford/bede-core:latest
+	@echo "✓ Bede images pulled"
 
 bede-start: env-check
 	@echo "Starting Bede..."
