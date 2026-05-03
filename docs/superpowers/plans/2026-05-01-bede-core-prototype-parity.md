@@ -86,7 +86,7 @@ main.py
 
 When a scheduled task is `interactive: true`, the session manager must override the model for subsequent user messages and track idle/max-age timeouts. The daily session ID is already shared — interactive mode just changes which model is used and marks the session as interactive.
 
-- [ ] **Step 1: Write the interactive session tests**
+- [x] **Step 1: Write the interactive session tests**
 
 Add to `bede-core/tests/test_session_manager.py`:
 
@@ -196,12 +196,12 @@ class TestInteractiveSession:
         assert sm.is_interactive is False
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 Run: `cd /Users/joeradford/dev/bede/bede-core && uv run pytest tests/test_session_manager.py::TestInteractiveSession -v`
 Expected: FAIL — `register_interactive` does not exist.
 
-- [ ] **Step 3: Add interactive state to SessionManager**
+- [x] **Step 3: Add interactive state to SessionManager**
 
 Modify `bede-core/src/bede_core/session_manager.py`:
 
@@ -330,7 +330,7 @@ class SessionManager:
     # ... existing send_task, clear_daily_session, append_scratchpad_entry unchanged ...
 ```
 
-- [ ] **Step 4: Update SessionManager constructor in main.py**
+- [x] **Step 4: Update SessionManager constructor in main.py**
 
 Modify the SessionManager instantiation in `bede-core/src/bede_core/main.py`:
 
@@ -347,14 +347,14 @@ Modify the SessionManager instantiation in `bede-core/src/bede_core/main.py`:
     )
 ```
 
-- [ ] **Step 5: Update the `sm` fixture in tests to match new signature**
+- [x] **Step 5: Update the `sm` fixture in tests to match new signature**
 
 The existing `sm` fixture in `test_session_manager.py` must accept the new kwargs without breaking. The defaults handle this — no fixture change needed since the new params have defaults. Verify:
 
 Run: `cd /Users/joeradford/dev/bede/bede-core && uv run pytest tests/test_session_manager.py -v`
 Expected: All tests pass (existing + new interactive tests).
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 cd /Users/joeradford/dev/bede
@@ -372,7 +372,7 @@ git commit -m "feat(bede-core): interactive session tracking with model override
 
 After a task with `interactive: true` runs successfully, the TaskRunner registers the interactive session in the SessionManager so subsequent user messages use the task's model.
 
-- [ ] **Step 1: Write the interactive handoff test**
+- [x] **Step 1: Write the interactive handoff test**
 
 Add to `bede-core/tests/test_scheduler.py`:
 
@@ -436,12 +436,12 @@ class TestInteractiveHandoff:
         session_manager.register_interactive.assert_not_called()
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 Run: `cd /Users/joeradford/dev/bede/bede-core && uv run pytest tests/test_scheduler.py::TestInteractiveHandoff -v`
 Expected: FAIL — `register_interactive` never called.
 
-- [ ] **Step 3: Add interactive handoff to `_run_task_inner`**
+- [x] **Step 3: Add interactive handoff to `_run_task_inner`**
 
 Modify `bede-core/src/bede_core/scheduler.py`, in `_run_task_inner`, after the successful output handling (after the quiet hours check block):
 
@@ -498,12 +498,12 @@ Modify `bede-core/src/bede_core/scheduler.py`, in `_run_task_inner`, after the s
             self._session.register_interactive(model)
 ```
 
-- [ ] **Step 4: Run all scheduler tests**
+- [x] **Step 4: Run all scheduler tests**
 
 Run: `cd /Users/joeradford/dev/bede/bede-core && uv run pytest tests/test_scheduler.py -v`
 Expected: All pass.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 cd /Users/joeradford/dev/bede
@@ -525,7 +525,7 @@ git commit -m "feat(bede-core): interactive task handoff from scheduler to sessi
 
 During interactive sessions, the user's messages are corrections/feedback to the scheduled task output (e.g., Evening Reflection). These corrections are appended to `Bede/reflection-memory.md` in the vault and committed+pushed so they're available on the next run.
 
-- [ ] **Step 1: Write the reflection module tests**
+- [x] **Step 1: Write the reflection module tests**
 
 Create `bede-core/tests/test_reflection.py`:
 
@@ -575,12 +575,12 @@ class TestReflection:
         assert "2026-" in content
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 Run: `cd /Users/joeradford/dev/bede/bede-core && uv run pytest tests/test_reflection.py -v`
 Expected: FAIL — `bede_core.reflection` does not exist.
 
-- [ ] **Step 3: Implement the reflection module**
+- [x] **Step 3: Implement the reflection module**
 
 Create `bede-core/src/bede_core/reflection.py`:
 
@@ -637,12 +637,12 @@ def append_correction(text: str, vault_path: str, timezone: str):
     _git_commit_push(vault_path, full_path)
 ```
 
-- [ ] **Step 4: Run reflection tests**
+- [x] **Step 4: Run reflection tests**
 
 Run: `cd /Users/joeradford/dev/bede/bede-core && uv run pytest tests/test_reflection.py -v`
 Expected: All pass.
 
-- [ ] **Step 5: Write bot interactive correction test**
+- [x] **Step 5: Write bot interactive correction test**
 
 Add to `bede-core/tests/test_bot.py`:
 
@@ -702,7 +702,7 @@ class TestInteractiveCorrections:
         assert len(correction_calls) == 0
 ```
 
-- [ ] **Step 6: Add correction call to bot message handler**
+- [x] **Step 6: Add correction call to bot message handler**
 
 Modify `bede-core/src/bede_core/bot.py`. Update `create_message_handler` to accept an `append_correction_fn` parameter, and call it during interactive sessions:
 
@@ -767,7 +767,7 @@ def create_message_handler(
     return handle_message
 ```
 
-- [ ] **Step 7: Wire correction function in main.py**
+- [x] **Step 7: Wire correction function in main.py**
 
 Modify the message handler creation in `bede-core/src/bede_core/main.py`:
 
@@ -799,16 +799,16 @@ Then update the `create_message_handler` call:
     )
 ```
 
-- [ ] **Step 8: Add `vault_repo` to config (needed by entrypoint, already exists as env var)**
+- [x] **Step 8: Add `vault_repo` to config (needed by entrypoint, already exists as env var)**
 
 Verify `VAULT_REPO` is already available in `docker-compose.ai.yml` for bede-core. It is — line 109 has `VAULT_REPO=${VAULT_REPO}`. No config.py change needed since `reflection.py` takes `vault_path` directly.
 
-- [ ] **Step 9: Run all tests**
+- [x] **Step 9: Run all tests**
 
 Run: `cd /Users/joeradford/dev/bede/bede-core && uv run pytest tests/ -v`
 Expected: All pass.
 
-- [ ] **Step 10: Commit**
+- [x] **Step 10: Commit**
 
 ```bash
 cd /Users/joeradford/dev/bede
@@ -829,7 +829,7 @@ git commit -m "feat(bede-core): reflection memory — append corrections during 
 
 When the user sends `/reset`, all running scheduled tasks should be cancelled and their subprocesses killed. The user should see which tasks were cancelled.
 
-- [ ] **Step 1: Write the cancel tests**
+- [x] **Step 1: Write the cancel tests**
 
 Add to `bede-core/tests/test_scheduler.py`:
 
@@ -849,12 +849,12 @@ class TestCancelTasks:
         assert cancelled == []
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 Run: `cd /Users/joeradford/dev/bede/bede-core && uv run pytest tests/test_scheduler.py::TestCancelTasks -v`
 Expected: FAIL — `cancel_all` does not exist.
 
-- [ ] **Step 3: Add `cancel_all` to TaskRunner**
+- [x] **Step 3: Add `cancel_all` to TaskRunner**
 
 Add to `bede-core/src/bede_core/scheduler.py`, in the `TaskRunner` class:
 
@@ -865,7 +865,7 @@ Add to `bede-core/src/bede_core/scheduler.py`, in the `TaskRunner` class:
         return cancelled
 ```
 
-- [ ] **Step 4: Write bot reset cancel test**
+- [x] **Step 4: Write bot reset cancel test**
 
 Add to `bede-core/tests/test_bot.py`:
 
@@ -909,7 +909,7 @@ class TestResetCancellation:
         assert "cleared" in reply_text.lower()
 ```
 
-- [ ] **Step 5: Update `create_reset_handler` to accept runner**
+- [x] **Step 5: Update `create_reset_handler` to accept runner**
 
 Modify `bede-core/src/bede_core/bot.py`:
 
@@ -930,7 +930,7 @@ def create_reset_handler(session_manager: SessionManager, allowed_user_id: int, 
     return handle_reset
 ```
 
-- [ ] **Step 6: Pass runner to reset handler in main.py**
+- [x] **Step 6: Pass runner to reset handler in main.py**
 
 Modify `bede-core/src/bede_core/main.py`:
 
@@ -942,12 +942,12 @@ Modify `bede-core/src/bede_core/main.py`:
     )
 ```
 
-- [ ] **Step 7: Run all tests**
+- [x] **Step 7: Run all tests**
 
 Run: `cd /Users/joeradford/dev/bede/bede-core && uv run pytest tests/ -v`
 Expected: All pass.
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 cd /Users/joeradford/dev/bede
@@ -967,7 +967,7 @@ git commit -m "feat(bede-core): cancel running tasks and clear interactive sessi
 
 The prototype shows a typing indicator in Telegram while scheduled tasks are running. The bot reply handler should also set `disable_web_page_preview=True`.
 
-- [ ] **Step 1: Write typing indicator test**
+- [x] **Step 1: Write typing indicator test**
 
 Add to `bede-core/tests/test_scheduler.py`:
 
@@ -1002,12 +1002,12 @@ class TestTypingIndicator:
         typing_fn.assert_called()
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `cd /Users/joeradford/dev/bede/bede-core && uv run pytest tests/test_scheduler.py::TestTypingIndicator -v`
 Expected: FAIL — `typing_fn` not accepted.
 
-- [ ] **Step 3: Add typing support to TaskRunner**
+- [x] **Step 3: Add typing support to TaskRunner**
 
 Modify `bede-core/src/bede_core/scheduler.py`. Add `typing_fn` to `__init__` and call it in `run_task`:
 
@@ -1068,7 +1068,7 @@ Modify `run_task` to start typing before task execution:
 
 Add `import asyncio` at the top of the file if not already present.
 
-- [ ] **Step 4: Create typing function in main.py**
+- [x] **Step 4: Create typing function in main.py**
 
 Add to `bede-core/src/bede_core/main.py`, before the `runner` creation:
 
@@ -1099,7 +1099,7 @@ Add `import asyncio, time` at the top. Pass `typing_fn=keep_typing` to the `Task
     )
 ```
 
-- [ ] **Step 5: Add `disable_web_page_preview` to bot reply handler**
+- [x] **Step 5: Add `disable_web_page_preview` to bot reply handler**
 
 Modify `bede-core/src/bede_core/bot.py`, in `_send_response`:
 
@@ -1114,12 +1114,12 @@ async def _send_response(message, text: str):
             await message.reply_text(c, disable_web_page_preview=True)
 ```
 
-- [ ] **Step 6: Run all tests**
+- [x] **Step 6: Run all tests**
 
 Run: `cd /Users/joeradford/dev/bede/bede-core && uv run pytest tests/ -v`
 Expected: All pass.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 cd /Users/joeradford/dev/bede
@@ -1139,7 +1139,7 @@ git commit -m "feat(bede-core): typing indicator during scheduled tasks, disable
 
 Add a `task_config` TEXT column (JSON, nullable) to the `schedules` table. This holds multi-step task definitions. When null, the task is a single-step task using the `prompt` field.
 
-- [ ] **Step 1: Write the API test for task_config**
+- [x] **Step 1: Write the API test for task_config**
 
 Add to `bede-data/tests/test_api_config.py`:
 
@@ -1196,12 +1196,12 @@ class TestScheduleTaskConfig:
         assert found[0]["task_config"] == config
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 Run: `cd /Users/joeradford/dev/bede/bede-data && uv run pytest tests/test_api_config.py::TestScheduleTaskConfig -v`
 Expected: FAIL — `task_config` not accepted or not returned.
 
-- [ ] **Step 3: Update schema**
+- [x] **Step 3: Update schema**
 
 Modify `bede-data/src/bede_data/db/schema.py`:
 
@@ -1225,7 +1225,7 @@ CREATE TABLE IF NOT EXISTS schedules (
 );
 ```
 
-- [ ] **Step 4: Add migration in connection.py**
+- [x] **Step 4: Add migration in connection.py**
 
 Modify `bede-data/src/bede_data/db/connection.py`, in `init_db`, add migration before `conn.executescript(SCHEMA_SQL)`:
 
@@ -1240,7 +1240,7 @@ Modify `bede-data/src/bede_data/db/connection.py`, in `init_db`, add migration b
 
 This goes after the existing `if existing is not None and existing < 3:` block and before `conn.executescript(SCHEMA_SQL)`.
 
-- [ ] **Step 5: Update API models and endpoints**
+- [x] **Step 5: Update API models and endpoints**
 
 Modify `bede-data/src/bede_data/api/config_api.py`:
 
@@ -1312,12 +1312,12 @@ Add `task_config` to the update logic in `update_schedule`:
             updates[field] = val
 ```
 
-- [ ] **Step 6: Run all bede-data tests**
+- [x] **Step 6: Run all bede-data tests**
 
 Run: `cd /Users/joeradford/dev/bede/bede-data && uv run pytest tests/ -v`
 Expected: All pass.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 cd /Users/joeradford/dev/bede
@@ -1335,7 +1335,7 @@ git commit -m "feat(bede-data): add task_config column to schedules for multi-st
 
 When a task has `task_config` with `steps`, TaskRunner runs each step as a separate Claude invocation. Steps can run sequentially (default) or in parallel (`parallel: true`). Silent steps execute but don't send output to Telegram. The main `prompt` field serves as preamble context for all steps.
 
-- [ ] **Step 1: Write multi-step tests**
+- [x] **Step 1: Write multi-step tests**
 
 Add to `bede-core/tests/test_scheduler.py`:
 
@@ -1492,12 +1492,12 @@ class TestMultiStepTasks:
         session_manager.send_task.assert_called_once()
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 Run: `cd /Users/joeradford/dev/bede/bede-core && uv run pytest tests/test_scheduler.py::TestMultiStepTasks -v`
 Expected: FAIL — multi-step logic not implemented.
 
-- [ ] **Step 3: Implement multi-step execution**
+- [x] **Step 3: Implement multi-step execution**
 
 Modify `bede-core/src/bede_core/scheduler.py`. Add a `json` import. Modify `_run_task_inner` to check for `task_config`:
 
@@ -1649,17 +1649,17 @@ import json
         await self._send(f"✅ *{name}* complete.")
 ```
 
-- [ ] **Step 4: Run all tests**
+- [x] **Step 4: Run all tests**
 
 Run: `cd /Users/joeradford/dev/bede/bede-core && uv run pytest tests/ -v`
 Expected: All pass.
 
-- [ ] **Step 5: Lint and format**
+- [x] **Step 5: Lint and format**
 
 Run: `cd /Users/joeradford/dev/bede/bede-core && uv run ruff check src/ tests/ --fix && uv run ruff format src/ tests/`
 Expected: No errors.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 cd /Users/joeradford/dev/bede
