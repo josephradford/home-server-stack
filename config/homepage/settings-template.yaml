@@ -35,8 +35,13 @@ layout:
     Network & Security:
       style: row
       columns: 3
-  
-  
+    AI Services:
+      style: row
+      columns: 3
+    Location:
+      style: row
+      columns: 2
+
 
 # UI preferences
 statusStyle: "dot"
