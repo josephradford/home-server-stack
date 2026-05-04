@@ -48,6 +48,38 @@ services:
       timeout: 5s
       retries: 3
 
+  bede-workspace-mcp:
+    image: ghcr.io/josephradford/bede-workspace-mcp:latest
+    container_name: bede-workspace-mcp
+    restart: unless-stopped
+    environment:
+      - WORKSPACE_MCP_PORT=8003
+      - GOOGLE_OAUTH_CLIENT_ID=${GOOGLE_OAUTH_CLIENT_ID}
+      - GOOGLE_OAUTH_CLIENT_SECRET=${GOOGLE_OAUTH_CLIENT_SECRET}
+      - GOOGLE_OAUTH_REDIRECT_URI=https://mcp.${DOMAIN}/oauth2callback
+      - GOOGLE_MCP_CREDENTIALS_DIR=/data/workspace-mcp/credentials
+      - WORKSPACE_MCP_OAUTH_PROXY_STORAGE_BACKEND=disk
+      - WORKSPACE_MCP_OAUTH_PROXY_DISK_DIRECTORY=/data/workspace-mcp/oauth-proxy
+      - MCP_SINGLE_USER_MODE=true
+      - USER_GOOGLE_EMAIL=${USER_GOOGLE_EMAIL}
+    volumes:
+      - ./data/bede:/data
+    networks:
+      - homeserver
+    healthcheck:
+      test: ["CMD", "python", "-c", "import socket; s=socket.create_connection(('localhost', 8003), timeout=5); s.close()"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.workspace-mcp.rule=Host(`mcp.${DOMAIN}`)"
+      - "traefik.http.routers.workspace-mcp.entrypoints=websecure"
+      - "traefik.http.routers.workspace-mcp.tls=true"
+      - "traefik.http.routers.workspace-mcp.middlewares=admin-secure-no-ratelimit@docker"
+      - "traefik.http.routers.workspace-mcp.service=workspace-mcp"
+      - "traefik.http.services.workspace-mcp.loadbalancer.server.port=8003"
+
   bede-core:
     image: ghcr.io/josephradford/bede-core:latest
     container_name: bede-core
@@ -77,6 +109,8 @@ services:
       bede-data:
         condition: service_healthy
       bede-data-mcp:
+        condition: service_healthy
+      bede-workspace-mcp:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-sf", "http://localhost:8080/health"]

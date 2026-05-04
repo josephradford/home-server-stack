@@ -263,6 +263,13 @@
           server: my-docker
           showStats: true
 
+      - Bede Workspace MCP:
+          icon: mdi-google
+          description: Google Workspace MCP (Gmail, Calendar, Tasks)
+          container: bede-workspace-mcp
+          server: my-docker
+          showStats: true
+
   # Location Services - Location tracking
   - Location:
       - OwnTracks:
