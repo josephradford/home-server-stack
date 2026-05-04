@@ -124,6 +124,12 @@ Currently deployed and active services.
 - **Access:** Internal only (container-to-container, port 8002)
 - **Image:** `ghcr.io/josephradford/bede-data-mcp:latest`
 
+#### bede-workspace-mcp
+- **Purpose:** Google Workspace MCP sidecar — wraps the `workspace-mcp` PyPI package to provide Gmail, Calendar, Tasks, Docs, Sheets, Slides, and Drive access to Claude inside bede-core
+- **Access:** Internal MCP on port 8003, OAuth callback at https://mcp.${DOMAIN}/oauth2callback (admin-secure, no rate limit)
+- **Image:** `ghcr.io/josephradford/bede-workspace-mcp:latest`
+- **Depends on:** Google OAuth credentials in `.env`
+
 ### Location Services
 
 #### owntracks-recorder
@@ -165,6 +171,7 @@ Currently deployed and active services.
 | bede-core | Telegram bot | N/A |
 | bede-data | https://data.${DOMAIN} | N/A |
 | bede-data-mcp | Internal only | N/A |
+| bede-workspace-mcp | https://mcp.${DOMAIN} (OAuth only) | N/A |
 | owntracks-recorder | https://owntracks.${DOMAIN} | N/A |
 | hae-server | https://hae.${DOMAIN} | N/A |
 | hae-influxdb | https://influxdb.${DOMAIN} | N/A |
