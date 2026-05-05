@@ -253,11 +253,19 @@ def bom_weather():
 @app.route('/api/transport/departures/<stop_id>')
 def transport_departures(stop_id):
     """
-    Get Transport NSW departures with enhanced data
+    Get Transport NSW departures with enhanced data.
+    Optional query params:
+      destination - filter by destination substring (case-insensitive)
+      routes - comma-separated route numbers to include
+      limit - max results (default 5)
     """
     try:
         if not TRANSPORT_NSW_API_KEY:
             return jsonify({'error': 'Transport NSW API key not configured'}), 503
+
+        dest_filter = request.args.get('destination', '').lower()
+        routes_filter = [r.strip() for r in request.args.get('routes', '').split(',') if r.strip()]
+        limit = int(request.args.get('limit', 15))
 
         url = 'https://api.transport.nsw.gov.au/v1/tp/departure_mon'
         params = {
@@ -279,34 +287,40 @@ def transport_departures(stop_id):
         response.raise_for_status()
         data = response.json()
 
-        # Parse and simplify the response
         departures = []
         stop_events = data.get('stopEvents', [])
 
-        for event in stop_events[:5]:  # Get next 5 departures
+        for event in stop_events:
+            if len(departures) >= limit:
+                break
+
             transportation = event.get('transportation', {})
+            destination_name = transportation.get('destination', {}).get('name', '')
+            route_number = transportation.get('number', '')
+
+            if dest_filter and dest_filter not in destination_name.lower():
+                continue
+            if routes_filter and route_number not in routes_filter:
+                continue
+
             location = event.get('location', {})
 
-            # Calculate delay if realtime data is available
             delay_minutes = 0
             if event.get('isRealtimeControlled'):
                 try:
                     planned_str = event.get('departureTimePlanned')
                     estimated_str = event.get('departureTimeEstimated')
                     if planned_str and estimated_str:
-                        # Parse ISO timestamps
                         planned = datetime.fromisoformat(planned_str.replace('Z', '+00:00'))
                         estimated = datetime.fromisoformat(estimated_str.replace('Z', '+00:00'))
-                        # Calculate difference in minutes
                         delay_minutes = int((estimated - planned).total_seconds() / 60)
                 except (ValueError, AttributeError):
-                    # If parsing fails, default to 0
                     delay_minutes = 0
 
             departures.append({
                 'time': event.get('departureTimePlanned'),
-                'destination': transportation.get('destination', {}).get('name'),
-                'line': transportation.get('number'),
+                'destination': destination_name,
+                'line': route_number,
                 'platform': location.get('properties', {}).get('platformName'),
                 'realtime': event.get('isRealtimeControlled', False),
                 'delay_minutes': delay_minutes
