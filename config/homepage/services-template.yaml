@@ -37,72 +37,76 @@
               color: blue
               maxEvents: 5
 
-# Transport & Commute - Public transport and traffic
-- Transport & Commute:
-    - Train Departures:
+# Transport
+- "{{HOMEPAGE_VAR_TRANSPORT_SECTION_1}}":
+    - "{{HOMEPAGE_VAR_TRANSPORT_STOP_1_NAME}}":
         icon: {{HOMEPAGE_VAR_TRANSPORT_STOP_1_ICON}}
-        description: {{HOMEPAGE_VAR_TRANSPORT_STOP_1_NAME}}
+        description: "{{HOMEPAGE_VAR_TRANSPORT_SECTION_1}}"
         widget:
           type: customapi
-          url: http://homepage-api:5000/api/transport/departures/{{HOMEPAGE_VAR_TRANSPORT_STOP_1_ID}}
-          refreshInterval: 60000  # 1 minute
+          url: http://homepage-api:5000/api/transport/departures/{{HOMEPAGE_VAR_TRANSPORT_STOP_1_ID}}?{{HOMEPAGE_VAR_TRANSPORT_STOP_1_FILTER}}
+          refreshInterval: 60000
           mappings:
-            - field: departures.0.destination
-              label: Next Train
+            - field: departures.0.line
+              label: Next
             - field: departures.0.time
               label: Departs
+              format: relativeDate
+            - field: departures.1.line
+              label: Following
+            - field: departures.1.time
+              label: Departs
+              format: relativeDate
+
+    - "{{HOMEPAGE_VAR_TRANSPORT_STOP_2_NAME}}":
+        icon: {{HOMEPAGE_VAR_TRANSPORT_STOP_2_ICON}}
+        description: "{{HOMEPAGE_VAR_TRANSPORT_SECTION_1}}"
+        widget:
+          type: customapi
+          url: http://homepage-api:5000/api/transport/departures/{{HOMEPAGE_VAR_TRANSPORT_STOP_2_ID}}?{{HOMEPAGE_VAR_TRANSPORT_STOP_2_FILTER}}
+          refreshInterval: 60000
+          mappings:
+            - field: departures.0.time
+              label: Next
               format: relativeDate
             - field: departures.1.time
               label: Following
               format: relativeDate
 
-    - Bus Departures:
-        icon: {{HOMEPAGE_VAR_TRANSPORT_STOP_2_ICON}}
-        description: {{HOMEPAGE_VAR_TRANSPORT_STOP_2_NAME}}
+- "{{HOMEPAGE_VAR_TRANSPORT_SECTION_2}}":
+    - "{{HOMEPAGE_VAR_TRANSPORT_STOP_3_NAME}}":
+        icon: {{HOMEPAGE_VAR_TRANSPORT_STOP_3_ICON}}
+        description: "{{HOMEPAGE_VAR_TRANSPORT_SECTION_2}}"
         widget:
           type: customapi
-          url: http://homepage-api:5000/api/transport/departures/{{HOMEPAGE_VAR_TRANSPORT_STOP_2_ID}}
+          url: http://homepage-api:5000/api/transport/departures/{{HOMEPAGE_VAR_TRANSPORT_STOP_3_ID}}?{{HOMEPAGE_VAR_TRANSPORT_STOP_3_FILTER}}
           refreshInterval: 60000
           mappings:
-            - field: departures.0.destination
-              label: Next Bus
+            - field: departures.0.line
+              label: Next
             - field: departures.0.time
               label: Departs
               format: relativeDate
+            - field: departures.1.line
+              label: Following
+            - field: departures.1.time
+              label: Departs
+              format: relativeDate
 
-    - Morning Commute:
-        icon: mdi-car
-        description: {{HOMEPAGE_VAR_TRAFFIC_ROUTE_1_NAME}}
+    - "{{HOMEPAGE_VAR_TRANSPORT_STOP_4_NAME}}":
+        icon: {{HOMEPAGE_VAR_TRANSPORT_STOP_4_ICON}}
+        description: "{{HOMEPAGE_VAR_TRANSPORT_SECTION_2}}"
         widget:
           type: customapi
-          url: http://homepage-api:5000/api/traffic/route?origin={{HOMEPAGE_VAR_TRAFFIC_ROUTE_1_ORIGIN}}&destination={{HOMEPAGE_VAR_TRAFFIC_ROUTE_1_DESTINATION}}
-          refreshInterval: 300000  # 5 minutes
+          url: http://homepage-api:5000/api/transport/departures/{{HOMEPAGE_VAR_TRANSPORT_STOP_4_ID}}?{{HOMEPAGE_VAR_TRANSPORT_STOP_4_FILTER}}
+          refreshInterval: 60000
           mappings:
-            - field: travelTimeMinutes
-              label: Drive Time
-              suffix: " min"
-            - field: trafficDelayMinutes
-              label: Delay
-              suffix: " min"
-            - field: status
-              label: Traffic
-
-    - Evening Commute:
-        icon: mdi-home-import-outline
-        description: {{HOMEPAGE_VAR_TRAFFIC_ROUTE_2_NAME}}
-        widget:
-          type: customapi
-          url: http://homepage-api:5000/api/traffic/route?origin={{HOMEPAGE_VAR_TRAFFIC_ROUTE_2_ORIGIN}}&destination={{HOMEPAGE_VAR_TRAFFIC_ROUTE_2_DESTINATION}}
-          refreshInterval: 300000
-          mappings:
-            - field: travelTimeMinutes
-              label: Drive Time
-              suffix: " min"
-            - field: trafficDelayMinutes
-              label: Delay
-              suffix: " min"
-            - field: status
-              label: Traffic
+            - field: departures.0.time
+              label: Next
+              format: relativeDate
+            - field: departures.1.time
+              label: Following
+              format: relativeDate
 
     - Transport NSW:
         icon: mdi-bus-multiple

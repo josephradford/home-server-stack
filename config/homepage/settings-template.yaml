@@ -19,6 +19,12 @@ layout:
   Today:
     style: row
     columns: 3
+  "{{HOMEPAGE_VAR_TRANSPORT_SECTION_1}}":
+    style: row
+    columns: 2
+  "{{HOMEPAGE_VAR_TRANSPORT_SECTION_2}}":
+    style: row
+    columns: 2
   Services:
     icon: mdi-docker
     style: row
