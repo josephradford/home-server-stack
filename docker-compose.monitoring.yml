@@ -91,7 +91,7 @@ services:
       - homeserver
 
   cadvisor:
-    image: gcr.io/cadvisor/cadvisor:v0.56.2
+    image: ghcr.io/google/cadvisor:0.56.2
     container_name: cadvisor
     restart: unless-stopped
     ports:
