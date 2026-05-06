@@ -35,7 +35,7 @@ services:
       - "traefik.http.routers.homepage-api.middlewares=admin-secure"
 
   homepage:
-    image: ghcr.io/gethomepage/homepage:latest
+    image: ghcr.io/gethomepage/homepage:v1.12.3
     container_name: homepage
     environment:
       PUID: ${PUID:-1000}

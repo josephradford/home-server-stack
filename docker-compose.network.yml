@@ -13,8 +13,9 @@ services:
   # Note: Using v3.6.2+ which includes Docker API compatibility fix for Docker 29.x+
   # Previous versions (v3.2-v3.6.1) had embedded Docker client API v1.24 incompatibility
   # Fixed in v3.6.2 via auto-negotiation (GitHub issue #12253, PR #12256)
+  # Pinned to v3.6.16 (latest patch on v3.6.x line)
   traefik:
-    image: traefik:v3.6.2
+    image: traefik:v3.6.16
     container_name: traefik
     restart: unless-stopped
     command:
@@ -133,7 +134,7 @@ services:
 
   # Fail2ban - Protection against brute force and scanning attempts
   fail2ban:
-    image: crazymax/fail2ban:latest
+    image: crazymax/fail2ban:1.1.0
     container_name: fail2ban
     restart: unless-stopped
     cap_add:
