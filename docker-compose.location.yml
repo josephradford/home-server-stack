@@ -15,7 +15,7 @@
 
 services:
   mosquitto:
-    image: eclipse-mosquitto:2.1.2
+    image: eclipse-mosquitto:2.0.22
     container_name: mosquitto
     restart: unless-stopped
     # No config needed — default settings allow anonymous connections on 1883
