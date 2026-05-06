@@ -49,6 +49,29 @@ services:
       timeout: 5s
       retries: 3
 
+  bede-web:
+    image: ghcr.io/josephradford/bede-web:latest
+    container_name: bede-web
+    restart: unless-stopped
+    networks:
+      - homeserver
+    depends_on:
+      bede-data:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:80/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.bede-web.rule=Host(`bede.${DOMAIN}`)"
+      - "traefik.http.routers.bede-web.entrypoints=websecure"
+      - "traefik.http.routers.bede-web.tls=true"
+      - "traefik.http.routers.bede-web.middlewares=admin-secure@docker"
+      - "traefik.http.routers.bede-web.service=bede-web"
+      - "traefik.http.services.bede-web.loadbalancer.server.port=80"
+
   bede-workspace-mcp:
     image: ghcr.io/josephradford/bede-workspace-mcp:latest
     container_name: bede-workspace-mcp
