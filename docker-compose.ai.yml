@@ -29,6 +29,7 @@ services:
       - "traefik.http.routers.data-ingest.middlewares=webhook-secure@docker"
       - "traefik.http.routers.data-ingest.service=data-ingest"
       - "traefik.http.services.data-ingest.loadbalancer.server.port=8001"
+      - "traefik.docker.network=home-server-stack_homeserver"
 
   bede-data-mcp:
     image: ghcr.io/josephradford/bede-data-mcp:latest
