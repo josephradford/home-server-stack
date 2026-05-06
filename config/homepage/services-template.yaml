@@ -283,10 +283,3 @@
           container: owntracks-recorder
           server: my-docker
           showStats: true
-
-      - Mosquitto:
-          icon: mdi-access-point
-          description: MQTT broker (internal)
-          container: mosquitto
-          server: my-docker
-          showStats: true

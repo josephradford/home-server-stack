@@ -137,10 +137,6 @@ Currently deployed and active services.
 - **Access:** https://owntracks.${DOMAIN}
 - **Authentication:** IP-restricted via Traefik `admin-secure`
 
-#### mosquitto
-- **Purpose:** Internal MQTT broker sidecar required by owntracks-recorder
-- **Access:** Internal only
-- **Authentication:** Internal network-only usage in this stack
 
 ### Health Services
 

@@ -63,11 +63,8 @@ graph TB
     subgraph Location["Location Services
     docker-compose.location.yml"]
         OwnTracks["owntracks-recorder
-        Location API
+        Location API (HTTP-only)
         :8083"]
-        Mosquitto["mosquitto
-        MQTT sidecar
-        :1883 (internal)"]
     end
 
     subgraph Monitoring["Monitoring Stack
@@ -154,7 +151,7 @@ graph TB
     Bede -->|Telegram Bot API| Internet
     Bede -.->|MCP Protocol| DataMCP
     DataMCP -->|Reads| OwnTracks
-    OwnTracks -->|Publishes via sidecar| Mosquitto
+    OwnTracks -->|HTTP POST /pub| OwnTracks
 
     %% Certificate management
     Certbot -->|Copies Certs| TraefikData
@@ -249,7 +246,7 @@ graph TB
         owntracks-recorder"]
         Internal["Internal-Only Services
         bede (Telegram outbound)
-        data-mcp, mosquitto
+        data-mcp
         node-exporter, cadvisor"]
         Webhooks["Public Webhooks
         Future"]
@@ -366,9 +363,6 @@ graph TD
     Personal Data MCP"]
     OwnTracks["owntracks-recorder
     Location API"]
-    Mosquitto["mosquitto
-    MQTT sidecar"]
-
     %% Dependencies
     Docker --> Traefik
     Docker --> Fail2ban
@@ -384,7 +378,6 @@ graph TD
     Docker --> Bede
     Docker --> DataMCP
     Docker --> OwnTracks
-    Docker --> Mosquitto
 
     Traefik --> N8N
     Traefik --> Grafana
@@ -401,7 +394,6 @@ graph TD
     Prometheus --> Alertmanager
 
     HomepageAPI --> Homepage
-    Mosquitto --> OwnTracks
     OwnTracks --> DataMCP
     DataMCP --> Bede
 
@@ -424,7 +416,7 @@ graph TD
     class AdGuard,N8NInit,N8N core
     class Prometheus,NodeExporter,CAdvisor,Grafana,Alertmanager monitoring
     class HomepageAPI,Homepage dashboard
-    class Bede,DataMCP,OwnTracks,Mosquitto ai
+    class Bede,DataMCP,OwnTracks ai
 ```
 
 ---
@@ -554,7 +546,7 @@ The stack uses multiple compose files for logical separation:
 - **docker-compose.monitoring.yml**: Monitoring stack (Prometheus, Grafana, Alertmanager, exporters)
 - **docker-compose.dashboard.yml**: Dashboard (Homepage, Homepage API)
 - **docker-compose.ai.yml**: AI assistant services (Bede, data-mcp)
-- **docker-compose.location.yml**: Location stack (owntracks-recorder, mosquitto)
+- **docker-compose.location.yml**: Location stack (owntracks-recorder)
 
 ### Domain-Based Routing
 All services accessible via `https://<service>.${DOMAIN}`:
