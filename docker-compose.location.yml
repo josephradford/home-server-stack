@@ -15,7 +15,7 @@
 
 services:
   mosquitto:
-    image: eclipse-mosquitto
+    image: eclipse-mosquitto:2.1.2
     container_name: mosquitto
     restart: unless-stopped
     # No config needed — default settings allow anonymous connections on 1883
@@ -23,7 +23,7 @@ services:
       - location
 
   owntracks-recorder:
-    image: owntracks/recorder
+    image: owntracks/recorder:1.0.1
     container_name: owntracks-recorder
     restart: unless-stopped
     environment:

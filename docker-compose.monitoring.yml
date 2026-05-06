@@ -1,6 +1,6 @@
 services:
   prometheus:
-    image: prom/prometheus:latest
+    image: prom/prometheus:v3.11.3
     container_name: prometheus
     restart: unless-stopped
     ports:
@@ -28,7 +28,7 @@ services:
       - "traefik.http.routers.prometheus.middlewares=admin-secure"
 
   grafana:
-    image: grafana/grafana:latest
+    image: grafana/grafana:12.4.3
     container_name: grafana
     restart: unless-stopped
     expose:
@@ -53,7 +53,7 @@ services:
       - "traefik.http.routers.grafana.middlewares=admin-secure-no-ratelimit"
 
   alertmanager:
-    image: prom/alertmanager:latest
+    image: prom/alertmanager:v0.32.1
     container_name: alertmanager
     restart: unless-stopped
     ports:
@@ -73,7 +73,7 @@ services:
       - "traefik.http.routers.alertmanager.middlewares=admin-secure"
 
   node-exporter:
-    image: prom/node-exporter:latest
+    image: prom/node-exporter:v1.11.1
     container_name: node-exporter
     restart: unless-stopped
     ports:
@@ -91,7 +91,7 @@ services:
       - homeserver
 
   cadvisor:
-    image: gcr.io/cadvisor/cadvisor:v0.47.2
+    image: gcr.io/cadvisor/cadvisor:v0.56.2
     container_name: cadvisor
     restart: unless-stopped
     ports:

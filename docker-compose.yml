@@ -6,7 +6,7 @@
 
 services:
   adguard:
-    image: adguard/adguardhome:latest
+    image: adguard/adguardhome:v0.107.74
     container_name: adguard-home
     restart: unless-stopped
     ports:
@@ -31,7 +31,7 @@ services:
       - "traefik.http.routers.adguard.middlewares=admin-secure-no-ratelimit"
 
   n8n-init:
-    image: alpine:latest
+    image: alpine:3.22.4
     container_name: n8n-init
     restart: "no"
     volumes:
@@ -44,7 +44,7 @@ services:
       "
 
   n8n:
-    image: n8nio/n8n:latest
+    image: n8nio/n8n:2.20.0
     container_name: n8n
     restart: unless-stopped
     user: "1000:1000"
