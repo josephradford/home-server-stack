@@ -273,6 +273,13 @@
           container: bede-workspace-mcp
           server: my-docker
           showStats: true
+      - Bede Web:
+          icon: mdi-monitor-dashboard
+          href: https://bede.{{HOMEPAGE_VAR_DOMAIN}}
+          description: Bede operational dashboard
+          container: bede-web
+          server: my-docker
+          showStats: true
 
   # Location Services - Location tracking
   - Location:
