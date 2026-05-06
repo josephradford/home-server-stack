@@ -52,12 +52,21 @@ graph TB
 
     subgraph AI["AI Services
     docker-compose.ai.yml"]
-        Bede["Bede
-        Telegram Bot
+        BedeCore["bede-core
+        Telegram Bot + Scheduler
         (outbound only)"]
-        DataMCP["data-mcp
-        Personal Data MCP
-        :8000 (internal)"]
+        BedeData["bede-data
+        REST API + SQLite
+        :8001 (internal)"]
+        DataMCP["bede-data-mcp
+        MCP Proxy
+        :8002 (internal)"]
+        WorkspaceMCP["bede-workspace-mcp
+        Google Workspace MCP
+        :8003 (internal)"]
+        BedeWeb["bede-web
+        Dashboard UI
+        :8080"]
     end
 
     subgraph Location["Location Services
@@ -147,10 +156,14 @@ graph TB
     HomepageAPI -->|Docker Stats| Monitoring
 
     %% AI service connections
-    Bede -->|Claude API| Internet
-    Bede -->|Telegram Bot API| Internet
-    Bede -.->|MCP Protocol| DataMCP
-    DataMCP -->|Reads| OwnTracks
+    BedeCore -->|Claude CLI| Internet
+    BedeCore -->|Telegram Bot API| Internet
+    BedeCore -.->|MCP Protocol| DataMCP
+    BedeCore -.->|MCP Protocol| WorkspaceMCP
+    BedeData -->|Reads| OwnTracks
+    DataMCP -->|HTTP API| BedeData
+    BedeWeb -->|API Proxy| BedeData
+    Traefik -->|bede.domain routing| BedeWeb
     OwnTracks -->|HTTP POST /pub| OwnTracks
 
     %% Certificate management
@@ -165,7 +178,7 @@ graph TB
     Prometheus -.->|Stores| PrometheusData
     VPN -.->|Stores| WireGuardData
     OwnTracks -.->|Stores| OwnTracksData
-    Bede -.->|Stores| BedeVault
+    BedeData -.->|Stores| BedeVault
 
     classDef external fill:#ff6b6b,stroke:#c92a2a,stroke-width:2px,color:#fff
     classDef network fill:#4dabf7,stroke:#1971c2,stroke-width:2px,color:#fff
@@ -181,8 +194,8 @@ graph TB
     class AdGuard,N8N core
     class Prometheus,Grafana,Alertmanager,NodeExporter,CAdvisor monitoring
     class Homepage,HomepageAPI dashboard
-    class Bede,DataMCP ai
-    class AdGuardData,N8NData,TraefikData,GrafanaData,PrometheusData,WireGuardData,OwnTracksData,InfluxData,BedeVault data
+    class BedeCore,BedeData,DataMCP,WorkspaceMCP,BedeWeb ai
+    class AdGuardData,N8NData,TraefikData,GrafanaData,PrometheusData,WireGuardData,OwnTracksData,BedeVault data
     class Certbot system
 ```
 
@@ -243,10 +256,11 @@ graph TB
         Traefik Dashboard, AdGuard, n8n
         Homepage, Homepage API
         Grafana, Prometheus, Alertmanager
-        owntracks-recorder"]
+        owntracks-recorder, bede-web"]
         Internal["Internal-Only Services
-        bede (Telegram outbound)
-        data-mcp
+        bede-core (Telegram outbound)
+        bede-data, bede-data-mcp
+        bede-workspace-mcp
         node-exporter, cadvisor"]
         Webhooks["Public Webhooks
         Future"]
@@ -357,10 +371,16 @@ graph TD
     Dashboard UI"]
 
     %% AI / data / location services
-    Bede["Bede
-    Telegram Assistant"]
-    DataMCP["data-mcp
-    Personal Data MCP"]
+    BedeCore["bede-core
+    Telegram + Scheduler"]
+    BedeData["bede-data
+    REST API"]
+    DataMCP["bede-data-mcp
+    MCP Proxy"]
+    WorkspaceMCP["bede-workspace-mcp
+    Google Workspace"]
+    BedeWeb["bede-web
+    Dashboard"]
     OwnTracks["owntracks-recorder
     Location API"]
     %% Dependencies
@@ -375,8 +395,11 @@ graph TD
     Docker --> Alertmanager
     Docker --> HomepageAPI
     Docker --> Homepage
-    Docker --> Bede
+    Docker --> BedeCore
+    Docker --> BedeData
     Docker --> DataMCP
+    Docker --> WorkspaceMCP
+    Docker --> BedeWeb
     Docker --> OwnTracks
 
     Traefik --> N8N
@@ -394,8 +417,11 @@ graph TD
     Prometheus --> Alertmanager
 
     HomepageAPI --> Homepage
-    OwnTracks --> DataMCP
-    DataMCP --> Bede
+    OwnTracks --> BedeData
+    BedeData --> DataMCP
+    BedeData --> BedeWeb
+    DataMCP --> BedeCore
+    WorkspaceMCP --> BedeCore
 
     Certbot -.->|Provides Certs| Traefik
     AdGuard -.->|DNS Resolution| Traefik
@@ -416,7 +442,7 @@ graph TD
     class AdGuard,N8NInit,N8N core
     class Prometheus,NodeExporter,CAdvisor,Grafana,Alertmanager monitoring
     class HomepageAPI,Homepage dashboard
-    class Bede,DataMCP,OwnTracks ai
+    class BedeCore,BedeData,DataMCP,WorkspaceMCP,BedeWeb,OwnTracks ai
 ```
 
 ---
@@ -545,7 +571,7 @@ The stack uses multiple compose files for logical separation:
 - **docker-compose.network.yml**: Network & Security (Traefik, Fail2ban)
 - **docker-compose.monitoring.yml**: Monitoring stack (Prometheus, Grafana, Alertmanager, exporters)
 - **docker-compose.dashboard.yml**: Dashboard (Homepage, Homepage API)
-- **docker-compose.ai.yml**: AI assistant services (Bede, data-mcp)
+- **docker-compose.ai.yml**: AI assistant services (bede-core, bede-data, bede-data-mcp, bede-workspace-mcp, bede-web)
 - **docker-compose.location.yml**: Location stack (owntracks-recorder)
 
 ### Domain-Based Routing
@@ -598,6 +624,7 @@ tar -czf backup.tar.gz data/ .env
 - **Alertmanager** - https://alerts.${DOMAIN}
 - **Homepage** - https://homepage.${DOMAIN}
 - **Traefik Dashboard** - https://traefik.${DOMAIN}
+- **Bede Dashboard** - https://bede.${DOMAIN}
 - **OwnTracks Recorder** - https://owntracks.${DOMAIN}
 
 ### Direct Access (monitoring, not exposed externally)

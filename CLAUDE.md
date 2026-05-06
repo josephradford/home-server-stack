@@ -45,9 +45,10 @@ Add peers: `sudo ./scripts/wireguard/wireguard-add-peer.sh <name>`
 - `docker-compose.network.yml` — Network & security (Traefik, Fail2ban)
 - `docker-compose.monitoring.yml` — Monitoring (Prometheus, Grafana, Alertmanager, exporters)
 - `docker-compose.dashboard.yml` — Dashboard (Homepage, Homepage API)
-- `docker-compose.ai.yml` — AI services (bede + bede-data + bede-data-mcp — prebuilt GHCR images from josephradford/bede)
+- `docker-compose.ai.yml` — AI services (bede-core, bede-data, bede-data-mcp, bede-workspace-mcp, bede-web — prebuilt GHCR images from josephradford/bede)
+- `docker-compose.location.yml` — Location services (owntracks-recorder)
 
-The Makefile combines all five files by default.
+The Makefile combines all six files by default.
 
 ### Domain Routing
 1. **AdGuard Home** (port 53) resolves `*.DOMAIN` → `SERVER_IP`
