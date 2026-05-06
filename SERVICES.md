@@ -130,6 +130,12 @@ Currently deployed and active services.
 - **Image:** `ghcr.io/josephradford/bede-workspace-mcp:latest`
 - **Depends on:** Google OAuth credentials in `.env`
 
+#### bede-web
+- **Purpose:** Read-only operational dashboard and data browser for Bede — displays data freshness, task status, storage usage, schedule, memories, goals, and conversation history
+- **Access:** https://bede.${DOMAIN} (admin-secure middleware — IP whitelist + security headers)
+- **Image:** `ghcr.io/josephradford/bede-web:latest`
+- **Depends on:** bede-data (HTTP API proxied via nginx)
+
 ### Location Services
 
 #### owntracks-recorder
@@ -168,6 +174,7 @@ Currently deployed and active services.
 | bede-data | https://data.${DOMAIN} | N/A |
 | bede-data-mcp | Internal only | N/A |
 | bede-workspace-mcp | https://mcp.${DOMAIN} (OAuth only) | N/A |
+| bede-web | https://bede.${DOMAIN} | N/A |
 | owntracks-recorder | https://owntracks.${DOMAIN} | N/A |
 | hae-server | https://hae.${DOMAIN} | N/A |
 | hae-influxdb | https://influxdb.${DOMAIN} | N/A |
