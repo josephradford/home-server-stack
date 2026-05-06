@@ -102,11 +102,6 @@ Currently deployed and active services.
 
 ### AI Services
 
-#### Bede (prototype — disabled)
-- **Purpose:** Original Bede prototype (replaced by bede-core)
-- **Access:** Disabled via docker-compose profile
-- **Status:** Superseded by bede-core
-
 #### bede-data
 - **Purpose:** Data layer for Bede — REST API serving health, location, vault, memory, goal, analytics, and config data from SQLite
 - **Access:** https://data.${DOMAIN} (ingest endpoints), internal API on port 8001
@@ -144,18 +139,6 @@ Currently deployed and active services.
 - **Authentication:** IP-restricted via Traefik `admin-secure`
 
 
-### Health Services
-
-#### hae-server
-- **Purpose:** Apple Health Auto Export ingest API
-- **Access:** https://hae.${DOMAIN}
-- **Authentication:** Bearer token (`HAE_WRITE_TOKEN`)
-
-#### hae-influxdb
-- **Purpose:** Time-series storage for health metrics/workouts
-- **Access:** https://influxdb.${DOMAIN}
-- **Authentication:** InfluxDB credentials + token
-
 ---
 
 ## Quick Reference
@@ -176,8 +159,6 @@ Currently deployed and active services.
 | bede-workspace-mcp | https://mcp.${DOMAIN} (OAuth only) | N/A |
 | bede-web | https://bede.${DOMAIN} | N/A |
 | owntracks-recorder | https://owntracks.${DOMAIN} | N/A |
-| hae-server | https://hae.${DOMAIN} | N/A |
-| hae-influxdb | https://influxdb.${DOMAIN} | N/A |
 
 ---
 
@@ -196,6 +177,10 @@ Services queued for implementation.
 - [ ] **[Navidrome](https://github.com/navidrome/navidrome)** - Modern Music Server and Streamer compatible with Subsonic/Airsonic (alternative to Jellyfin for music)
 - [ ] **[Sonarr](https://github.com/Sonarr/Sonarr)** - Smart PVR for newsgroup and bittorrent users (TV show automation)
 - [ ] **[Radarr](https://github.com/Radarr/Radarr)** - Movie organizer/manager for usenet and torrent users
+
+### Health & Fitness
+- [ ] **hae-server** - Apple Health Auto Export ingest API
+- [ ] **hae-influxdb** - InfluxDB time-series storage for health metrics/workouts
 
 ### Infrastructure & Security
 - [ ] **[Ollama](https://github.com/ollama/ollama)** - Run large language models locally

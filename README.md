@@ -2,30 +2,15 @@
 
 A complete self-hosted infrastructure for home automation, AI, and network services using Docker Compose.
 
-## 🆕 Recent Changes (late March → mid April 2026)
-
-- Added **data-mcp** so Bede can query personal data from OwnTracks and vault git history.
-- Added **OwnTracks location services** (`owntracks-recorder` + internal `mosquitto`) in `docker-compose.location.yml`.
-- Removed **OpenClaw** and standardized AI assistant workflows on Bede.
-
 ## 🚀 Services
 
-**Core Services:**
-- **[AdGuard Home](https://github.com/AdguardTeam/AdGuardHome)** - Network-wide ad blocking and DNS server
-- **[n8n](https://github.com/n8n-io/n8n)** - Workflow automation platform
-- **[WireGuard](https://github.com/wireguard)** - VPN for secure remote access
-- **[Traefik](https://github.com/traefik/traefik)** - Reverse proxy for domain-based service access
-- **OwnTracks Recorder** - Location timeline ingestion and query API
+**Core:** [AdGuard Home](https://github.com/AdguardTeam/AdGuardHome) (DNS/ad-blocking), [n8n](https://github.com/n8n-io/n8n) (workflow automation), [WireGuard](https://github.com/wireguard) (VPN), [Traefik](https://github.com/traefik/traefik) (reverse proxy), OwnTracks Recorder (location)
 
-**Monitoring Stack:**
-- **[Grafana](https://github.com/grafana/grafana)** - Metrics visualization and dashboards
-  - **System Overview** - CPU, memory, disk, network metrics
-  - **Container Health** - Docker container status and resource usage
-  - **Resource Utilization** - Historical trends and capacity planning
-- **[Prometheus](https://github.com/prometheus/prometheus)** - Metrics collection and alerting
-- **[Alertmanager](https://github.com/prometheus/alertmanager)** - Alert routing and management
-- **[Node Exporter](https://github.com/prometheus/node_exporter)** - System metrics exporter
-- **[cAdvisor](https://github.com/google/cadvisor)** - Container metrics
+**AI (Bede):** bede-core (Telegram bot + scheduler), bede-data (REST API + SQLite), bede-data-mcp (MCP proxy), bede-workspace-mcp (Google Workspace), bede-web (dashboard)
+
+**Monitoring:** [Grafana](https://github.com/grafana/grafana), [Prometheus](https://github.com/prometheus/prometheus), [Alertmanager](https://github.com/prometheus/alertmanager), Node Exporter, cAdvisor
+
+**Dashboard:** [Homepage](https://github.com/gethomepage/homepage) + custom API backend
 
 See [SERVICES.md](SERVICES.md) for the complete catalog including planned services.
 
@@ -144,6 +129,7 @@ All services are accessible via domain names on your local network:
 - **Prometheus:** `https://prometheus.${DOMAIN}` (Metrics)
 - **Alertmanager:** `https://alerts.${DOMAIN}` (Alerts)
 - **Homepage:** `https://homepage.${DOMAIN}` (Dashboard)
+- **Bede Dashboard:** `https://bede.${DOMAIN}` (AI assistant dashboard)
 - **OwnTracks Recorder:** `https://owntracks.${DOMAIN}` (Location history API)
 
 **Note:** Services are accessible via domain names thanks to Traefik reverse proxy and AdGuard Home DNS. Your devices must use AdGuard Home as their DNS server (configured automatically if DHCP points to the server).
@@ -200,8 +186,6 @@ This project implements **multi-layered defense-in-depth security** with four pr
 - **Admin Interfaces** (n8n, Grafana, etc.): VPN or local network only
 - **Future Webhooks**: Public access with rate limiting (not yet configured)
 - **VPN Primary Boundary**: WireGuard for all remote admin access
-
-See **[security-tickets/README.md](security-tickets/README.md)** for the complete security roadmap.
 
 ## 📊 Dashboard & Automation
 
@@ -260,4 +244,4 @@ This project is open source. Individual services maintain their own licenses:
 ---
 
 **Project Status:** Active Development
-**Latest Update:** 2025-10-16
+**Latest Update:** 2026-05-07
