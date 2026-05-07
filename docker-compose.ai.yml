@@ -105,7 +105,7 @@ services:
       - "traefik.http.services.workspace-mcp.loadbalancer.server.port=8003"
 
   bede-browser-mcp:
-    image: mcr.microsoft.com/playwright/mcp:latest
+    image: mcr.microsoft.com/playwright/mcp:v0.0.74
     container_name: bede-browser-mcp
     restart: unless-stopped
     command: ["--headless", "--port", "8004", "--host", "0.0.0.0", "--no-sandbox"]
