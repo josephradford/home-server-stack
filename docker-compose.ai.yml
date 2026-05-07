@@ -10,6 +10,7 @@ services:
       - OWNTRACKS_URL=http://owntracks-recorder:8083
       - OWNTRACKS_USER=${OWNTRACKS_USER}
       - OWNTRACKS_DEVICE=${OWNTRACKS_DEVICE}
+      - AIR_QUALITY_SITE_ID=${AIR_QUALITY_SITE_ID}
     volumes:
       - ./data/bede/sqlite:/data/sqlite
     networks:
