@@ -281,6 +281,13 @@
           server: my-docker
           showStats: true
 
+      - Bede Browser MCP:
+          icon: mdi-web
+          description: Headless browser access for Bede (internal MCP)
+          container: bede-browser-mcp
+          server: my-docker
+          showStats: true
+
   # Location Services - Location tracking
   - Location:
       - OwnTracks:

@@ -131,6 +131,13 @@ Currently deployed and active services.
 - **Image:** `ghcr.io/josephradford/bede-web:latest`
 - **Depends on:** bede-data (HTTP API proxied via nginx)
 
+#### bede-browser-mcp
+- **Purpose:** Headless Chromium browser access for bede-core via MCP — enables web browsing, screenshot capture, and page interaction
+- **Access:** Internal only (no Traefik routing) — bede-core connects via `http://bede-browser-mcp:8004/mcp`
+- **Image:** `mcr.microsoft.com/playwright/mcp:latest`
+- **Port:** 8004
+- **Depends on:** None (standalone sidecar)
+
 ### Location Services
 
 #### owntracks-recorder
@@ -158,6 +165,7 @@ Currently deployed and active services.
 | bede-data-mcp | Internal only | N/A |
 | bede-workspace-mcp | https://mcp.${DOMAIN} (OAuth only) | N/A |
 | bede-web | https://bede.${DOMAIN} | N/A |
+| bede-browser-mcp | Internal only | N/A |
 | owntracks-recorder | https://owntracks.${DOMAIN} | N/A |
 
 ---
