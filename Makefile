@@ -364,6 +364,7 @@ bede-pull: env-check
 	@docker pull ghcr.io/josephradford/bede-core:latest
 	@docker pull ghcr.io/josephradford/bede-workspace-mcp:latest
 	@docker pull ghcr.io/josephradford/bede-web:latest
+	@docker pull mcr.microsoft.com/playwright/mcp:v0.0.74
 	@echo "✓ Bede images pulled"
 
 bede-start: env-check

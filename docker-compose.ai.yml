@@ -104,6 +104,19 @@ services:
       - "traefik.http.routers.workspace-mcp.service=workspace-mcp"
       - "traefik.http.services.workspace-mcp.loadbalancer.server.port=8003"
 
+  bede-browser-mcp:
+    image: mcr.microsoft.com/playwright/mcp:v0.0.74
+    container_name: bede-browser-mcp
+    restart: unless-stopped
+    command: ["--headless", "--port", "8004", "--host", "0.0.0.0", "--no-sandbox"]
+    networks:
+      - homeserver
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:8004/mcp').then(r => process.exit(r.status === 400 ? 0 : 1)).catch(() => process.exit(1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
   bede-core:
     image: ghcr.io/josephradford/bede-core:latest
     container_name: bede-core
@@ -135,6 +148,8 @@ services:
       bede-data-mcp:
         condition: service_healthy
       bede-workspace-mcp:
+        condition: service_healthy
+      bede-browser-mcp:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-sf", "http://localhost:8080/health"]
