@@ -1,6 +1,6 @@
 # Deal Monitoring & News Curation Implementation Plan
 
-> **Status: COMPLETE** — Code tasks 1-7 merged in bede PR #73 (2026-05-07). Seed script added. Remaining: Task 8 (data seeding via conversation), Task 9 (Deal Scout schedule config), Task 10 (News Digest schedule config) — these are runtime configuration, not code.
+> **Status: COMPLETE** — All tasks done. Code tasks 1-7 merged in bede PR #73 (2026-05-07). Task 8: monitored items seeded, 46 dead URLs and 47 price history records migrated from price-checker-memory.md, vault preference files archived. Task 9: Deal Scout running Sundays 2pm AEST with 5 parallel steps (Groceries, Vacuum, Clothing, Camping Gear, Events). Task 10: News Digest running weekdays 7am AEST, `/digest` command merged.
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
