@@ -52,13 +52,25 @@
             - field: departures.0.time
               label: Departs
               format: relativeDate
+            - field: departures.0.realtime
+              label: Tracking
+              remap:
+                - value: true
+                  to: "● Live"
+                - value: false
+                  to: "○ Sched"
             - field: departures.1.line
               label: Following
             - field: departures.1.time
               label: Departs
               format: relativeDate
-            - field: data_status
-              label: Data
+            - field: departures.1.realtime
+              label: Tracking
+              remap:
+                - value: true
+                  to: "● Live"
+                - value: false
+                  to: "○ Sched"
 
     - "{{HOMEPAGE_VAR_TRANSPORT_STOP_2_NAME}}":
         icon: {{HOMEPAGE_VAR_TRANSPORT_STOP_2_ICON}}
@@ -71,11 +83,23 @@
             - field: departures.0.time
               label: Next
               format: relativeDate
+            - field: departures.0.realtime
+              label: Tracking
+              remap:
+                - value: true
+                  to: "● Live"
+                - value: false
+                  to: "○ Sched"
             - field: departures.1.time
               label: Following
               format: relativeDate
-            - field: data_status
-              label: Data
+            - field: departures.1.realtime
+              label: Tracking
+              remap:
+                - value: true
+                  to: "● Live"
+                - value: false
+                  to: "○ Sched"
 
 - "{{HOMEPAGE_VAR_TRANSPORT_SECTION_2}}":
     - "{{HOMEPAGE_VAR_TRANSPORT_STOP_3_NAME}}":
@@ -91,13 +115,25 @@
             - field: departures.0.time
               label: Departs
               format: relativeDate
+            - field: departures.0.realtime
+              label: Tracking
+              remap:
+                - value: true
+                  to: "● Live"
+                - value: false
+                  to: "○ Sched"
             - field: departures.1.line
               label: Following
             - field: departures.1.time
               label: Departs
               format: relativeDate
-            - field: data_status
-              label: Data
+            - field: departures.1.realtime
+              label: Tracking
+              remap:
+                - value: true
+                  to: "● Live"
+                - value: false
+                  to: "○ Sched"
 
     - "{{HOMEPAGE_VAR_TRANSPORT_STOP_4_NAME}}":
         icon: {{HOMEPAGE_VAR_TRANSPORT_STOP_4_ICON}}
@@ -113,8 +149,13 @@
             - field: departures.1.time
               label: Following
               format: relativeDate
-            - field: data_status
-              label: Data
+            - field: departures.1.realtime
+              label: Tracking
+              remap:
+                - value: true
+                  to: "● Live"
+                - value: false
+                  to: "○ Sched"
 
     - Transport NSW:
         icon: mdi-bus-multiple
