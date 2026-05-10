@@ -289,8 +289,6 @@ def transport_departures(stop_id):
 
         departures = []
         stop_events = data.get('stopEvents', [])
-        has_realtime = False
-
         for event in stop_events:
             if len(departures) >= limit:
                 break
@@ -313,7 +311,6 @@ def transport_departures(stop_id):
             delay_minutes = 0
             departure_time = event.get('departureTimePlanned')
             if is_realtime:
-                has_realtime = True
                 estimated_str = event.get('departureTimeEstimated')
                 if estimated_str:
                     departure_time = estimated_str
@@ -338,7 +335,6 @@ def transport_departures(stop_id):
         return jsonify({
             'stopId': stop_id,
             'departures': departures,
-            'data_status': 'Live' if has_realtime else 'Scheduled',
             'updated': datetime.now().isoformat()
         })
 
