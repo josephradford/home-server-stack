@@ -103,10 +103,14 @@ Currently deployed and active services.
 ### AI Services
 
 #### bede-data
-- **Purpose:** Data layer for Bede — REST API serving health, location, vault, memory, goal, analytics, and config data from SQLite
+- **Purpose:** Data layer for Bede — REST API serving health, location, vault, memory, goal, analytics, config, deal monitoring, and news curation data from SQLite
 - **Access:** https://data.${DOMAIN} (ingest endpoints), internal API on port 8001
 - **Image:** `ghcr.io/josephradford/bede-data:latest`
 - **Authentication:** `INGEST_WRITE_TOKEN` for write endpoints
+- **Key API surfaces:**
+  - `/api/deals/*` — price check recording, price history queries, dead URL tracking
+  - `/api/news/*` — article storage, deduplication, digest tracking
+  - `/api/config/monitored-items` — CRUD for deal/event/news monitoring config
 
 #### bede-core
 - **Purpose:** Bede's brain — Telegram bot, APScheduler task runner, Claude CLI session manager, and memory manager
@@ -115,9 +119,10 @@ Currently deployed and active services.
 - **Depends on:** bede-data (HTTP API), bede-data-mcp (MCP tools)
 
 #### bede-data-mcp
-- **Purpose:** Thin MCP proxy (42 tools) forwarding to bede-data's HTTP API — how Claude inside bede-core discovers and calls personal data tools
+- **Purpose:** Thin MCP proxy (50+ tools) forwarding to bede-data's HTTP API — how Claude inside bede-core discovers and calls personal data tools
 - **Access:** Internal only (container-to-container, port 8002)
 - **Image:** `ghcr.io/josephradford/bede-data-mcp:latest`
+- **Includes:** deal monitoring tools (record_price_check, get_price_history, report_dead_url, list_dead_urls, update_dead_url), news curation tools (save_article, list_articles, check_article_exists, mark_article_in_digest), plus config/schedule/health/vault/location/weather/memory/goal/analytics tools
 
 #### bede-workspace-mcp
 - **Purpose:** Google Workspace MCP sidecar — wraps the `workspace-mcp` PyPI package to provide Gmail, Calendar, Tasks, Docs, Sheets, Slides, and Drive access to Claude inside bede-core
