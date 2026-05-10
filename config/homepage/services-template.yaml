@@ -57,6 +57,8 @@
             - field: departures.1.time
               label: Departs
               format: relativeDate
+            - field: data_status
+              label: Data
 
     - "{{HOMEPAGE_VAR_TRANSPORT_STOP_2_NAME}}":
         icon: {{HOMEPAGE_VAR_TRANSPORT_STOP_2_ICON}}
@@ -72,6 +74,8 @@
             - field: departures.1.time
               label: Following
               format: relativeDate
+            - field: data_status
+              label: Data
 
 - "{{HOMEPAGE_VAR_TRANSPORT_SECTION_2}}":
     - "{{HOMEPAGE_VAR_TRANSPORT_STOP_3_NAME}}":
@@ -92,6 +96,8 @@
             - field: departures.1.time
               label: Departs
               format: relativeDate
+            - field: data_status
+              label: Data
 
     - "{{HOMEPAGE_VAR_TRANSPORT_STOP_4_NAME}}":
         icon: {{HOMEPAGE_VAR_TRANSPORT_STOP_4_ICON}}
@@ -107,6 +113,8 @@
             - field: departures.1.time
               label: Following
               format: relativeDate
+            - field: data_status
+              label: Data
 
     - Transport NSW:
         icon: mdi-bus-multiple

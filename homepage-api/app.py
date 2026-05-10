@@ -289,10 +289,14 @@ def transport_departures(stop_id):
 
         departures = []
         stop_events = data.get('stopEvents', [])
+        has_realtime = False
 
         for event in stop_events:
             if len(departures) >= limit:
                 break
+
+            if event.get('isCancelled'):
+                continue
 
             transportation = event.get('transportation', {})
             destination_name = transportation.get('destination', {}).get('name', '')
@@ -304,12 +308,17 @@ def transport_departures(stop_id):
                 continue
 
             location = event.get('location', {})
+            is_realtime = event.get('isRealtimeControlled', False)
 
             delay_minutes = 0
-            if event.get('isRealtimeControlled'):
+            departure_time = event.get('departureTimePlanned')
+            if is_realtime:
+                has_realtime = True
+                estimated_str = event.get('departureTimeEstimated')
+                if estimated_str:
+                    departure_time = estimated_str
                 try:
                     planned_str = event.get('departureTimePlanned')
-                    estimated_str = event.get('departureTimeEstimated')
                     if planned_str and estimated_str:
                         planned = datetime.fromisoformat(planned_str.replace('Z', '+00:00'))
                         estimated = datetime.fromisoformat(estimated_str.replace('Z', '+00:00'))
@@ -318,17 +327,18 @@ def transport_departures(stop_id):
                     delay_minutes = 0
 
             departures.append({
-                'time': event.get('departureTimePlanned'),
+                'time': departure_time,
                 'destination': destination_name,
                 'line': route_number,
                 'platform': location.get('properties', {}).get('platformName'),
-                'realtime': event.get('isRealtimeControlled', False),
+                'realtime': is_realtime,
                 'delay_minutes': delay_minutes
             })
 
         return jsonify({
             'stopId': stop_id,
             'departures': departures,
+            'data_status': 'Live' if has_realtime else 'Scheduled',
             'updated': datetime.now().isoformat()
         })
 
