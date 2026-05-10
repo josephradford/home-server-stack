@@ -8,14 +8,6 @@ set -e
 echo "🏠 Configuring Homepage Dashboard"
 echo "=================================="
 
-# Load environment variables
-if [ ! -f .env ]; then
-    echo "❌ Error: .env file not found"
-    exit 1
-fi
-
-source .env
-
 # Ensure config directory exists
 CONFIG_DIR="data/homepage/config"
 TEMPLATE_DIR="config/homepage"
