@@ -103,7 +103,7 @@ Currently deployed and active services.
 ### AI Services
 
 #### bede-data
-- **Purpose:** Data layer for Bede — REST API serving health, location, vault, memory, goal, analytics, config, deal monitoring, and news curation data from SQLite
+- **Purpose:** Data layer for Bede — REST API serving health, location, usage, memory, goal, analytics, config, deal monitoring, and news curation data from SQLite
 - **Access:** https://data.${DOMAIN} (ingest endpoints), internal API on port 8001
 - **Image:** `ghcr.io/josephradford/bede-data:latest`
 - **Authentication:** `INGEST_WRITE_TOKEN` for write endpoints

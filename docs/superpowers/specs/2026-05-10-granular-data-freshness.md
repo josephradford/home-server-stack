@@ -1,6 +1,6 @@
 # Granular Data Freshness — Design Notes
 
-> **Status:** Research / brainstorming — not yet a spec. Resume from here when ready to implement.
+> **Status:** Implemented — see design spec and implementation plan in `docs/superpowers/specs/` and `docs/superpowers/plans/`.
 
 ## Problem
 
