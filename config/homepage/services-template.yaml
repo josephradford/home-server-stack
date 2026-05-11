@@ -46,6 +46,7 @@
           type: customapi
           url: http://homepage-api:5000/api/transport/departures/{{HOMEPAGE_VAR_TRANSPORT_STOP_1_ID}}?{{HOMEPAGE_VAR_TRANSPORT_STOP_1_FILTER}}
           refreshInterval: 60000
+          display: list
           mappings:
             - field: departures.0.line
               label: Next
@@ -79,9 +80,12 @@
           type: customapi
           url: http://homepage-api:5000/api/transport/departures/{{HOMEPAGE_VAR_TRANSPORT_STOP_2_ID}}?{{HOMEPAGE_VAR_TRANSPORT_STOP_2_FILTER}}
           refreshInterval: 60000
+          display: list
           mappings:
-            - field: departures.0.time
+            - field: departures.0.line
               label: Next
+            - field: departures.0.time
+              label: Departs
               format: relativeDate
             - field: departures.0.realtime
               label: Tracking
@@ -90,8 +94,10 @@
                   to: "● Live"
                 - value: false
                   to: "○ Sched"
-            - field: departures.1.time
+            - field: departures.1.line
               label: Following
+            - field: departures.1.time
+              label: Departs
               format: relativeDate
             - field: departures.1.realtime
               label: Tracking
@@ -109,6 +115,7 @@
           type: customapi
           url: http://homepage-api:5000/api/transport/departures/{{HOMEPAGE_VAR_TRANSPORT_STOP_3_ID}}?{{HOMEPAGE_VAR_TRANSPORT_STOP_3_FILTER}}
           refreshInterval: 60000
+          display: list
           mappings:
             - field: departures.0.line
               label: Next
@@ -142,12 +149,24 @@
           type: customapi
           url: http://homepage-api:5000/api/transport/departures/{{HOMEPAGE_VAR_TRANSPORT_STOP_4_ID}}?{{HOMEPAGE_VAR_TRANSPORT_STOP_4_FILTER}}
           refreshInterval: 60000
+          display: list
           mappings:
-            - field: departures.0.time
+            - field: departures.0.line
               label: Next
+            - field: departures.0.time
+              label: Departs
               format: relativeDate
-            - field: departures.1.time
+            - field: departures.0.realtime
+              label: Tracking
+              remap:
+                - value: true
+                  to: "● Live"
+                - value: false
+                  to: "○ Sched"
+            - field: departures.1.line
               label: Following
+            - field: departures.1.time
+              label: Departs
               format: relativeDate
             - field: departures.1.realtime
               label: Tracking
