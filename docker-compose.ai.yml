@@ -13,6 +13,7 @@ services:
       - AIR_QUALITY_SITE_ID=${AIR_QUALITY_SITE_ID}
     volumes:
       - ./data/bede/sqlite:/data/sqlite
+      - ./data/bede/claude-projects/-app:/data/bede/claude-sessions:ro
     networks:
       - homeserver
       - location
