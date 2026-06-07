@@ -1,0 +1,10 @@
+[Unit]
+Description=Run Gandi DDNS update every 5 minutes
+
+[Timer]
+OnBootSec=30
+OnUnitActiveSec=5min
+Persistent=true
+
+[Install]
+WantedBy=timers.target
