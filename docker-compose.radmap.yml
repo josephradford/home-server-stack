@@ -1,0 +1,25 @@
+---
+# Radmap - Offline NSW topographic map PWA
+# Serves static files from the radmap submodule (apps/radmap/public)
+
+services:
+  radmap:
+    image: nginx:alpine
+    container_name: radmap
+    restart: unless-stopped
+    volumes:
+      - ./apps/radmap/public:/usr/share/nginx/html:ro
+      - ./config/radmap/default.conf:/etc/nginx/conf.d/default.conf:ro
+    networks:
+      - homeserver
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.radmap.rule=Host(`radmap.${DOMAIN}`)"
+      - "traefik.http.routers.radmap.entrypoints=websecure"
+      - "traefik.http.routers.radmap.tls=true"
+      - "traefik.http.services.radmap.loadbalancer.server.port=80"
+      - "traefik.http.routers.radmap.middlewares=internal-only,security-headers"
+
+networks:
+  homeserver:
+    external: true
