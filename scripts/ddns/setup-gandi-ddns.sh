@@ -1,11 +1,10 @@
 #!/bin/bash
 # setup-gandi-ddns.sh
-# One-time setup: creates vpn.DOMAIN A record in Gandi LiveDNS, installs a
-# user crontab entry to run gandi-ddns-update.sh every 5 minutes, and
-# configures log rotation.
+# One-time setup: creates vpn.DOMAIN A record in Gandi LiveDNS and installs
+# a systemd timer to run gandi-ddns-update.sh every 5 minutes.
 #
 # Run from the repo root: sudo ./scripts/ddns/setup-gandi-ddns.sh
-# (sudo required for /var/log/ and /etc/logrotate.d/ write access)
+# (sudo required for systemd unit installation)
 
 set -e
 
@@ -24,10 +23,6 @@ if [ "$(id -u)" != "0" ]; then
     echo "  sudo ./scripts/ddns/setup-gandi-ddns.sh"
     exit 1
 fi
-
-# Identify the real user (not root).
-# $SUDO_USER is set by sudo to the original unprivileged username.
-REAL_USER="${SUDO_USER:-$(whoami)}"
 
 # Load environment variables
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -61,11 +56,7 @@ fi
 GANDI_API="https://api.gandi.net/v5/livedns"
 AUTH_HEADER="Authorization: Bearer $GANDIV5_PERSONAL_ACCESS_TOKEN"
 RECORD_URL="$GANDI_API/domains/$DOMAIN/records/$WIREGUARD_DDNS_SUBDOMAIN/A"
-# Note: spec uses `realpath scripts/ddns/gandi-ddns-update.sh` (CWD-relative).
-# Using $REPO_ROOT derived from BASH_SOURCE is more robust — it works regardless
-# of the working directory the script is invoked from.
 UPDATE_SCRIPT="$REPO_ROOT/scripts/ddns/gandi-ddns-update.sh"
-LOG_FILE="/var/log/gandi-ddns.log"
 
 # Step 1: Fetch public IP
 echo -e "${YELLOW}Step 1/4: Fetching current public IP...${NC}"
@@ -100,36 +91,37 @@ else
 fi
 echo ""
 
-# Step 3: Create log file owned by the real user so the cron job can append to it.
-# Running as sudo, we must explicitly chown back to $REAL_USER after creation.
-echo -e "${YELLOW}Step 3/4: Creating log file and configuring log rotation...${NC}"
-touch "$LOG_FILE"
-chown "$REAL_USER": "$LOG_FILE"
-chmod 644 "$LOG_FILE"
-echo -e "${GREEN}✓${NC} Log file: $LOG_FILE (owner: $REAL_USER)"
-
-cat > /etc/logrotate.d/gandi-ddns <<EOF
-$LOG_FILE {
-    daily
-    rotate 7
-    compress
-    missingok
-    notifempty
-}
-EOF
-echo -e "${GREEN}✓${NC} Log rotation configured"
+# Step 3: Remove legacy cron entry if present
+echo -e "${YELLOW}Step 3/5: Removing legacy cron entry (if any)...${NC}"
+REAL_USER="${SUDO_USER:-$(whoami)}"
+if crontab -u "$REAL_USER" -l 2>/dev/null | grep -q "gandi-ddns-update.sh"; then
+    crontab -u "$REAL_USER" -l 2>/dev/null | grep -v "gandi-ddns-update.sh" | crontab -u "$REAL_USER" -
+    echo -e "${GREEN}✓${NC} Removed legacy cron entry"
+else
+    echo -e "${GREEN}✓${NC} No legacy cron entry found"
+fi
 echo ""
 
-# Step 4: Install cron entry for the real user (idempotent).
-# Uses `crontab -u $REAL_USER` because the script runs as root via sudo —
-# plain `crontab -` would install into root's crontab instead.
-# Deduplication key is "gandi-ddns-update.sh": any existing entry with that
-# filename is removed before the new line is appended.
-echo -e "${YELLOW}Step 4/4: Installing cron entry...${NC}"
-CRON_LINE="*/5 * * * * $UPDATE_SCRIPT >> $LOG_FILE 2>&1"
-(crontab -u "$REAL_USER" -l 2>/dev/null | grep -v "gandi-ddns-update.sh"; \
- echo "$CRON_LINE") | crontab -u "$REAL_USER" -
-echo -e "${GREEN}✓${NC} Cron entry installed for $REAL_USER (every 5 minutes)"
+# Step 4: Install systemd timer
+echo -e "${YELLOW}Step 4/5: Installing systemd timer...${NC}"
+sed "s|__REPO_ROOT__|$REPO_ROOT|g" "$SCRIPT_DIR/gandi-ddns.service" > /etc/systemd/system/gandi-ddns.service
+cp "$SCRIPT_DIR/gandi-ddns.timer" /etc/systemd/system/gandi-ddns.timer
+systemctl daemon-reload
+systemctl enable --now gandi-ddns.timer
+echo -e "${GREEN}✓${NC} Systemd timer installed and started"
+echo ""
+
+# Step 5: Verify timer is active
+echo -e "${YELLOW}Step 5/5: Verifying timer...${NC}"
+if systemctl is-active --quiet gandi-ddns.timer; then
+    echo -e "${GREEN}✓${NC} gandi-ddns.timer is active"
+    NEXT_RUN=$(systemctl show gandi-ddns.timer --property=NextElapseUSecRealtime --value)
+    echo -e "${GREEN}✓${NC} Next run: $NEXT_RUN"
+else
+    echo -e "${RED}ERROR: gandi-ddns.timer failed to start${NC}"
+    systemctl status gandi-ddns.timer
+    exit 1
+fi
 echo ""
 
 echo -e "${GREEN}======================================${NC}"
@@ -139,16 +131,13 @@ echo ""
 echo "DNS record created:"
 echo "  $WIREGUARD_DDNS_SUBDOMAIN.$DOMAIN → $CURRENT_IP (TTL 300s)"
 echo ""
-echo "Cron job installed for user: $REAL_USER"
-echo "  Runs every 5 minutes"
-echo "  Logs to: $LOG_FILE"
+echo "Systemd timer installed:"
+echo "  Runs every 5 minutes (+ 30s after boot)"
+echo "  Logs: journalctl -u gandi-ddns"
+echo "  Status: systemctl status gandi-ddns.timer"
 echo ""
 echo "Next steps:"
 echo "  1. Update your .env:  WIREGUARD_SERVERURL=$WIREGUARD_DDNS_SUBDOMAIN.$DOMAIN"
 echo "  2. Test the updater:  make ddns-update"
 echo "  3. Check status:      make ddns-status"
-echo ""
-echo "Action required — regenerate configs for existing WireGuard peers"
-echo "so their Endpoint uses the hostname instead of a raw IP (one-time only):"
-echo "  sudo ./scripts/wireguard/wireguard-add-peer.sh <peer-name>"
 echo ""

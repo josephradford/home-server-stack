@@ -89,7 +89,7 @@ help:
 	@echo "  make ssl-renew-test     - Test certificate renewal (dry run)"
 	@echo ""
 	@echo "Dynamic DNS (Gandi LiveDNS):"
-	@echo "  make ddns-setup     - Create vpn.DOMAIN DNS record and install 5-min cron updater"
+	@echo "  make ddns-setup     - Create vpn.DOMAIN DNS record and install systemd timer"
 	@echo "  make ddns-update    - Manually trigger a DDNS IP check and update"
 	@echo "  make ddns-status    - Show current public IP vs Gandi DNS record"
 	@echo ""
@@ -556,7 +556,12 @@ ddns-status:
 	    echo "  Status: in sync"; \
 	else \
 	    echo "  Status: out of sync — run: make ddns-update"; \
-	fi
+	fi; \
+	echo ""; \
+	echo "Timer:"; \
+	systemctl status gandi-ddns.timer --no-pager 2>/dev/null \
+	    && systemctl list-timers gandi-ddns.timer --no-pager 2>/dev/null \
+	    || echo "  (systemd timer not installed — run: make ddns-setup)"
 
 # Setup SSL certificate storage (for certbot-generated certs)
 setup-certs:

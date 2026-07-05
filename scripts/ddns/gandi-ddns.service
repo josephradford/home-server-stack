@@ -1,0 +1,11 @@
+[Unit]
+Description=Update Gandi LiveDNS A record with current public IP
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=__REPO_ROOT__/scripts/ddns/gandi-ddns-update.sh
+
+[Install]
+WantedBy=multi-user.target
