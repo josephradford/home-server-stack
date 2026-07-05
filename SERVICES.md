@@ -100,49 +100,6 @@ Currently deployed and active services.
 - **Purpose:** Container metrics
 - **Port:** 8080 (internal only)
 
-### AI Services
-
-#### bede-data
-- **Purpose:** Data layer for Bede — REST API serving health, location, usage, memory, goal, analytics, config, deal monitoring, and news curation data from SQLite
-- **Access:** https://data.${DOMAIN} (ingest endpoints), internal API on port 8001
-- **Image:** `ghcr.io/josephradford/bede-data:latest`
-- **Authentication:** `INGEST_WRITE_TOKEN` for write endpoints
-- **Key API surfaces:**
-  - `/api/deals/*` — price check recording, price history queries, dead URL tracking
-  - `/api/news/*` — article storage, deduplication, digest tracking
-  - `/api/config/monitored-items` — CRUD for deal/event/news monitoring config
-
-#### bede-core
-- **Purpose:** Bede's brain — Telegram bot, APScheduler task runner, Claude CLI session manager, and memory manager
-- **Access:** Telegram bot (@your_bot_name), health endpoint on port 8080 (internal)
-- **Image:** `ghcr.io/josephradford/bede-core:latest`
-- **Depends on:** bede-data (HTTP API), bede-data-mcp (MCP tools)
-
-#### bede-data-mcp
-- **Purpose:** Thin MCP proxy (50+ tools) forwarding to bede-data's HTTP API — how Claude inside bede-core discovers and calls personal data tools
-- **Access:** Internal only (container-to-container, port 8002)
-- **Image:** `ghcr.io/josephradford/bede-data-mcp:latest`
-- **Includes:** deal monitoring tools (record_price_check, get_price_history, report_dead_url, list_dead_urls, update_dead_url), news curation tools (save_article, list_articles, check_article_exists, mark_article_in_digest), plus config/schedule/health/vault/location/weather/memory/goal/analytics tools
-
-#### bede-workspace-mcp
-- **Purpose:** Google Workspace MCP sidecar — wraps the `workspace-mcp` PyPI package to provide Gmail, Calendar, Tasks, Docs, Sheets, Slides, and Drive access to Claude inside bede-core
-- **Access:** Internal MCP on port 8003, OAuth callback at https://mcp.${DOMAIN}/oauth2callback (admin-secure, no rate limit)
-- **Image:** `ghcr.io/josephradford/bede-workspace-mcp:latest`
-- **Depends on:** Google OAuth credentials in `.env`
-
-#### bede-web
-- **Purpose:** Read-only operational dashboard and data browser for Bede — displays data freshness, task status, storage usage, schedule, memories, goals, and conversation history
-- **Access:** https://bede.${DOMAIN} (admin-secure middleware — IP whitelist + security headers)
-- **Image:** `ghcr.io/josephradford/bede-web:latest`
-- **Depends on:** bede-data (HTTP API proxied via nginx)
-
-#### bede-browser-mcp
-- **Purpose:** Headless Chromium browser access for bede-core via MCP — enables web browsing, screenshot capture, and page interaction
-- **Access:** Internal only (no Traefik routing) — bede-core connects via `http://bede-browser-mcp:8004/mcp`
-- **Image:** `mcr.microsoft.com/playwright/mcp:latest`
-- **Port:** 8004
-- **Depends on:** None (standalone sidecar)
-
 ### Location Services
 
 #### owntracks-recorder
@@ -165,12 +122,6 @@ Currently deployed and active services.
 | Grafana | https://grafana.${DOMAIN} | N/A (Traefik only) |
 | Prometheus | https://prometheus.${DOMAIN} | http://IP:9090 |
 | Alertmanager | https://alerts.${DOMAIN} | http://IP:9093 |
-| bede-core | Telegram bot | N/A |
-| bede-data | https://data.${DOMAIN} | N/A |
-| bede-data-mcp | Internal only | N/A |
-| bede-workspace-mcp | https://mcp.${DOMAIN} (OAuth only) | N/A |
-| bede-web | https://bede.${DOMAIN} | N/A |
-| bede-browser-mcp | Internal only | N/A |
 | owntracks-recorder | https://owntracks.${DOMAIN} | N/A |
 
 ---

@@ -2,12 +2,11 @@
 # Simplifies deployment and maintenance operations
 
 .PHONY: help setup update start stop restart logs build build-custom pull status clean purge validate env-check
-.PHONY: logs-n8n logs-homepage logs-bede logs-owntracks
+.PHONY: logs-n8n logs-homepage logs-owntracks
 .PHONY: setup-certs test-domain-access
 .PHONY: wireguard-status wireguard-install wireguard-setup wireguard-routing wireguard-test wireguard-peers wireguard-check
 .PHONY: ssl-setup ssl-renew-test
 .PHONY: ddns-setup ddns-update ddns-status
-.PHONY: bede-start bede-stop bede-restart bede-pull bede-status collect-bede-sessions
 .PHONY: location-start location-stop location-restart location-status
 
 # Compose file flags
@@ -16,8 +15,6 @@
 # - docker-compose.network.yml: Network & Security (Traefik, Fail2ban)
 # - docker-compose.monitoring.yml: Monitoring stack (Prometheus, Grafana, Alertmanager, exporters)  
 # - docker-compose.dashboard.yml: Dashboard (Homepage, Homepage API)
-# - docker-compose.ai.yml: AI services (Bede, workspace-mcp)
-# - docker-compose.health.yml: REMOVED (replaced by data-ingest in docker-compose.ai.yml)
 # - docker-compose.location.yml: Location services (owntracks-recorder)
 #
 # NOTE: WireGuard is now a system service, not Docker service
@@ -27,7 +24,7 @@
 # COMPOSE_CORE: Core + Network + Monitoring (used for operations that shouldn't restart dashboard or AI)
 # COMPOSE: All services including dashboard and AI (default for most operations)
 COMPOSE_CORE := docker compose -f docker-compose.yml -f docker-compose.network.yml -f docker-compose.monitoring.yml
-COMPOSE := docker compose -f docker-compose.yml -f docker-compose.network.yml -f docker-compose.monitoring.yml -f docker-compose.dashboard.yml -f docker-compose.ai.yml -f docker-compose.location.yml
+COMPOSE := docker compose -f docker-compose.yml -f docker-compose.network.yml -f docker-compose.monitoring.yml -f docker-compose.dashboard.yml -f docker-compose.location.yml
 
 # Default target - show help
 help:
@@ -59,7 +56,6 @@ help:
 	@echo "  make logs               - Show logs from all services"
 	@echo "  make logs-n8n           - Show n8n logs only"
 	@echo "  make logs-homepage      - Show Homepage logs only"
-	@echo "  make logs-bede          - Show Bede logs only"
 	@echo "  make logs-owntracks     - Show OwnTracks Recorder logs only"
 	@echo ""
 	@echo "OwnTracks Location (Individual Service Management):"
@@ -67,14 +63,6 @@ help:
 	@echo "  make location-stop      - Stop OwnTracks Recorder only"
 	@echo "  make location-restart   - Restart OwnTracks Recorder only"
 	@echo "  make location-status    - Show OwnTracks container status"
-	@echo ""
-	@echo "Bede AI Assistant (Individual Service Management):"
-	@echo "  make bede-pull          - Pull latest Bede images from GHCR"
-	@echo "  make bede-start         - Start Bede AI services only"
-	@echo "  make bede-stop          - Stop Bede AI services only"
-	@echo "  make bede-restart       - Restart Bede AI services only"
-	@echo "  make bede-status        - Show Bede AI container status"
-	@echo "  make collect-bede-sessions        - Collect Bede session summaries (DATE=YYYY-MM-DD)"
 	@echo ""
 	@echo "WireGuard VPN Management:"
 	@echo "  make wireguard-install  - Install WireGuard packages (one-time, requires sudo)"
@@ -316,7 +304,6 @@ update: env-check validate wireguard-check
 # Start all services
 start: env-check wireguard-check
 	@echo "Starting all services..."
-	@mkdir -p data/bede/vault data/bede/sqlite
 	@$(COMPOSE) up -d
 	@echo "✓ All services started"
 
@@ -347,52 +334,8 @@ logs-n8n:
 logs-homepage:
 	@$(COMPOSE) logs -f homepage
 
-logs-bede:
-	@$(COMPOSE) logs -f bede
-
 logs-owntracks:
 	@$(COMPOSE) logs -f owntracks-recorder mosquitto
-
-# Bede AI Assistant (docker-compose.ai.yml)
-COMPOSE_AI := docker compose -f docker-compose.ai.yml
-
-bede-pull: env-check
-	@echo "Pulling Bede images..."
-	@docker pull ghcr.io/josephradford/bede:latest
-	@docker pull ghcr.io/josephradford/bede-data:latest
-	@docker pull ghcr.io/josephradford/bede-data-mcp:latest
-	@docker pull ghcr.io/josephradford/bede-core:latest
-	@docker pull ghcr.io/josephradford/bede-workspace-mcp:latest
-	@docker pull ghcr.io/josephradford/bede-web:latest
-	@docker pull mcr.microsoft.com/playwright/mcp:v0.0.74
-	@echo "✓ Bede images pulled"
-
-bede-start: env-check
-	@echo "Starting Bede..."
-	@mkdir -p data/bede/vault data/bede/sqlite data/bede/workspace-mcp/credentials data/bede/workspace-mcp/oauth-proxy data/bede/claude-projects
-	@$(COMPOSE_AI) up -d
-	@echo "✓ Bede started"
-
-bede-stop:
-	@echo "Stopping Bede..."
-	@$(COMPOSE_AI) down
-	@echo "✓ Bede stopped"
-
-bede-restart: env-check
-	@echo "Restarting Bede..."
-	@$(COMPOSE_AI) up -d
-	@echo "✓ Bede restarted"
-
-bede-status:
-	@$(COMPOSE_AI) ps
-
-# Collect Bede session summaries and POST to data-ingest
-# Runs automatically at 02:00 inside the Bede container via APScheduler.
-# This target is for manual/ad-hoc runs:
-#   make collect-bede-sessions                    # today
-#   make collect-bede-sessions DATE=2026-04-15    # specific date
-collect-bede-sessions:
-	@docker exec bede python3 collect_sessions.py $(DATE)
 
 # Location services (docker-compose.location.yml)
 COMPOSE_LOCATION := docker compose -f docker-compose.location.yml
