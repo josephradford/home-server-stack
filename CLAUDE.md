@@ -22,16 +22,13 @@ Self-hosted Docker Compose infrastructure stack: home automation, workflow autom
 | `make start` / `stop` / `restart` | Manage all services |
 | `make status` | Service health check |
 | `make logs` | Follow all service logs |
-| `make logs-<service>` | Logs for one service (n8n, homepage, bede, etc.) |
+| `make logs-<service>` | Logs for one service (n8n, homepage, etc.) |
 | `make update` | Pull latest images and restart |
 | `make build` | Build all (includes custom services) |
 | `make validate` | Validate docker-compose config |
 | `make test-domain-access` | Test HTTPS access to all services |
 | `make clean` | Remove containers/volumes (preserves ./data/) |
 | `make purge` | **DESTRUCTIVE** — removes everything including ./data/ |
-
-**Bede AI services** (also included in main targets):
-`make bede-start` / `bede-stop` / `bede-restart` / `bede-pull` / `bede-status`
 
 **SSL**: `make ssl-setup` / `ssl-renew-test`
 
@@ -45,10 +42,9 @@ Add peers: `sudo ./scripts/wireguard/wireguard-add-peer.sh <name>`
 - `docker-compose.network.yml` — Network & security (Traefik, Fail2ban)
 - `docker-compose.monitoring.yml` — Monitoring (Prometheus, Grafana, Alertmanager, exporters)
 - `docker-compose.dashboard.yml` — Dashboard (Homepage, Homepage API)
-- `docker-compose.ai.yml` — AI services (bede-core, bede-data, bede-data-mcp, bede-workspace-mcp, bede-web — prebuilt GHCR images from josephradford/bede)
 - `docker-compose.location.yml` — Location services (owntracks-recorder)
 
-The Makefile combines all six files by default.
+The Makefile combines all five files by default.
 
 ### Domain Routing
 1. **AdGuard Home** (port 53) resolves `*.DOMAIN` → `SERVER_IP`
@@ -95,14 +91,6 @@ See `.env.example` for the complete variable list with descriptions. Dollar sign
 ## Git Workflow
 
 GitHub Flow: `main` is production. Feature branches (`feature/`, `fix/`, `docs/`). PRs with squash merge.
-
-### Deploying Bede changes
-
-Bede source lives in a separate repo (josephradford/bede). The deploy workflow is:
-
-1. Make changes in the bede repo, create a PR, merge to main
-2. **Wait for GitHub Actions to build and push the new GHCR image** — do not deploy until the build completes
-3. On the server: `make bede-pull && make bede-restart`
 
 ## Testing Checklist
 
