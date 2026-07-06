@@ -6,8 +6,6 @@ A complete self-hosted infrastructure for home automation, AI, and network servi
 
 **Core:** [AdGuard Home](https://github.com/AdguardTeam/AdGuardHome) (DNS/ad-blocking), [n8n](https://github.com/n8n-io/n8n) (workflow automation), [WireGuard](https://github.com/wireguard) (VPN), [Traefik](https://github.com/traefik/traefik) (reverse proxy), OwnTracks Recorder (location)
 
-**AI (Bede):** bede-core (Telegram bot + scheduler), bede-data (REST API + SQLite), bede-data-mcp (MCP proxy), bede-workspace-mcp (Google Workspace), bede-web (dashboard)
-
 **Monitoring:** [Grafana](https://github.com/grafana/grafana), [Prometheus](https://github.com/prometheus/prometheus), [Alertmanager](https://github.com/prometheus/alertmanager), Node Exporter, cAdvisor
 
 **Dashboard:** [Homepage](https://github.com/gethomepage/homepage) + custom API backend
@@ -129,7 +127,6 @@ All services are accessible via domain names on your local network:
 - **Prometheus:** `https://prometheus.${DOMAIN}` (Metrics)
 - **Alertmanager:** `https://alerts.${DOMAIN}` (Alerts)
 - **Homepage:** `https://homepage.${DOMAIN}` (Dashboard)
-- **Bede Dashboard:** `https://bede.${DOMAIN}` (AI assistant dashboard)
 - **OwnTracks Recorder:** `https://owntracks.${DOMAIN}` (Location history API)
 
 **Note:** Services are accessible via domain names thanks to Traefik reverse proxy and AdGuard Home DNS. Your devices must use AdGuard Home as their DNS server (configured automatically if DHCP points to the server).

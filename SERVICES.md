@@ -142,10 +142,6 @@ Services queued for implementation.
 - [ ] **[Sonarr](https://github.com/Sonarr/Sonarr)** - Smart PVR for newsgroup and bittorrent users (TV show automation)
 - [ ] **[Radarr](https://github.com/Radarr/Radarr)** - Movie organizer/manager for usenet and torrent users
 
-### Health & Fitness
-- [ ] **hae-server** - Apple Health Auto Export ingest API
-- [ ] **hae-influxdb** - InfluxDB time-series storage for health metrics/workouts
-
 ### Infrastructure & Security
 - [ ] **[Ollama](https://github.com/ollama/ollama)** - Run large language models locally
 - [ ] **[Watchtower](https://github.com/containrrr/watchtower)** - A process for automating Docker container base image updates
