@@ -267,6 +267,33 @@ HOMEPAGE_VAR_ICLOUD_B_LABEL: ${ICLOUD_B_LABEL:-Photos B}
   listed.
 - `.env.example`: the variable block above.
 
+## What this protects against (and what it does not)
+
+icloudpd runs **download-only**. It downloads anything present in iCloud that
+is not already on the drive and never modifies or removes existing local
+files. The `--auto-delete` and `--delete-after-download` flags are
+deliberately **not** used and must never be added — with them, deleting a
+photo in iCloud would delete it from the backup too.
+
+Protects against:
+
+- Accidental deletion of photos in iCloud (the backup copy remains).
+- Apple account lockout, loss, or cloud-side library corruption.
+
+Does **not** protect against:
+
+- **Point-in-time gaps.** The backup is additive, not a snapshot. A photo
+  deleted in iCloud before icloudpd ever downloaded it is never captured.
+  With continuous ~6h cycles this window is small but real.
+- **Loss of the drive itself.** One external drive is a single copy — drive
+  failure, theft, filesystem corruption, ransomware, or an accidental delete
+  on the drive loses the backup. This is not a 3-2-1 backup.
+  Filesystem snapshots (btrfs/ZFS/rsnapshot) are the usual mitigation but are
+  out of scope here (the server is too small); a second rotated drive is the
+  practical option if stronger durability is wanted later.
+
+This is documented in `docs/icloud-photos-backup.md` for the operator.
+
 ## Testing
 
 - `make validate` — compose config parses with the new file.
