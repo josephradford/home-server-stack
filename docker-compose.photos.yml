@@ -10,7 +10,7 @@ x-icloudpd-common: &icloudpd-common
   networks:
     - homeserver
   environment:
-    TZ: ${TZ:-Australia/Sydney}
+    TZ: ${TIMEZONE:-UTC}
     ICLOUD_BACKUP_DRIVE_ID: ${ICLOUD_BACKUP_DRIVE_ID}
 
 services:
@@ -27,19 +27,26 @@ services:
         if [ "$$(cat /drive/.backup-drive 2>/dev/null)" != "$$ICLOUD_BACKUP_DRIVE_ID" ]; then
           echo "backup drive not mounted or wrong drive"; sleep 3600; exit 1
         fi
+        # Re-check every 5 min: if the drive drops out mid-run, stop writing (kill PID 1,
+        # restart policy lands us back at the guard above).
+        while sleep 300; do
+          [ "$$(cat /drive/.backup-drive 2>/dev/null)" = "$$ICLOUD_BACKUP_DRIVE_ID" ] || {
+            echo "backup drive disappeared mid-run"; kill 1
+          }
+        done &
         exec icloudpd \
-          --directory /drive/${ICLOUD_A_SUBDIR} \
-          --username ${ICLOUD_A_USERNAME} \
+          --directory "/drive/${ICLOUD_A_SUBDIR}" \
+          --username "${ICLOUD_A_USERNAME}" \
           --cookie-directory /cookies \
-          --watch-with-interval ${ICLOUD_A_INTERVAL:-21600} \
+          --watch-with-interval "${ICLOUD_A_INTERVAL:-21600}" \
           --folder-structure "${ICLOUD_FOLDER_STRUCTURE}" \
           --password-provider webui \
           --mfa-provider webui \
-          --smtp-host ${ICLOUD_SMTP_HOST} \
-          --smtp-port ${ICLOUD_SMTP_PORT:-587} \
-          --smtp-username ${ICLOUD_SMTP_USERNAME} \
-          --smtp-password ${ICLOUD_SMTP_PASSWORD} \
-          --notification-email ${ICLOUD_NOTIFICATION_EMAIL} \
+          --smtp-host "${ICLOUD_SMTP_HOST}" \
+          --smtp-port "${ICLOUD_SMTP_PORT:-587}" \
+          --smtp-username "${ICLOUD_SMTP_USERNAME}" \
+          --smtp-password "${ICLOUD_SMTP_PASSWORD}" \
+          --notification-email "${ICLOUD_NOTIFICATION_EMAIL}" \
           --no-progress-bar
     healthcheck:
       test: ["CMD-SHELL", "test \"$$(cat /drive/.backup-drive 2>/dev/null)\" = \"$$ICLOUD_BACKUP_DRIVE_ID\""]
@@ -69,19 +76,26 @@ services:
           echo "backup drive not mounted or wrong drive"; sleep 3600; exit 1
         fi
         sleep ${ICLOUD_B_START_DELAY:-1800}
+        # Re-check every 5 min: if the drive drops out mid-run, stop writing (kill PID 1,
+        # restart policy lands us back at the guard above).
+        while sleep 300; do
+          [ "$$(cat /drive/.backup-drive 2>/dev/null)" = "$$ICLOUD_BACKUP_DRIVE_ID" ] || {
+            echo "backup drive disappeared mid-run"; kill 1
+          }
+        done &
         exec icloudpd \
-          --directory /drive/${ICLOUD_B_SUBDIR} \
-          --username ${ICLOUD_B_USERNAME} \
+          --directory "/drive/${ICLOUD_B_SUBDIR}" \
+          --username "${ICLOUD_B_USERNAME}" \
           --cookie-directory /cookies \
-          --watch-with-interval ${ICLOUD_B_INTERVAL:-23400} \
+          --watch-with-interval "${ICLOUD_B_INTERVAL:-23400}" \
           --folder-structure "${ICLOUD_FOLDER_STRUCTURE}" \
           --password-provider webui \
           --mfa-provider webui \
-          --smtp-host ${ICLOUD_SMTP_HOST} \
-          --smtp-port ${ICLOUD_SMTP_PORT:-587} \
-          --smtp-username ${ICLOUD_SMTP_USERNAME} \
-          --smtp-password ${ICLOUD_SMTP_PASSWORD} \
-          --notification-email ${ICLOUD_NOTIFICATION_EMAIL} \
+          --smtp-host "${ICLOUD_SMTP_HOST}" \
+          --smtp-port "${ICLOUD_SMTP_PORT:-587}" \
+          --smtp-username "${ICLOUD_SMTP_USERNAME}" \
+          --smtp-password "${ICLOUD_SMTP_PASSWORD}" \
+          --notification-email "${ICLOUD_NOTIFICATION_EMAIL}" \
           --no-progress-bar
     healthcheck:
       test: ["CMD-SHELL", "test \"$$(cat /drive/.backup-drive 2>/dev/null)\" = \"$$ICLOUD_BACKUP_DRIVE_ID\""]
@@ -99,4 +113,5 @@ services:
 
 networks:
   homeserver:
-    driver: bridge
+    external: true
+    name: home-server-stack_homeserver

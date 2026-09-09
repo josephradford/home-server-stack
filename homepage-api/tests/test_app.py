@@ -502,3 +502,33 @@ class TestIcloudpdStatusEndpoint:
         resp = client.get('/api/icloudpd/status/icloudpd-a')
         assert resp.status_code == 200
         assert resp.get_json()['status'] == 'unknown'
+
+    @patch('app._docker_logs')
+    @patch('app._docker_api')
+    def test_stale_drive_marker_then_recovery_is_ok(self, mock_api, mock_logs, client):
+        """A resolved earlier drive outage must not pin the tile."""
+        mock_api.return_value = {
+            'State': {'Status': 'running', 'Running': True,
+                      'StartedAt': '2026-09-06T00:00:00Z', 'Health': {'Status': 'healthy'}}
+        }
+        mock_logs.return_value = (
+            "2026-09-06T01:00:00Z backup drive not mounted or wrong drive\n"
+            "2026-09-06T04:15:03Z INFO All photos have been downloaded\n"
+        )
+        resp = client.get('/api/icloudpd/status/icloudpd-a')
+        assert resp.get_json()['status'] == 'ok'
+
+    def test_rel_time_parses_nanosecond_docker_timestamp(self):
+        from app import _rel_time
+        # Docker RFC3339Nano — 9 fractional digits
+        assert _rel_time('2020-01-01T00:00:00.123456789+00:00') is not None
+
+    def test_demux_docker_stream_parses_multiplexed_frames(self):
+        import struct
+        from app import _demux_docker_stream
+        payload1 = b'2026-09-06T04:15:03.000000000Z line one\n'
+        payload2 = b'2026-09-06T04:15:04.000000000Z line two\n'
+        raw = (struct.pack('>BxxxI', 1, len(payload1)) + payload1
+               + struct.pack('>BxxxI', 2, len(payload2)) + payload2)
+        text = _demux_docker_stream(raw)
+        assert 'line one' in text and 'line two' in text

@@ -15,6 +15,10 @@ the `--auto-delete` / `--delete-after-download` flags are deliberately not used.
   drive loses the backup), and point-in-time gaps (a photo deleted in iCloud
   before it was ever downloaded is never captured). This is not a 3-2-1 backup.
   A second rotated drive is the practical way to add durability later.
+- **Partial mid-run protection:** a start-up guard plus a 5-minute re-check stop
+  new writes if the backup drive drops out, but a write in the few-minute gap
+  before detection could land on the server's system disk. Keep an eye on the
+  dashboard tile.
 
 ## One-time setup
 
@@ -44,9 +48,12 @@ The containers refuse to run unless a sentinel file on the drive matches
 `ICLOUD_BACKUP_DRIVE_ID`. Pick any unique string:
 
 ```bash
-echo "photos-backup-2026-hitachi" | sudo tee /mnt/photos-backup/.backup-drive
+echo "photos-backup-drive-01" | sudo tee /mnt/photos-backup/.backup-drive
 sudo mkdir -p /mnt/photos-backup/account-a /mnt/photos-backup/account-b
 ```
+
+(the `account-a` / `account-b` directory names must match `ICLOUD_A_SUBDIR` /
+`ICLOUD_B_SUBDIR` in `.env`.)
 
 ### 3. Configure `.env`
 
@@ -56,6 +63,9 @@ sentinel contents), `ICLOUD_A_USERNAME` / `ICLOUD_B_USERNAME`,
 the `ICLOUD_SMTP_*` + `ICLOUD_NOTIFICATION_EMAIL` values. See `.env.example`.
 
 The Apple ID **password is not set in `.env`** — it is entered in the web UI.
+
+Any `$` characters in `.env` values (for example an SMTP password) must be
+escaped as `$$` for Docker Compose — a stack-wide rule, see `.env.example`.
 
 ### 4. Start and authenticate
 

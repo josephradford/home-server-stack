@@ -25,7 +25,7 @@
 # COMPOSE_CORE: Core + Network + Monitoring (used for operations that shouldn't restart dashboard or AI)
 # COMPOSE: All services including dashboard and AI (default for most operations)
 COMPOSE_CORE := docker compose -f docker-compose.yml -f docker-compose.network.yml -f docker-compose.monitoring.yml
-COMPOSE := docker compose -f docker-compose.yml -f docker-compose.network.yml -f docker-compose.monitoring.yml -f docker-compose.dashboard.yml -f docker-compose.location.yml -f docker-compose.photos.yml
+COMPOSE := docker compose -f docker-compose.yml -f docker-compose.network.yml -f docker-compose.monitoring.yml -f docker-compose.dashboard.yml -f docker-compose.photos.yml -f docker-compose.location.yml
 
 # Default target - show help
 help:

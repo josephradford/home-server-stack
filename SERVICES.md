@@ -119,7 +119,6 @@ Download-only — deletions in iCloud never propagate. Re-auth is needed roughly
 every 2 months; `icloudpd` emails a notification and the Homepage Backups tile
 shows the state. Full setup: `docs/icloud-photos-backup.md`.
 
-
 ---
 
 ## Quick Reference

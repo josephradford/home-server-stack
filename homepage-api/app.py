@@ -11,6 +11,7 @@ from flask_cors import CORS
 import requests
 from datetime import datetime, timedelta
 import os
+import re
 import json
 from functools import lru_cache, wraps
 from weather_au import api as weather_api
@@ -593,7 +594,6 @@ def _docker_logs(name, tail=250):
     """
     import http.client
     import socket as _socket
-    import struct
 
     class _UnixConn(http.client.HTTPConnection):
         def connect(self):
@@ -604,9 +604,18 @@ def _docker_logs(name, tail=250):
     try:
         conn.request('GET', f'/containers/{name}/logs?stdout=1&stderr=1&timestamps=1&tail={tail}')
         resp = conn.getresponse()
+        if resp.status >= 400:
+            return ''
         raw = resp.read()
     finally:
         conn.close()
+
+    return _demux_docker_stream(raw)
+
+
+def _demux_docker_stream(raw):
+    """Strip the 8-byte frame headers from a multiplexed Docker log stream."""
+    import struct
 
     out = []
     i = 0
@@ -650,8 +659,11 @@ _ICLOUDPD_PROGRESS_MARKERS = (
 def _rel_time(iso_ts):
     """'2026-09-06T04:15:03Z' -> '3 hours ago' (coarse)."""
     try:
-        ts = datetime.fromisoformat(iso_ts.replace('Z', '+00:00'))
-    except (ValueError, AttributeError):
+        s = iso_ts.replace('Z', '+00:00')
+        # Docker emits nanosecond precision; datetime accepts at most microseconds
+        s = re.sub(r'(\.\d{6})\d+', r'\1', s)
+        ts = datetime.fromisoformat(s)
+    except (ValueError, AttributeError, TypeError):
         return None
     delta = datetime.now(ts.tzinfo) - ts
     secs = int(delta.total_seconds())
@@ -673,14 +685,17 @@ def _classify_icloudpd(state, health, logs):
         return {'status': 'down', 'statusLabel': 'Stopped', 'lastSync': None,
                 'lastSyncRelative': None, 'message': 'Container is not running'}
 
-    if _ICLOUDPD_DRIVE_MARKER in '\n'.join(lower) or health == 'unhealthy':
-        return {'status': 'drive_missing', 'statusLabel': 'Drive not mounted',
-                'lastSync': None, 'lastSyncRelative': None,
-                'message': 'Backup drive is not mounted or is the wrong drive'}
+    _drive_result = {'status': 'drive_missing', 'statusLabel': 'Drive not mounted',
+                     'lastSync': None, 'lastSyncRelative': None,
+                     'message': 'Backup drive is not mounted or is the wrong drive'}
+    if health == 'unhealthy':
+        return _drive_result
 
     # Walk newest -> oldest; first meaningful marker wins.
     last_done_ts = None
     for ln, lo in zip(reversed(lines), reversed(lower)):
+        if _ICLOUDPD_DRIVE_MARKER in lo:
+            return _drive_result
         if any(m in lo for m in _ICLOUDPD_AUTH_MARKERS):
             return {'status': 'auth_required', 'statusLabel': 'Re-auth needed',
                     'lastSync': last_done_ts,
