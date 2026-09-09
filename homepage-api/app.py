@@ -584,6 +584,138 @@ def docker_status():
         })
 
 
+def _docker_logs(name, tail=250):
+    """
+    Return recent combined stdout/stderr logs for a container as text.
+    The Docker logs endpoint returns a multiplexed stream: each frame is an
+    8-byte header (stream byte, 3 zero bytes, 4-byte big-endian length)
+    followed by the payload. Strip the headers.
+    """
+    import http.client
+    import socket as _socket
+    import struct
+
+    class _UnixConn(http.client.HTTPConnection):
+        def connect(self):
+            self.sock = _socket.socket(_socket.AF_UNIX, _socket.SOCK_STREAM)
+            self.sock.connect('/var/run/docker.sock')
+
+    conn = _UnixConn('localhost')
+    try:
+        conn.request('GET', f'/containers/{name}/logs?stdout=1&stderr=1&timestamps=1&tail={tail}')
+        resp = conn.getresponse()
+        raw = resp.read()
+    finally:
+        conn.close()
+
+    out = []
+    i = 0
+    while i + 8 <= len(raw):
+        header = raw[i:i + 8]
+        # If this doesn't look like a frame header (no-TTY containers always
+        # send headers; guard anyway), treat the rest as plain text.
+        if header[0] in (0, 1, 2) and header[1:4] == b'\x00\x00\x00':
+            (length,) = struct.unpack('>I', header[4:8])
+            out.append(raw[i + 8:i + 8 + length].decode('utf-8', 'replace'))
+            i += 8 + length
+        else:
+            out.append(raw[i:].decode('utf-8', 'replace'))
+            break
+    return ''.join(out)
+
+
+_ICLOUDPD_CONTAINERS = ('icloudpd-a', 'icloudpd-b')
+
+# Log substrings, checked case-insensitively. Tune against real output on the
+# server; keep the lists here so tuning is a one-line change.
+_ICLOUDPD_AUTH_MARKERS = (
+    'invalid authentication token',
+    'waiting for mfa',
+    'two-step authentication',
+    'two-factor authentication',
+    'password is required',
+    'failed to login',
+)
+_ICLOUDPD_DRIVE_MARKER = 'backup drive not mounted or wrong drive'
+_ICLOUDPD_DONE_MARKERS = (
+    'all photos have been downloaded',
+    'iteration completed',
+)
+_ICLOUDPD_PROGRESS_MARKERS = (
+    'downloading ',
+    'downloaded ',
+)
+
+
+def _rel_time(iso_ts):
+    """'2026-09-06T04:15:03Z' -> '3 hours ago' (coarse)."""
+    try:
+        ts = datetime.fromisoformat(iso_ts.replace('Z', '+00:00'))
+    except (ValueError, AttributeError):
+        return None
+    delta = datetime.now(ts.tzinfo) - ts
+    secs = int(delta.total_seconds())
+    if secs < 0:
+        return 'just now'
+    for unit, size in (('day', 86400), ('hour', 3600), ('minute', 60)):
+        if secs >= size:
+            n = secs // size
+            return f'{n} {unit}{"s" if n != 1 else ""} ago'
+    return 'just now'
+
+
+def _classify_icloudpd(state, health, logs):
+    lines = [ln for ln in logs.splitlines() if ln.strip()]
+    lower = [ln.lower() for ln in lines]
+
+    running = bool(state.get('Running'))
+    if not running:
+        return {'status': 'down', 'statusLabel': 'Stopped', 'lastSync': None,
+                'lastSyncRelative': None, 'message': 'Container is not running'}
+
+    if _ICLOUDPD_DRIVE_MARKER in '\n'.join(lower) or health == 'unhealthy':
+        return {'status': 'drive_missing', 'statusLabel': 'Drive not mounted',
+                'lastSync': None, 'lastSyncRelative': None,
+                'message': 'Backup drive is not mounted or is the wrong drive'}
+
+    # Walk newest -> oldest; first meaningful marker wins.
+    last_done_ts = None
+    for ln, lo in zip(reversed(lines), reversed(lower)):
+        if any(m in lo for m in _ICLOUDPD_AUTH_MARKERS):
+            return {'status': 'auth_required', 'statusLabel': 'Re-auth needed',
+                    'lastSync': last_done_ts,
+                    'lastSyncRelative': _rel_time(last_done_ts) if last_done_ts else None,
+                    'message': 'Apple sign-in expired — open the web UI to re-authenticate'}
+        if any(m in lo for m in _ICLOUDPD_DONE_MARKERS):
+            last_done_ts = ln.split(' ', 1)[0]
+            return {'status': 'ok', 'statusLabel': 'OK', 'lastSync': last_done_ts,
+                    'lastSyncRelative': _rel_time(last_done_ts),
+                    'message': 'Last sync completed'}
+        if any(m in lo for m in _ICLOUDPD_PROGRESS_MARKERS):
+            return {'status': 'syncing', 'statusLabel': 'Syncing', 'lastSync': None,
+                    'lastSyncRelative': None, 'message': 'Sync in progress'}
+
+    return {'status': 'unknown', 'statusLabel': 'Unknown', 'lastSync': None,
+            'lastSyncRelative': None, 'message': 'No recent activity in logs'}
+
+
+@app.route('/api/icloudpd/status/<name>')
+def icloudpd_status(name):
+    if name not in _ICLOUDPD_CONTAINERS:
+        return jsonify({'error': 'unknown container'}), 404
+    try:
+        info = _docker_api(f'/containers/{name}/json')
+        state = info.get('State', {}) or {}
+        health = (state.get('Health') or {}).get('Status')
+        logs = _docker_logs(name)
+        result = _classify_icloudpd(state, health, logs)
+    except Exception as e:
+        result = {'status': 'unknown', 'statusLabel': 'Unknown', 'lastSync': None,
+                  'lastSyncRelative': None, 'message': f'Cannot read container state: {e}'}
+    result['name'] = name
+    return jsonify(result)
+
+
 if __name__ == '__main__':
     # Clear weather API cache on startup
     get_weather_api.cache_clear()
