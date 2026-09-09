@@ -1,0 +1,102 @@
+# iCloud Photos backup — two icloudpd containers, one per Apple account.
+# See docs/icloud-photos-backup.md for setup. All identifying values are in .env.
+#
+# The Apple ID password is entered via each container's web UI (never stored in
+# .env or the repo) and persisted only in ./data/icloudpd/<x>/cookies.
+
+x-icloudpd-common: &icloudpd-common
+  image: icloudpd/icloudpd:1.32.3
+  restart: unless-stopped
+  networks:
+    - homeserver
+  environment:
+    TZ: ${TZ:-Australia/Sydney}
+    ICLOUD_BACKUP_DRIVE_ID: ${ICLOUD_BACKUP_DRIVE_ID}
+
+services:
+  icloudpd-a:
+    <<: *icloudpd-common
+    container_name: icloudpd-a
+    volumes:
+      - ${ICLOUD_BACKUP_ROOT}:/drive
+      - ./data/icloudpd/a/cookies:/cookies
+    command:
+      - /bin/sh
+      - -c
+      - |
+        if [ "$$(cat /drive/.backup-drive 2>/dev/null)" != "$$ICLOUD_BACKUP_DRIVE_ID" ]; then
+          echo "backup drive not mounted or wrong drive"; sleep 3600; exit 1
+        fi
+        exec icloudpd \
+          --directory /drive/${ICLOUD_A_SUBDIR} \
+          --username ${ICLOUD_A_USERNAME} \
+          --cookie-directory /cookies \
+          --watch-with-interval ${ICLOUD_A_INTERVAL:-21600} \
+          --folder-structure "${ICLOUD_FOLDER_STRUCTURE}" \
+          --password-provider webui \
+          --mfa-provider webui \
+          --smtp-host ${ICLOUD_SMTP_HOST} \
+          --smtp-port ${ICLOUD_SMTP_PORT:-587} \
+          --smtp-username ${ICLOUD_SMTP_USERNAME} \
+          --smtp-password ${ICLOUD_SMTP_PASSWORD} \
+          --notification-email ${ICLOUD_NOTIFICATION_EMAIL} \
+          --no-progress-bar
+    healthcheck:
+      test: ["CMD-SHELL", "test \"$$(cat /drive/.backup-drive 2>/dev/null)\" = \"$$ICLOUD_BACKUP_DRIVE_ID\""]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.icloud-a.rule=Host(`icloud-a.${DOMAIN}`)"
+      - "traefik.http.routers.icloud-a.entrypoints=websecure"
+      - "traefik.http.routers.icloud-a.tls=true"
+      - "traefik.http.services.icloud-a.loadbalancer.server.port=8080"
+      - "traefik.http.routers.icloud-a.middlewares=admin-secure"
+
+  icloudpd-b:
+    <<: *icloudpd-common
+    container_name: icloudpd-b
+    volumes:
+      - ${ICLOUD_BACKUP_ROOT}:/drive
+      - ./data/icloudpd/b/cookies:/cookies
+    command:
+      - /bin/sh
+      - -c
+      - |
+        if [ "$$(cat /drive/.backup-drive 2>/dev/null)" != "$$ICLOUD_BACKUP_DRIVE_ID" ]; then
+          echo "backup drive not mounted or wrong drive"; sleep 3600; exit 1
+        fi
+        sleep ${ICLOUD_B_START_DELAY:-1800}
+        exec icloudpd \
+          --directory /drive/${ICLOUD_B_SUBDIR} \
+          --username ${ICLOUD_B_USERNAME} \
+          --cookie-directory /cookies \
+          --watch-with-interval ${ICLOUD_B_INTERVAL:-23400} \
+          --folder-structure "${ICLOUD_FOLDER_STRUCTURE}" \
+          --password-provider webui \
+          --mfa-provider webui \
+          --smtp-host ${ICLOUD_SMTP_HOST} \
+          --smtp-port ${ICLOUD_SMTP_PORT:-587} \
+          --smtp-username ${ICLOUD_SMTP_USERNAME} \
+          --smtp-password ${ICLOUD_SMTP_PASSWORD} \
+          --notification-email ${ICLOUD_NOTIFICATION_EMAIL} \
+          --no-progress-bar
+    healthcheck:
+      test: ["CMD-SHELL", "test \"$$(cat /drive/.backup-drive 2>/dev/null)\" = \"$$ICLOUD_BACKUP_DRIVE_ID\""]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.icloud-b.rule=Host(`icloud-b.${DOMAIN}`)"
+      - "traefik.http.routers.icloud-b.entrypoints=websecure"
+      - "traefik.http.routers.icloud-b.tls=true"
+      - "traefik.http.services.icloud-b.loadbalancer.server.port=8080"
+      - "traefik.http.routers.icloud-b.middlewares=admin-secure"
+
+networks:
+  homeserver:
+    driver: bridge
