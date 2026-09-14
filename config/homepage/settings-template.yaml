@@ -25,6 +25,9 @@ layout:
   "{{HOMEPAGE_VAR_TRANSPORT_SECTION_2}}":
     style: row
     columns: 2
+  Backups:
+    style: row
+    columns: 2
   Services:
     icon: mdi-docker
     style: row

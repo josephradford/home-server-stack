@@ -107,6 +107,17 @@ Currently deployed and active services.
 - **Access:** https://owntracks.${DOMAIN}
 - **Authentication:** IP-restricted via Traefik `admin-secure`
 
+### Backup Services
+
+#### icloudpd (iCloud Photos)
+
+Two containers (`icloudpd-a`, `icloudpd-b`) using `icloudpd/icloudpd:1.32.3`
+download two iCloud photo libraries to an external drive on a continuous watch
+loop. Each exposes a web UI at `https://icloud-a.${DOMAIN}` /
+`https://icloud-b.${DOMAIN}` (home/VPN only) for password and 2FA entry.
+Download-only — deletions in iCloud never propagate. Re-auth is needed roughly
+every 2 months; `icloudpd` emails a notification and the Homepage Backups tile
+shows the state. Full setup: `docs/icloud-photos-backup.md`.
 
 ---
 
@@ -123,6 +134,8 @@ Currently deployed and active services.
 | Prometheus | https://prometheus.${DOMAIN} | http://IP:9090 |
 | Alertmanager | https://alerts.${DOMAIN} | http://IP:9093 |
 | owntracks-recorder | https://owntracks.${DOMAIN} | N/A |
+| icloudpd A | https://icloud-a.${DOMAIN} | N/A |
+| icloudpd B | https://icloud-b.${DOMAIN} | N/A |
 
 ---
 

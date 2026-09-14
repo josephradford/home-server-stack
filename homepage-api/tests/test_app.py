@@ -415,3 +415,120 @@ class TestCORSHeaders:
         # CORS headers should be present (handled by flask-cors)
         # The exact header name might vary, so we just check the response is successful
         assert response.status_code == 200
+
+
+class TestIcloudpdStatusEndpoint:
+    """Tests for /api/icloudpd/status/<name>"""
+
+    def test_rejects_unknown_container_name(self, client):
+        resp = client.get('/api/icloudpd/status/n8n')
+        assert resp.status_code == 404
+
+    @patch('app._docker_logs')
+    @patch('app._docker_api')
+    def test_running_and_recent_sync_is_ok(self, mock_api, mock_logs, client):
+        mock_api.return_value = {
+            'State': {'Status': 'running', 'Running': True,
+                      'StartedAt': '2026-09-06T00:00:00Z',
+                      'Health': {'Status': 'healthy'}}
+        }
+        mock_logs.return_value = (
+            "2026-09-06T04:15:00Z INFO Downloading 0 original photos to /drive/account-a\n"
+            "2026-09-06T04:15:03Z INFO All photos have been downloaded\n"
+        )
+        resp = client.get('/api/icloudpd/status/icloudpd-a')
+        assert resp.status_code == 200
+        data = resp.get_json()
+        assert data['status'] == 'ok'
+        assert data['statusLabel'] == 'OK'
+        assert data['lastSync'] == '2026-09-06T04:15:03Z'
+
+    @patch('app._docker_logs')
+    @patch('app._docker_api')
+    def test_mfa_prompt_is_auth_required(self, mock_api, mock_logs, client):
+        mock_api.return_value = {
+            'State': {'Status': 'running', 'Running': True,
+                      'StartedAt': '2026-09-06T00:00:00Z', 'Health': {'Status': 'healthy'}}
+        }
+        mock_logs.return_value = (
+            "2026-09-06T04:15:00Z INFO All photos have been downloaded\n"
+            "2026-09-08T02:00:00Z ERROR Invalid authentication token, please log in\n"
+            "2026-09-08T02:00:01Z INFO Waiting for MFA code via webui\n"
+        )
+        resp = client.get('/api/icloudpd/status/icloudpd-a')
+        data = resp.get_json()
+        assert data['status'] == 'auth_required'
+        assert data['statusLabel'] == 'Re-auth needed'
+
+    @patch('app._docker_logs')
+    @patch('app._docker_api')
+    def test_drive_guard_message_is_drive_missing(self, mock_api, mock_logs, client):
+        mock_api.return_value = {
+            'State': {'Status': 'running', 'Running': True,
+                      'StartedAt': '2026-09-06T00:00:00Z', 'Health': {'Status': 'unhealthy'}}
+        }
+        mock_logs.return_value = "backup drive not mounted or wrong drive\n"
+        resp = client.get('/api/icloudpd/status/icloudpd-b')
+        data = resp.get_json()
+        assert data['status'] == 'drive_missing'
+        assert data['statusLabel'] == 'Drive not mounted'
+
+    @patch('app._docker_logs')
+    @patch('app._docker_api')
+    def test_not_running_is_down(self, mock_api, mock_logs, client):
+        mock_api.return_value = {'State': {'Status': 'exited', 'Running': False, 'Health': None}}
+        mock_logs.return_value = ""
+        resp = client.get('/api/icloudpd/status/icloudpd-a')
+        data = resp.get_json()
+        assert data['status'] == 'down'
+        assert data['statusLabel'] == 'Stopped'
+
+    @patch('app._docker_logs')
+    @patch('app._docker_api')
+    def test_in_progress_is_syncing(self, mock_api, mock_logs, client):
+        mock_api.return_value = {
+            'State': {'Status': 'running', 'Running': True,
+                      'StartedAt': '2026-09-06T00:00:00Z', 'Health': {'Status': 'healthy'}}
+        }
+        mock_logs.return_value = (
+            "2026-09-06T04:15:03Z INFO All photos have been downloaded\n"
+            "2026-09-06T10:00:00Z INFO Downloading 240 original photos to /drive/account-a\n"
+        )
+        resp = client.get('/api/icloudpd/status/icloudpd-a')
+        assert resp.get_json()['status'] == 'syncing'
+
+    @patch('app._docker_api', side_effect=OSError("socket gone"))
+    def test_socket_error_is_unknown_http_200(self, mock_api, client):
+        resp = client.get('/api/icloudpd/status/icloudpd-a')
+        assert resp.status_code == 200
+        assert resp.get_json()['status'] == 'unknown'
+
+    @patch('app._docker_logs')
+    @patch('app._docker_api')
+    def test_stale_drive_marker_then_recovery_is_ok(self, mock_api, mock_logs, client):
+        """A resolved earlier drive outage must not pin the tile."""
+        mock_api.return_value = {
+            'State': {'Status': 'running', 'Running': True,
+                      'StartedAt': '2026-09-06T00:00:00Z', 'Health': {'Status': 'healthy'}}
+        }
+        mock_logs.return_value = (
+            "2026-09-06T01:00:00Z backup drive not mounted or wrong drive\n"
+            "2026-09-06T04:15:03Z INFO All photos have been downloaded\n"
+        )
+        resp = client.get('/api/icloudpd/status/icloudpd-a')
+        assert resp.get_json()['status'] == 'ok'
+
+    def test_rel_time_parses_nanosecond_docker_timestamp(self):
+        from app import _rel_time
+        # Docker RFC3339Nano — 9 fractional digits
+        assert _rel_time('2020-01-01T00:00:00.123456789+00:00') is not None
+
+    def test_demux_docker_stream_parses_multiplexed_frames(self):
+        import struct
+        from app import _demux_docker_stream
+        payload1 = b'2026-09-06T04:15:03.000000000Z line one\n'
+        payload2 = b'2026-09-06T04:15:04.000000000Z line two\n'
+        raw = (struct.pack('>BxxxI', 1, len(payload1)) + payload1
+               + struct.pack('>BxxxI', 2, len(payload2)) + payload2)
+        text = _demux_docker_stream(raw)
+        assert 'line one' in text and 'line two' in text
