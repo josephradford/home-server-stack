@@ -633,7 +633,7 @@ def _demux_docker_stream(raw):
     return ''.join(out)
 
 
-_ICLOUDPD_CONTAINERS = ('icloudpd-a', 'icloudpd-b')
+_ICLOUDPD_CONTAINER = 'icloudpd'
 
 # Log substrings, checked case-insensitively. Tune against real output on the
 # server; keep the lists here so tuning is a one-line change.
@@ -654,6 +654,10 @@ _ICLOUDPD_PROGRESS_MARKERS = (
     'downloading ',
     'downloaded ',
 )
+_ICLOUDPD_USER_MARKER = 'processing user:'
+
+# Worst status wins when combining multiple accounts' results.
+_ICLOUDPD_SEVERITY = {'auth_required': 3, 'syncing': 2, 'unknown': 1, 'ok': 0}
 
 
 def _rel_time(iso_ts):
@@ -676,6 +680,28 @@ def _rel_time(iso_ts):
     return 'just now'
 
 
+def _classify_account_segment(seg_lines, seg_lower):
+    """Classify one account's slice of the log, newest line wins (same logic
+    as the original single-account classifier)."""
+    last_done_ts = None
+    for ln, lo in zip(reversed(seg_lines), reversed(seg_lower)):
+        if any(m in lo for m in _ICLOUDPD_AUTH_MARKERS):
+            return {'status': 'auth_required', 'statusLabel': 'Re-auth needed',
+                    'lastSync': last_done_ts,
+                    'lastSyncRelative': _rel_time(last_done_ts) if last_done_ts else None,
+                    'message': 'Apple sign-in expired — open the web UI to re-authenticate'}
+        if any(m in lo for m in _ICLOUDPD_DONE_MARKERS):
+            last_done_ts = ln.split(' ', 1)[0]
+            return {'status': 'ok', 'statusLabel': 'OK', 'lastSync': last_done_ts,
+                    'lastSyncRelative': _rel_time(last_done_ts),
+                    'message': 'Last sync completed'}
+        if any(m in lo for m in _ICLOUDPD_PROGRESS_MARKERS):
+            return {'status': 'syncing', 'statusLabel': 'Syncing', 'lastSync': None,
+                    'lastSyncRelative': None, 'message': 'Sync in progress'}
+    return {'status': 'unknown', 'statusLabel': 'Unknown', 'lastSync': None,
+            'lastSyncRelative': None, 'message': 'No recent activity in logs'}
+
+
 def _classify_icloudpd(state, health, logs):
     lines = [ln for ln in logs.splitlines() if ln.strip()]
     lower = [ln.lower() for ln in lines]
@@ -691,33 +717,49 @@ def _classify_icloudpd(state, health, logs):
     if health == 'unhealthy':
         return _drive_result
 
-    # Walk newest -> oldest; first meaningful marker wins.
-    last_done_ts = None
-    for ln, lo in zip(reversed(lines), reversed(lower)):
+    # The drive guard runs before icloudpd starts, so its failure line always
+    # precedes any "Processing user:" activity from a lifetime where the guard
+    # passed. Scan newest-first but stop at the first "Processing user:" line —
+    # a drive-marker line older than that is from a since-recovered earlier
+    # lifetime and must not pin the status.
+    for lo in reversed(lower):
+        if _ICLOUDPD_USER_MARKER in lo:
+            break
         if _ICLOUDPD_DRIVE_MARKER in lo:
             return _drive_result
-        if any(m in lo for m in _ICLOUDPD_AUTH_MARKERS):
-            return {'status': 'auth_required', 'statusLabel': 'Re-auth needed',
-                    'lastSync': last_done_ts,
-                    'lastSyncRelative': _rel_time(last_done_ts) if last_done_ts else None,
-                    'message': 'Apple sign-in expired — open the web UI to re-authenticate'}
-        if any(m in lo for m in _ICLOUDPD_DONE_MARKERS):
-            last_done_ts = ln.split(' ', 1)[0]
-            return {'status': 'ok', 'statusLabel': 'OK', 'lastSync': last_done_ts,
-                    'lastSyncRelative': _rel_time(last_done_ts),
-                    'message': 'Last sync completed'}
-        if any(m in lo for m in _ICLOUDPD_PROGRESS_MARKERS):
-            return {'status': 'syncing', 'statusLabel': 'Syncing', 'lastSync': None,
-                    'lastSyncRelative': None, 'message': 'Sync in progress'}
 
-    return {'status': 'unknown', 'statusLabel': 'Unknown', 'lastSync': None,
-            'lastSyncRelative': None, 'message': 'No recent activity in logs'}
+    # Split into per-account segments: each starts at a "Processing user: X"
+    # line and runs to just before the next such line (or end of tail).
+    segments_by_user = {}
+    current_user = None
+    current_lines = []
+    current_lower = []
+    for ln, lo in zip(lines, lower):
+        idx = lo.find(_ICLOUDPD_USER_MARKER)
+        if idx != -1:
+            if current_user is not None:
+                segments_by_user[current_user] = (current_lines, current_lower)
+            current_user = ln[idx + len(_ICLOUDPD_USER_MARKER):].strip()
+            current_lines = []
+            current_lower = []
+        else:
+            current_lines.append(ln)
+            current_lower.append(lo)
+    if current_user is not None:
+        segments_by_user[current_user] = (current_lines, current_lower)
+
+    if not segments_by_user:
+        return {'status': 'unknown', 'statusLabel': 'Unknown', 'lastSync': None,
+                'lastSyncRelative': None, 'message': 'No recent activity in logs'}
+
+    results = [_classify_account_segment(seg_lines, seg_lower)
+               for seg_lines, seg_lower in segments_by_user.values()]
+    return max(results, key=lambda r: _ICLOUDPD_SEVERITY.get(r['status'], -1))
 
 
-@app.route('/api/icloudpd/status/<name>')
-def icloudpd_status(name):
-    if name not in _ICLOUDPD_CONTAINERS:
-        return jsonify({'error': 'unknown container'}), 404
+@app.route('/api/icloudpd/status')
+def icloudpd_status():
+    name = _ICLOUDPD_CONTAINER
     try:
         info = _docker_api(f'/containers/{name}/json')
         state = info.get('State', {}) or {}
