@@ -339,7 +339,7 @@ logs-owntracks:
 	@$(COMPOSE) logs -f owntracks-recorder mosquitto
 
 logs-icloudpd:
-	@$(COMPOSE) logs -f icloudpd-a icloudpd-b
+	@$(COMPOSE) logs -f icloudpd
 
 # Location services (docker-compose.location.yml)
 COMPOSE_LOCATION := docker compose -f docker-compose.location.yml
