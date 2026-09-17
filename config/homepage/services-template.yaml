@@ -183,34 +183,16 @@
 
 # Backups - Data backup services
 - Backups:
-    - "{{HOMEPAGE_VAR_ICLOUD_A_LABEL}}":
+    - "{{HOMEPAGE_VAR_ICLOUD_LABEL}}":
         icon: mdi-cloud-download
-        href: https://icloud-a.{{HOMEPAGE_VAR_DOMAIN}}
+        href: https://icloud.{{HOMEPAGE_VAR_DOMAIN}}
         description: iCloud photo backup
-        container: icloudpd-a
+        container: icloudpd
         server: my-docker
         showStats: true
         widget:
           type: customapi
-          url: http://homepage-api:5000/api/icloudpd/status/icloudpd-a
-          refreshInterval: 60000
-          mappings:
-            - field: statusLabel
-              label: Status
-            - field: lastSyncRelative
-              label: Last sync
-            - field: message
-              label: Detail
-    - "{{HOMEPAGE_VAR_ICLOUD_B_LABEL}}":
-        icon: mdi-cloud-download
-        href: https://icloud-b.{{HOMEPAGE_VAR_DOMAIN}}
-        description: iCloud photo backup
-        container: icloudpd-b
-        server: my-docker
-        showStats: true
-        widget:
-          type: customapi
-          url: http://homepage-api:5000/api/icloudpd/status/icloudpd-b
+          url: http://homepage-api:5000/api/icloudpd/status
           refreshInterval: 60000
           mappings:
             - field: statusLabel
