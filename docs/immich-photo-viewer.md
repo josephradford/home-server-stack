@@ -21,7 +21,9 @@ make validate && make update
 ### 2. Create the admin account
 
 Open `https://immich.${DOMAIN}` (home network / VPN only, behind
-`admin-secure`). The first visit prompts you to create the admin account —
+`admin-secure-no-ratelimit` — Immich's SPA loads too many assets at once for
+the rate-limited variant, same as AdGuard/Grafana/Homepage). The first visit
+prompts you to create the admin account —
 this is entirely in-app; nothing is configured through `.env` or compose for
 this step.
 
