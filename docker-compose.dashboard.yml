@@ -71,9 +71,8 @@ services:
       HOMEPAGE_VAR_TRANSPORT_STOP_4_NAME: ${TRANSPORT_STOP_4_NAME}
       HOMEPAGE_VAR_TRANSPORT_STOP_4_ICON: ${TRANSPORT_STOP_4_ICON:-mdi-tram}
       HOMEPAGE_VAR_TRANSPORT_STOP_4_FILTER: ${TRANSPORT_STOP_4_FILTER}
-      # iCloud photo backup labels
-      HOMEPAGE_VAR_ICLOUD_A_LABEL: ${ICLOUD_A_LABEL:-Photos A}
-      HOMEPAGE_VAR_ICLOUD_B_LABEL: ${ICLOUD_B_LABEL:-Photos B}
+      # iCloud photo backup label
+      HOMEPAGE_VAR_ICLOUD_LABEL: ${ICLOUD_LABEL:-Photo Backups}
     # No port exposure - access via Traefik at https://homepage.${DOMAIN}
     volumes:
       - ./data/homepage/config:/app/config
