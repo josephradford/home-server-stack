@@ -10,7 +10,7 @@ A complete self-hosted infrastructure for home automation, AI, and network servi
 
 **Dashboard:** [Homepage](https://github.com/gethomepage/homepage) + custom API backend
 
-**Backup:** [icloudpd](https://github.com/icloud-photos-downloader/icloud_photos_downloader) containers mirroring iCloud photo libraries to an external drive
+**Backup:** [icloudpd](https://github.com/icloud-photos-downloader/icloud_photos_downloader) container mirroring iCloud photo libraries to an external drive
 
 See [SERVICES.md](SERVICES.md) for the complete catalog including planned services.
 
