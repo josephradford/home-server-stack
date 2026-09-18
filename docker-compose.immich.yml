@@ -1,0 +1,94 @@
+# Immich — self-hosted photo viewer reading icloudpd's backups as a
+# read-only external library. See docs/immich-photo-viewer.md for the
+# first-run admin setup (Immich has no compose/env-driven account creation).
+#
+# /mnt/photos-backup is mounted read-only into immich-server and
+# immich-machine-learning — Immich must never write to the backup drive;
+# icloudpd remains the sole writer. Immich's own managed storage
+# (./data/immich/upload) holds only derived files (thumbnails, transcoded
+# previews), never a copy of the originals.
+
+services:
+  immich-server:
+    image: ghcr.io/immich-app/immich-server:${IMMICH_VERSION:-v3.2.2}
+    container_name: immich-server
+    restart: unless-stopped
+    networks:
+      - homeserver
+    environment:
+      TZ: ${TIMEZONE:-UTC}
+      DB_HOSTNAME: immich-postgres
+      DB_USERNAME: postgres
+      DB_DATABASE_NAME: immich
+      DB_PASSWORD: ${IMMICH_DB_PASSWORD}
+      REDIS_HOSTNAME: immich-redis
+    volumes:
+      - ./data/immich/upload:/data
+      - /mnt/photos-backup:/mnt/photos-backup:ro
+      - /etc/localtime:/etc/localtime:ro
+    # Quick Sync hardware-accelerated video transcoding (separate from ML
+    # inference below) — uses the same integrated GPU.
+    devices:
+      - /dev/dri:/dev/dri
+    depends_on:
+      - immich-redis
+      - immich-postgres
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.immich.rule=Host(`immich.${DOMAIN}`)"
+      - "traefik.http.routers.immich.entrypoints=websecure"
+      - "traefik.http.routers.immich.tls=true"
+      - "traefik.http.services.immich.loadbalancer.server.port=2283"
+      - "traefik.http.routers.immich.middlewares=admin-secure"
+
+  immich-machine-learning:
+    # -openvino uses the server's integrated GPU (Quick Sync-capable HD 630)
+    # for inference instead of pure CPU. Deployed so ML features can be
+    # turned on later purely via Immich's admin UI, with zero redeploy.
+    image: ghcr.io/immich-app/immich-machine-learning:${IMMICH_VERSION:-v3.2.2}-openvino
+    container_name: immich-machine-learning
+    restart: unless-stopped
+    networks:
+      - homeserver
+    environment:
+      TZ: ${TIMEZONE:-UTC}
+    volumes:
+      - ./data/immich/model-cache:/cache
+      - /mnt/photos-backup:/mnt/photos-backup:ro
+      - /dev/bus/usb:/dev/bus/usb
+    device_cgroup_rules:
+      - 'c 189:* rmw'
+    devices:
+      - /dev/dri:/dev/dri
+
+  immich-redis:
+    image: docker.io/valkey/valkey:9@sha256:70739f85ad2ee01a726a965584a0f94895f01b0c60b3cc8b0aeef11eaa6888cf
+    container_name: immich-redis
+    restart: unless-stopped
+    networks:
+      - homeserver
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli ping | grep -q PONG || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  immich-postgres:
+    image: ghcr.io/immich-app/postgres:14-vectorchord0.4.3-pgvectors0.2.0@sha256:bcf63357191b76a916ae5eb93464d65c07511da41e3bf7a8416db519b40b1c23
+    container_name: immich-postgres
+    restart: unless-stopped
+    networks:
+      - homeserver
+    environment:
+      POSTGRES_PASSWORD: ${IMMICH_DB_PASSWORD}
+      POSTGRES_USER: postgres
+      POSTGRES_DB: immich
+      POSTGRES_INITDB_ARGS: '--data-checksums'
+    volumes:
+      - ./data/immich/postgres:/var/lib/postgresql/data
+    shm_size: 128mb
+
+networks:
+  homeserver:
+    external: true
+    name: home-server-stack_homeserver
