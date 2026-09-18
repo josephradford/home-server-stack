@@ -120,6 +120,17 @@ needed roughly every 2 months per account; `icloudpd` emails a notification
 and the Homepage Backups tile shows the worse of the two accounts' status.
 Full setup: `docs/icloud-photos-backup.md`.
 
+#### Immich (Photo Viewer)
+
+Self-hosted photo gallery (`immich-server`, `immich-machine-learning`,
+`immich-postgres`, `immich-redis`) reading icloudpd's backups as a
+read-only external library — never writes to the backup drive. Access:
+`https://immich.${DOMAIN}` (home/VPN only). Machine learning (smart
+search, face recognition) is deployed — verify its enabled/disabled state in
+Administration → Machine Learning before registering libraries; can be
+toggled at any time, no redeploy needed. Full setup:
+`docs/immich-photo-viewer.md`.
+
 ---
 
 ## Quick Reference
@@ -136,6 +147,7 @@ Full setup: `docs/icloud-photos-backup.md`.
 | Alertmanager | https://alerts.${DOMAIN} | http://IP:9093 |
 | owntracks-recorder | https://owntracks.${DOMAIN} | N/A |
 | icloudpd | https://icloud.${DOMAIN} | N/A |
+| Immich | https://immich.${DOMAIN} | N/A |
 
 ---
 
@@ -149,7 +161,6 @@ Services queued for implementation.
 - [ ] **[Habitica](https://github.com/HabitRPG/habitica)** - Gamified habit and task tracker
 - [ ] **[Bookwyrm](https://github.com/bookwyrm-social/bookwyrm)** - Social reading and book tracking platform
 - [ ] **[Kiwix](https://github.com/kiwix)** - Offline content reader with ZIM file support for Wikipedia and educational content
-- [ ] **[Immich](https://github.com/immich-app/immich)** - High performance self-hosted photo and video management solution (Apple Photos alternative)
 - [ ] **[Jellyfin](https://github.com/jellyfin/jellyfin)** - The Free Software Media System for movies, TV shows, and music
 - [ ] **[Navidrome](https://github.com/navidrome/navidrome)** - Modern Music Server and Streamer compatible with Subsonic/Airsonic (alternative to Jellyfin for music)
 - [ ] **[Sonarr](https://github.com/Sonarr/Sonarr)** - Smart PVR for newsgroup and bittorrent users (TV show automation)

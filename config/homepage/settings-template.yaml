@@ -41,6 +41,9 @@ layout:
     Dashboard:
       style: row
       columns: 1
+    Media:
+      style: row
+      columns: 1
     Network & Security:
       style: row
       columns: 3
