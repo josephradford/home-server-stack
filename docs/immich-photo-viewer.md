@@ -40,16 +40,42 @@ pointed at a path mounted `:ro` — Immich will refuse to modify files it
 can't write to). Trigger a scan; Immich indexes the existing files without
 copying them anywhere.
 
+## Hardware acceleration
+
+`immich-server` and `immich-machine-learning` are configured to use the
+server's integrated GPU (`/dev/dri`) for video transcoding and ML
+inference. Verify it exists before deploying:
+
+```bash
+ls -la /dev/dri
+```
+
+If `/dev/dri` is missing, fall back to CPU-only:
+
+1. In `docker-compose.immich.yml`, remove the `devices: [/dev/dri:/dev/dri]`
+   block from `immich-server`.
+2. On `immich-machine-learning`, remove `devices:`, `device_cgroup_rules:`,
+   and the `/dev/bus/usb` volume line, and drop the `-openvino` suffix from
+   its image tag (falls back to the plain CPU image).
+3. Redeploy. ML inference and video transcoding will be slower but
+   functionally identical.
+
 ## Enabling machine learning later
 
-Smart search (search by photo content) and facial recognition are deployed
-but **off by default**. To turn them on: **Administration → Machine
-Learning → enable Smart Search / Facial Recognition**. This takes effect
-immediately — no redeploy needed, since the `immich-machine-learning`
-container has been running since first setup. Expect the initial indexing
-pass over the existing backlog to take a while on this hardware (no
-dedicated GPU, CPU-bound ML inference via OpenVINO acceleration on the
-integrated GPU helps but this is still a background job, not instant).
+Immediately after creating the admin account and BEFORE registering the
+external libraries, check **Administration → Machine Learning**. If Smart
+Search or Facial Recognition are already enabled and you don't want them
+running against the full backlog yet, disable them there first — then
+register the libraries.
+
+Smart search (search by photo content) and facial recognition can be turned
+on or off at any time: **Administration → Machine Learning → enable/disable
+Smart Search / Facial Recognition**. This takes effect immediately — no
+redeploy needed, since the `immich-machine-learning` container has been
+running since first setup. Expect the initial indexing pass over the
+existing backlog to take a while on this hardware (no dedicated GPU,
+CPU-bound ML inference via OpenVINO acceleration on the integrated GPU
+helps but this is still a background job, not instant).
 
 ## What this does and doesn't do
 

@@ -24,7 +24,7 @@ services:
       REDIS_HOSTNAME: immich-redis
     volumes:
       - ./data/immich/upload:/data
-      - /mnt/photos-backup:/mnt/photos-backup:ro
+      - ${ICLOUD_BACKUP_ROOT:-/mnt/photos-backup}:/mnt/photos-backup:ro
       - /etc/localtime:/etc/localtime:ro
     # Quick Sync hardware-accelerated video transcoding (separate from ML
     # inference below) — uses the same integrated GPU.
@@ -54,7 +54,7 @@ services:
       TZ: ${TIMEZONE:-UTC}
     volumes:
       - ./data/immich/model-cache:/cache
-      - /mnt/photos-backup:/mnt/photos-backup:ro
+      - ${ICLOUD_BACKUP_ROOT:-/mnt/photos-backup}:/mnt/photos-backup:ro
       - /dev/bus/usb:/dev/bus/usb
     device_cgroup_rules:
       - 'c 189:* rmw'

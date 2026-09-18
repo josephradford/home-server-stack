@@ -126,8 +126,9 @@ Self-hosted photo gallery (`immich-server`, `immich-machine-learning`,
 `immich-postgres`, `immich-redis`) reading icloudpd's backups as a
 read-only external library — never writes to the backup drive. Access:
 `https://immich.${DOMAIN}` (home/VPN only). Machine learning (smart
-search, face recognition) is deployed but off by default — enable later in
-Administration → Machine Learning, no redeploy needed. Full setup:
+search, face recognition) is deployed — verify its enabled/disabled state in
+Administration → Machine Learning before registering libraries; can be
+toggled at any time, no redeploy needed. Full setup:
 `docs/immich-photo-viewer.md`.
 
 ---
