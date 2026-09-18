@@ -16,7 +16,7 @@
 # - docker-compose.monitoring.yml: Monitoring stack (Prometheus, Grafana, Alertmanager, exporters)  
 # - docker-compose.dashboard.yml: Dashboard (Homepage, Homepage API)
 # - docker-compose.location.yml: Location services (owntracks-recorder)
-# - docker-compose.photos.yml: iCloud photo backup (icloudpd-a, icloudpd-b)
+# - docker-compose.photos.yml: iCloud photo backup (icloudpd)
 #
 # NOTE: WireGuard is now a system service, not Docker service
 # Install with: sudo ./scripts/wireguard/install-wireguard.sh

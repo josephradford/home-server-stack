@@ -538,6 +538,64 @@ class TestIcloudpdStatusEndpoint:
         assert resp.status_code == 200
         assert resp.get_json()['status'] == 'unknown'
 
+    @patch('app._docker_logs')
+    @patch('app._docker_api')
+    def test_busy_sync_with_no_marker_in_window_is_syncing_not_unknown(self, mock_api, mock_logs, client):
+        """A tail window entirely full of download activity with no 'Processing
+        user:' marker (marker scrolled out by a heavy sync) must still report
+        syncing, not unknown."""
+        mock_api.return_value = {
+            'State': {'Status': 'running', 'Running': True,
+                      'StartedAt': '2026-09-17T00:00:00Z', 'Health': {'Status': 'healthy'}}
+        }
+        mock_logs.return_value = (
+            "2026-09-17T04:00:00Z INFO Downloading photo1.HEIC\n"
+            "2026-09-17T04:00:01Z INFO Downloaded photo1.HEIC\n"
+            "2026-09-17T04:00:02Z INFO Downloading photo2.HEIC\n"
+        )
+        resp = client.get('/api/icloudpd/status')
+        assert resp.get_json()['status'] == 'syncing'
+
+    @patch('app._docker_logs')
+    @patch('app._docker_api')
+    def test_just_started_account_segment_is_syncing_not_unknown(self, mock_api, mock_logs, client):
+        """An account whose 'Processing user:' marker just printed, with no
+        further lines yet, must not report unknown (which would outrank a
+        sibling account's ok)."""
+        mock_api.return_value = {
+            'State': {'Status': 'running', 'Running': True,
+                      'StartedAt': '2026-09-17T00:00:00Z', 'Health': {'Status': 'healthy'}}
+        }
+        mock_logs.return_value = (
+            "2026-09-17T04:00:00Z INFO Processing user: alice@example.com\n"
+            "2026-09-17T04:00:05Z INFO All photos have been downloaded\n"
+            "2026-09-17T04:00:06Z INFO Processing user: bob@example.com\n"
+        )
+        resp = client.get('/api/icloudpd/status')
+        data = resp.get_json()
+        assert data['status'] == 'syncing'
+
+    @patch('app._docker_logs')
+    @patch('app._docker_api')
+    def test_worst_of_ties_prefers_more_recent_last_sync(self, mock_api, mock_logs, client):
+        """When both accounts are 'ok', lastSync must reflect whichever
+        actually synced more recently, not whichever account appears first
+        in the log."""
+        mock_api.return_value = {
+            'State': {'Status': 'running', 'Running': True,
+                      'StartedAt': '2026-09-17T00:00:00Z', 'Health': {'Status': 'healthy'}}
+        }
+        mock_logs.return_value = (
+            "2026-09-17T04:00:00Z INFO Processing user: alice@example.com\n"
+            "2026-09-17T04:00:05Z INFO All photos have been downloaded\n"
+            "2026-09-17T04:00:06Z INFO Processing user: bob@example.com\n"
+            "2026-09-17T09:00:00Z INFO All photos have been downloaded\n"
+        )
+        resp = client.get('/api/icloudpd/status')
+        data = resp.get_json()
+        assert data['status'] == 'ok'
+        assert data['lastSync'] == '2026-09-17T09:00:00Z'
+
     def test_rel_time_parses_nanosecond_docker_timestamp(self):
         from app import _rel_time
         # Docker RFC3339Nano — 9 fractional digits

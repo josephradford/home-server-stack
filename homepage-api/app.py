@@ -680,9 +680,11 @@ def _rel_time(iso_ts):
     return 'just now'
 
 
-def _classify_account_segment(seg_lines, seg_lower):
+def _classify_account_segment(seg_lines, seg_lower, empty_status='unknown',
+                               empty_label='Unknown', empty_message='No recent activity in logs'):
     """Classify one account's slice of the log, newest line wins (same logic
-    as the original single-account classifier)."""
+    as the original single-account classifier). `empty_*` control the result
+    when nothing in the segment matches any marker."""
     last_done_ts = None
     for ln, lo in zip(reversed(seg_lines), reversed(seg_lower)):
         if any(m in lo for m in _ICLOUDPD_AUTH_MARKERS):
@@ -698,8 +700,8 @@ def _classify_account_segment(seg_lines, seg_lower):
         if any(m in lo for m in _ICLOUDPD_PROGRESS_MARKERS):
             return {'status': 'syncing', 'statusLabel': 'Syncing', 'lastSync': None,
                     'lastSyncRelative': None, 'message': 'Sync in progress'}
-    return {'status': 'unknown', 'statusLabel': 'Unknown', 'lastSync': None,
-            'lastSyncRelative': None, 'message': 'No recent activity in logs'}
+    return {'status': empty_status, 'statusLabel': empty_label, 'lastSync': None,
+            'lastSyncRelative': None, 'message': empty_message}
 
 
 def _classify_icloudpd(state, health, logs):
@@ -749,12 +751,15 @@ def _classify_icloudpd(state, health, logs):
         segments_by_user[current_user] = (current_lines, current_lower)
 
     if not segments_by_user:
+        if current_lines:
+            return _classify_account_segment(current_lines, current_lower)
         return {'status': 'unknown', 'statusLabel': 'Unknown', 'lastSync': None,
                 'lastSyncRelative': None, 'message': 'No recent activity in logs'}
 
-    results = [_classify_account_segment(seg_lines, seg_lower)
+    results = [_classify_account_segment(seg_lines, seg_lower, empty_status='syncing',
+                                          empty_label='Syncing', empty_message='Sync in progress')
                for seg_lines, seg_lower in segments_by_user.values()]
-    return max(results, key=lambda r: _ICLOUDPD_SEVERITY.get(r['status'], -1))
+    return max(results, key=lambda r: (_ICLOUDPD_SEVERITY.get(r['status'], -1), r['lastSync'] or ''))
 
 
 @app.route('/api/icloudpd/status')
@@ -764,7 +769,7 @@ def icloudpd_status():
         info = _docker_api(f'/containers/{name}/json')
         state = info.get('State', {}) or {}
         health = (state.get('Health') or {}).get('Status')
-        logs = _docker_logs(name)
+        logs = _docker_logs(name, tail=500)
         result = _classify_icloudpd(state, health, logs)
     except Exception as e:
         result = {'status': 'unknown', 'statusLabel': 'Unknown', 'lastSync': None,
