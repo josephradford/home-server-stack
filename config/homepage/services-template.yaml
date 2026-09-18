@@ -283,6 +283,16 @@
           server: my-docker
           showStats: true
 
+  # Media - Photo and media viewers
+  - Media:
+      - Immich:
+          icon: mdi-image-multiple
+          href: https://immich.{{HOMEPAGE_VAR_DOMAIN}}
+          description: Photo library viewer
+          container: immich-server
+          server: my-docker
+          showStats: true
+
   # Network & Security - Infrastructure services for routing, VPN, and security
   - Network & Security:
       - Traefik:
