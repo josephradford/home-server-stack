@@ -2,7 +2,8 @@
 # Simplifies deployment and maintenance operations
 
 .PHONY: help setup update start stop restart logs build build-custom pull status clean purge validate env-check
-.PHONY: logs-n8n logs-homepage logs-owntracks logs-icloudpd logs-immich
+.PHONY: logs-n8n logs-homepage logs-owntracks logs-icloudpd logs-immich logs-cwa logs-library-digest
+.PHONY: library-digest-now
 .PHONY: setup-certs test-domain-access
 .PHONY: wireguard-status wireguard-install wireguard-setup wireguard-routing wireguard-test wireguard-peers wireguard-check
 .PHONY: ssl-setup ssl-renew-test
@@ -13,11 +14,12 @@
 # Services are organized into logical groups:
 # - docker-compose.yml: Core services (AdGuard, n8n)
 # - docker-compose.network.yml: Network & Security (Traefik, Fail2ban)
-# - docker-compose.monitoring.yml: Monitoring stack (Prometheus, Grafana, Alertmanager, exporters)  
+# - docker-compose.monitoring.yml: Monitoring stack (Prometheus, Grafana, Alertmanager, exporters)
 # - docker-compose.dashboard.yml: Dashboard (Homepage, Homepage API)
 # - docker-compose.location.yml: Location services (owntracks-recorder)
 # - docker-compose.photos.yml: iCloud photo backup (icloudpd)
 # - docker-compose.immich.yml: Immich photo viewer (immich-server, immich-machine-learning, immich-postgres, immich-redis)
+# - docker-compose.library.yml: Ebook library (cwa, library-digest)
 #
 # NOTE: WireGuard is now a system service, not Docker service
 # Install with: sudo ./scripts/wireguard/install-wireguard.sh
@@ -26,7 +28,7 @@
 # COMPOSE_CORE: Core + Network + Monitoring (used for operations that shouldn't restart dashboard or AI)
 # COMPOSE: All services including dashboard and AI (default for most operations)
 COMPOSE_CORE := docker compose -f docker-compose.yml -f docker-compose.network.yml -f docker-compose.monitoring.yml
-COMPOSE := docker compose -f docker-compose.yml -f docker-compose.network.yml -f docker-compose.monitoring.yml -f docker-compose.dashboard.yml -f docker-compose.photos.yml -f docker-compose.location.yml -f docker-compose.immich.yml
+COMPOSE := docker compose -f docker-compose.yml -f docker-compose.network.yml -f docker-compose.monitoring.yml -f docker-compose.dashboard.yml -f docker-compose.photos.yml -f docker-compose.location.yml -f docker-compose.immich.yml -f docker-compose.library.yml
 
 # Default target - show help
 help:
@@ -59,6 +61,9 @@ help:
 	@echo "  make logs-n8n           - Show n8n logs only"
 	@echo "  make logs-homepage      - Show Homepage logs only"
 	@echo "  make logs-owntracks     - Show OwnTracks Recorder logs only"
+	@echo "  make logs-cwa           - Show Calibre Web Archive logs only"
+	@echo "  make logs-library-digest - Show library digest logs only"
+	@echo "  make library-digest-now - Run the reading digest once, immediately"
 	@echo ""
 	@echo "OwnTracks Location (Individual Service Management):"
 	@echo "  make location-start     - Start OwnTracks Recorder only"
@@ -344,6 +349,17 @@ logs-icloudpd:
 
 logs-immich:
 	@$(COMPOSE) logs -f immich-server immich-machine-learning
+
+logs-cwa:
+	@$(COMPOSE) logs -f cwa
+
+logs-library-digest:
+	@$(COMPOSE) logs -f library-digest
+
+# Run the RSS-to-EPUB digest once, immediately, instead of waiting for the
+# container's internal sleep loop.
+library-digest-now:
+	@$(COMPOSE) exec library-digest python /app/digest.py
 
 # Location services (docker-compose.location.yml)
 COMPOSE_LOCATION := docker compose -f docker-compose.location.yml
