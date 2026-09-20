@@ -28,15 +28,28 @@ urls = [
 ]
 
 for url in urls:
-    feed = feedparser.parse(url)
-    source = feed.feed.get("title", url)
-    new = [e for e in feed.entries if (e.get("id") or e.get("link")) not in seen]
-    # Mark everything as seen, but only include the newest few
-    for e in feed.entries:
-        seen.add(e.get("id") or e.get("link"))
-    for e in new[:MAX_PER_FEED]:
-        body = e.content[0].value if e.get("content") else e.get("summary", "")
-        posts.append((source, e.get("title", "Untitled"), e.get("link", ""), body))
+    try:
+        feed = feedparser.parse(url)
+        source = feed.feed.get("title", url)
+        # Entries with neither id nor link have no stable identity for dedup;
+        # skip them entirely rather than risk re-bundling them every run or
+        # polluting `seen` with None (which would crash sorted() later).
+        new = [
+            e
+            for e in feed.entries
+            if (e.get("id") or e.get("link")) and (e.get("id") or e.get("link")) not in seen
+        ]
+        # Mark everything as seen, but only include the newest few
+        for e in feed.entries:
+            key = e.get("id") or e.get("link")
+            if key:
+                seen.add(key)
+        for e in new[:MAX_PER_FEED]:
+            body = e.content[0].value if e.get("content") else e.get("summary", "")
+            posts.append((source, e.get("title", "Untitled"), e.get("link", ""), body))
+    except Exception as e:
+        print(f"Skipping {url}: {e}")
+        continue
 
 if not posts:
     print("Nothing new.")
@@ -53,7 +66,7 @@ book.add_author("Digest")
 chapters = []
 for i, (source, title, link, body) in enumerate(posts, 1):
     ch = epub.EpubHtml(title=title, file_name=f"post{i}.xhtml", lang="en")
-    ch.content = f"<h1>{title}</h1><p><em>{source}</em></p>{body}"
+    ch.content = f"<h1>{title}</h1><p><em>{source}</em></p><p><a href=\"{link}\">{link}</a></p>{body}"
     book.add_item(ch)
     chapters.append(ch)
 

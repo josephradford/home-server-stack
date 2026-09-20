@@ -49,7 +49,7 @@ services:
     # Runs at container start, then every DIGEST_INTERVAL seconds (drifts from start
     # time; fine for a daily digest, not a cron guarantee).
     command: >
-      sh -c "pip install -q feedparser ebooklib &&
+      sh -c "pip install -q feedparser==6.0.11 ebooklib==0.18 &&
       while true; do python /app/digest.py; sleep ${DIGEST_INTERVAL:-86400}; done"
 
 networks:
