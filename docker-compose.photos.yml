@@ -1,7 +1,13 @@
-# iCloud Photos backup — one icloudpd container handling two Apple accounts
-# sequentially (icloudpd's own native multi-account support via repeated
+# iCloud Photos backup — one icloudpd container, handling Apple accounts
+# sequentially via icloudpd's native multi-account support (repeated
 # --username/--directory pairs). See docs/icloud-photos-backup.md for setup.
 # All identifying values are in .env.
+#
+# Account B is temporarily disabled: an invalid/placeholder ICLOUD_B_USERNAME
+# throws an unhandled exception in pyicloud during auth (KeyError: 'dsInfo'),
+# which crashes the whole icloudpd process and forces account A to restart its
+# entire pass from scratch. Once ICLOUD_B_USERNAME holds a real, ready-to-auth
+# Apple ID, re-add its pair to the --username/--directory list below.
 #
 # The Apple ID passwords are entered via the container's web UI (never
 # stored in .env or the repo) and persisted only in ./data/icloudpd/cookies.
@@ -50,8 +56,7 @@ services:
           --smtp-password "${ICLOUD_SMTP_PASSWORD}" \
           --notification-email "${ICLOUD_NOTIFICATION_EMAIL}" \
           --no-progress-bar \
-          --username "${ICLOUD_A_USERNAME}" --directory "/drive/${ICLOUD_A_SUBDIR}" \
-          --username "${ICLOUD_B_USERNAME}" --directory "/drive/${ICLOUD_B_SUBDIR}"
+          --username "${ICLOUD_A_USERNAME}" --directory "/drive/${ICLOUD_A_SUBDIR}"
     healthcheck:
       test: ["CMD-SHELL", "test \"$$(cat /drive/.backup-drive 2>/dev/null)\" = \"$$ICLOUD_BACKUP_DRIVE_ID\""]
       interval: 60s
