@@ -1,0 +1,58 @@
+# Ebook library: Calibre-Web-Automated at books.${DOMAIN} + a daily RSS-to-EPUB digest.
+# Follows the conventions of docker-compose.photos.yml (external homeserver network,
+# Traefik labels with the wildcard cert, admin middleware).
+#
+# One-time prep:
+#   mkdir -p data/cwa/{config,ingest,library} data/library-digest
+#   chown -R ${PUID}:${PGID} data/cwa data/library-digest
+
+services:
+  cwa:
+    image: ghcr.io/crocodilestick/calibre-web-automated:V3.1.4
+    container_name: cwa
+    restart: unless-stopped
+    networks:
+      - homeserver
+    environment:
+      PUID: ${PUID:-1000}
+      PGID: ${PGID:-1000}
+      TZ: ${TIMEZONE:-UTC}
+    volumes:
+      - ./data/cwa/config:/config
+      - ./data/cwa/ingest:/cwa-book-ingest    # drop EPUB/PDF here; CWA imports/converts and clears it
+      - ./data/cwa/library:/calibre-library
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.books.rule=Host(`books.${DOMAIN}`)"
+      - "traefik.http.routers.books.entrypoints=websecure"
+      - "traefik.http.routers.books.tls=true"
+      - "traefik.http.services.books.loadbalancer.server.port=8083"
+      # Local/VPN only. The no-ratelimit variant is used because Kobo sync makes bursts
+      # of requests (metadata, covers) that the 10 req/min admin limit would throttle.
+      - "traefik.http.routers.books.middlewares=admin-secure-no-ratelimit"
+
+  library-digest:
+    image: python:3.12.8-slim
+    container_name: library-digest
+    restart: unless-stopped
+    networks:
+      - homeserver
+    environment:
+      TZ: ${TIMEZONE:-UTC}
+      DIGEST_PUID: ${PUID:-1000}
+      DIGEST_PGID: ${PGID:-1000}
+    volumes:
+      - ./scripts/library:/app:ro
+      - ./config/library:/config:ro           # feeds.txt lives here
+      - ./data/library-digest:/data           # seen.json (what's already been bundled)
+      - ./data/cwa/ingest:/ingest
+    # Runs at container start, then every DIGEST_INTERVAL seconds (drifts from start
+    # time; fine for a daily digest, not a cron guarantee).
+    command: >
+      sh -c "pip install -q feedparser ebooklib &&
+      while true; do python /app/digest.py; sleep ${DIGEST_INTERVAL:-86400}; done"
+
+networks:
+  homeserver:
+    external: true
+    name: home-server-stack_homeserver
