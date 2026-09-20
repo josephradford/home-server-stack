@@ -86,11 +86,12 @@ Currently deployed and active services.
 - **Authentication:** None (VPN-protected)
 
 #### Alertmanager
-- **Purpose:** Alert routing and management
+- **Purpose:** Alert routing and management — delivers by email (`ALERT_SMTP_*` / `ALERT_EMAIL_*` in `.env`)
 - **Access:** https://alerts.${DOMAIN}
 - **Direct Access:** http://SERVER_IP:9093 (for alert routing)
 - **Port:** 9093
 - **Authentication:** None (VPN-protected)
+- **Config:** generated from `monitoring/alertmanager/alertmanager.yml.example` by `scripts/monitoring/configure-alertmanager.sh` (runs automatically via `make setup`/`start`/`update`) — the real file is git-ignored since it holds SMTP credentials
 
 #### Node Exporter
 - **Purpose:** System metrics exporter

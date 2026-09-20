@@ -2,6 +2,10 @@
 .env
 .env.local
 
+# Generated from monitoring/alertmanager/alertmanager.yml.example by
+# scripts/monitoring/configure-alertmanager.sh — contains real SMTP creds
+monitoring/alertmanager/alertmanager.yml
+
 # Data directories
 data/
 
