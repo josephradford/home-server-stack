@@ -1,4 +1,3 @@
 # One RSS URL per line. Any Substack's feed is https://<name>.substack.com/feed
-# Replace these placeholders with the writers you actually want.
-https://example.substack.com/feed
-# https://another.substack.com/feed
+# Add more here as you find writers you want in the nightly digest.
+https://clarkesworldmagazine.com/feed/
