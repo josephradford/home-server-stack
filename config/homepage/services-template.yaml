@@ -293,6 +293,14 @@
           server: my-docker
           showStats: true
 
+      - Ebook Library:
+          icon: mdi-bookshelf
+          href: https://books.{{HOMEPAGE_VAR_DOMAIN}}
+          description: Calibre-Web-Automated + Kobo sync
+          container: cwa
+          server: my-docker
+          showStats: true
+
   # Network & Security - Infrastructure services for routing, VPN, and security
   - Network & Security:
       - Traefik:

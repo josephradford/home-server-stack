@@ -43,8 +43,12 @@ Add peers: `sudo ./scripts/wireguard/wireguard-add-peer.sh <name>`
 - `docker-compose.monitoring.yml` — Monitoring (Prometheus, Grafana, Alertmanager, exporters)
 - `docker-compose.dashboard.yml` — Dashboard (Homepage, Homepage API)
 - `docker-compose.location.yml` — Location services (owntracks-recorder)
+- `docker-compose.photos.yml` — iCloud photo backup (icloudpd)
+- `docker-compose.immich.yml` — Photo viewer (immich-server, immich-machine-learning, immich-postgres, immich-redis)
+- `docker-compose.library.yml` — Ebook library (cwa, library-digest)
 
-The Makefile combines all five files by default.
+The Makefile combines all of these files by default (see `COMPOSE` in the Makefile
+for the authoritative list).
 
 ### Domain Routing
 1. **AdGuard Home** (port 53) resolves `*.DOMAIN` → `SERVER_IP`
