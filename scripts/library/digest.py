@@ -44,7 +44,10 @@ for url in urls:
             key = e.get("id") or e.get("link")
             if key:
                 seen.add(key)
-        for e in new[:MAX_PER_FEED]:
+        # Feeds list entries newest-first; reverse the selected batch so a
+        # serialized work (e.g. a book posted chapter by chapter) reads in
+        # the right order in the bundled EPUB instead of newest-chapter-first.
+        for e in reversed(new[:MAX_PER_FEED]):
             body = e.content[0].value if e.get("content") else e.get("summary", "")
             posts.append((source, e.get("title", "Untitled"), e.get("link", ""), body))
     except Exception as e:
