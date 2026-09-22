@@ -135,32 +135,35 @@ pull: validate
 setup: env-check validate wireguard-check
 	@echo "Starting first-time setup..."
 	@echo ""
-	@echo "Step 1/9: Setting up Traefik dashboard password..."
+	@echo "Step 1/10: Setting up Traefik dashboard password..."
 	@./scripts/traefik/setup-traefik-password.sh
 	@echo ""
-	@echo "Step 2/9: Setting up SSL certificate storage..."
+	@echo "Step 2/10: Setting up SSL certificate storage..."
 	@$(MAKE) setup-certs
 	@echo ""
-	@echo "Step 3/9: Setting up Homepage dashboard config..."
+	@echo "Step 3/10: Setting up Homepage dashboard config..."
 	@./scripts/homepage/configure-homepage.sh
 	@echo ""
-	@echo "Step 4/9: Pulling pre-built images..."
+	@echo "Step 4/10: Configuring Alertmanager email..."
+	@./scripts/monitoring/configure-alertmanager.sh
+	@echo ""
+	@echo "Step 5/10: Pulling pre-built images..."
 	@$(COMPOSE) pull --ignore-pull-failures
 	@echo ""
-	@echo "Step 5/9: Building custom services from source..."
+	@echo "Step 6/10: Building custom services from source..."
 	@$(COMPOSE) build homepage-api --progress=plain
 	@echo ""
-	@echo "Step 6/9: Starting services (Docker Compose will create networks)..."
+	@echo "Step 7/10: Starting services (Docker Compose will create networks)..."
 	@$(COMPOSE) up -d
 	@echo ""
-	@echo "Step 7/9: Fixing data directory permissions..."
+	@echo "Step 8/10: Fixing data directory permissions..."
 	@echo "Containers create directories as root, fixing ownership for user access..."
 	@if [ -d "data" ]; then \
 		sudo chown -R $(shell id -u):$(shell getent group docker | cut -d: -f3) data/ && \
 		echo "✓ Data directory permissions fixed"; \
 	fi
 	@echo ""
-	@echo "Step 8/9: Configuring AdGuard DNS rewrites..."
+	@echo "Step 9/10: Configuring AdGuard DNS rewrites..."
 	@./scripts/adguard/setup-adguard-dns.sh
 	@echo ""
 	@echo "Restarting AdGuard to apply configuration..."
@@ -170,12 +173,12 @@ setup: env-check validate wireguard-check
 	@echo ""
 	@set -a; . ./.env; set +a; \
 	if [ -n "$$WIREGUARD_DDNS_SUBDOMAIN" ]; then \
-		echo "Step 9/9: Setting up dynamic DNS for WireGuard VPN..."; \
+		echo "Step 10/10: Setting up dynamic DNS for WireGuard VPN..."; \
 		echo ""; \
 		sudo ./scripts/ddns/setup-gandi-ddns.sh; \
 		echo ""; \
 	else \
-		echo "Step 9/9: Skipping dynamic DNS (WIREGUARD_DDNS_SUBDOMAIN not set in .env)"; \
+		echo "Step 10/10: Skipping dynamic DNS (WIREGUARD_DDNS_SUBDOMAIN not set in .env)"; \
 		echo ""; \
 	fi
 	@echo "Testing DNS resolution..."
@@ -295,13 +298,16 @@ wireguard-check:
 update: env-check validate wireguard-check
 	@echo "Updating all services..."
 	@echo ""
-	@echo "Step 1/3: Pulling latest images..."
+	@echo "Step 1/4: Regenerating Alertmanager config from .env..."
+	@./scripts/monitoring/configure-alertmanager.sh
+	@echo ""
+	@echo "Step 2/4: Pulling latest images..."
 	@$(COMPOSE) pull --ignore-pull-failures
 	@echo ""
-	@echo "Step 2/3: Building custom services from source..."
+	@echo "Step 3/4: Building custom services from source..."
 	@$(COMPOSE) build homepage-api --progress=plain
 	@echo ""
-	@echo "Step 3/3: Restarting services with new images..."
+	@echo "Step 4/4: Restarting services with new images..."
 	@$(COMPOSE) up -d
 	@echo ""
 	@echo "✓ Update complete! All services restarted with latest versions."
@@ -311,6 +317,7 @@ update: env-check validate wireguard-check
 # Start all services
 start: env-check wireguard-check
 	@echo "Starting all services..."
+	@./scripts/monitoring/configure-alertmanager.sh
 	@$(COMPOSE) up -d
 	@echo "✓ All services started"
 

@@ -1,0 +1,93 @@
+# Alertmanager config template.
+#
+# Alertmanager does NOT substitute ${VAR} placeholders itself — this file is
+# rendered into monitoring/alertmanager/alertmanager.yml (git-ignored, real
+# credentials) by scripts/monitoring/configure-alertmanager.sh, which runs
+# automatically as part of `make setup` / `make start` / `make update`.
+#
+# Set ALERT_SMTP_HOST, ALERT_SMTP_PORT, ALERT_SMTP_USERNAME,
+# ALERT_SMTP_PASSWORD, ALERT_EMAIL_FROM, ALERT_EMAIL_TO in .env.
+# Use a dedicated app password for this, separate from any other service's.
+
+global:
+  smtp_smarthost: '${ALERT_SMTP_HOST}:${ALERT_SMTP_PORT}'
+  smtp_from: '${ALERT_EMAIL_FROM}'
+  smtp_auth_username: '${ALERT_SMTP_USERNAME}'
+  smtp_auth_password: '${ALERT_SMTP_PASSWORD}'
+  smtp_require_tls: true
+
+route:
+  group_by: ['alertname', 'cluster', 'service']
+  group_wait: 10s
+  group_interval: 10s
+  repeat_interval: 1h
+  receiver: 'default-receiver'
+  routes:
+    - match:
+        severity: critical
+      receiver: 'critical-alerts'
+      group_wait: 10s
+      repeat_interval: 5m
+    - match:
+        severity: warning
+      receiver: 'warning-alerts'
+      repeat_interval: 30m
+
+receivers:
+  # Catches anything that doesn't match a severity route below (e.g. `info`
+  # alerts like RateLimitHit) — without this they'd have nowhere to go.
+  - name: 'default-receiver'
+    email_configs:
+      - to: '${ALERT_EMAIL_TO}'
+        send_resolved: true
+        headers:
+          Subject: 'Alert: {{ range .Alerts }}{{ .Annotations.summary }}{{ end }}'
+
+  - name: 'critical-alerts'
+    email_configs:
+      - to: '${ALERT_EMAIL_TO}'
+        send_resolved: true
+        headers:
+          Subject: 'CRITICAL: {{ range .Alerts }}{{ .Annotations.summary }}{{ end }}'
+        html: |
+          <html>
+          <body>
+            <h2 style="color: #d9534f;">Critical Alert</h2>
+            {{ range .Alerts }}
+            <div style="border-left: 4px solid #d9534f; padding-left: 10px; margin: 10px 0;">
+              <p><strong>Alert:</strong> {{ .Annotations.summary }}</p>
+              <p><strong>Description:</strong> {{ .Annotations.description }}</p>
+              <p><strong>Severity:</strong> {{ .Labels.severity }}</p>
+              <p><strong>Time:</strong> {{ .StartsAt }}</p>
+            </div>
+            {{ end }}
+          </body>
+          </html>
+
+  - name: 'warning-alerts'
+    email_configs:
+      - to: '${ALERT_EMAIL_TO}'
+        send_resolved: true
+        headers:
+          Subject: 'WARNING: {{ range .Alerts }}{{ .Annotations.summary }}{{ end }}'
+        html: |
+          <html>
+          <body>
+            <h2 style="color: #f0ad4e;">Warning Alert</h2>
+            {{ range .Alerts }}
+            <div style="border-left: 4px solid #f0ad4e; padding-left: 10px; margin: 10px 0;">
+              <p><strong>Alert:</strong> {{ .Annotations.summary }}</p>
+              <p><strong>Description:</strong> {{ .Annotations.description }}</p>
+              <p><strong>Severity:</strong> {{ .Labels.severity }}</p>
+              <p><strong>Time:</strong> {{ .StartsAt }}</p>
+            </div>
+            {{ end }}
+          </body>
+          </html>
+
+inhibit_rules:
+  - source_match:
+      severity: 'critical'
+    target_match:
+      severity: 'warning'
+    equal: ['alertname', 'instance']
