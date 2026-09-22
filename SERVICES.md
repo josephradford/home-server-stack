@@ -46,13 +46,6 @@ Currently deployed and active services.
 - **Port:** 8888 (admin), 53 (DNS)
 - **Authentication:** Set during initial setup
 
-#### n8n
-- **Purpose:** Workflow automation with AI
-- **Access:** https://n8n.${DOMAIN}
-- **Legacy:** https://SERVER_IP:5678
-- **Port:** 5678
-- **Authentication:** N8N_USER / N8N_PASSWORD from .env
-
 ### Dashboard
 
 #### Homepage
@@ -150,7 +143,6 @@ into CWA's ingest folder for auto-import. Full setup:
 |---------|--------|--------|
 | Traefik | https://traefik.${DOMAIN} | N/A |
 | AdGuard | https://adguard.${DOMAIN} | http://IP:8888 |
-| n8n | https://n8n.${DOMAIN} | http://IP:5678 |
 | Homepage | https://homepage.${DOMAIN} | N/A |
 | Homepage API | https://homepage-api.${DOMAIN} | N/A |
 | Grafana | https://grafana.${DOMAIN} | N/A (Traefik only) |

@@ -2,7 +2,7 @@
 # Simplifies deployment and maintenance operations
 
 .PHONY: help setup update start stop restart logs build build-custom pull status clean purge validate env-check
-.PHONY: logs-n8n logs-homepage logs-owntracks logs-icloudpd logs-immich logs-cwa logs-library-digest
+.PHONY: logs-homepage logs-owntracks logs-icloudpd logs-immich logs-cwa logs-library-digest
 .PHONY: library-digest-now
 .PHONY: setup-certs test-domain-access
 .PHONY: wireguard-status wireguard-install wireguard-setup wireguard-routing wireguard-test wireguard-peers wireguard-check
@@ -12,7 +12,7 @@
 
 # Compose file flags
 # Services are organized into logical groups:
-# - docker-compose.yml: Core services (AdGuard, n8n)
+# - docker-compose.yml: Core services (AdGuard)
 # - docker-compose.network.yml: Network & Security (Traefik, Fail2ban)
 # - docker-compose.monitoring.yml: Monitoring stack (Prometheus, Grafana, Alertmanager, exporters)
 # - docker-compose.dashboard.yml: Dashboard (Homepage, Homepage API)
@@ -58,7 +58,6 @@ help:
 	@echo ""
 	@echo "Logs & Debugging:"
 	@echo "  make logs               - Show logs from all services"
-	@echo "  make logs-n8n           - Show n8n logs only"
 	@echo "  make logs-homepage      - Show Homepage logs only"
 	@echo "  make logs-owntracks     - Show OwnTracks Recorder logs only"
 	@echo "  make logs-cwa           - Show Calibre Web Archive logs only"
@@ -185,8 +184,6 @@ setup: env-check validate wireguard-check
 	@sleep 3
 	@set -a; . ./.env; set +a; \
 	if [ -n "$$DOMAIN" ]; then \
-		echo "Testing: n8n.$$DOMAIN"; \
-		dig @$$SERVER_IP n8n.$$DOMAIN +short || true; \
 		echo ""; \
 		echo "All *.$$DOMAIN domains should now resolve to $$SERVER_IP"; \
 		echo "Configure network devices to use $$SERVER_IP as DNS server"; \
@@ -205,7 +202,6 @@ setup: env-check validate wireguard-check
 		echo "    - Homepage Dashboard: https://homepage.$$DOMAIN"; \
 		echo "    - Traefik Dashboard:  https://traefik.$$DOMAIN"; \
 		echo "    - AdGuard Home:       https://adguard.$$DOMAIN"; \
-		echo "    - n8n:                https://n8n.$$DOMAIN"; \
 		echo "    - Grafana:            https://grafana.$$DOMAIN"; \
 		echo "    - Prometheus:         https://prometheus.$$DOMAIN"; \
 		echo "    - Alertmanager:       https://alerts.$$DOMAIN"; \
@@ -342,9 +338,6 @@ logs:
 	@$(COMPOSE) logs -f
 
 # View logs from specific services
-logs-n8n:
-	@$(COMPOSE) logs -f n8n
-
 logs-homepage:
 	@$(COMPOSE) logs -f homepage
 
@@ -406,7 +399,6 @@ purge:
 	@echo "  - All Docker containers and volumes"
 	@echo "  - All Docker images (requires re-download on next setup)"
 	@echo "  - AdGuard configuration and logs"
-	@echo "  - n8n workflows and database"
 	@echo "  - WireGuard VPN configs"
 	@echo "  - All monitoring data (Grafana, Prometheus)"
 	@echo "  - Homepage dashboard configuration"
@@ -600,7 +592,6 @@ ssl-setup: env-check
 	@set -a; . ./.env; set +a; \
 	if [ -n "$$DOMAIN" ]; then \
 		echo "Test your certificates:"; \
-		echo "  https://n8n.$$DOMAIN"; \
 		echo "  https://grafana.$$DOMAIN"; \
 		echo "  https://traefik.$$DOMAIN"; \
 		echo ""; \

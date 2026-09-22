@@ -4,7 +4,7 @@ A complete self-hosted infrastructure for home automation, AI, and network servi
 
 ## 🚀 Services
 
-**Core:** [AdGuard Home](https://github.com/AdguardTeam/AdGuardHome) (DNS/ad-blocking), [n8n](https://github.com/n8n-io/n8n) (workflow automation), [WireGuard](https://github.com/wireguard) (VPN), [Traefik](https://github.com/traefik/traefik) (reverse proxy), OwnTracks Recorder (location)
+**Core:** [AdGuard Home](https://github.com/AdguardTeam/AdGuardHome) (DNS/ad-blocking), [WireGuard](https://github.com/wireguard) (VPN), [Traefik](https://github.com/traefik/traefik) (reverse proxy), OwnTracks Recorder (location)
 
 **Monitoring:** [Grafana](https://github.com/grafana/grafana), [Prometheus](https://github.com/prometheus/prometheus), [Alertmanager](https://github.com/prometheus/alertmanager), Node Exporter, cAdvisor
 
@@ -126,7 +126,6 @@ All services are accessible via domain names on your local network:
 
 - **Traefik Dashboard:** `https://traefik.${DOMAIN}`
 - **AdGuard Home:** `https://adguard.${DOMAIN}` (DNS admin)
-- **n8n:** `https://n8n.${DOMAIN}` (Workflow automation)
 - **Grafana:** `https://grafana.${DOMAIN}` (Monitoring)
 - **Prometheus:** `https://prometheus.${DOMAIN}` (Metrics)
 - **Alertmanager:** `https://alerts.${DOMAIN}` (Alerts)
@@ -184,7 +183,7 @@ This project implements **multi-layered defense-in-depth security** with four pr
 
 ### Access Model
 
-- **Admin Interfaces** (n8n, Grafana, etc.): VPN or local network only
+- **Admin Interfaces** (Grafana, etc.): VPN or local network only
 - **Future Webhooks**: Public access with rate limiting (not yet configured)
 - **VPN Primary Boundary**: WireGuard for all remote admin access
 
@@ -228,7 +227,6 @@ Contributions are welcome! Submit bug reports and feature requests via [GitHub I
 
 This project is open source. Individual services maintain their own licenses:
 - AdGuard Home: GPL-3.0
-- n8n: Fair-code (Sustainable Use License)
 - Traefik: MIT
 - Grafana: AGPL-3.0
 - Prometheus: Apache-2.0
@@ -239,7 +237,6 @@ This project is open source. Individual services maintain their own licenses:
 - **Issues**: [GitHub Issues](https://github.com/josephradford/home-server-stack/issues)
 - **Service-specific docs**:
   - [AdGuard Home](https://adguard.com/kb/)
-  - [n8n](https://docs.n8n.io/)
   - [Traefik](https://doc.traefik.io/traefik/)
 
 ---

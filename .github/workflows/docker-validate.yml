@@ -38,7 +38,7 @@ jobs:
       run: |
         # Check that all required environment variables are present
         echo "Checking .env.example contains all required variables..."
-        required_vars=("SERVER_IP" "TIMEZONE" "N8N_PASSWORD" "GRAFANA_PASSWORD")
+        required_vars=("SERVER_IP" "TIMEZONE" "GRAFANA_PASSWORD")
         for var in "${required_vars[@]}"; do
           if ! grep -q "^${var}=" .env.example; then
             echo "ERROR: Required variable $var not found in .env.example"

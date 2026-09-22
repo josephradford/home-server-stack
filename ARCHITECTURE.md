@@ -45,9 +45,6 @@ graph TB
         AdGuard["AdGuard Home
         DNS Server
         :53, :8888"]
-        N8N["n8n
-        Workflow Automation
-        :5678"]
     end
 
     subgraph AI["AI Services
@@ -108,7 +105,6 @@ graph TB
     subgraph Data["Data Persistence
     ./data/ bind mounts"]
         AdGuardData[(AdGuard Data)]
-        N8NData[(n8n Database)]
         TraefikData[(Traefik Certs/Logs)]
         GrafanaData[(Grafana Config)]
         PrometheusData[(Prometheus TSDB)]
@@ -132,7 +128,6 @@ graph TB
 
     %% Traefik routing
     Traefik -->|*.domain routing| AdGuard
-    Traefik -->|*.domain routing| N8N
     Traefik -->|*.domain routing| Grafana
     Traefik -->|*.domain routing| Prometheus
     Traefik -->|*.domain routing| Alertmanager
@@ -172,7 +167,6 @@ graph TB
 
     %% Data persistence
     AdGuard -.->|Stores| AdGuardData
-    N8N -.->|Stores| N8NData
     Traefik -.->|Stores| TraefikData
     Grafana -.->|Stores| GrafanaData
     Prometheus -.->|Stores| PrometheusData
@@ -191,11 +185,11 @@ graph TB
 
     class VPN,HTTP external
     class Traefik,Fail2ban,UFW network
-    class AdGuard,N8N core
+    class AdGuard core
     class Prometheus,Grafana,Alertmanager,NodeExporter,CAdvisor monitoring
     class Homepage,HomepageAPI dashboard
     class BedeCore,BedeData,DataMCP,WorkspaceMCP,BedeWeb ai
-    class AdGuardData,N8NData,TraefikData,GrafanaData,PrometheusData,WireGuardData,OwnTracksData,BedeVault data
+    class AdGuardData,TraefikData,GrafanaData,PrometheusData,WireGuardData,OwnTracksData,BedeVault data
     class Certbot system
 ```
 
@@ -253,7 +247,7 @@ graph TB
     subgraph L5["Layer 5: Application Services"]
         direction LR
         Admin["Admin Interfaces
-        Traefik Dashboard, AdGuard, n8n
+        Traefik Dashboard, AdGuard
         Homepage, Homepage API
         Grafana, Prometheus, Alertmanager
         owntracks-recorder, bede-web"]
@@ -347,10 +341,6 @@ graph TD
     %% Core services - depend on network
     AdGuard["AdGuard Home
     DNS Server"]
-    N8NInit["n8n-init
-    Init Container"]
-    N8N["n8n
-    Workflow Engine"]
 
     %% Monitoring - depends on core services
     Prometheus["Prometheus
@@ -387,7 +377,6 @@ graph TD
     Docker --> Traefik
     Docker --> Fail2ban
     Docker --> AdGuard
-    Docker --> N8NInit
     Docker --> NodeExporter
     Docker --> CAdvisor
     Docker --> Prometheus
@@ -402,14 +391,11 @@ graph TD
     Docker --> BedeWeb
     Docker --> OwnTracks
 
-    Traefik --> N8N
     Traefik --> Grafana
     Traefik --> Prometheus
     Traefik --> Alertmanager
     Traefik --> Homepage
     Traefik --> OwnTracks
-
-    N8NInit --> N8N
 
     NodeExporter --> Prometheus
     CAdvisor --> Prometheus
@@ -439,7 +425,7 @@ graph TD
 
     class Docker,WireGuard,Certbot system
     class Traefik,Fail2ban network
-    class AdGuard,N8NInit,N8N core
+    class AdGuard core
     class Prometheus,NodeExporter,CAdvisor,Grafana,Alertmanager monitoring
     class HomepageAPI,Homepage dashboard
     class BedeCore,BedeData,DataMCP,WorkspaceMCP,BedeWeb,OwnTracks ai
@@ -462,8 +448,6 @@ graph LR
             direction TB
             AdGuardDir["./data/adguard/
             conf/, work/"]
-            N8NDir["./data/n8n/
-            database.sqlite, .n8n/"]
             TraefikDir["./data/traefik/
             certs/, logs/"]
             PrometheusDir["./data/prometheus/
@@ -508,7 +492,6 @@ graph LR
     subgraph Containers["Docker Containers"]
         direction TB
         AdGuard[AdGuard Home]
-        N8N[n8n]
         Traefik[Traefik]
         Prometheus[Prometheus]
         Grafana[Grafana]
@@ -520,7 +503,6 @@ graph LR
     %% Data mounts
     AdGuardDir -.->|Mount to container| AdGuard
     AdGuardDir -.->|Mount to container| AdGuard
-    N8NDir -.->|Mount to container| N8N
     TraefikDir -.->|Mount certs| Traefik
     TraefikDir -.->|Mount logs| Traefik
     PrometheusDir -.->|Mount to container| Prometheus
@@ -554,9 +536,9 @@ graph LR
     classDef system fill:#ff922b,stroke:#e67700,stroke-width:2px,color:#fff
     classDef backup fill:#ffd43b,stroke:#f08c00,stroke-width:2px,color:#000
 
-    class AdGuardDir,N8NDir,TraefikDir,PrometheusDir,GrafanaDir,AlertmanagerDir,WireGuardDir data
+    class AdGuardDir,TraefikDir,PrometheusDir,GrafanaDir,AlertmanagerDir,WireGuardDir data
     class TraefikConfig,Fail2banConfig,PromConfig,AlertConfig,HomepageConfig,EnvFile config
-    class AdGuard,N8N,Traefik,Prometheus,Grafana,Alertmanager,Fail2ban,Homepage container
+    class AdGuard,Traefik,Prometheus,Grafana,Alertmanager,Fail2ban,Homepage container
     class LetsEncrypt,WGSystem,WireGuard system
     class Backup backup
 ```
@@ -567,7 +549,7 @@ graph LR
 
 ### Multi-File Compose Organization
 The stack uses multiple compose files for logical separation:
-- **docker-compose.yml**: Core services (AdGuard, n8n)
+- **docker-compose.yml**: Core services (AdGuard)
 - **docker-compose.network.yml**: Network & Security (Traefik, Fail2ban)
 - **docker-compose.monitoring.yml**: Monitoring stack (Prometheus, Grafana, Alertmanager, exporters)
 - **docker-compose.dashboard.yml**: Dashboard (Homepage, Homepage API)
@@ -617,7 +599,6 @@ tar -czf backup.tar.gz data/ .env
 - **443** - HTTPS (Traefik reverse proxy)
 
 ### Internal Services (via Traefik domain routing)
-- **n8n** - https://n8n.${DOMAIN}
 - **AdGuard** - https://adguard.${DOMAIN} (also http://${SERVER_IP}:8888)
 - **Grafana** - https://grafana.${DOMAIN}
 - **Prometheus** - https://prometheus.${DOMAIN}
