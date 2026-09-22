@@ -39,7 +39,10 @@ services:
       - "traefik.http.routers.immich.entrypoints=websecure"
       - "traefik.http.routers.immich.tls=true"
       - "traefik.http.services.immich.loadbalancer.server.port=2283"
-      - "traefik.http.routers.immich.middlewares=admin-secure"
+      # Immich's SPA fires ~80 asset/API requests on initial load, well over
+      # admin-ratelimit's burst of 50 — same reason AdGuard/Grafana/Homepage
+      # use the no-ratelimit variant.
+      - "traefik.http.routers.immich.middlewares=admin-secure-no-ratelimit"
 
   immich-machine-learning:
     # -openvino uses the server's integrated GPU (Quick Sync-capable HD 630)
