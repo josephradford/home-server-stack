@@ -22,7 +22,7 @@ Self-hosted Docker Compose infrastructure stack: home automation, workflow autom
 | `make start` / `stop` / `restart` | Manage all services |
 | `make status` | Service health check |
 | `make logs` | Follow all service logs |
-| `make logs-<service>` | Logs for one service (n8n, homepage, etc.) |
+| `make logs-<service>` | Logs for one service (homepage, etc.) |
 | `make update` | Pull latest images and restart |
 | `make build` | Build all (includes custom services) |
 | `make validate` | Validate docker-compose config |
@@ -38,7 +38,7 @@ Add peers: `sudo ./scripts/wireguard/wireguard-add-peer.sh <name>`
 ## Architecture
 
 ### Compose File Organization
-- `docker-compose.yml` — Core services (AdGuard, n8n)
+- `docker-compose.yml` — Core services (AdGuard)
 - `docker-compose.network.yml` — Network & security (Traefik, Fail2ban)
 - `docker-compose.monitoring.yml` — Monitoring (Prometheus, Grafana, Alertmanager, exporters)
 - `docker-compose.dashboard.yml` — Dashboard (Homepage, Homepage API)

@@ -218,14 +218,6 @@
           server: my-docker
           showStats: true
 
-      - n8n:
-          icon: n8n.png
-          href: https://n8n.{{HOMEPAGE_VAR_DOMAIN}}
-          description: Workflow automation
-          container: n8n
-          server: my-docker
-          showStats: true
-
   # Monitoring Stack - Metrics collection and visualization
   - Monitoring:
       - Prometheus:

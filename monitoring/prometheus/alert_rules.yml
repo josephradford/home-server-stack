@@ -19,7 +19,7 @@ groups:
       # System-wide CPU usage monitoring
       # Calculates average CPU usage across all cores by measuring non-idle time
       # 85% threshold: Leaves 15% headroom for burst activity, prevents performance degradation
-      # 5m duration: Filters out brief spikes from legitimate workloads (n8n workflows)
+      # 5m duration: Filters out brief spikes from legitimate workloads
       - alert: HighCPUUsage
         expr: 100 - (avg(rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 85
         for: 5m
@@ -101,11 +101,11 @@ groups:
           description: "15-minute load average on {{ $labels.instance }} is above 2x CPU count for more than 10 minutes"
 
       # Critical container availability monitoring via cAdvisor
-      # Checks when cAdvisor last saw critical containers (adguard, n8n)
+      # Checks when cAdvisor last saw critical containers (adguard)
       # 60s threshold: Container not seen by cAdvisor for over a minute indicates it's stopped
       # for: 0m - Immediate alert as these are core services requiring high availability
       - alert: ContainerDown
-        expr: time() - container_last_seen{name=~"adguard|n8n"} > 60
+        expr: time() - container_last_seen{name=~"adguard"} > 60
         for: 0m
         labels:
           severity: critical
@@ -117,7 +117,7 @@ groups:
       # Per-container CPU usage monitoring
       # Monitors individual container CPU consumption using cAdvisor metrics
       # 80% threshold: Warning level for single container (lower than system-wide 85%)
-      # 10m duration: Long window to tolerate n8n batch jobs
+      # 10m duration: Long window to tolerate batch jobs
       - alert: ContainerHighCPU
         expr: rate(container_cpu_usage_seconds_total{name=~".+"}[5m]) * 100 > 80
         for: 10m
@@ -186,20 +186,6 @@ groups:
         annotations:
           summary: "AdGuard DNS service is down"
           description: "AdGuard service is not responding for more than 1 minute"
-
-      # n8n workflow automation platform availability
-      # Critical as automated workflows and integrations depend on this service
-      # Monitors container health via cAdvisor
-      # 2m threshold: Slightly longer than DNS as brief restarts for config changes are acceptable
-      - alert: N8nDown
-        expr: absent(container_last_seen{name="n8n"}) or (time() - container_last_seen{name="n8n"} > 120)
-        for: 2m
-        labels:
-          severity: critical
-          category: availability
-        annotations:
-          summary: "n8n automation service is down"
-          description: "n8n container has been down for more than 2 minutes"
 
   # Note: WireGuard VPN monitoring removed - WireGuard is now a system service (not Docker container)
   # Monitor WireGuard via system service checks instead of container metrics

@@ -33,7 +33,7 @@ A clear and concise description of what actually happened.
 - Docker Compose version: [e.g. 2.21.0]
 
 **Service Information:**
-- Which service(s) are affected: [e.g. AdGuard Home, n8n, Ollama]
+- Which service(s) are affected: [e.g. AdGuard Home, Immich, Traefik]
 - Browser (if applicable): [e.g. Chrome 120.0]
 
 ## Configuration

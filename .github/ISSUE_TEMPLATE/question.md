@@ -16,7 +16,7 @@ Please provide context about your setup and what you're trying to accomplish:
 
 **Current Setup:**
 - OS: [e.g. Ubuntu 24.04 LTS]
-- Services running: [e.g. AdGuard Home, n8n, Ollama]
+- Services running: [e.g. AdGuard Home, Immich, Traefik]
 - How long have you been running this stack: [e.g. 2 weeks]
 
 **What you're trying to do:**

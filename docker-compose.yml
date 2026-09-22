@@ -2,7 +2,6 @@
 # Core Services
 # This file contains the primary user-facing services
 # - AdGuard Home: Network-wide ad blocking and DNS server
-# - n8n: Workflow automation platform
 
 services:
   adguard:
@@ -29,63 +28,6 @@ services:
       # Security: VPN/Local access only - DNS admin interface should never be public
       # Note: Using admin-secure-no-ratelimit because AdGuard UI makes 10-15 API calls per page load
       - "traefik.http.routers.adguard.middlewares=admin-secure-no-ratelimit"
-
-  n8n-init:
-    image: alpine:3.22.4
-    container_name: n8n-init
-    restart: "no"
-    volumes:
-      - ./data/n8n:/data
-    command: >
-      sh -c "
-        mkdir -p /data &&
-        chown -R 1000:1000 /data &&
-        chmod -R 755 /data
-      "
-
-  n8n:
-    image: n8nio/n8n:2.20.0
-    container_name: n8n
-    restart: unless-stopped
-    user: "1000:1000"
-    expose:
-      - 5678
-    environment:
-      - N8N_BASIC_AUTH_ACTIVE=true
-      - N8N_BASIC_AUTH_USER=${N8N_USER}
-      - N8N_BASIC_AUTH_PASSWORD=${N8N_PASSWORD}
-      - N8N_HOST=n8n.${DOMAIN}
-      - N8N_PORT=5678
-      - N8N_PROTOCOL=https
-      - WEBHOOK_URL=https://n8n.${DOMAIN}/
-      - N8N_EDITOR_BASE_URL=https://n8n.${DOMAIN}
-      - GENERIC_TIMEZONE=${TIMEZONE}
-      - N8N_SECURE_COOKIE=true
-      - N8N_RUNNERS_TASK_TIMEOUT=${N8N_RUNNERS_TASK_TIMEOUT}
-      - EXECUTIONS_TIMEOUT=${EXECUTIONS_TIMEOUT}
-      - EXECUTIONS_TIMEOUT_MAX=${EXECUTIONS_TIMEOUT_MAX}
-    volumes:
-      - ./data/n8n:/home/node/.n8n
-    networks:
-      - homeserver
-    depends_on:
-      - n8n-init
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.n8n.rule=Host(`n8n.${DOMAIN}`)"
-      - "traefik.http.routers.n8n.entrypoints=websecure"
-      - "traefik.http.routers.n8n.tls=true"
-      # Using file provider certificate (wildcard from certbot)
-      - "traefik.http.services.n8n.loadbalancer.server.port=5678"
-
-      # Security: VPN/Local access only (admin-secure = internal-only + security-headers + rate-limit)
-      # TODO: This blocks ALL external access including webhooks!
-      # When exposing webhooks publicly, you'll need to:
-      #   1. Create a separate router for webhooks: n8n-webhook.rule=Host(`n8n.${DOMAIN}`) && PathPrefix(`/webhook`)
-      #   2. Apply webhook-secure middleware to n8n-webhook router (allows public with rate limiting)
-      #   3. Keep n8n router with admin-secure for editor/UI access (VPN/local only)
-      # See ticket-13 for webhook architecture implementation
-      - "traefik.http.routers.n8n.middlewares=admin-secure"
 
 networks:
   homeserver:
