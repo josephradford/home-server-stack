@@ -7,3 +7,25 @@
 # post content in their free RSS, so they actually work end to end.
 https://www.astralcodexten.com/feed
 https://theconvivialsociety.substack.com/feed
+
+# Southerly (relaunched 2025 at UNSW, after the old southerlyjournal.wordpress.com
+# site went dormant in 2015) — full article text in the feed.
+https://southerlylitmag.com.au/feed/
+
+# Library of America's "Story of the Week" — weekly classic/public-domain
+# American short fiction, full story text embedded in the Atom feed.
+https://storyoftheweek.loa.org/feeds/posts/default
+
+# "The Classics" (Substack) — public-domain classic short stories, full text.
+https://philanderson.substack.com/feed
+
+# Parked, teaser-only like Clarkesworld above (excerpt + "read more" link,
+# no full text in the feed) — add back once the digest can follow through
+# to the full page:
+#   https://overland.org.au/feed/
+#   https://www.griffithreview.com/feed/
+#   https://westerlymag.com.au/feed/
+#   https://meanjin.com.au/feed/
+#
+# No RSS feed found at all: Island (islandmag.com, Tasmania) — would need
+# to email admin@islandmag.com or scrape the site directly.
