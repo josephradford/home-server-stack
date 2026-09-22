@@ -10,7 +10,7 @@ from ebooklib import epub
 FEEDS = pathlib.Path("/config/feeds.txt")
 STATE = pathlib.Path("/data/seen.json")
 OUT = pathlib.Path("/ingest")
-MAX_PER_FEED = 5  # cap per feed per run, so the first run isn't a huge backlog
+MAX_PER_FEED = 20  # cap per feed per run, so the first run isn't a huge backlog
 
 # Matches the PUID/PGID the cwa container runs as (set via DIGEST_PUID/DIGEST_PGID
 # in docker-compose.library.yml, defaulting to 1000/1000) so CWA's ingest watcher
