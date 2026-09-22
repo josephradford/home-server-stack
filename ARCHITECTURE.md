@@ -47,25 +47,6 @@ graph TB
         :53, :8888"]
     end
 
-    subgraph AI["AI Services
-    docker-compose.ai.yml"]
-        BedeCore["bede-core
-        Telegram Bot + Scheduler
-        (outbound only)"]
-        BedeData["bede-data
-        REST API + SQLite
-        :8001 (internal)"]
-        DataMCP["bede-data-mcp
-        MCP Proxy
-        :8002 (internal)"]
-        WorkspaceMCP["bede-workspace-mcp
-        Google Workspace MCP
-        :8003 (internal)"]
-        BedeWeb["bede-web
-        Dashboard UI
-        :8080"]
-    end
-
     subgraph Location["Location Services
     docker-compose.location.yml"]
         OwnTracks["owntracks-recorder
@@ -110,7 +91,6 @@ graph TB
         PrometheusData[(Prometheus TSDB)]
         WireGuardData[(WireGuard Configs)]
         OwnTracksData[(OwnTracks Store)]
-        BedeVault[(Bede Vault Data)]
     end
 
     %% External connections
@@ -150,17 +130,6 @@ graph TB
     HomepageAPI -->|Docker Stats| Core
     HomepageAPI -->|Docker Stats| Monitoring
 
-    %% AI service connections
-    BedeCore -->|Claude CLI| Internet
-    BedeCore -->|Telegram Bot API| Internet
-    BedeCore -.->|MCP Protocol| DataMCP
-    BedeCore -.->|MCP Protocol| WorkspaceMCP
-    BedeData -->|Reads| OwnTracks
-    DataMCP -->|HTTP API| BedeData
-    BedeWeb -->|API Proxy| BedeData
-    Traefik -->|bede.domain routing| BedeWeb
-    OwnTracks -->|HTTP POST /pub| OwnTracks
-
     %% Certificate management
     Certbot -->|Copies Certs| TraefikData
     Certbot -.->|Renewal Hook| Traefik
@@ -172,14 +141,12 @@ graph TB
     Prometheus -.->|Stores| PrometheusData
     VPN -.->|Stores| WireGuardData
     OwnTracks -.->|Stores| OwnTracksData
-    BedeData -.->|Stores| BedeVault
 
     classDef external fill:#ff6b6b,stroke:#c92a2a,stroke-width:2px,color:#fff
     classDef network fill:#4dabf7,stroke:#1971c2,stroke-width:2px,color:#fff
     classDef core fill:#51cf66,stroke:#2b8a3e,stroke-width:2px,color:#fff
     classDef monitoring fill:#ffd43b,stroke:#f08c00,stroke-width:2px,color:#000
     classDef dashboard fill:#da77f2,stroke:#9c36b5,stroke-width:2px,color:#fff
-    classDef ai fill:#845ef7,stroke:#6741d9,stroke-width:2px,color:#fff
     classDef data fill:#868e96,stroke:#495057,stroke-width:2px,color:#fff
     classDef system fill:#ff922b,stroke:#e67700,stroke-width:2px,color:#fff
 
@@ -188,8 +155,7 @@ graph TB
     class AdGuard core
     class Prometheus,Grafana,Alertmanager,NodeExporter,CAdvisor monitoring
     class Homepage,HomepageAPI dashboard
-    class BedeCore,BedeData,DataMCP,WorkspaceMCP,BedeWeb ai
-    class AdGuardData,TraefikData,GrafanaData,PrometheusData,WireGuardData,OwnTracksData,BedeVault data
+    class AdGuardData,TraefikData,GrafanaData,PrometheusData,WireGuardData,OwnTracksData data
     class Certbot system
 ```
 
@@ -250,11 +216,8 @@ graph TB
         Traefik Dashboard, AdGuard
         Homepage, Homepage API
         Grafana, Prometheus, Alertmanager
-        owntracks-recorder, bede-web"]
+        owntracks-recorder"]
         Internal["Internal-Only Services
-        bede-core (Telegram outbound)
-        bede-data, bede-data-mcp
-        bede-workspace-mcp
         node-exporter, cadvisor"]
         Webhooks["Public Webhooks
         Future"]
@@ -360,17 +323,7 @@ graph TD
     Homepage["Homepage
     Dashboard UI"]
 
-    %% AI / data / location services
-    BedeCore["bede-core
-    Telegram + Scheduler"]
-    BedeData["bede-data
-    REST API"]
-    DataMCP["bede-data-mcp
-    MCP Proxy"]
-    WorkspaceMCP["bede-workspace-mcp
-    Google Workspace"]
-    BedeWeb["bede-web
-    Dashboard"]
+    %% Location services
     OwnTracks["owntracks-recorder
     Location API"]
     %% Dependencies
@@ -384,11 +337,6 @@ graph TD
     Docker --> Alertmanager
     Docker --> HomepageAPI
     Docker --> Homepage
-    Docker --> BedeCore
-    Docker --> BedeData
-    Docker --> DataMCP
-    Docker --> WorkspaceMCP
-    Docker --> BedeWeb
     Docker --> OwnTracks
 
     Traefik --> Grafana
@@ -403,11 +351,6 @@ graph TD
     Prometheus --> Alertmanager
 
     HomepageAPI --> Homepage
-    OwnTracks --> BedeData
-    BedeData --> DataMCP
-    BedeData --> BedeWeb
-    DataMCP --> BedeCore
-    WorkspaceMCP --> BedeCore
 
     Certbot -.->|Provides Certs| Traefik
     AdGuard -.->|DNS Resolution| Traefik
@@ -421,14 +364,12 @@ graph TD
     classDef core fill:#51cf66,stroke:#2b8a3e,stroke-width:2px,color:#fff
     classDef monitoring fill:#ffd43b,stroke:#f08c00,stroke-width:2px,color:#000
     classDef dashboard fill:#da77f2,stroke:#9c36b5,stroke-width:2px,color:#fff
-    classDef ai fill:#845ef7,stroke:#6741d9,stroke-width:2px,color:#fff
 
     class Docker,WireGuard,Certbot system
     class Traefik,Fail2ban network
     class AdGuard core
     class Prometheus,NodeExporter,CAdvisor,Grafana,Alertmanager monitoring
-    class HomepageAPI,Homepage dashboard
-    class BedeCore,BedeData,DataMCP,WorkspaceMCP,BedeWeb,OwnTracks ai
+    class HomepageAPI,Homepage,OwnTracks dashboard
 ```
 
 ---
@@ -553,8 +494,10 @@ The stack uses multiple compose files for logical separation:
 - **docker-compose.network.yml**: Network & Security (Traefik, Fail2ban)
 - **docker-compose.monitoring.yml**: Monitoring stack (Prometheus, Grafana, Alertmanager, exporters)
 - **docker-compose.dashboard.yml**: Dashboard (Homepage, Homepage API)
-- **docker-compose.ai.yml**: AI assistant services (bede-core, bede-data, bede-data-mcp, bede-workspace-mcp, bede-web)
 - **docker-compose.location.yml**: Location stack (owntracks-recorder)
+- **docker-compose.photos.yml**: iCloud photo backup (icloudpd)
+- **docker-compose.immich.yml**: Immich photo viewer (immich-server, immich-machine-learning, immich-postgres, immich-redis)
+- **docker-compose.library.yml**: Ebook library (cwa, library-digest)
 
 ### Domain-Based Routing
 All services accessible via `https://<service>.${DOMAIN}`:
@@ -605,8 +548,9 @@ tar -czf backup.tar.gz data/ .env
 - **Alertmanager** - https://alerts.${DOMAIN}
 - **Homepage** - https://homepage.${DOMAIN}
 - **Traefik Dashboard** - https://traefik.${DOMAIN}
-- **Bede Dashboard** - https://bede.${DOMAIN}
 - **OwnTracks Recorder** - https://owntracks.${DOMAIN}
+- **Immich** - https://immich.${DOMAIN}
+- **Calibre-Web-Automated** - https://books.${DOMAIN}
 
 ### Direct Access (monitoring, not exposed externally)
 - **9090** - Prometheus (metrics)
