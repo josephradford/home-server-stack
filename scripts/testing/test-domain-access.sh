@@ -151,7 +151,7 @@ echo "----------------------------------------"
 
 # Services with Traefik routing (accessible via domains)
 # Based on actual docker-compose.yml configurations
-services=("traefik" "grafana" "n8n" "adguard-home" "prometheus" "alertmanager" "homepage" "homepage-api")
+services=("traefik" "grafana" "adguard-home" "prometheus" "alertmanager" "homepage" "homepage-api")
 all_running=true
 
 for service in "${services[@]}"; do
@@ -191,7 +191,6 @@ echo ""
 DOMAIN="${DOMAIN:-home.local}"
 
 # Run tests for each service (based on actual docker-compose configurations)
-test_domain "n8n.${DOMAIN}" "n8n Workflow Automation"
 test_domain "adguard.${DOMAIN}" "AdGuard Home"
 test_domain "homepage.${DOMAIN}" "Homepage Dashboard"
 test_domain "homepage-api.${DOMAIN}" "Homepage API"
@@ -216,7 +215,6 @@ if [ $FAILED_TESTS -eq 0 ]; then
     echo ""
     echo "Access services via:"
     echo "  • Homepage:     https://homepage.${DOMAIN}"
-    echo "  • n8n:          https://n8n.${DOMAIN}"
     echo "  • AdGuard:      https://adguard.${DOMAIN}"
     echo "  • Grafana:      https://grafana.${DOMAIN}"
     echo "  • Prometheus:   https://prometheus.${DOMAIN}"
@@ -232,7 +230,7 @@ else
     echo "Troubleshooting steps:"
     echo "  1. Verify services are running: make status"
     echo "  2. Check Traefik logs: docker logs traefik"
-    echo "  3. Check AdGuard DNS: dig @${DNS_SERVER} n8n.${DOMAIN}"
+    echo "  3. Check AdGuard DNS: dig @${DNS_SERVER} grafana.${DOMAIN}"
     echo "  4. Verify DNS configuration in AdGuard: https://adguard.${DOMAIN}"
     echo "  5. Ensure your client is using ${DNS_SERVER} as DNS server"
     echo "  6. Check specific service logs: make logs-<service-name>"
