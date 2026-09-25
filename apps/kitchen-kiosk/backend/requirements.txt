@@ -2,5 +2,6 @@ Flask==3.0.0
 requests==2.31.0
 gunicorn==21.2.0
 icalendar==5.0.11
+recurring-ical-events==2.2.3
 pytest==7.4.3
 pytest-mock==3.12.0

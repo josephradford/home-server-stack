@@ -48,16 +48,43 @@ const KioskApp = (() => {
     idleTimer = setTimeout(showIdle, timeout);
   }
 
+  function formatEventWhen(e) {
+    const start = new Date(e.start);
+    const now = new Date();
+    const isSameDay = start.toDateString() === now.toDateString();
+    const tomorrow = new Date(now);
+    tomorrow.setDate(now.getDate() + 1);
+    const isTomorrow = start.toDateString() === tomorrow.toDateString();
+
+    const dayLabel = isSameDay ? 'Today'
+      : isTomorrow ? 'Tomorrow'
+      : start.toLocaleDateString([], {weekday: 'short', month: 'short', day: 'numeric'});
+
+    if (e.all_day) return dayLabel;
+
+    const time = start.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
+    return `${dayLabel}, ${time}`;
+  }
+
   async function refreshOverlay() {
     try {
       const [weather, calendar] = await Promise.all([
         fetch('/api/weather').then(r => r.json()),
         fetch('/api/calendar/events?limit=2').then(r => r.json()),
       ]);
-      $('overlay-weather').textContent = weather.observations
-        ? `${weather.observations.temp}°C` : 'Weather unavailable';
+      if (weather.observations) {
+        const location = weather.location ? weather.location.name : '';
+        const condition = weather.forecast_daily && weather.forecast_daily[0]
+          ? weather.forecast_daily[0].short_text : '';
+        $('overlay-weather').innerHTML = [
+          `${weather.observations.temp}°C${location ? ' · ' + location : ''}`,
+          condition,
+        ].filter(Boolean).join('<br>');
+      } else {
+        $('overlay-weather').textContent = 'Weather unavailable';
+      }
       $('overlay-events').innerHTML = calendar.events
-        .map(e => `${e.title} — ${new Date(e.start).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})}`)
+        .map(e => `${e.title} — ${formatEventWhen(e)}`)
         .join('<br>');
     } catch (e) {
       console.error('overlay refresh failed', e);
@@ -190,11 +217,18 @@ const KioskApp = (() => {
   }
 
   function init() {
-    document.addEventListener('touchstart', () => {
+    // Bound to both touchstart (real touchscreen) and click (mouse, and
+    // browsers' synthetic click after a touch) so the idle screen reveals
+    // navigation whichever input the device sends. Idempotent either way -
+    // a touchstart's showNav()/wake() followed by the synthetic click is a
+    // harmless no-op repeat, not a double transition.
+    function handleIdleActivation() {
       if (isSleeping) { wake(); return; }   // touch always wakes instantly, regardless of schedule
       if (currentView === 'idle') { showNav(); return; }
       resetIdleTimer();
-    });
+    }
+    document.addEventListener('touchstart', handleIdleActivation);
+    document.addEventListener('click', handleIdleActivation);
 
     document.querySelectorAll('#view-nav button').forEach(btn => {
       btn.addEventListener('click', () => showPanel(btn.dataset.panel));
