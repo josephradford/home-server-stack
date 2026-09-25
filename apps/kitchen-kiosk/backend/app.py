@@ -39,6 +39,9 @@ def create_app():
     from photos import photos_bp
     app.register_blueprint(photos_bp)
 
+    from presence import presence_bp
+    app.register_blueprint(presence_bp)
+
     return app
 
 

@@ -167,8 +167,16 @@ const KioskApp = (() => {
     showIdle();
   }
 
-  function checkSleepSchedule() {
-    if (isWithinSleepWindow(new Date())) {
+  async function checkSleepSchedule() {
+    let anyoneHome = true;
+    try {
+      const presence = await fetch('/api/presence').then(r => r.json());
+      anyoneHome = presence.anyone_home;
+    } catch (e) {
+      console.error('presence check failed, assuming home', e);
+    }
+
+    if (isWithinSleepWindow(new Date()) || !anyoneHome) {
       enterSleep();
     } else if (isSleeping) {
       wake();

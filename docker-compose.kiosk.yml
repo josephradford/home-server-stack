@@ -18,8 +18,10 @@ services:
       KIOSK_IMMICH_ALBUM_IDS: ${KIOSK_IMMICH_ALBUM_IDS:-}
       KIOSK_SLEEP_START: ${KIOSK_SLEEP_START:-23:00}
       KIOSK_SLEEP_END: ${KIOSK_SLEEP_END:-07:00}
+      KIOSK_PRESENCE_KNOWN_MACS: ${KIOSK_PRESENCE_KNOWN_MACS:-}
     volumes:
       - ./data/kitchen-kiosk/recipes:/recipes:ro
+      - /proc/net/arp:/proc/net/arp:ro
     restart: unless-stopped
     networks:
       - homeserver
