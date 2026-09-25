@@ -27,6 +27,9 @@ def create_app():
     from recipes import recipes_bp
     app.register_blueprint(recipes_bp)
 
+    from photos import photos_bp
+    app.register_blueprint(photos_bp)
+
     return app
 
 
