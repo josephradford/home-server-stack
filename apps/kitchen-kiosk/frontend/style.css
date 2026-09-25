@@ -22,12 +22,14 @@ html, body { margin: 0; height: 100%; background: #000; color: #fff;
    very different and read identically without a label. */
 .overlay-clock, .overlay-photo-meta { font-size: 1.1rem; }
 
-/* "Now playing" banner - only shown while radio is playing, sits above the
-   bottom overlays, width auto-centered rather than corner-anchored since
-   it's transient state rather than always-on info. */
-.overlay-bottom-center { bottom: 0; left: 50%; transform: translateX(-50%);
-  width: auto; max-width: 80%; text-align: center; border-radius: 12px 12px 0 0;
-  background: rgba(0,0,0,0.75); }
+/* "Now playing" banner - only shown while radio is playing. A floating
+   pill lifted clear of the bottom-left/right corner overlays (photo date,
+   calendar) rather than anchored to the very bottom, so it never collides
+   with them - it's transient state, not always-on info like those two. */
+.overlay-bottom-center { bottom: 90px; left: 50%; transform: translateX(-50%);
+  width: auto; max-width: 70%; padding: 14px 28px;
+  text-align: center; border-radius: 999px;
+  background: rgba(0,0,0,0.78); box-shadow: 0 6px 20px rgba(0,0,0,0.45); }
 
 #view-sleep { background: #000; }
 .panel { background: #111; padding: 24px; box-sizing: border-box; }
