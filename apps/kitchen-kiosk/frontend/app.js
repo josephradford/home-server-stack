@@ -4,10 +4,12 @@ const KioskApp = (() => {
   const PHOTO_INTERVAL_MS = 60 * 1000;
   const POLL_INTERVAL_MS = 30 * 1000;
   const WAKE_GRACE_MS = 5 * 60 * 1000;      // grace period after a manual touch-wake before the schedule can re-sleep it
+  const NOW_PLAYING_POLL_MS = 15 * 1000;    // matches the backend's now-playing cache TTL
 
   let idleTimer = null;
   let currentView = 'idle';
   let currentStation = null;
+  let nowPlayingPollTimer = null;
   let sleepWindow = { sleep_start: '23:00', sleep_end: '07:00' };
   let isSleeping = false;
   let wokeAt = 0;
@@ -27,6 +29,8 @@ const KioskApp = (() => {
     currentStation = null;
     nowPlayingStationName = null;
     nowPlayingTrackMeta = '';
+    if (nowPlayingPollTimer) clearInterval(nowPlayingPollTimer);
+    nowPlayingPollTimer = null;
     document.querySelectorAll('#radio-list li.playing').forEach(el => el.classList.remove('playing'));
     updateNowPlayingDisplay();
   }
@@ -130,7 +134,7 @@ const KioskApp = (() => {
   }
 
   let nowPlayingStationName = null;
-  let nowPlayingTrackMeta = '';  // best-effort ID3 metadata, see attachMetadataListener()
+  let nowPlayingTrackMeta = '';
 
   function updateNowPlayingDisplay() {
     const el = $('overlay-nowplaying');
@@ -143,32 +147,21 @@ const KioskApp = (() => {
     el.classList.remove('hidden');
   }
 
-  function attachMetadataListener(audio) {
-    // Best-effort: Safari exposes ID3 metadata embedded in some HLS audio
-    // streams as WebVTT-like text track cues. Not every station's stream
-    // carries this, and support varies - if nothing shows up, the "now
-    // playing" line just falls back to the station name alone (set by the
-    // caller before this runs). Wrapped defensively since this touches a
-    // less-common browser API surface that's hard to verify without a real
-    // device + live stream in front of you.
+  async function pollNowPlayingTrack(stationId) {
+    // Track metadata comes from ABC's own public "now playing" API, not by
+    // parsing the audio stream - the same way a DAB+ car radio or the ABC
+    // Listen app gets it (a broadcast/backend metadata channel, not the
+    // audio itself). ABC Cricket has no music metadata (it's commentary);
+    // the endpoint returns nulls for it and the line just stays as the
+    // station name alone.
     try {
-      if (!audio.textTracks) return;
-      audio.textTracks.addEventListener('addtrack', (addEvent) => {
-        const track = addEvent.track;
-        track.mode = 'hidden';
-        track.addEventListener('cuechange', () => {
-          const cue = track.activeCues && track.activeCues[0];
-          if (!cue) return;
-          // ID3 cues typically expose a parsed frame on .value (e.g. a
-          // TIT2/title frame's text) or fall back to .text.
-          const text = (cue.value && (cue.value.text || cue.value.data)) || cue.text || '';
-          nowPlayingTrackMeta = String(text).trim();
-          updateNowPlayingDisplay();
-        });
-      });
+      const { artist, title } = await fetch(`/api/radio/now-playing/${stationId}`).then(r => r.json());
+      nowPlayingTrackMeta = (artist && title) ? `${artist} — ${title}` : '';
     } catch (e) {
-      console.error('ID3 metadata listener unsupported', e);
+      console.error('now-playing fetch failed', e);
+      nowPlayingTrackMeta = '';
     }
+    updateNowPlayingDisplay();
   }
 
   async function loadRadioPanel() {
@@ -181,7 +174,6 @@ const KioskApp = (() => {
     list.dataset.loaded = 'true';
 
     const audio = $('radio-audio');
-    attachMetadataListener(audio);
 
     list.addEventListener('click', (e) => {
       const li = e.target.closest('li');
@@ -198,6 +190,10 @@ const KioskApp = (() => {
         nowPlayingTrackMeta = '';
         li.classList.add('playing');
         updateNowPlayingDisplay();
+
+        if (nowPlayingPollTimer) clearInterval(nowPlayingPollTimer);
+        pollNowPlayingTrack(currentStation);
+        nowPlayingPollTimer = setInterval(() => pollNowPlayingTrack(currentStation), NOW_PLAYING_POLL_MS);
       }
     });
   }
