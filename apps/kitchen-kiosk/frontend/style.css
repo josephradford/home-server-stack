@@ -16,6 +16,19 @@ html, body { margin: 0; height: 100%; background: #000; color: #fff;
   background: linear-gradient(45deg, rgba(0,0,0,0.65) 0%, rgba(0,0,0,0) 100%); }
 .overlay-bottom-right { bottom: 0; right: 0; text-align: right;
   background: linear-gradient(315deg, rgba(0,0,0,0.65) 0%, rgba(0,0,0,0) 100%); }
+
+/* Explicit icon prefixes so it's obvious at a glance which timestamp is
+   "now" (clock) vs "when this photo was taken" (camera) - they can be
+   very different and read identically without a label. */
+.overlay-clock, .overlay-photo-meta { font-size: 1.1rem; }
+
+/* "Now playing" banner - only shown while radio is playing, sits above the
+   bottom overlays, width auto-centered rather than corner-anchored since
+   it's transient state rather than always-on info. */
+.overlay-bottom-center { bottom: 0; left: 50%; transform: translateX(-50%);
+  width: auto; max-width: 80%; text-align: center; border-radius: 12px 12px 0 0;
+  background: rgba(0,0,0,0.75); }
+
 #view-sleep { background: #000; }
 .panel { background: #111; padding: 24px; box-sizing: border-box; }
 .back-btn { font-size: 1.2rem; background: none; color: #fff; border: none; margin-bottom: 16px; }
@@ -27,3 +40,25 @@ html, body { margin: 0; height: 100%; background: #000; color: #fff;
 #recipes-list { list-style: none; padding: 0; font-size: 1.3rem; }
 #recipes-list li { padding: 16px; border-bottom: 1px solid #333; }
 #recipes-detail-view { font-size: 1.2rem; overflow-y: auto; height: calc(100% - 60px); }
+
+/* Nav overlay - dims the idle photo underneath rather than replacing it
+   with a separate screen, so the screensaver stays visible while choosing
+   a panel. */
+#view-nav.nav-overlay {
+  position: fixed; inset: 0; z-index: 10;
+  background: rgba(0,0,0,0.55);
+  display: flex; align-items: center; justify-content: center; gap: 32px;
+}
+#view-nav button {
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  min-width: 140px; padding: 28px 20px;
+  font-size: 1.3rem; font-family: inherit; color: #fff;
+  background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.25);
+  border-radius: 20px; backdrop-filter: blur(4px);
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+#view-nav button:active { background: rgba(255,255,255,0.28); transform: scale(0.97); }
+#view-nav .nav-icon { font-size: 2.5rem; }
+/* #view-nav.nav-overlay's ID+class specificity would otherwise beat the
+   plain .hidden rule and the display:flex would never actually hide. */
+#view-nav.nav-overlay.hidden { display: none; }

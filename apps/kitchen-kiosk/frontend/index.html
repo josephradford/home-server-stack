@@ -10,24 +10,29 @@
   <div id="view-idle" class="view">
     <img id="idle-photo" src="" alt="">
     <div class="overlay overlay-top-left">
-      <div id="overlay-time"></div>
+      <div id="overlay-time" class="overlay-clock">🕐 <span id="overlay-time-value"></span></div>
       <div id="overlay-date"></div>
     </div>
     <div class="overlay overlay-top-right">
       <div id="overlay-weather"></div>
     </div>
     <div class="overlay overlay-bottom-left">
-      <div id="overlay-photo-meta"></div>
+      <div id="overlay-photo-meta" class="overlay-photo-meta">📷 <span id="overlay-photo-meta-value"></span></div>
     </div>
     <div class="overlay overlay-bottom-right">
       <div id="overlay-events"></div>
     </div>
+    <div id="overlay-nowplaying" class="overlay overlay-bottom-center hidden"></div>
   </div>
 
-  <div id="view-nav" class="view hidden">
-    <button data-panel="radio">Radio</button>
-    <button data-panel="calendar">Calendar</button>
-    <button data-panel="recipes">Recipes</button>
+  <!-- Not a full .view - this overlays on top of the idle photo (dimmed via
+       CSS) rather than replacing it, so touching to navigate doesn't lose
+       the screensaver. Clicking the dimmed backdrop (anywhere but a button)
+       returns to idle immediately, via the listener in app.js. -->
+  <div id="view-nav" class="nav-overlay hidden">
+    <button data-panel="radio"><span class="nav-icon">📻</span>Radio</button>
+    <button data-panel="calendar"><span class="nav-icon">📅</span>Calendar</button>
+    <button data-panel="recipes"><span class="nav-icon">🍳</span>Recipes</button>
   </div>
 
   <div id="view-radio" class="view panel hidden">

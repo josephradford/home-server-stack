@@ -16,6 +16,7 @@ const KioskApp = (() => {
 
   function showView(id) {
     document.querySelectorAll('.view').forEach(el => el.classList.add('hidden'));
+    $('view-nav').classList.add('hidden');  // nav is an overlay on top of idle, not part of the .view group - see showNav()
     $(id).classList.remove('hidden');
   }
 
@@ -24,11 +25,13 @@ const KioskApp = (() => {
     if (!audio || audio.paused) return;
     audio.pause();
     currentStation = null;
+    nowPlayingStationName = null;
+    nowPlayingTrackMeta = '';
     document.querySelectorAll('#radio-list li.playing').forEach(el => el.classList.remove('playing'));
+    updateNowPlayingDisplay();
   }
 
   function showIdle() {
-    stopRadio();  // leaving any panel (back button, idle timeout, sleep) shouldn't leave a station playing in the background
     currentView = 'idle';
     showView('view-idle');
     resetIdleTimer();
@@ -36,12 +39,13 @@ const KioskApp = (() => {
 
   function showNav() {
     currentView = 'nav';
-    showView('view-nav');
+    // Not showView() - nav sits on top of the idle photo (dimmed via CSS)
+    // rather than replacing it, so the screensaver stays visible underneath.
+    $('view-nav').classList.remove('hidden');
     resetIdleTimer();
   }
 
   function showPanel(name) {
-    if (name !== 'radio') stopRadio();  // defensive: covers any future panel-to-panel navigation that skips idle
     currentView = 'panel';
     showView(`view-${name}`);
     if (name === 'radio') loadRadioPanel();
@@ -72,7 +76,8 @@ const KioskApp = (() => {
 
     if (e.all_day) return dayLabel;
 
-    const time = start.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
+    // hour12: false -> 24-hour clock throughout the kiosk.
+    const time = start.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit', hour12: false});
     return `${dayLabel}, ${time}`;
   }
 
@@ -84,12 +89,14 @@ const KioskApp = (() => {
       ]);
       if (weather.observations) {
         const location = weather.location ? weather.location.name : '';
-        const condition = weather.forecast_daily && weather.forecast_daily[0]
-          ? weather.forecast_daily[0].short_text : '';
-        $('overlay-weather').innerHTML = [
-          `${weather.observations.temp}°C${location ? ' · ' + location : ''}`,
-          condition,
-        ].filter(Boolean).join('<br>');
+        const today = weather.forecast_daily && weather.forecast_daily[0];
+        const condition = today ? today.short_text : '';
+        const tempLine = [
+          `${weather.observations.temp}°C`,
+          today && today.temp_max != null ? `(max ${today.temp_max}°C)` : null,
+          location ? `· ${location}` : null,
+        ].filter(Boolean).join(' ');
+        $('overlay-weather').innerHTML = [tempLine, condition].filter(Boolean).join('<br>');
       } else {
         $('overlay-weather').textContent = 'Weather unavailable';
       }
@@ -105,9 +112,12 @@ const KioskApp = (() => {
     try {
       const photo = await fetch('/api/photos/random').then(r => r.json());
       $('idle-photo').src = photo.image_url;
+      // Explicitly labelled ("📷") and distinct from the clock ("🕐") so
+      // it's unambiguous which timestamp is "now" and which is "when this
+      // photo was taken" - they can be very different.
       const meta = [photo.taken_at ? new Date(photo.taken_at).toLocaleDateString() : null, photo.place]
         .filter(Boolean).join(' · ');
-      $('overlay-photo-meta').textContent = meta;
+      $('overlay-photo-meta-value').textContent = meta || 'Unknown date';
     } catch (e) {
       console.error('photo refresh failed', e);
     }
@@ -115,8 +125,50 @@ const KioskApp = (() => {
 
   function updateClock() {
     const now = new Date();
-    $('overlay-time').textContent = now.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
+    $('overlay-time-value').textContent = now.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit', hour12: false});
     $('overlay-date').textContent = now.toLocaleDateString([], {weekday: 'long', month: 'long', day: 'numeric'});
+  }
+
+  let nowPlayingStationName = null;
+  let nowPlayingTrackMeta = '';  // best-effort ID3 metadata, see attachMetadataListener()
+
+  function updateNowPlayingDisplay() {
+    const el = $('overlay-nowplaying');
+    if (!nowPlayingStationName) {
+      el.classList.add('hidden');
+      el.textContent = '';
+      return;
+    }
+    el.textContent = ['📻 ' + nowPlayingStationName, nowPlayingTrackMeta].filter(Boolean).join(' — ');
+    el.classList.remove('hidden');
+  }
+
+  function attachMetadataListener(audio) {
+    // Best-effort: Safari exposes ID3 metadata embedded in some HLS audio
+    // streams as WebVTT-like text track cues. Not every station's stream
+    // carries this, and support varies - if nothing shows up, the "now
+    // playing" line just falls back to the station name alone (set by the
+    // caller before this runs). Wrapped defensively since this touches a
+    // less-common browser API surface that's hard to verify without a real
+    // device + live stream in front of you.
+    try {
+      if (!audio.textTracks) return;
+      audio.textTracks.addEventListener('addtrack', (addEvent) => {
+        const track = addEvent.track;
+        track.mode = 'hidden';
+        track.addEventListener('cuechange', () => {
+          const cue = track.activeCues && track.activeCues[0];
+          if (!cue) return;
+          // ID3 cues typically expose a parsed frame on .value (e.g. a
+          // TIT2/title frame's text) or fall back to .text.
+          const text = (cue.value && (cue.value.text || cue.value.data)) || cue.text || '';
+          nowPlayingTrackMeta = String(text).trim();
+          updateNowPlayingDisplay();
+        });
+      });
+    } catch (e) {
+      console.error('ID3 metadata listener unsupported', e);
+    }
   }
 
   async function loadRadioPanel() {
@@ -124,25 +176,28 @@ const KioskApp = (() => {
     if (list.dataset.loaded) return;
     const { stations } = await fetch('/api/radio/stations').then(r => r.json());
     list.innerHTML = stations.map(s =>
-      `<li data-url="${s.stream_url}" data-id="${s.id}">${s.name}</li>`
+      `<li data-url="${s.stream_url}" data-id="${s.id}" data-name="${s.name}">${s.name}</li>`
     ).join('');
     list.dataset.loaded = 'true';
+
+    const audio = $('radio-audio');
+    attachMetadataListener(audio);
 
     list.addEventListener('click', (e) => {
       const li = e.target.closest('li');
       if (!li) return;
       resetIdleTimer();
-      const audio = $('radio-audio');
       if (currentStation === li.dataset.id) {
-        audio.pause();
-        currentStation = null;
-        li.classList.remove('playing');
+        stopRadio();
       } else {
         list.querySelectorAll('li').forEach(el => el.classList.remove('playing'));
         audio.src = li.dataset.url;
-        audio.play();
+        audio.play().catch(err => console.error('playback failed', err));
         currentStation = li.dataset.id;
+        nowPlayingStationName = li.dataset.name;
+        nowPlayingTrackMeta = '';
         li.classList.add('playing');
+        updateNowPlayingDisplay();
       }
     });
   }
@@ -154,7 +209,7 @@ const KioskApp = (() => {
       const start = new Date(e.start);
       const when = e.all_day
         ? start.toLocaleDateString([], {weekday: 'short', month: 'short', day: 'numeric'})
-        : start.toLocaleString([], {weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'});
+        : start.toLocaleString([], {weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false});
       return `<li><strong>${e.title}</strong><br>${when}</li>`;
     }).join('') || '<li>No upcoming events</li>';
   }
@@ -242,7 +297,19 @@ const KioskApp = (() => {
     document.addEventListener('click', handleIdleActivation);
 
     document.querySelectorAll('#view-nav button').forEach(btn => {
-      btn.addEventListener('click', () => showPanel(btn.dataset.panel));
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        showPanel(btn.dataset.panel);
+      });
+    });
+
+    // Clicking the dimmed backdrop itself (anywhere that isn't one of the
+    // three buttons) returns straight to idle, rather than waiting out the
+    // idle timeout.
+    $('view-nav').addEventListener('click', (e) => {
+      if (e.target.closest('button')) return;  // button's own listener (above) handles this
+      e.stopPropagation();
+      showIdle();
     });
 
     $('recipes-back-to-list').addEventListener('click', () => {
