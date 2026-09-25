@@ -214,7 +214,17 @@ filters:
     name: AdAway Default Blocklist
     id: 2
 whitelist_filters: []
-user_rules: []
+# Disables iCloud Private Relay on this network (Apple-documented mechanism:
+# https://support.apple.com/en-us/102602) by refusing to resolve its two
+# masking domains. Without this, Safari/iOS devices with Private Relay
+# enabled fail to reach *.${DOMAIN} (a local-only domain not in public DNS)
+# unless the user manually disables "Limit IP Address Tracking" per device
+# per network. This fixes it for every Apple device on this network at
+# once, at the cost of Private Relay's IP-masking while on this network
+# (unaffected on cellular/other networks, and instantly reversible).
+user_rules:
+  - "||mask.icloud.com^"
+  - "||mask-h2.icloud.com^"
 dhcp:
   enabled: false
   interface_name: ""
