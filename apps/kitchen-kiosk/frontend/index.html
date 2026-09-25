@@ -31,16 +31,16 @@
   </div>
 
   <div id="view-radio" class="view panel hidden">
-    <button class="back-btn" onclick="KioskApp.showIdle()">← Back</button>
+    <button class="back-btn" onclick="event.stopPropagation(); KioskApp.showIdle()">← Back</button>
     <ul id="radio-list"></ul>
     <audio id="radio-audio"></audio>
   </div>
   <div id="view-calendar" class="view panel hidden">
-    <button class="back-btn" onclick="KioskApp.showIdle()">← Back</button>
+    <button class="back-btn" onclick="event.stopPropagation(); KioskApp.showIdle()">← Back</button>
     <ul id="calendar-list"></ul>
   </div>
   <div id="view-recipes" class="view panel hidden">
-    <button class="back-btn" onclick="KioskApp.showIdle()">← Back</button>
+    <button class="back-btn" onclick="event.stopPropagation(); KioskApp.showIdle()">← Back</button>
     <div id="recipes-list-view">
       <ul id="recipes-list"></ul>
     </div>
