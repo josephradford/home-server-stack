@@ -15,6 +15,9 @@ def create_app():
     def health_check():
         return jsonify({'status': 'healthy'})
 
+    from radio import radio_bp
+    app.register_blueprint(radio_bp)
+
     return app
 
 
