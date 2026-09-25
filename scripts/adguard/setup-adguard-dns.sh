@@ -136,7 +136,13 @@ dns:
     - 149.112.112.10
     - 2620:fe::10
     - 2620:fe::fe:10
-  fallback_dns: []
+  # Plain DNS fallback for when the encrypted upstream_dns servers below are
+  # unreachable (observed: DoT/DoH connections to some upstreams can hang
+  # for the full upstream_timeout per address tried, making every affected
+  # page load look like "the internet dropped" until it falls through).
+  fallback_dns:
+    - 1.1.1.1
+    - 8.8.8.8
   upstream_mode: load_balance
   fastest_timeout: 1s
   allowed_clients: []
@@ -165,7 +171,10 @@ dns:
   ipset: []
   ipset_file: ""
   bootstrap_prefer_ipv6: false
-  upstream_timeout: 10s
+  # Lowered from the 10s default - a hung/unreachable upstream was taking
+  # up to 20s (multiple addresses tried serially) before failing over,
+  # which felt like a network outage. 3s fails fast onto fallback_dns above.
+  upstream_timeout: 3s
   private_networks: []
   use_private_ptr_resolvers: true
   local_ptr_upstreams: []
