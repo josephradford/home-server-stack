@@ -31,6 +31,7 @@ const KioskApp = (() => {
     currentView = 'panel';
     showView(`view-${name}`);
     if (name === 'radio') loadRadioPanel();
+    if (name === 'calendar') loadCalendarPanel();
     resetIdleTimer();
   }
 
@@ -102,6 +103,18 @@ const KioskApp = (() => {
         li.classList.add('playing');
       }
     });
+  }
+
+  async function loadCalendarPanel() {
+    const list = $('calendar-list');
+    const { events } = await fetch('/api/calendar/events?limit=20').then(r => r.json());
+    list.innerHTML = events.map(e => {
+      const start = new Date(e.start);
+      const when = e.all_day
+        ? start.toLocaleDateString([], {weekday: 'short', month: 'short', day: 'numeric'})
+        : start.toLocaleString([], {weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'});
+      return `<li><strong>${e.title}</strong><br>${when}</li>`;
+    }).join('') || '<li>No upcoming events</li>';
   }
 
   function init() {

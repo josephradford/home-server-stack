@@ -15,3 +15,5 @@ html, body { margin: 0; height: 100%; background: #000; color: #fff;
 #radio-list { list-style: none; padding: 0; font-size: 1.5rem; }
 #radio-list li { padding: 16px; border-bottom: 1px solid #333; }
 #radio-list li.playing { color: #4ade80; }
+#calendar-list { list-style: none; padding: 0; font-size: 1.3rem; }
+#calendar-list li { padding: 16px; border-bottom: 1px solid #333; }
