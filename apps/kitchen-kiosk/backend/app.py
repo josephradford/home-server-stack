@@ -6,12 +6,10 @@ for the kitchen kiosk frontend.
 import os
 
 from flask import Flask, jsonify
-from flask_cors import CORS
 
 
 def create_app():
     app = Flask(__name__)
-    CORS(app)
 
     @app.route('/api/health')
     def health_check():

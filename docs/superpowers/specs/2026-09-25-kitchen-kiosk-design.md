@@ -67,7 +67,8 @@ Views:
 - **Idle/screensaver** — full-screen photo slideshow + overlay (time/date, weather,
   next 1–2 events, photo metadata). View-only; any touch transitions to touch state.
 - **Radio panel** — preset list, tap to start/stop via `<audio>` + stream URL.
-- **Calendar panel** — full day/week view and event details on tap.
+- **Calendar panel** — full upcoming event list (flat, sorted chronologically); day/week
+  grouping deferred to v2.
 - **Recipe panel** — browse list, tap to view one recipe in full.
 - **Sleep state** — screen off / slideshow paused; any touch wakes instantly back to
   idle, regardless of schedule or presence state.
@@ -79,10 +80,13 @@ separate, longer inactivity timeout.
 
 ### Networking
 
-Traefik-routed as `kiosk.${DOMAIN}`, on the existing `homeserver` Docker network,
-local-network-only (consistent with every other service in this stack — no public
-exposure). No `admin-secure` middleware needed since there's no privileged admin UI
-to protect, unlike Grafana/AdGuard/etc.
+Traefik-routed as `kiosk.${DOMAIN}` and `kiosk-api.${DOMAIN}`, on the existing
+`homeserver` Docker network, local-network-only (consistent with every other service
+in this stack — no public exposure). Both routers carry the `admin-secure-no-ratelimit`
+middleware (RFC1918 IP whitelist + security headers, same pattern as Immich) since
+kiosk-api serves unauthenticated personal data (calendar events, photos) to the LAN;
+the no-ratelimit variant is used because the frontend polls it continuously
+(every 30-60s), which would trip the standard `admin-secure` rate limit.
 
 ### Sleep / presence (v1 scope)
 

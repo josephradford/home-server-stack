@@ -1,6 +1,7 @@
 """Merges multiple Google/iCloud iCal feed URLs into one sorted, future-only
 event list. Read-only - no event creation."""
 import os
+import time
 from datetime import datetime, timezone
 
 import requests
@@ -10,6 +11,9 @@ from icalendar import Calendar
 calendar_bp = Blueprint('calendar', __name__)
 
 ICAL_URLS = [u.strip() for u in os.getenv('KIOSK_CALENDAR_ICAL_URLS', '').split(',') if u.strip()]
+
+EVENTS_CACHE_TTL_SECONDS = 60
+_events_cache = {'data': None, 'fetched_at': 0}
 
 
 def _to_utc_datetime(value):
@@ -37,17 +41,29 @@ def _fetch_events(url):
     return events
 
 
-@calendar_bp.route('/api/calendar/events')
-def events():
-    limit = request.args.get('limit', default=20, type=int)
-    now = datetime.now(timezone.utc)
+def _collect_events():
+    now = time.time()
+    if _events_cache['data'] is not None and (now - _events_cache['fetched_at']) < EVENTS_CACHE_TTL_SECONDS:
+        return _events_cache['data']
 
     all_events = []
     for url in ICAL_URLS:
         try:
             all_events.extend(_fetch_events(url))
-        except requests.RequestException:
+        except (requests.RequestException, ValueError, AttributeError):
             continue  # one bad feed shouldn't take down the merged list
+
+    _events_cache['data'] = all_events
+    _events_cache['fetched_at'] = now
+    return all_events
+
+
+@calendar_bp.route('/api/calendar/events')
+def events():
+    limit = request.args.get('limit', default=20, type=int)
+    now = datetime.now(timezone.utc)
+
+    all_events = _collect_events()
 
     future = [e for e in all_events if e['end'] >= now]
     future.sort(key=lambda e: e['start'])

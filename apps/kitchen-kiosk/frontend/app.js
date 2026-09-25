@@ -3,12 +3,14 @@ const KioskApp = (() => {
   const PANEL_TIMEOUT_MS = 5 * 60 * 1000;  // panels get their own longer timeout
   const PHOTO_INTERVAL_MS = 60 * 1000;
   const POLL_INTERVAL_MS = 30 * 1000;
+  const WAKE_GRACE_MS = 5 * 60 * 1000;      // grace period after a manual touch-wake before the schedule can re-sleep it
 
   let idleTimer = null;
   let currentView = 'idle';
   let currentStation = null;
   let sleepWindow = { sleep_start: '23:00', sleep_end: '07:00' };
   let isSleeping = false;
+  let wokeAt = 0;
 
   function $(id) { return document.getElementById(id); }
 
@@ -52,8 +54,8 @@ const KioskApp = (() => {
         fetch('/api/weather').then(r => r.json()),
         fetch('/api/calendar/events?limit=2').then(r => r.json()),
       ]);
-      $('overlay-weather').textContent = weather.current
-        ? `${weather.current.temp}°C` : 'Weather unavailable';
+      $('overlay-weather').textContent = weather.observations
+        ? `${weather.observations.temp}°C` : 'Weather unavailable';
       $('overlay-events').innerHTML = calendar.events
         .map(e => `${e.title} — ${new Date(e.start).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})}`)
         .join('<br>');
@@ -159,11 +161,13 @@ const KioskApp = (() => {
   function enterSleep() {
     if (isSleeping) return;
     isSleeping = true;
+    if (idleTimer) clearTimeout(idleTimer);
     showView('view-sleep');
   }
 
   function wake() {
     isSleeping = false;
+    wokeAt = Date.now();
     showIdle();
   }
 
@@ -176,7 +180,9 @@ const KioskApp = (() => {
       console.error('presence check failed, assuming home', e);
     }
 
-    if (isWithinSleepWindow(new Date()) || !anyoneHome) {
+    const withinWakeGrace = Date.now() - wokeAt < WAKE_GRACE_MS;
+
+    if ((isWithinSleepWindow(new Date()) || !anyoneHome) && !withinWakeGrace) {
       enterSleep();
     } else if (isSleeping) {
       wake();

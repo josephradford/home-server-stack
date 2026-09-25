@@ -11,9 +11,8 @@ services:
     container_name: kiosk-api
     environment:
       HOMEPAGE_API_URL: http://homepage-api:5000
-      TIMEZONE: ${TIMEZONE:-UTC}
       KIOSK_CALENDAR_ICAL_URLS: ${KIOSK_CALENDAR_ICAL_URLS:-}
-      KIOSK_IMMICH_URL: ${KIOSK_IMMICH_URL:-}
+      KIOSK_IMMICH_URL: ${KIOSK_IMMICH_URL:-http://immich-server:2283}
       KIOSK_IMMICH_API_KEY: ${KIOSK_IMMICH_API_KEY:-}
       KIOSK_IMMICH_ALBUM_IDS: ${KIOSK_IMMICH_ALBUM_IDS:-}
       KIOSK_SLEEP_START: ${KIOSK_SLEEP_START:-23:00}
@@ -37,12 +36,16 @@ services:
       - "traefik.http.routers.kiosk-api.entrypoints=websecure"
       - "traefik.http.routers.kiosk-api.tls=true"
       - "traefik.http.services.kiosk-api.loadbalancer.server.port=5100"
+      # Security: polled continuously by the frontend (30-60s), so use the
+      # no-ratelimit variant of admin-secure (same pattern as immich).
+      - "traefik.http.routers.kiosk-api.middlewares=admin-secure-no-ratelimit"
 
   kiosk-web:
     image: nginx:1.27-alpine
     container_name: kiosk-web
     volumes:
       - ./apps/kitchen-kiosk/frontend:/usr/share/nginx/html:ro
+      - ./apps/kitchen-kiosk/frontend/nginx.conf:/etc/nginx/conf.d/default.conf:ro
     restart: unless-stopped
     networks:
       - homeserver
@@ -54,6 +57,9 @@ services:
       - "traefik.http.routers.kiosk.entrypoints=websecure"
       - "traefik.http.routers.kiosk.tls=true"
       - "traefik.http.services.kiosk.loadbalancer.server.port=80"
+      # Security: served continuously to the always-on iPad, so use the
+      # no-ratelimit variant of admin-secure (same pattern as immich/homepage).
+      - "traefik.http.routers.kiosk.middlewares=admin-secure-no-ratelimit"
 
 networks:
   homeserver:

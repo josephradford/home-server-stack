@@ -24,3 +24,16 @@ def app():
 @pytest.fixture
 def client(app):
     return app.test_client()
+
+
+@pytest.fixture(autouse=True)
+def reset_caches():
+    """Module-level TTL caches (calendar_feed, photos) must not leak between
+    tests - reset them before every test."""
+    import calendar_feed
+    import photos
+    calendar_feed._events_cache['data'] = None
+    calendar_feed._events_cache['fetched_at'] = 0
+    photos._assets_cache['data'] = None
+    photos._assets_cache['fetched_at'] = 0
+    yield

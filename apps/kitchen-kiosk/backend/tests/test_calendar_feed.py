@@ -75,3 +75,27 @@ def test_calendar_events_merges_multiple_feeds(client, mocker):
 
     # two identical feeds merged -> each future event appears twice, still sorted
     assert len(response.get_json()['events']) == 4
+
+
+def test_calendar_events_fetches_feeds_once_within_cache_ttl(client, mocker):
+    mock_response = mocker.Mock()
+    mock_response.status_code = 200
+    mock_response.text = _sample_ical()
+    mock_get = mocker.patch('calendar_feed.requests.get', return_value=mock_response)
+
+    client.get('/api/calendar/events')
+    client.get('/api/calendar/events?limit=1')
+
+    assert mock_get.call_count == 1
+
+
+def test_calendar_events_skips_feed_with_unparseable_calendar(client, mocker):
+    mock_response = mocker.Mock()
+    mock_response.status_code = 200
+    mock_response.text = 'not a valid ical calendar'
+    mocker.patch('calendar_feed.requests.get', return_value=mock_response)
+
+    response = client.get('/api/calendar/events')
+
+    assert response.status_code == 200
+    assert response.get_json()['events'] == []
