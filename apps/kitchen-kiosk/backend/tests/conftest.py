@@ -6,6 +6,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 
 os.environ['HOMEPAGE_API_URL'] = 'http://homepage-api:5000'
 os.environ['KIOSK_CALENDAR_ICAL_URLS'] = 'http://a.example/cal.ics'
+os.environ['KIOSK_RECIPES_DIR'] = '/tmp/kiosk-test-recipes'
 
 from app import create_app
 
