@@ -35,7 +35,9 @@ def _fetch_asset_ids():
         )
         response.raise_for_status()
         ids.extend(item['id'] for item in response.json().get('assets', {}).get('items', []))
-    return ids
+    # A photo present in more than one configured album would otherwise be
+    # added once per album, skewing random selection in its favour.
+    return list(dict.fromkeys(ids))
 
 
 def _collect_asset_ids():

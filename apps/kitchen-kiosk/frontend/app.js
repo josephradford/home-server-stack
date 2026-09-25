@@ -19,7 +19,16 @@ const KioskApp = (() => {
     $(id).classList.remove('hidden');
   }
 
+  function stopRadio() {
+    const audio = $('radio-audio');
+    if (!audio || audio.paused) return;
+    audio.pause();
+    currentStation = null;
+    document.querySelectorAll('#radio-list li.playing').forEach(el => el.classList.remove('playing'));
+  }
+
   function showIdle() {
+    stopRadio();  // leaving any panel (back button, idle timeout, sleep) shouldn't leave a station playing in the background
     currentView = 'idle';
     showView('view-idle');
     resetIdleTimer();
@@ -32,6 +41,7 @@ const KioskApp = (() => {
   }
 
   function showPanel(name) {
+    if (name !== 'radio') stopRadio();  // defensive: covers any future panel-to-panel navigation that skips idle
     currentView = 'panel';
     showView(`view-${name}`);
     if (name === 'radio') loadRadioPanel();
@@ -189,6 +199,7 @@ const KioskApp = (() => {
     if (isSleeping) return;
     isSleeping = true;
     if (idleTimer) clearTimeout(idleTimer);
+    stopRadio();
     showView('view-sleep');
   }
 

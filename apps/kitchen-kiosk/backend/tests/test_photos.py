@@ -130,6 +130,28 @@ def test_photo_image_502_when_immich_unreachable(client, mocker):
     assert response.status_code == 502
 
 
+def test_fetch_asset_ids_dedupes_across_albums(mocker):
+    import photos
+
+    album_1_response = mocker.Mock()
+    album_1_response.status_code = 200
+    album_1_response.raise_for_status = mocker.Mock()
+    album_1_response.json.return_value = {'assets': {'items': [{'id': 'shared'}, {'id': 'only-in-1'}]}}
+
+    album_2_response = mocker.Mock()
+    album_2_response.status_code = 200
+    album_2_response.raise_for_status = mocker.Mock()
+    album_2_response.json.return_value = {'assets': {'items': [{'id': 'shared'}, {'id': 'only-in-2'}]}}
+
+    mocker.patch('photos.requests.post', side_effect=[album_1_response, album_2_response])
+    mocker.patch('photos.ALBUM_IDS', ['album-1', 'album-2'])
+
+    ids = photos._fetch_asset_ids()
+
+    assert ids.count('shared') == 1
+    assert set(ids) == {'shared', 'only-in-1', 'only-in-2'}
+
+
 def test_random_photo_collects_asset_ids_once_within_cache_ttl(client, mocker):
     mock_post, _ = _mock_search_and_detail(mocker, ASSET_1_DETAIL)
 
