@@ -30,7 +30,7 @@ def _collect_assets():
 def random_photo():
     try:
         assets = _collect_assets()
-    except Exception as e:
+    except requests.RequestException as e:
         return jsonify({'error': f'immich unreachable: {e}'}), 502
 
     if not assets:

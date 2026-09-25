@@ -1,3 +1,6 @@
+import requests
+
+
 IMMICH_ALBUM_RESPONSE = {
     'assets': [
         {
@@ -45,7 +48,7 @@ def test_random_photo_handles_missing_metadata(client, mocker):
 
 
 def test_random_photo_502_when_immich_unreachable(client, mocker):
-    mocker.patch('photos.requests.get', side_effect=ConnectionError('refused'))
+    mocker.patch('photos.requests.get', side_effect=requests.exceptions.ConnectionError('refused'))
 
     response = client.get('/api/photos/random')
 
