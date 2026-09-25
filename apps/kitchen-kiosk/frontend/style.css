@@ -3,33 +3,30 @@ html, body { margin: 0; height: 100%; background: #000; color: #fff;
 .view { position: fixed; inset: 0; }
 .hidden { display: none; }
 #idle-photo { width: 100%; height: 100%; object-fit: cover; }
-.overlay { position: absolute; width: 45%; padding: 20px 24px; font-size: 1rem;
-  line-height: 1.5; text-shadow: 0 1px 4px rgba(0,0,0,0.8); box-sizing: border-box; }
-/* Gradient rather than a flat block so the edge blends into the photo
-   instead of looking like a pasted-on panel, while still guaranteeing
-   contrast for the text near the corner. */
-.overlay-top-left { top: 0; left: 0;
-  background: linear-gradient(135deg, rgba(0,0,0,0.65) 0%, rgba(0,0,0,0) 100%); }
-.overlay-top-right { top: 0; right: 0; text-align: right;
-  background: linear-gradient(225deg, rgba(0,0,0,0.65) 0%, rgba(0,0,0,0) 100%); }
-.overlay-bottom-left { bottom: 0; left: 0;
-  background: linear-gradient(45deg, rgba(0,0,0,0.65) 0%, rgba(0,0,0,0) 100%); }
-.overlay-bottom-right { bottom: 0; right: 0; text-align: right;
-  background: linear-gradient(315deg, rgba(0,0,0,0.65) 0%, rgba(0,0,0,0) 100%); }
+/* Two full-width gradient bands (top, bottom) rather than four separate
+   corner boxes - a single continuous edge blends into any photo, where
+   four independent gradient triangles each had a visible cut-off corner
+   against busier/brighter images. */
+.overlay-band { position: absolute; left: 0; right: 0; box-sizing: border-box;
+  padding: 20px 28px; display: flex; justify-content: space-between; gap: 24px;
+  font-size: 1rem; line-height: 1.5; text-shadow: 0 1px 4px rgba(0,0,0,0.8); }
+.overlay-top { top: 0; align-items: flex-start;
+  background: linear-gradient(to bottom, rgba(0,0,0,0.65) 0%, rgba(0,0,0,0) 100%); }
+.overlay-bottom { bottom: 0; align-items: flex-end;
+  background: linear-gradient(to top, rgba(0,0,0,0.65) 0%, rgba(0,0,0,0) 100%); }
+.overlay-section { max-width: 34%; }
+.overlay-align-end { text-align: right; }
 
 /* Explicit icon prefixes so it's obvious at a glance which timestamp is
    "now" (clock) vs "when this photo was taken" (camera) - they can be
    very different and read identically without a label. */
 .overlay-clock, .overlay-photo-meta { font-size: 1.1rem; }
 
-/* "Now playing" banner - only shown while radio is playing. A floating
-   pill lifted clear of the bottom-left/right corner overlays (photo date,
-   calendar) rather than anchored to the very bottom, so it never collides
-   with them - it's transient state, not always-on info like those two. */
-.overlay-bottom-center { bottom: 90px; left: 50%; transform: translateX(-50%);
-  width: auto; max-width: 70%; padding: 14px 28px;
-  text-align: center; border-radius: 999px;
-  background: rgba(0,0,0,0.78); box-shadow: 0 6px 20px rgba(0,0,0,0.45); }
+/* "Now playing" - center section of the top band, only shown while radio
+   is playing. When hidden, the flex row's other two sections (time,
+   weather) simply keep their space-between positions with no gap left
+   behind. */
+.overlay-nowplaying { text-align: center; }
 
 #view-sleep { background: #000; }
 .panel { background: #111; padding: 24px; box-sizing: border-box; }
