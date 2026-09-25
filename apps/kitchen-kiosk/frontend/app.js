@@ -4,10 +4,12 @@ const KioskApp = (() => {
   const PHOTO_INTERVAL_MS = 60 * 1000;
   const POLL_INTERVAL_MS = 30 * 1000;
   const WAKE_GRACE_MS = 5 * 60 * 1000;      // grace period after a manual touch-wake before the schedule can re-sleep it
+  const NOW_PLAYING_POLL_MS = 15 * 1000;    // matches the backend's now-playing cache TTL
 
   let idleTimer = null;
   let currentView = 'idle';
   let currentStation = null;
+  let nowPlayingPollTimer = null;
   let sleepWindow = { sleep_start: '23:00', sleep_end: '07:00' };
   let isSleeping = false;
   let wokeAt = 0;
@@ -16,6 +18,7 @@ const KioskApp = (() => {
 
   function showView(id) {
     document.querySelectorAll('.view').forEach(el => el.classList.add('hidden'));
+    $('view-nav').classList.add('hidden');  // nav is an overlay on top of idle, not part of the .view group - see showNav()
     $(id).classList.remove('hidden');
   }
 
@@ -24,11 +27,15 @@ const KioskApp = (() => {
     if (!audio || audio.paused) return;
     audio.pause();
     currentStation = null;
+    nowPlayingStationName = null;
+    nowPlayingTrackMeta = '';
+    if (nowPlayingPollTimer) clearInterval(nowPlayingPollTimer);
+    nowPlayingPollTimer = null;
     document.querySelectorAll('#radio-list li.playing').forEach(el => el.classList.remove('playing'));
+    updateNowPlayingDisplay();
   }
 
   function showIdle() {
-    stopRadio();  // leaving any panel (back button, idle timeout, sleep) shouldn't leave a station playing in the background
     currentView = 'idle';
     showView('view-idle');
     resetIdleTimer();
@@ -36,12 +43,13 @@ const KioskApp = (() => {
 
   function showNav() {
     currentView = 'nav';
-    showView('view-nav');
+    // Not showView() - nav sits on top of the idle photo (dimmed via CSS)
+    // rather than replacing it, so the screensaver stays visible underneath.
+    $('view-nav').classList.remove('hidden');
     resetIdleTimer();
   }
 
   function showPanel(name) {
-    if (name !== 'radio') stopRadio();  // defensive: covers any future panel-to-panel navigation that skips idle
     currentView = 'panel';
     showView(`view-${name}`);
     if (name === 'radio') loadRadioPanel();
@@ -72,7 +80,8 @@ const KioskApp = (() => {
 
     if (e.all_day) return dayLabel;
 
-    const time = start.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
+    // hour12: false -> 24-hour clock throughout the kiosk.
+    const time = start.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit', hour12: false});
     return `${dayLabel}, ${time}`;
   }
 
@@ -84,12 +93,14 @@ const KioskApp = (() => {
       ]);
       if (weather.observations) {
         const location = weather.location ? weather.location.name : '';
-        const condition = weather.forecast_daily && weather.forecast_daily[0]
-          ? weather.forecast_daily[0].short_text : '';
-        $('overlay-weather').innerHTML = [
-          `${weather.observations.temp}°C${location ? ' · ' + location : ''}`,
-          condition,
-        ].filter(Boolean).join('<br>');
+        const today = weather.forecast_daily && weather.forecast_daily[0];
+        const condition = today ? today.short_text : '';
+        const tempLine = [
+          `${weather.observations.temp}°C`,
+          today && today.temp_max != null ? `(max ${today.temp_max}°C)` : null,
+          location ? `· ${location}` : null,
+        ].filter(Boolean).join(' ');
+        $('overlay-weather').innerHTML = [tempLine, condition].filter(Boolean).join('<br>');
       } else {
         $('overlay-weather').textContent = 'Weather unavailable';
       }
@@ -105,9 +116,12 @@ const KioskApp = (() => {
     try {
       const photo = await fetch('/api/photos/random').then(r => r.json());
       $('idle-photo').src = photo.image_url;
+      // Explicitly labelled ("📷") and distinct from the clock ("🕐") so
+      // it's unambiguous which timestamp is "now" and which is "when this
+      // photo was taken" - they can be very different.
       const meta = [photo.taken_at ? new Date(photo.taken_at).toLocaleDateString() : null, photo.place]
         .filter(Boolean).join(' · ');
-      $('overlay-photo-meta').textContent = meta;
+      $('overlay-photo-meta-value').textContent = meta || 'Unknown date';
     } catch (e) {
       console.error('photo refresh failed', e);
     }
@@ -115,8 +129,39 @@ const KioskApp = (() => {
 
   function updateClock() {
     const now = new Date();
-    $('overlay-time').textContent = now.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
+    $('overlay-time-value').textContent = now.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit', hour12: false});
     $('overlay-date').textContent = now.toLocaleDateString([], {weekday: 'long', month: 'long', day: 'numeric'});
+  }
+
+  let nowPlayingStationName = null;
+  let nowPlayingTrackMeta = '';
+
+  function updateNowPlayingDisplay() {
+    const el = $('overlay-nowplaying');
+    if (!nowPlayingStationName) {
+      el.classList.add('hidden');
+      el.textContent = '';
+      return;
+    }
+    el.textContent = ['📻 ' + nowPlayingStationName, nowPlayingTrackMeta].filter(Boolean).join(' — ');
+    el.classList.remove('hidden');
+  }
+
+  async function pollNowPlayingTrack(stationId) {
+    // Track metadata comes from ABC's own public "now playing" API, not by
+    // parsing the audio stream - the same way a DAB+ car radio or the ABC
+    // Listen app gets it (a broadcast/backend metadata channel, not the
+    // audio itself). ABC Cricket has no music metadata (it's commentary);
+    // the endpoint returns nulls for it and the line just stays as the
+    // station name alone.
+    try {
+      const { artist, title } = await fetch(`/api/radio/now-playing/${stationId}`).then(r => r.json());
+      nowPlayingTrackMeta = (artist && title) ? `${artist} — ${title}` : '';
+    } catch (e) {
+      console.error('now-playing fetch failed', e);
+      nowPlayingTrackMeta = '';
+    }
+    updateNowPlayingDisplay();
   }
 
   async function loadRadioPanel() {
@@ -124,25 +169,31 @@ const KioskApp = (() => {
     if (list.dataset.loaded) return;
     const { stations } = await fetch('/api/radio/stations').then(r => r.json());
     list.innerHTML = stations.map(s =>
-      `<li data-url="${s.stream_url}" data-id="${s.id}">${s.name}</li>`
+      `<li data-url="${s.stream_url}" data-id="${s.id}" data-name="${s.name}">${s.name}</li>`
     ).join('');
     list.dataset.loaded = 'true';
+
+    const audio = $('radio-audio');
 
     list.addEventListener('click', (e) => {
       const li = e.target.closest('li');
       if (!li) return;
       resetIdleTimer();
-      const audio = $('radio-audio');
       if (currentStation === li.dataset.id) {
-        audio.pause();
-        currentStation = null;
-        li.classList.remove('playing');
+        stopRadio();
       } else {
         list.querySelectorAll('li').forEach(el => el.classList.remove('playing'));
         audio.src = li.dataset.url;
-        audio.play();
+        audio.play().catch(err => console.error('playback failed', err));
         currentStation = li.dataset.id;
+        nowPlayingStationName = li.dataset.name;
+        nowPlayingTrackMeta = '';
         li.classList.add('playing');
+        updateNowPlayingDisplay();
+
+        if (nowPlayingPollTimer) clearInterval(nowPlayingPollTimer);
+        pollNowPlayingTrack(currentStation);
+        nowPlayingPollTimer = setInterval(() => pollNowPlayingTrack(currentStation), NOW_PLAYING_POLL_MS);
       }
     });
   }
@@ -154,7 +205,7 @@ const KioskApp = (() => {
       const start = new Date(e.start);
       const when = e.all_day
         ? start.toLocaleDateString([], {weekday: 'short', month: 'short', day: 'numeric'})
-        : start.toLocaleString([], {weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'});
+        : start.toLocaleString([], {weekday: 'short', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false});
       return `<li><strong>${e.title}</strong><br>${when}</li>`;
     }).join('') || '<li>No upcoming events</li>';
   }
@@ -242,7 +293,19 @@ const KioskApp = (() => {
     document.addEventListener('click', handleIdleActivation);
 
     document.querySelectorAll('#view-nav button').forEach(btn => {
-      btn.addEventListener('click', () => showPanel(btn.dataset.panel));
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        showPanel(btn.dataset.panel);
+      });
+    });
+
+    // Clicking the dimmed backdrop itself (anywhere that isn't one of the
+    // three buttons) returns straight to idle, rather than waiting out the
+    // idle timeout.
+    $('view-nav').addEventListener('click', (e) => {
+      if (e.target.closest('button')) return;  // button's own listener (above) handles this
+      e.stopPropagation();
+      showIdle();
     });
 
     $('recipes-back-to-list').addEventListener('click', () => {
