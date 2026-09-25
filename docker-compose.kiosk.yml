@@ -1,0 +1,73 @@
+# docker-compose.kiosk.yml
+# Kitchen Kiosk
+# - kiosk-api: aggregates weather (via homepage-api), calendar, Immich photos,
+#              recipes, and radio presets behind one local API.
+# - kiosk-web: static frontend served full-screen on the kitchen iPad via
+#              Safari "Add to Home Screen" + Guided Access.
+
+services:
+  kiosk-api:
+    build: ./apps/kitchen-kiosk/backend
+    container_name: kiosk-api
+    environment:
+      HOMEPAGE_API_URL: http://homepage-api:5000
+      KIOSK_CALENDAR_ICAL_URLS: ${KIOSK_CALENDAR_ICAL_URLS:-}
+      KIOSK_IMMICH_URL: ${KIOSK_IMMICH_URL:-http://immich-server:2283}
+      KIOSK_IMMICH_API_KEY: ${KIOSK_IMMICH_API_KEY:-}
+      KIOSK_IMMICH_ALBUM_IDS: ${KIOSK_IMMICH_ALBUM_IDS:-}
+      KIOSK_SLEEP_START: ${KIOSK_SLEEP_START:-23:00}
+      KIOSK_SLEEP_END: ${KIOSK_SLEEP_END:-07:00}
+      KIOSK_PRESENCE_KNOWN_MACS: ${KIOSK_PRESENCE_KNOWN_MACS:-}
+    volumes:
+      - ./data/kitchen-kiosk/recipes:/recipes:ro
+      # Mounted at /host/proc/net rather than /proc itself: modern
+      # Docker/runc refuses to bind-mount anything directly into a
+      # container's /proc ("cannot be mounted because it is inside /proc").
+      # Only /proc/net is mounted (not the whole host /proc tree) so the
+      # container can read the ARP table without also gaining visibility
+      # into every host process's /proc/<pid> info.
+      - /proc/net:/host/proc/net:ro
+    restart: unless-stopped
+    networks:
+      - homeserver
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5100/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.kiosk-api.rule=Host(`kiosk-api.${DOMAIN}`)"
+      - "traefik.http.routers.kiosk-api.entrypoints=websecure"
+      - "traefik.http.routers.kiosk-api.tls=true"
+      - "traefik.http.services.kiosk-api.loadbalancer.server.port=5100"
+      # Security: polled continuously by the frontend (30-60s), so use the
+      # no-ratelimit variant of admin-secure (same pattern as immich).
+      - "traefik.http.routers.kiosk-api.middlewares=admin-secure-no-ratelimit"
+
+  kiosk-web:
+    image: nginx:1.27-alpine
+    container_name: kiosk-web
+    volumes:
+      - ./apps/kitchen-kiosk/frontend:/usr/share/nginx/html:ro
+      - ./apps/kitchen-kiosk/frontend/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    restart: unless-stopped
+    networks:
+      - homeserver
+    depends_on:
+      - kiosk-api
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.kiosk.rule=Host(`kiosk.${DOMAIN}`)"
+      - "traefik.http.routers.kiosk.entrypoints=websecure"
+      - "traefik.http.routers.kiosk.tls=true"
+      - "traefik.http.services.kiosk.loadbalancer.server.port=80"
+      # Security: served continuously to the always-on iPad, so use the
+      # no-ratelimit variant of admin-secure (same pattern as immich/homepage).
+      - "traefik.http.routers.kiosk.middlewares=admin-secure-no-ratelimit"
+
+networks:
+  homeserver:
+    external: true
+    name: home-server-stack_homeserver

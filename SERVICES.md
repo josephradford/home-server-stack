@@ -135,6 +135,18 @@ posts from `config/library/feeds.txt` into one EPUB per day and drops it
 into CWA's ingest folder for auto-import. Full setup:
 `docs/ebook-library.md`.
 
+### Kitchen Kiosk
+
+#### Kitchen Kiosk API
+- **Purpose:** Aggregates weather (via homepage-api), calendar, Immich photos, recipes, and radio presets for the kiosk frontend
+- **Access:** https://kiosk-api.${DOMAIN}
+- **Authentication:** IP-restricted (local network / VPN only)
+
+#### Kitchen Kiosk Web
+- **Purpose:** Static frontend served full-screen on the kitchen iPad via Safari "Add to Home Screen" + Guided Access
+- **Access:** https://kiosk.${DOMAIN}
+- **Authentication:** IP-restricted (local network / VPN only)
+
 ---
 
 ## Quick Reference
@@ -152,6 +164,8 @@ into CWA's ingest folder for auto-import. Full setup:
 | icloudpd | https://icloud.${DOMAIN} | N/A |
 | Immich | https://immich.${DOMAIN} | N/A |
 | Ebook Library (CWA) | https://books.${DOMAIN} | N/A |
+| Kitchen Kiosk API | https://kiosk-api.${DOMAIN} | N/A |
+| Kitchen Kiosk | https://kiosk.${DOMAIN} | N/A |
 
 ---
 
