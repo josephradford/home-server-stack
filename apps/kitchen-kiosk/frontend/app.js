@@ -6,6 +6,7 @@ const KioskApp = (() => {
 
   let idleTimer = null;
   let currentView = 'idle';
+  let currentStation = null;
 
   function $(id) { return document.getElementById(id); }
 
@@ -29,6 +30,7 @@ const KioskApp = (() => {
   function showPanel(name) {
     currentView = 'panel';
     showView(`view-${name}`);
+    if (name === 'radio') loadRadioPanel();
     resetIdleTimer();
   }
 
@@ -72,6 +74,34 @@ const KioskApp = (() => {
     const now = new Date();
     $('overlay-time').textContent = now.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
     $('overlay-date').textContent = now.toLocaleDateString([], {weekday: 'long', month: 'long', day: 'numeric'});
+  }
+
+  async function loadRadioPanel() {
+    const list = $('radio-list');
+    if (list.dataset.loaded) return;
+    const { stations } = await fetch('/api/radio/stations').then(r => r.json());
+    list.innerHTML = stations.map(s =>
+      `<li data-url="${s.stream_url}" data-id="${s.id}">${s.name}</li>`
+    ).join('');
+    list.dataset.loaded = 'true';
+
+    list.addEventListener('click', (e) => {
+      const li = e.target.closest('li');
+      if (!li) return;
+      resetIdleTimer();
+      const audio = $('radio-audio');
+      if (currentStation === li.dataset.id) {
+        audio.pause();
+        currentStation = null;
+        li.classList.remove('playing');
+      } else {
+        list.querySelectorAll('li').forEach(el => el.classList.remove('playing'));
+        audio.src = li.dataset.url;
+        audio.play();
+        currentStation = li.dataset.id;
+        li.classList.add('playing');
+      }
+    });
   }
 
   function init() {

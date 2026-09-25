@@ -10,3 +10,8 @@ html, body { margin: 0; height: 100%; background: #000; color: #fff;
 .overlay-bottom-left { bottom: 0; left: 0; }
 .overlay-bottom-right { bottom: 0; right: 0; text-align: right; }
 #view-sleep { background: #000; }
+.panel { background: #111; padding: 24px; box-sizing: border-box; }
+.back-btn { font-size: 1.2rem; background: none; color: #fff; border: none; margin-bottom: 16px; }
+#radio-list { list-style: none; padding: 0; font-size: 1.5rem; }
+#radio-list li { padding: 16px; border-bottom: 1px solid #333; }
+#radio-list li.playing { color: #4ade80; }
