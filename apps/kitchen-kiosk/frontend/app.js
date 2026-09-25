@@ -32,6 +32,7 @@ const KioskApp = (() => {
     showView(`view-${name}`);
     if (name === 'radio') loadRadioPanel();
     if (name === 'calendar') loadCalendarPanel();
+    if (name === 'recipes') loadRecipesPanel();
     resetIdleTimer();
   }
 
@@ -117,6 +118,27 @@ const KioskApp = (() => {
     }).join('') || '<li>No upcoming events</li>';
   }
 
+  async function loadRecipesPanel() {
+    $('recipes-detail-view').classList.add('hidden');
+    $('recipes-list-view').classList.remove('hidden');
+
+    const list = $('recipes-list');
+    const { recipes } = await fetch('/api/recipes').then(r => r.json());
+    list.innerHTML = recipes.map(r => `<li data-id="${r.id}">${r.title}</li>`).join('');
+
+    list.onclick = async (e) => {
+      const li = e.target.closest('li');
+      if (!li) return;
+      resetIdleTimer();
+      const recipe = await fetch(`/api/recipes/${li.dataset.id}`).then(r => r.json());
+      $('recipe-title').textContent = recipe.title;
+      $('recipe-ingredients').innerHTML = recipe.ingredients.map(i => `<li>${i}</li>`).join('');
+      $('recipe-steps').innerHTML = recipe.steps.map(s => `<li>${s}</li>`).join('');
+      $('recipes-list-view').classList.add('hidden');
+      $('recipes-detail-view').classList.remove('hidden');
+    };
+  }
+
   function init() {
     document.addEventListener('touchstart', () => {
       if (currentView === 'idle') { showNav(); return; }
@@ -125,6 +147,12 @@ const KioskApp = (() => {
 
     document.querySelectorAll('#view-nav button').forEach(btn => {
       btn.addEventListener('click', () => showPanel(btn.dataset.panel));
+    });
+
+    $('recipes-back-to-list').addEventListener('click', () => {
+      resetIdleTimer();
+      $('recipes-detail-view').classList.add('hidden');
+      $('recipes-list-view').classList.remove('hidden');
     });
 
     updateClock();
