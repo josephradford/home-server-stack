@@ -32,6 +32,17 @@ def test_presence_defaults_to_home_when_unconfigured(client, mocker):
     assert response.get_json() == {'anyone_home': True}
 
 
+def test_presence_defaults_to_home_when_arp_table_unreadable(client, mocker):
+    # Mount missing/unreadable shouldn't wrongly force the kiosk to sleep.
+    mocker.patch('presence.KNOWN_MACS', ['aa:bb:cc:dd:ee:01'])
+    mocker.patch('presence._run_arp_scan', side_effect=FileNotFoundError('no such file'))
+
+    response = client.get('/api/presence')
+
+    assert response.status_code == 200
+    assert response.get_json() == {'anyone_home': True}
+
+
 def test_run_arp_scan_parses_proc_net_arp(tmp_path, mocker):
     import presence
 

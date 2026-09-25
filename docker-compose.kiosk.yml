@@ -20,7 +20,11 @@ services:
       KIOSK_PRESENCE_KNOWN_MACS: ${KIOSK_PRESENCE_KNOWN_MACS:-}
     volumes:
       - ./data/kitchen-kiosk/recipes:/recipes:ro
-      - /proc/net/arp:/proc/net/arp:ro
+      # Mounted at /host/proc rather than /proc itself: modern Docker/runc
+      # refuses to bind-mount anything directly into a container's /proc
+      # ("cannot be mounted because it is inside /proc"). Mounting the whole
+      # tree at a path outside /proc is the standard workaround.
+      - /proc:/host/proc:ro
     restart: unless-stopped
     networks:
       - homeserver
