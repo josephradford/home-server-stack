@@ -4,6 +4,8 @@ import os
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
+os.environ['HOMEPAGE_API_URL'] = 'http://homepage-api:5000'
+
 from app import create_app
 
 

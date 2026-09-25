@@ -18,6 +18,9 @@ def create_app():
     from radio import radio_bp
     app.register_blueprint(radio_bp)
 
+    from weather import weather_bp
+    app.register_blueprint(weather_bp)
+
     return app
 
 
