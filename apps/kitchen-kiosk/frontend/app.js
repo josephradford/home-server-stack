@@ -7,6 +7,8 @@ const KioskApp = (() => {
   let idleTimer = null;
   let currentView = 'idle';
   let currentStation = null;
+  let sleepWindow = { sleep_start: '23:00', sleep_end: '07:00' };
+  let isSleeping = false;
 
   function $(id) { return document.getElementById(id); }
 
@@ -139,8 +141,43 @@ const KioskApp = (() => {
     };
   }
 
+  function parseTimeToMinutes(hhmm) {
+    const [h, m] = hhmm.split(':').map(Number);
+    return h * 60 + m;
+  }
+
+  function isWithinSleepWindow(now) {
+    const nowMinutes = now.getHours() * 60 + now.getMinutes();
+    const start = parseTimeToMinutes(sleepWindow.sleep_start);
+    const end = parseTimeToMinutes(sleepWindow.sleep_end);
+    // overnight windows wrap past midnight (e.g. 23:00 -> 07:00)
+    return start > end
+      ? (nowMinutes >= start || nowMinutes < end)
+      : (nowMinutes >= start && nowMinutes < end);
+  }
+
+  function enterSleep() {
+    if (isSleeping) return;
+    isSleeping = true;
+    showView('view-sleep');
+  }
+
+  function wake() {
+    isSleeping = false;
+    showIdle();
+  }
+
+  function checkSleepSchedule() {
+    if (isWithinSleepWindow(new Date())) {
+      enterSleep();
+    } else if (isSleeping) {
+      wake();
+    }
+  }
+
   function init() {
     document.addEventListener('touchstart', () => {
+      if (isSleeping) { wake(); return; }   // touch always wakes instantly, regardless of schedule
       if (currentView === 'idle') { showNav(); return; }
       resetIdleTimer();
     });
@@ -155,12 +192,16 @@ const KioskApp = (() => {
       $('recipes-list-view').classList.remove('hidden');
     });
 
+    fetch('/api/config').then(r => r.json()).then(cfg => { sleepWindow = cfg; });
+
     updateClock();
     setInterval(updateClock, 1000);
     refreshOverlay();
     setInterval(refreshOverlay, POLL_INTERVAL_MS);
     refreshPhoto();
     setInterval(refreshPhoto, PHOTO_INTERVAL_MS);
+    checkSleepSchedule();
+    setInterval(checkSleepSchedule, 60 * 1000);
 
     showIdle();
   }

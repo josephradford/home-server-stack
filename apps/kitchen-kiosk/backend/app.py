@@ -3,6 +3,8 @@ Kitchen Kiosk Backend API
 Aggregates weather, calendar, photos, recipes, and radio presets
 for the kitchen kiosk frontend.
 """
+import os
+
 from flask import Flask, jsonify
 from flask_cors import CORS
 
@@ -14,6 +16,13 @@ def create_app():
     @app.route('/api/health')
     def health_check():
         return jsonify({'status': 'healthy'})
+
+    @app.route('/api/config')
+    def config():
+        return jsonify({
+            'sleep_start': os.getenv('KIOSK_SLEEP_START', '23:00'),
+            'sleep_end': os.getenv('KIOSK_SLEEP_END', '07:00'),
+        })
 
     from radio import radio_bp
     app.register_blueprint(radio_bp)
