@@ -1,0 +1,57 @@
+# docker-compose.kiosk.yml
+# Kitchen Kiosk
+# - kiosk-api: aggregates weather (via homepage-api), calendar, Immich photos,
+#              recipes, and radio presets behind one local API.
+# - kiosk-web: static frontend served full-screen on the kitchen iPad via
+#              Safari "Add to Home Screen" + Guided Access.
+
+services:
+  kiosk-api:
+    build: ./apps/kitchen-kiosk/backend
+    container_name: kiosk-api
+    environment:
+      HOMEPAGE_API_URL: http://homepage-api:5000
+      TIMEZONE: ${TIMEZONE:-UTC}
+      KIOSK_CALENDAR_ICAL_URLS: ${KIOSK_CALENDAR_ICAL_URLS:-}
+      KIOSK_IMMICH_URL: ${KIOSK_IMMICH_URL:-}
+      KIOSK_IMMICH_API_KEY: ${KIOSK_IMMICH_API_KEY:-}
+      KIOSK_IMMICH_ALBUM_IDS: ${KIOSK_IMMICH_ALBUM_IDS:-}
+    volumes:
+      - ./data/kitchen-kiosk/recipes:/recipes:ro
+    restart: unless-stopped
+    networks:
+      - homeserver
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5100/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.kiosk-api.rule=Host(`kiosk-api.${DOMAIN}`)"
+      - "traefik.http.routers.kiosk-api.entrypoints=websecure"
+      - "traefik.http.routers.kiosk-api.tls=true"
+      - "traefik.http.services.kiosk-api.loadbalancer.server.port=5100"
+
+  kiosk-web:
+    image: nginx:1.27-alpine
+    container_name: kiosk-web
+    volumes:
+      - ./apps/kitchen-kiosk/frontend:/usr/share/nginx/html:ro
+    restart: unless-stopped
+    networks:
+      - homeserver
+    depends_on:
+      - kiosk-api
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.kiosk.rule=Host(`kiosk.${DOMAIN}`)"
+      - "traefik.http.routers.kiosk.entrypoints=websecure"
+      - "traefik.http.routers.kiosk.tls=true"
+      - "traefik.http.services.kiosk.loadbalancer.server.port=80"
+
+networks:
+  homeserver:
+    external: true
+    name: home-server-stack_homeserver

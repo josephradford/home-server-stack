@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+  <title>Kitchen Kiosk</title>
+  <style>
+    html, body { margin: 0; height: 100%; background: #000; color: #fff;
+      font-family: -apple-system, sans-serif; display: flex;
+      align-items: center; justify-content: center; }
+    #status { font-size: 1.2rem; opacity: 0.6; }
+  </style>
+</head>
+<body>
+  <div id="status">Kitchen Kiosk — booting…</div>
+  <script>
+    async function checkBackend() {
+      try {
+        const res = await fetch('/api/health');
+        const data = await res.json();
+        document.getElementById('status').textContent =
+          data.status === 'healthy' ? 'Kitchen Kiosk — backend connected' : 'Backend unhealthy';
+      } catch (e) {
+        document.getElementById('status').textContent = 'Kitchen Kiosk — backend unreachable, retrying…';
+      }
+    }
+    checkBackend();
+    setInterval(checkBackend, 5000);
+  </script>
+</body>
+</html>
