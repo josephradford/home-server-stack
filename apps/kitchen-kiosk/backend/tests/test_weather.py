@@ -1,3 +1,6 @@
+import requests
+
+
 def test_weather_proxies_homepage_api(client, mocker):
     mock_response = mocker.Mock()
     mock_response.status_code = 200
@@ -11,7 +14,7 @@ def test_weather_proxies_homepage_api(client, mocker):
 
 
 def test_weather_returns_502_when_homepage_api_unreachable(client, mocker):
-    mocker.patch('weather.requests.get', side_effect=ConnectionError('refused'))
+    mocker.patch('weather.requests.get', side_effect=requests.exceptions.ConnectionError('refused'))
 
     response = client.get('/api/weather')
 

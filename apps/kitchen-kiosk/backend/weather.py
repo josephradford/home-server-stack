@@ -15,5 +15,5 @@ def weather():
         response = requests.get(f'{HOMEPAGE_API_URL}/api/bom/weather', timeout=10)
         response.raise_for_status()
         return jsonify(response.json())
-    except (requests.RequestException, ConnectionError) as e:
+    except requests.RequestException as e:
         return jsonify({'error': f'weather backend unreachable: {e}'}), 502
