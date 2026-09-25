@@ -21,42 +21,59 @@ def _headers():
     return {'x-api-key': IMMICH_API_KEY}
 
 
-def _fetch_assets():
-    assets = []
+def _fetch_asset_ids():
+    """GET /api/albums/{id} no longer returns an `assets` array (Immich API
+    change since this was first written) - use the search endpoint instead,
+    which returns lightweight asset entries (id only, no exifInfo)."""
+    ids = []
     for album_id in ALBUM_IDS:
-        response = requests.get(f'{IMMICH_URL}/api/albums/{album_id}', headers=_headers(), timeout=10)
+        response = requests.post(
+            f'{IMMICH_URL}/api/search/metadata',
+            headers=_headers(),
+            json={'albumIds': [album_id]},
+            timeout=10,
+        )
         response.raise_for_status()
-        assets.extend(response.json().get('assets', []))
-    return assets
+        ids.extend(item['id'] for item in response.json().get('assets', {}).get('items', []))
+    return ids
 
 
-def _collect_assets():
+def _collect_asset_ids():
     now = time.time()
     if _assets_cache['data'] is not None and (now - _assets_cache['fetched_at']) < ASSETS_CACHE_TTL_SECONDS:
         return _assets_cache['data']
 
-    assets = _fetch_assets()
-    _assets_cache['data'] = assets
+    ids = _fetch_asset_ids()
+    _assets_cache['data'] = ids
     _assets_cache['fetched_at'] = now
-    return assets
+    return ids
 
 
 @photos_bp.route('/api/photos/random')
 def random_photo():
     try:
-        assets = _collect_assets()
+        asset_ids = _collect_asset_ids()
     except requests.RequestException as e:
         return jsonify({'error': f'immich unreachable: {e}'}), 502
 
-    if not assets:
+    if not asset_ids:
         return jsonify({'error': 'no photos available in configured albums'}), 404
 
-    asset = random.choice(assets)
-    exif = asset.get('exifInfo') or {}
+    asset_id = random.choice(asset_ids)
+
+    # exifInfo (date/place) is only present on the single-asset detail
+    # endpoint, not the list/search response - fetch it for just the one
+    # asset we picked, not the whole album.
+    try:
+        detail = requests.get(f'{IMMICH_URL}/api/assets/{asset_id}', headers=_headers(), timeout=10)
+        detail.raise_for_status()
+        exif = detail.json().get('exifInfo') or {}
+    except requests.RequestException:
+        exif = {}
 
     return jsonify({
-        'asset_id': asset['id'],
-        'image_url': f'/api/photos/{asset["id"]}/image',
+        'asset_id': asset_id,
+        'image_url': f'/api/photos/{asset_id}/image',
         'taken_at': exif.get('dateTimeOriginal'),
         'place': exif.get('city'),
     })
