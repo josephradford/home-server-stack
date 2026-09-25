@@ -293,6 +293,22 @@
           server: my-docker
           showStats: true
 
+      - Kitchen Kiosk:
+          icon: mdi-tablet-dashboard
+          href: https://kiosk.{{HOMEPAGE_VAR_DOMAIN}}
+          description: Kitchen photo screensaver + radio/calendar/recipes
+          container: kiosk-web
+          server: my-docker
+          showStats: true
+
+      - Kitchen Kiosk API:
+          icon: mdi-tablet-dashboard
+          href: https://kiosk-api.{{HOMEPAGE_VAR_DOMAIN}}
+          description: Kitchen kiosk backend (weather, calendar, photos, recipes, radio)
+          container: kiosk-api
+          server: my-docker
+          showStats: true
+
   # Network & Security - Infrastructure services for routing, VPN, and security
   - Network & Security:
       - Traefik:
