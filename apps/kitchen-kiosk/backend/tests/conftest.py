@@ -5,6 +5,7 @@ import os
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 os.environ['HOMEPAGE_API_URL'] = 'http://homepage-api:5000'
+os.environ['KIOSK_CALENDAR_ICAL_URLS'] = 'http://a.example/cal.ics'
 
 from app import create_app
 

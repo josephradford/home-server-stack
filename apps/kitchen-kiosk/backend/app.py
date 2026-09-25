@@ -21,6 +21,9 @@ def create_app():
     from weather import weather_bp
     app.register_blueprint(weather_bp)
 
+    from calendar_feed import calendar_bp
+    app.register_blueprint(calendar_bp)
+
     return app
 
 
