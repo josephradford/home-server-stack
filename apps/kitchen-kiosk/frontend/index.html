@@ -4,28 +4,38 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
   <title>Kitchen Kiosk</title>
-  <style>
-    html, body { margin: 0; height: 100%; background: #000; color: #fff;
-      font-family: -apple-system, sans-serif; display: flex;
-      align-items: center; justify-content: center; }
-    #status { font-size: 1.2rem; opacity: 0.6; }
-  </style>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <div id="status">Kitchen Kiosk — booting…</div>
-  <script>
-    async function checkBackend() {
-      try {
-        const res = await fetch('/api/health');
-        const data = await res.json();
-        document.getElementById('status').textContent =
-          data.status === 'healthy' ? 'Kitchen Kiosk — backend connected' : 'Backend unhealthy';
-      } catch (e) {
-        document.getElementById('status').textContent = 'Kitchen Kiosk — backend unreachable, retrying…';
-      }
-    }
-    checkBackend();
-    setInterval(checkBackend, 5000);
-  </script>
+  <div id="view-idle" class="view">
+    <img id="idle-photo" src="" alt="">
+    <div class="overlay overlay-top-left">
+      <div id="overlay-time"></div>
+      <div id="overlay-date"></div>
+    </div>
+    <div class="overlay overlay-top-right">
+      <div id="overlay-weather"></div>
+    </div>
+    <div class="overlay overlay-bottom-left">
+      <div id="overlay-photo-meta"></div>
+    </div>
+    <div class="overlay overlay-bottom-right">
+      <div id="overlay-events"></div>
+    </div>
+  </div>
+
+  <div id="view-nav" class="view hidden">
+    <button data-panel="radio">Radio</button>
+    <button data-panel="calendar">Calendar</button>
+    <button data-panel="recipes">Recipes</button>
+  </div>
+
+  <div id="view-radio" class="view panel hidden"></div>
+  <div id="view-calendar" class="view panel hidden"></div>
+  <div id="view-recipes" class="view panel hidden"></div>
+
+  <div id="view-sleep" class="view hidden"></div>
+
+  <script src="app.js"></script>
 </body>
 </html>
