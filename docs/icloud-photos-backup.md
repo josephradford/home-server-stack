@@ -127,6 +127,11 @@ icloudpd and Immich pick up a remounted drive on their own: `/mnt` is bound
 with `rslave` propagation, and icloudpd's startup guard waits (re-checking
 every 5 minutes) instead of exiting. With the automount fstab option the host
 remounts it on the next access; otherwise run `sudo mount /mnt/photos-backup`.
+Known limitation: Immich's `:ro` flag on the `/mnt` bind is not enforced for a
+drive that is mounted *after* the container started (observed: a write from
+`immich-server` succeeded after a remount). Immich only reads its external
+library, so this is accepted rather than worked around.
+
 Repeated drop-outs usually mean a bad USB cable, port or power supply — check
 `dmesg -T | grep -iE 'usb|sda|ext4'`.
 
