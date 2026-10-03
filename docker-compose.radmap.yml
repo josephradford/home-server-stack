@@ -1,0 +1,27 @@
+# Radmap - Offline NSW topographic map PWA
+# Static nginx image published from https://github.com/josephradford/radmap to
+# ghcr.io/josephradford/radmap (app shell + nginx config only).
+# The ~950 MB .tiles archives are NOT in the image; they live on the server in
+# ./data/radmap/tiles (generated with that repo's tools/download-tiles.mjs).
+
+services:
+  radmap:
+    image: ghcr.io/josephradford/radmap:latest
+    container_name: radmap
+    restart: unless-stopped
+    volumes:
+      - ./data/radmap/tiles:/usr/share/nginx/html/tiles:ro
+    networks:
+      - homeserver
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.radmap.rule=Host(`radmap.${DOMAIN}`)"
+      - "traefik.http.routers.radmap.entrypoints=websecure"
+      - "traefik.http.routers.radmap.tls=true"
+      - "traefik.http.services.radmap.loadbalancer.server.port=80"
+      - "traefik.http.routers.radmap.middlewares=internal-only,security-headers"
+
+networks:
+  homeserver:
+    external: true
+    name: home-server-stack_homeserver
