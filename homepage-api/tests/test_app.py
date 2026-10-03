@@ -586,6 +586,30 @@ class TestOutageStatusEndpoint:
         result = _poll_google_workspace()
         assert result['status'] == 'operational'
 
+    # --- /api/status/health (siteMonitor dot) ---
+
+    @patch('app._outage_snapshot')
+    def test_status_health_operational_returns_200(self, mock_snapshot, client):
+        mock_snapshot.return_value = {
+            'bellwethers': [{'name': 'Cloudflare', 'status': 'operational', 'detail': ''}],
+            'personal': [],
+        }
+        response = client.get('/api/status/health/bellwethers/0')
+        assert response.status_code == 200
+
+    @patch('app._outage_snapshot')
+    def test_status_health_issue_returns_503(self, mock_snapshot, client):
+        mock_snapshot.return_value = {
+            'bellwethers': [{'name': 'Cloudflare', 'status': 'issue', 'detail': 'Minor outage'}],
+            'personal': [],
+        }
+        response = client.get('/api/status/health/bellwethers/0')
+        assert response.status_code == 503
+
+    def test_status_health_unknown_tier_returns_404(self, client):
+        response = client.get('/api/status/health/nope/0')
+        assert response.status_code == 404
+
     # --- aggregate endpoint ---
 
     @patch('app._poll_statuspage')

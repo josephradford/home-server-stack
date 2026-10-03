@@ -604,6 +604,23 @@ def _poll_google_workspace():
         return {'name': 'Google Workspace (Gmail)', 'status': 'unknown', 'detail': str(e)}
 
 
+def _outage_snapshot():
+    return {
+        'bellwethers': [
+            _poll_statuspage('Cloudflare', 'https://www.cloudflarestatus.com/api/v2/status.json'),
+            _poll_aws(),
+            _poll_gcp(),
+            _poll_rss_feed('Azure', 'https://rssfeed.azure.status.microsoft/en-us/status/feed/'),
+        ],
+        'personal': [
+            _poll_google_workspace(),
+            _poll_icloud(),
+            _poll_statuspage('GitHub', 'https://www.githubstatus.com/api/v2/status.json'),
+            _poll_statuspage('Docker Hub', 'https://www.dockerstatus.com/api/v2/status.json'),
+        ],
+    }
+
+
 @app.route('/api/status/outages')
 def status_outages():
     """
@@ -613,19 +630,8 @@ def status_outages():
     - personal: services this household specifically depends on
     """
     try:
-        bellwethers = [
-            _poll_statuspage('Cloudflare', 'https://www.cloudflarestatus.com/api/v2/status.json'),
-            _poll_aws(),
-            _poll_gcp(),
-            _poll_rss_feed('Azure', 'https://rssfeed.azure.status.microsoft/en-us/status/feed/'),
-        ]
-        personal = [
-            _poll_google_workspace(),
-            _poll_icloud(),
-            _poll_statuspage('GitHub', 'https://www.githubstatus.com/api/v2/status.json'),
-            _poll_statuspage('Docker Hub', 'https://www.dockerstatus.com/api/v2/status.json'),
-        ]
-
+        snapshot = _outage_snapshot()
+        bellwethers, personal = snapshot['bellwethers'], snapshot['personal']
         return jsonify({
             'bellwethers': bellwethers,
             'bellwethers_issues': sum(1 for b in bellwethers if b['status'] == 'issue'),
@@ -635,6 +641,26 @@ def status_outages():
         })
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/status/health/<tier>/<int:index>')
+def status_health(tier, index):
+    """
+    Returns 200 when the provider reports operational, 503 otherwise.
+    Lets Homepage's siteMonitor show a green/red dot per provider.
+    """
+    if tier not in ('bellwethers', 'personal'):
+        return jsonify({'error': 'unknown tier'}), 404
+    try:
+        providers = _outage_snapshot()[tier]
+        provider = providers[index]
+    except IndexError:
+        return jsonify({'error': 'unknown provider'}), 404
+    except Exception as e:
+        return jsonify({'error': str(e)}), 503
+    if provider['status'] == 'operational':
+        return jsonify(provider), 200
+    return jsonify(provider), 503
 
 
 # =============================================================================

@@ -396,6 +396,7 @@
       - Cloudflare:
           icon: si-cloudflare
           href: https://www.cloudflarestatus.com
+          siteMonitor: http://homepage-api:5000/api/status/health/bellwethers/0
           description: Official status page
           widget:
             type: customapi
@@ -409,6 +410,7 @@
       - AWS (Sydney):
           icon: si-amazonaws
           href: https://status.aws.amazon.com
+          siteMonitor: http://homepage-api:5000/api/status/health/bellwethers/1
           description: Official status page
           widget:
             type: customapi
@@ -422,6 +424,7 @@
       - Google Cloud:
           icon: si-googlecloud
           href: https://status.cloud.google.com
+          siteMonitor: http://homepage-api:5000/api/status/health/bellwethers/2
           description: Official status page
           widget:
             type: customapi
@@ -435,6 +438,7 @@
       - Azure:
           icon: si-microsoftazure
           href: https://azure.status.microsoft/en-us/status
+          siteMonitor: http://homepage-api:5000/api/status/health/bellwethers/3
           description: Official status page
           widget:
             type: customapi
@@ -450,6 +454,7 @@
       - Gmail (Workspace):
           icon: si-gmail
           href: https://www.google.com/appsstatus/dashboard/
+          siteMonitor: http://homepage-api:5000/api/status/health/personal/0
           description: Official status page
           widget:
             type: customapi
@@ -463,6 +468,7 @@
       - iCloud:
           icon: si-icloud
           href: https://www.apple.com/support/systemstatus/
+          siteMonitor: http://homepage-api:5000/api/status/health/personal/1
           description: Official status page
           widget:
             type: customapi
@@ -476,6 +482,7 @@
       - GitHub:
           icon: si-github
           href: https://www.githubstatus.com
+          siteMonitor: http://homepage-api:5000/api/status/health/personal/2
           description: Official status page
           widget:
             type: customapi
@@ -489,6 +496,7 @@
       - Docker Hub:
           icon: si-docker
           href: https://www.dockerstatus.com
+          siteMonitor: http://homepage-api:5000/api/status/health/personal/3
           description: Official status page
           widget:
             type: customapi
