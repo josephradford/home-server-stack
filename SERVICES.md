@@ -105,8 +105,8 @@ Currently deployed and active services.
 - **Purpose:** Offline NSW topographic map PWA. nginx serves static files only (no backend); the phone downloads tile archives into IndexedDB, then works offline
 - **Access:** https://radmap.${DOMAIN}
 - **Authentication:** IP-restricted (local network / VPN only)
-- **Source:** `apps/radmap` git submodule (https://github.com/josephradford/radmap). The ~950 MB of tile archives (`apps/radmap/public/tiles/*.tiles`) are gitignored and live only on the server; see the radmap repo's `tools/download-tiles.mjs` to regenerate them
-- **Config:** `config/radmap/default.conf` is bind-mounted into nginx and must exist as a file (Docker creates a directory in its place if missing)
+- **Image:** `ghcr.io/josephradford/radmap` (built from https://github.com/josephradford/radmap; nginx config is baked in)
+- **Tiles:** the ~950 MB `.tiles` archives are not in the image or the repo. They live in `./data/radmap/tiles/` on the server (bind-mounted read-only); regenerate with `tools/download-tiles.mjs` in the radmap repo
 
 ### Backup Services
 
