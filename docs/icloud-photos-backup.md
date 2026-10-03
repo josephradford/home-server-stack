@@ -35,8 +35,13 @@ Add to `/etc/fstab` (mount by UUID, `nofail` so a missing drive doesn't block
 boot):
 
 ```
-UUID=<drive-uuid>  /mnt/photos-backup  ext4  defaults,nofail  0  2
+UUID=<drive-uuid>  /mnt/photos-backup  ext4  defaults,nofail,x-systemd.automount,x-systemd.device-timeout=10  0  2
 ```
+
+`x-systemd.automount` lets the host remount the drive on first access after a
+USB drop-out (plain fstab only mounts at boot). The backup root must live under
+`/mnt`: the containers bind `/mnt` with `rslave` propagation, so a remount on
+the host shows up inside them without recreating the containers.
 
 ```bash
 sudo mkdir -p /mnt/photos-backup
@@ -115,6 +120,20 @@ accounts' states entirely.
 | Drive not mounted | Sentinel check failed — drive missing or wrong drive |
 | Stopped | Container not running |
 | Unknown | No recent log activity for at least one account / cannot read state |
+
+## If the drive drops out
+
+icloudpd and Immich pick up a remounted drive on their own: `/mnt` is bound
+with `rslave` propagation, and icloudpd's startup guard waits (re-checking
+every 5 minutes) instead of exiting. With the automount fstab option the host
+remounts it on the next access; otherwise run `sudo mount /mnt/photos-backup`.
+Known limitation: Immich's `:ro` flag on the `/mnt` bind is not enforced for a
+drive that is mounted *after* the container started (observed: a write from
+`immich-server` succeeded after a remount). Immich only reads its external
+library, so this is accepted rather than worked around.
+
+Repeated drop-outs usually mean a bad USB cable, port or power supply — check
+`dmesg -T | grep -iE 'usb|sda|ext4'`.
 
 ## Replacing the drive
 
