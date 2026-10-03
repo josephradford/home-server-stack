@@ -368,3 +368,11 @@
           container: owntracks-recorder
           server: my-docker
           showStats: true
+
+      - Radmap:
+          icon: mdi-map-outline
+          href: https://radmap.{{HOMEPAGE_VAR_DOMAIN}}
+          description: Offline NSW topo map PWA (tile archives served to the phone)
+          container: radmap
+          server: my-docker
+          showStats: true

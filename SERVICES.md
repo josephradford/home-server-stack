@@ -101,6 +101,13 @@ Currently deployed and active services.
 - **Access:** https://owntracks.${DOMAIN}
 - **Authentication:** IP-restricted via Traefik `admin-secure`
 
+#### Radmap
+- **Purpose:** Offline NSW topographic map PWA. nginx serves static files only (no backend); the phone downloads tile archives into IndexedDB, then works offline
+- **Access:** https://radmap.${DOMAIN}
+- **Authentication:** IP-restricted (local network / VPN only)
+- **Source:** `apps/radmap` git submodule (https://github.com/josephradford/radmap). The ~950 MB of tile archives (`apps/radmap/public/tiles/*.tiles`) are gitignored and live only on the server; see the radmap repo's `tools/download-tiles.mjs` to regenerate them
+- **Config:** `config/radmap/default.conf` is bind-mounted into nginx and must exist as a file (Docker creates a directory in its place if missing)
+
 ### Backup Services
 
 #### icloudpd (iCloud Photos)
