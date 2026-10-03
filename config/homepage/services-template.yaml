@@ -391,45 +391,114 @@
               - field: disk_usage
                 label: Disk Usage
 
-  # External Service Status - outage status for infra bellwethers + services we depend on
-  - Service Status:
-      - Bellwether Outages:
-          icon: mdi-web
-          description: Cloudflare, AWS, GCP, Azure - if these are down, lots of unrelated sites are too
+  # External Service Status - official status pages for infra bellwethers and personal dependencies
+  - Bellwethers:
+      - Cloudflare:
+          icon: si-cloudflare
+          href: https://www.cloudflarestatus.com
+          description: Official status page
           widget:
             type: customapi
             url: http://homepage-api:5000/api/status/outages
             refreshInterval: 300000  # 5 minutes
             mappings:
-              - field: bellwethers_issues
-                label: Issues
               - field: bellwethers.0.status
-                label: Cloudflare
-              - field: bellwethers.1.status
-                label: AWS
-              - field: bellwethers.2.status
-                label: GCP
-              - field: bellwethers.3.status
-                label: Azure
-
-      - My Dependencies:
-          icon: mdi-account-check
-          description: Gmail, iCloud, GitHub, Docker Hub
+                label: Status
+              - field: bellwethers.0.detail
+                label: Detail
+      - AWS (Sydney):
+          icon: si-amazonaws
+          href: https://status.aws.amazon.com
+          description: Official status page
           widget:
             type: customapi
             url: http://homepage-api:5000/api/status/outages
             refreshInterval: 300000  # 5 minutes
             mappings:
-              - field: personal_issues
-                label: Issues
+              - field: bellwethers.1.status
+                label: Status
+              - field: bellwethers.1.detail
+                label: Detail
+      - Google Cloud:
+          icon: si-googlecloud
+          href: https://status.cloud.google.com
+          description: Official status page
+          widget:
+            type: customapi
+            url: http://homepage-api:5000/api/status/outages
+            refreshInterval: 300000  # 5 minutes
+            mappings:
+              - field: bellwethers.2.status
+                label: Status
+              - field: bellwethers.2.detail
+                label: Detail
+      - Azure:
+          icon: si-microsoftazure
+          href: https://azure.status.microsoft/en-us/status
+          description: Official status page
+          widget:
+            type: customapi
+            url: http://homepage-api:5000/api/status/outages
+            refreshInterval: 300000  # 5 minutes
+            mappings:
+              - field: bellwethers.3.status
+                label: Status
+              - field: bellwethers.3.detail
+                label: Detail
+
+  - My Dependencies:
+      - Gmail (Workspace):
+          icon: si-gmail
+          href: https://www.google.com/appsstatus/dashboard/
+          description: Official status page
+          widget:
+            type: customapi
+            url: http://homepage-api:5000/api/status/outages
+            refreshInterval: 300000  # 5 minutes
+            mappings:
               - field: personal.0.status
-                label: Gmail
+                label: Status
+              - field: personal.0.detail
+                label: Detail
+      - iCloud:
+          icon: si-icloud
+          href: https://www.apple.com/support/systemstatus/
+          description: Official status page
+          widget:
+            type: customapi
+            url: http://homepage-api:5000/api/status/outages
+            refreshInterval: 300000  # 5 minutes
+            mappings:
               - field: personal.1.status
-                label: iCloud
+                label: Status
+              - field: personal.1.detail
+                label: Detail
+      - GitHub:
+          icon: si-github
+          href: https://www.githubstatus.com
+          description: Official status page
+          widget:
+            type: customapi
+            url: http://homepage-api:5000/api/status/outages
+            refreshInterval: 300000  # 5 minutes
+            mappings:
               - field: personal.2.status
-                label: GitHub
+                label: Status
+              - field: personal.2.detail
+                label: Detail
+      - Docker Hub:
+          icon: si-docker
+          href: https://www.dockerstatus.com
+          description: Official status page
+          widget:
+            type: customapi
+            url: http://homepage-api:5000/api/status/outages
+            refreshInterval: 300000  # 5 minutes
+            mappings:
               - field: personal.3.status
-                label: Docker Hub
+                label: Status
+              - field: personal.3.detail
+                label: Detail
 
   # Location Services - Location tracking
   - Location:
