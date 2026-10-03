@@ -1,44 +1,6 @@
 ---
 # Life - calendar, weather, etc
 - Today:
-    - BOM Weather:
-        icon: mdi-weather-partly-cloudy
-        href: http://www.bom.gov.au/
-        description: Australian weather forecast
-        widget:
-          type: customapi
-          url: http://homepage-api:5000/api/bom/weather
-          refreshInterval: 300000  # 5 minutes
-          mappings:
-            - field: observations.temp
-              label: Temperature
-              suffix: "°C"
-            - field: observations.temp_feels_like
-              label: Feels Like
-              suffix: "°C"
-            - field: observations.humidity
-              label: Humidity
-              suffix: "%"
-            - field: forecast_daily.0.short_text
-              label: Today
-
-    - Google Calendar:
-        icon: google-calendar.png
-        href: https://calendar.google.com
-        description: Upcoming events
-        widget:
-          type: calendar
-          view: agenda
-          showTime: true
-          integrations:
-            - type: ical
-              url: {{HOMEPAGE_VAR_GCAL_ICAL_URL}}
-              name: Personal Calendar
-              color: blue
-              maxEvents: 5
-
-# Commute - bus and tram, each showing the stop for the current direction (switches at noon, Sydney time)
-- Commute:
     - Bus:
         icon: mdi-bus
         widget:
@@ -108,6 +70,42 @@
                   to: "● Live"
                 - value: false
                   to: "○ Sched"
+
+    - BOM Weather:
+        icon: mdi-weather-partly-cloudy
+        href: http://www.bom.gov.au/
+        description: Australian weather forecast
+        widget:
+          type: customapi
+          url: http://homepage-api:5000/api/bom/weather
+          refreshInterval: 300000  # 5 minutes
+          mappings:
+            - field: observations.temp
+              label: Temperature
+              suffix: "°C"
+            - field: observations.temp_feels_like
+              label: Feels Like
+              suffix: "°C"
+            - field: observations.humidity
+              label: Humidity
+              suffix: "%"
+            - field: forecast_daily.0.short_text
+              label: Today
+
+    - Google Calendar:
+        icon: google-calendar.png
+        href: https://calendar.google.com
+        description: Upcoming events
+        widget:
+          type: calendar
+          view: agenda
+          showTime: true
+          integrations:
+            - type: ical
+              url: {{HOMEPAGE_VAR_GCAL_ICAL_URL}}
+              name: Personal Calendar
+              color: blue
+              maxEvents: 5
 
 # Internet - network health, devices, and external provider status
 - Internet:

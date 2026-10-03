@@ -18,10 +18,7 @@ useEqualHeights: true
 layout:
   Today:
     style: row
-    columns: 3
-  Commute:
-    style: row
-    columns: 2
+    columns: 4
   Internet:
     style: row
     columns: 1
