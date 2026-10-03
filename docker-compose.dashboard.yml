@@ -8,6 +8,11 @@ services:
       BOM_LOCATION: ${BOM_LOCATION:-parramatta}
       # Transport NSW API
       TRANSPORT_NSW_API_KEY: ${TRANSPORT_NSW_API_KEY}
+      # AdGuard Home (device list)
+      ADGUARD_USERNAME: ${ADGUARD_USERNAME}
+      ADGUARD_PASSWORD: ${ADGUARD_PASSWORD}
+      # Router IP (must match the 'router' target in monitoring/prometheus/prometheus.yml)
+      ROUTER_IP: ${ROUTER_IP:-192.168.1.1}
     # No port exposure - access via Traefik or internal network only
     restart: unless-stopped
     networks:

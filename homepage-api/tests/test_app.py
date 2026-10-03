@@ -626,6 +626,95 @@ class TestOutageStatusEndpoint:
         # _poll_gcp raising is uncaught by the route (pollers are expected to
         # catch their own errors) -> surfaces as a 500 with an error body,
         # which is still a safe, non-crashing response.
+class TestNetworkDevicesEndpoint:
+    """Tests for /api/network/devices endpoint"""
+
+    @patch('app.ADGUARD_PASSWORD', 'testpass')
+    @patch('app.ADGUARD_USERNAME', 'testuser')
+    @patch('app.requests.get')
+    def test_network_devices_success(self, mock_get, client):
+        mock_response = Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            'auto_clients': [
+                {'ip': '192.168.1.50', 'name': 'joes-phone', 'source': 'DHCP'},
+                {'ip': '192.168.1.51', 'name': '', 'source': 'DNS'},
+            ]
+        }
+        mock_get.return_value = mock_response
+
+        response = client.get('/api/network/devices')
+        assert response.status_code == 200
+
+        data = response.get_json()
+        assert data['count'] == 2
+        assert data['devices'][0]['name'] == 'joes-phone'
+        # Falls back to IP when AdGuard has no name for the client
+        assert data['devices'][1]['name'] == '192.168.1.51'
+
+    @patch('app.ADGUARD_PASSWORD', None)
+    @patch('app.ADGUARD_USERNAME', None)
+    def test_network_devices_missing_credentials(self, client):
+        response = client.get('/api/network/devices')
+        assert response.status_code == 503
+        assert 'error' in response.get_json()
+
+    @patch('app.ADGUARD_PASSWORD', 'testpass')
+    @patch('app.ADGUARD_USERNAME', 'testuser')
+    @patch('app.requests.get')
+    def test_network_devices_adguard_error(self, mock_get, client):
+        mock_get.side_effect = Exception('connection refused')
+
+        response = client.get('/api/network/devices')
+        assert response.status_code == 500
+        assert 'error' in response.get_json()
+
+
+class TestNetworkHealthEndpoint:
+    """Tests for /api/network/health endpoint"""
+
+    @patch('app._NETWORK_PROBE_TARGETS',
+           {'router': '192.168.1.1', 'isp': '1.1.1.1', 'isp_secondary': '8.8.8.8'})
+    @patch('app.requests.get')
+    def test_network_health_success(self, mock_get, client):
+        def fake_get(url, params=None, timeout=None):
+            mock_response = Mock()
+            mock_response.status_code = 200
+            if 'probe_duration_seconds' in params['query']:
+                mock_response.json.return_value = {
+                    'status': 'success',
+                    'data': {'result': [
+                        {'metric': {'instance': '192.168.1.1'}, 'value': [0, '0.002']},
+                        {'metric': {'instance': '1.1.1.1'}, 'value': [0, '0.012']},
+                    ]}
+                }
+            else:
+                mock_response.json.return_value = {
+                    'status': 'success',
+                    'data': {'result': [
+                        {'metric': {'instance': '192.168.1.1'}, 'value': [0, '0']},
+                        {'metric': {'instance': '1.1.1.1'}, 'value': [0, '0.5']},
+                    ]}
+                }
+            return mock_response
+        mock_get.side_effect = fake_get
+
+        response = client.get('/api/network/health')
+        assert response.status_code == 200
+
+        data = response.get_json()
+        assert data['probes']['router']['latency_ms'] == 2.0
+        assert data['probes']['router']['packet_loss_pct_24h'] == 0.0
+        assert data['probes']['isp']['latency_ms'] == 12.0
+        assert data['probes']['isp']['packet_loss_pct_24h'] == 0.5
+        # No data returned for isp_secondary in this mock -> nulls, not an error
+        assert data['probes']['isp_secondary']['latency_ms'] is None
+
+    @patch('app.requests.get')
+    def test_network_health_prometheus_error(self, mock_get, client):
+        mock_get.side_effect = Exception('connection refused')
+
+        response = client.get('/api/network/health')
         assert response.status_code == 500
         assert 'error' in response.get_json()
 

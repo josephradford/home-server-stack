@@ -57,6 +57,7 @@ Currently deployed and active services.
   - Docker container resource monitoring (CPU, RAM, network)
   - BOM weather, Transport NSW departures, TomTom traffic
   - Google Calendar integration
+  - Devices seen on the network (via AdGuard) and router/ISP latency & packet loss (via blackbox_exporter)
   - External outage status: infra bellwethers (Cloudflare, AWS, GCP, Azure) and personal dependencies (Gmail, iCloud, GitHub, Docker Hub)
 
 #### Homepage API
@@ -94,6 +95,11 @@ Currently deployed and active services.
 #### cAdvisor
 - **Purpose:** Container metrics
 - **Port:** 8080 (internal only)
+
+#### blackbox-exporter
+- **Purpose:** ICMP probes for router + ISP latency/packet-loss (feeds the Homepage "Network Health" widget)
+- **Port:** 9115 (internal only)
+- **Config:** `monitoring/blackbox/blackbox.yml` (probe module); probe targets are set in `monitoring/prometheus/prometheus.yml`'s `blackbox-icmp` job — update the router IP there if it differs from the default `192.168.1.1`
 
 ### Location Services
 
