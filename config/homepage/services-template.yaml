@@ -181,7 +181,6 @@
         href: https://transportnsw.info/
         description: View all services
 
-# Backups - Data backup services
 # Internet - network health, devices, and external provider status
 - Internet:
   - Network:
@@ -335,6 +334,57 @@
                 label: Detail
 
 
+# Network & Security - Infrastructure services for routing, VPN, and security
+- Network & Security:
+  - Traefik:
+      icon: traefik.png
+      href: https://traefik.{{HOMEPAGE_VAR_DOMAIN}}
+      description: Reverse proxy management
+      widget:
+        type: traefik
+        url: http://traefik:8080
+      container: traefik
+      server: my-docker
+      showStats: true
+
+  - Wireguard VPN:
+      icon: wireguard.png
+      description: VPN server (system service)
+      widget:
+        type: customapi
+        url: http://homepage-api:5000/api/wireguard/status
+        refreshInterval: 30000  # 30 seconds
+        mappings:
+          - field: status
+            label: Status
+          - field: interface
+            label: Interface
+
+  - Fail2ban:
+      icon: mdi-shield-lock
+      description: Intrusion prevention system
+      container: fail2ban
+      server: my-docker
+      showStats: true
+
+  - Docker Daemon:
+      icon: mdi-docker
+      description: Container runtime (system service)
+      widget:
+        type: customapi
+        url: http://homepage-api:5000/api/docker/status
+        refreshInterval: 30000  # 30 seconds
+        mappings:
+          - field: status
+            label: Status
+          - field: containers
+            label: Containers
+          - field: version
+            label: Version
+          - field: disk_usage
+            label: Disk Usage
+
+
 - Services:
   - Core Services:
       - AdGuard Home:
@@ -441,91 +491,40 @@
           server: my-docker
           showStats: true
 
-  # Network & Security - Infrastructure services for routing, VPN, and security
-  - Network & Security:
-      - Traefik:
-          icon: traefik.png
-          href: https://traefik.{{HOMEPAGE_VAR_DOMAIN}}
-          description: Reverse proxy management
-          widget:
-            type: traefik
-            url: http://traefik:8080
-          container: traefik
+  - Backups:
+        - "{{HOMEPAGE_VAR_ICLOUD_LABEL}}":
+            icon: mdi-cloud-download
+            href: https://icloud.{{HOMEPAGE_VAR_DOMAIN}}
+            description: iCloud photo backup
+            container: icloudpd
+            server: my-docker
+            showStats: true
+            widget:
+              type: customapi
+              url: http://homepage-api:5000/api/icloudpd/status
+              refreshInterval: 60000
+              mappings:
+                - field: statusLabel
+                  label: Status
+                - field: lastSyncRelative
+                  label: Last sync
+                - field: message
+                  label: Detail
+
+  # Location Services - Location tracking
+  - Location:
+      - OwnTracks:
+          icon: mdi-map-marker
+          href: https://owntracks.{{HOMEPAGE_VAR_DOMAIN}}
+          description: Location tracking recorder
+          container: owntracks-recorder
           server: my-docker
           showStats: true
 
-      - Wireguard VPN:
-          icon: wireguard.png
-          description: VPN server (system service)
-          widget:
-            type: customapi
-            url: http://homepage-api:5000/api/wireguard/status
-            refreshInterval: 30000  # 30 seconds
-            mappings:
-              - field: status
-                label: Status
-              - field: interface
-                label: Interface
-
-      - Fail2ban:
-          icon: mdi-shield-lock
-          description: Intrusion prevention system
-          container: fail2ban
+      - Radmap:
+          icon: mdi-map-outline
+          href: https://radmap.{{HOMEPAGE_VAR_DOMAIN}}
+          description: Offline NSW topo map PWA (tile archives served to the phone)
+          container: radmap
           server: my-docker
           showStats: true
-
-      - Docker Daemon:
-          icon: mdi-docker
-          description: Container runtime (system service)
-          widget:
-            type: customapi
-            url: http://homepage-api:5000/api/docker/status
-            refreshInterval: 30000  # 30 seconds
-            mappings:
-              - field: status
-                label: Status
-              - field: containers
-                label: Containers
-              - field: version
-                label: Version
-              - field: disk_usage
-                label: Disk Usage
-
-- Backups:
-    - "{{HOMEPAGE_VAR_ICLOUD_LABEL}}":
-        icon: mdi-cloud-download
-        href: https://icloud.{{HOMEPAGE_VAR_DOMAIN}}
-        description: iCloud photo backup
-        container: icloudpd
-        server: my-docker
-        showStats: true
-        widget:
-          type: customapi
-          url: http://homepage-api:5000/api/icloudpd/status
-          refreshInterval: 60000
-          mappings:
-            - field: statusLabel
-              label: Status
-            - field: lastSyncRelative
-              label: Last sync
-            - field: message
-              label: Detail
-
-# Core Services - Primary user-facing services that "do stuff"
-# Location Services - Location tracking
-- Location:
-  - OwnTracks:
-      icon: mdi-map-marker
-      href: https://owntracks.{{HOMEPAGE_VAR_DOMAIN}}
-      description: Location tracking recorder
-      container: owntracks-recorder
-      server: my-docker
-      showStats: true
-
-  - Radmap:
-      icon: mdi-map-outline
-      href: https://radmap.{{HOMEPAGE_VAR_DOMAIN}}
-      description: Offline NSW topo map PWA (tile archives served to the phone)
-      container: radmap
-      server: my-docker
-      showStats: true
