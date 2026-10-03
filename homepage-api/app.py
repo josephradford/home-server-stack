@@ -377,6 +377,23 @@ def _commute_stop(number):
     )
 
 
+def _commute_slot(slot):
+    """Stop, direction and next departures for a commute slot (1 = bus, 2 = tram)."""
+    now = _sydney_now()
+    to_work = now.hour < COMMUTE_CUTOVER_HOUR
+    number = slot if to_work else slot + 2
+    direction = (os.getenv('TRANSPORT_SECTION_1', 'To Parramatta') if to_work
+                 else os.getenv('TRANSPORT_SECTION_2', 'From Parramatta'))
+    stop_id, stop_name, dest, routes = _commute_stop(number)
+    departures = _fetch_departures(stop_id, dest, routes, limit=4)
+    return {
+        'stop': stop_name,
+        'direction': direction,
+        'departures': departures,
+        'updated': now.isoformat()
+    }
+
+
 @app.route('/api/transport/commute/<int:slot>')
 def transport_commute(slot):
     """
@@ -386,28 +403,30 @@ def transport_commute(slot):
     """
     if slot not in (1, 2):
         return jsonify({'error': 'slot must be 1 or 2'}), 404
-    now = _sydney_now()
-    to_work = now.hour < COMMUTE_CUTOVER_HOUR
-    number = slot if to_work else slot + 2
-    direction = (os.getenv('TRANSPORT_SECTION_1', 'To Parramatta') if to_work
-                 else os.getenv('TRANSPORT_SECTION_2', 'From Parramatta'))
     try:
         if not TRANSPORT_NSW_API_KEY:
             return jsonify({'error': 'Transport NSW API key not configured'}), 503
-
-        stop_id, stop_name, dest, routes = _commute_stop(number)
-        departures = _fetch_departures(stop_id, dest, routes, limit=4)
-        return jsonify({
-            'stop': stop_name,
-            'direction': direction,
-            'departures': departures,
-            'updated': now.isoformat()
-        })
-
+        return jsonify(_commute_slot(slot))
     except requests.exceptions.RequestException as e:
         return jsonify({'error': f'Transport API error: {str(e)}'}), 500
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/transport/live/<int:slot>')
+def transport_live(slot):
+    """Returns 200 when the next departure for the slot is live-tracked, 503 otherwise.
+    Lets Homepage's siteMonitor show a green dot for live tracking."""
+    if slot not in (1, 2):
+        return jsonify({'error': 'slot must be 1 or 2'}), 404
+    try:
+        if not TRANSPORT_NSW_API_KEY:
+            return jsonify({'error': 'Transport NSW API key not configured'}), 503
+        payload = _commute_slot(slot)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 503
+    live = bool(payload['departures']) and payload['departures'][0]['realtime']
+    return jsonify({'live': live, 'stop': payload['stop']}), (200 if live else 503)
 
 
 # =============================================================================

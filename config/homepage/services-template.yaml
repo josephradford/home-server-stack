@@ -1,76 +1,6 @@
 ---
 # Life - calendar, weather, etc
 - Today:
-    - Bus:
-        icon: mdi-bus
-        widget:
-          type: customapi
-          url: http://homepage-api:5000/api/transport/commute/1
-          refreshInterval: 60000
-          display: list
-          mappings:
-            - field: direction
-              label: Direction
-            - field: departures.0.line
-              label: Next
-            - field: departures.0.time
-              label: Departs
-              format: relativeDate
-            - field: departures.0.realtime
-              label: Tracking
-              remap:
-                - value: true
-                  to: "● Live"
-                - value: false
-                  to: "○ Sched"
-            - field: departures.1.line
-              label: Following
-            - field: departures.1.time
-              label: Departs
-              format: relativeDate
-            - field: departures.1.realtime
-              label: Tracking
-              remap:
-                - value: true
-                  to: "● Live"
-                - value: false
-                  to: "○ Sched"
-
-    - Tram:
-        icon: mdi-tram
-        widget:
-          type: customapi
-          url: http://homepage-api:5000/api/transport/commute/2
-          refreshInterval: 60000
-          display: list
-          mappings:
-            - field: direction
-              label: Direction
-            - field: departures.0.line
-              label: Next
-            - field: departures.0.time
-              label: Departs
-              format: relativeDate
-            - field: departures.0.realtime
-              label: Tracking
-              remap:
-                - value: true
-                  to: "● Live"
-                - value: false
-                  to: "○ Sched"
-            - field: departures.1.line
-              label: Following
-            - field: departures.1.time
-              label: Departs
-              format: relativeDate
-            - field: departures.1.realtime
-              label: Tracking
-              remap:
-                - value: true
-                  to: "● Live"
-                - value: false
-                  to: "○ Sched"
-
     - BOM Weather:
         icon: mdi-weather-partly-cloudy
         href: http://www.bom.gov.au/
@@ -106,6 +36,50 @@
               name: Personal Calendar
               color: blue
               maxEvents: 5
+
+    - Bus:
+        icon: mdi-bus
+        siteMonitor: http://homepage-api:5000/api/transport/live/1
+        widget:
+          type: customapi
+          url: http://homepage-api:5000/api/transport/commute/1
+          refreshInterval: 60000
+          display: list
+          mappings:
+            - field: direction
+              label: Direction
+            - field: departures.0.line
+              label: Next
+            - field: departures.0.time
+              label: Departs
+              format: relativeDate
+            - field: departures.1.line
+              label: Following
+            - field: departures.1.time
+              label: Departs
+              format: relativeDate
+
+    - Tram:
+        icon: mdi-tram
+        siteMonitor: http://homepage-api:5000/api/transport/live/2
+        widget:
+          type: customapi
+          url: http://homepage-api:5000/api/transport/commute/2
+          refreshInterval: 60000
+          display: list
+          mappings:
+            - field: direction
+              label: Direction
+            - field: departures.0.line
+              label: Next
+            - field: departures.0.time
+              label: Departs
+              format: relativeDate
+            - field: departures.1.line
+              label: Following
+            - field: departures.1.time
+              label: Departs
+              format: relativeDate
 
 # Internet - network health, devices, and external provider status
 - Internet:

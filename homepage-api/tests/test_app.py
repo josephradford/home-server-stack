@@ -688,6 +688,28 @@ class TestTransportCommuteEndpoint:
         response = client.get('/api/transport/commute/3')
         assert response.status_code == 404
 
+    @patch('app.TRANSPORT_NSW_API_KEY', 'key')
+    @patch('app._commute_slot')
+    def test_live_returns_200_when_next_departure_realtime(self, mock_slot, client):
+        mock_slot.return_value = {'stop': 'Bus', 'departures': [{'realtime': True}]}
+        response = client.get('/api/transport/live/1')
+        assert response.status_code == 200
+        assert response.get_json()['live'] is True
+
+    @patch('app.TRANSPORT_NSW_API_KEY', 'key')
+    @patch('app._commute_slot')
+    def test_live_returns_503_when_scheduled(self, mock_slot, client):
+        mock_slot.return_value = {'stop': 'Bus', 'departures': [{'realtime': False}]}
+        response = client.get('/api/transport/live/1')
+        assert response.status_code == 503
+
+    @patch('app.TRANSPORT_NSW_API_KEY', 'key')
+    @patch('app._commute_slot')
+    def test_live_returns_503_when_no_departures(self, mock_slot, client):
+        mock_slot.return_value = {'stop': 'Bus', 'departures': []}
+        response = client.get('/api/transport/live/2')
+        assert response.status_code == 503
+
     @patch('app.TRANSPORT_NSW_API_KEY', None)
     def test_commute_without_api_key_returns_503(self, client):
         response = client.get('/api/transport/commute/1')
