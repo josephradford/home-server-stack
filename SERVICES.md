@@ -198,6 +198,8 @@ Services queued for implementation.
 - [ ] **[Radarr](https://github.com/Radarr/Radarr)** - Movie organizer/manager for usenet and torrent users
 
 ### Infrastructure & Security
+- [ ] **Router upgrade** - Current TP-Link Archer VR1600v has no Prometheus exporter and unconfirmed SNMP support, and WiFi is patchy in the main bedroom. Leaning towards a UniFi Dream Router (built-in WiFi 6, `unpoller` exporter support, native WireGuard VPN server) for the near term; OPNsense (richer firewall control, can also host AdGuard + WireGuard itself) is a longer-term option once a spare mini-PC is available (e.g. after migrating the home server to a Mac mini).
+- [ ] **Router hardware stats on Homepage** (temp, CPU, uptime) - Blocked on the router upgrade above; the current Archer VR1600v has no usable exporter/API for this. Devices-on-network and ISP/local latency + packet-loss widgets already shipped without needing this (via AdGuard + blackbox_exporter).
 - [ ] **[Ollama](https://github.com/ollama/ollama)** - Run large language models locally
 - [ ] **[Watchtower](https://github.com/containrrr/watchtower)** - A process for automating Docker container base image updates
 - [ ] **[SearXNG](https://github.com/searxng/searxng)** - Free internet metasearch engine which aggregates results from various search services
