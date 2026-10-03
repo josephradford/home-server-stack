@@ -720,6 +720,13 @@ class TestNetworkDevicesEndpoint:
     """Tests for /api/network/devices endpoint"""
 
     @staticmethod
+    def _ok(json_body):
+        response = Mock()
+        response.raise_for_status.return_value = None
+        response.json.return_value = json_body
+        return response
+
+    @staticmethod
     def _querylog_entry(client, minutes_ago, name=None):
         when = (datetime.now(timezone.utc) - timedelta(minutes=minutes_ago))
         return {
@@ -732,14 +739,15 @@ class TestNetworkDevicesEndpoint:
     @patch('app.ADGUARD_USERNAME', 'testuser')
     @patch('app.requests.get')
     def test_network_devices_success(self, mock_get, client):
-        mock_response = Mock()
-        mock_response.status_code = 200
-        mock_response.json.return_value = {'data': [
-            self._querylog_entry('192.168.1.50', 1, name="joes-phone"),
-            self._querylog_entry('192.168.1.51', 5),
-            self._querylog_entry('192.168.1.50', 2, name="joes-phone"),
-        ]}
-        mock_get.return_value = mock_response
+        mock_get.side_effect = [
+            self._ok({'data': [
+                self._querylog_entry('192.168.1.50', 1, name="joes-phone"),
+                self._querylog_entry('192.168.1.51', 5),
+                self._querylog_entry('192.168.1.50', 2, name="joes-phone"),
+            ]}),
+            self._ok({'data': []}),
+            self._ok({'protection_enabled': False}),
+        ]
 
         response = client.get('/api/network/devices')
         assert response.status_code == 200
@@ -751,6 +759,10 @@ class TestNetworkDevicesEndpoint:
         assert data['devices'][0]['ip'] == '192.168.1.50'
         # Falls back to IP when AdGuard has no name for the client
         assert data['devices'][1]['name'] == '192.168.1.51'
+        assert data['devices'][0]['queries'] == 2
+        assert data['top_devices'][0]['ip'] == '192.168.1.50'
+        assert len(data['top_devices']) == 2
+        assert data['protection_enabled'] is False
 
     @patch('app.ADGUARD_PASSWORD', 'testpass')
     @patch('app.ADGUARD_USERNAME', 'testuser')
@@ -781,12 +793,14 @@ class TestNetworkDevicesEndpoint:
         third = Mock()
         third.raise_for_status.return_value = None
         third.json.return_value = {'data': [self._querylog_entry('192.168.1.72', 40)]}
-        mock_get.side_effect = [first, second, third]
+        status = self._ok({'protection_enabled': True})
+        mock_get.side_effect = [first, second, third, status]
 
         data = client.get('/api/network/devices').get_json()
         assert data['count'] == 2
         assert {d['ip'] for d in data['devices']} == {'192.168.1.70', '192.168.1.71'}
-        assert mock_get.call_count == 3
+        assert mock_get.call_count == 4
+        assert data['protection_enabled'] is True
         assert mock_get.call_args_list[1].kwargs['params']['older_than'] == first.json.return_value['data'][0]['time']
 
     @patch('app.ADGUARD_PASSWORD', None)

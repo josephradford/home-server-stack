@@ -95,7 +95,17 @@
             refreshInterval: 60000  # 1 minute
             mappings:
               - field: count
-                label: Devices
+                label: Devices (30 min)
+              - field: top_devices.0.name
+                label: Top
+              - field: top_devices.0.queries
+                label: Queries
+              - field: top_devices.1.name
+                label: Next
+              - field: top_devices.1.queries
+                label: Queries
+              - field: protection_enabled
+                label: Protection
 
       - Network Health:
           icon: mdi-wan

@@ -764,9 +764,10 @@ def _parse_adguard_time(value):
 
 
 def _recent_querylog_clients(window):
-    """Latest query per client IP, for clients that queried within `window`."""
+    """Latest query and query count per client IP, for queries within `window`."""
     cutoff = datetime.now(timezone.utc) - window
     latest = {}
+    counts = {}
     older_than = None
     for _ in range(_QUERYLOG_MAX_PAGES):
         params = {'limit': _QUERYLOG_PAGE_SIZE}
@@ -790,6 +791,8 @@ def _recent_querylog_clients(window):
                 reached_cutoff = True
                 break
             ip = entry.get('client')
+            if ip:
+                counts[ip] = counts.get(ip, 0) + 1
             if ip and ip not in latest:
                 name = (entry.get('client_info') or {}).get('name')
                 latest[ip] = {
@@ -801,13 +804,26 @@ def _recent_querylog_clients(window):
             break
         older_than = entries[-1]['time']
 
+    for ip, device in latest.items():
+        device['queries'] = counts[ip]
     return sorted(latest.values(), key=lambda d: d['last_seen'], reverse=True)
+
+
+def _adguard_protection_enabled():
+    response = requests.get(
+        f'{ADGUARD_URL}/control/status',
+        auth=(ADGUARD_USERNAME, ADGUARD_PASSWORD),
+        timeout=10
+    )
+    response.raise_for_status()
+    return bool(response.json().get('protection_enabled'))
 
 
 @app.route('/api/network/devices')
 def network_devices():
     """
-    Devices that made a DNS query through AdGuard in the last 30 minutes.
+    Devices that made a DNS query through AdGuard in the last 30 minutes, the
+    two busiest by query count, and whether AdGuard protection is on.
     Reflects DNS activity, so an idle device will not appear.
     """
     try:
@@ -815,9 +831,12 @@ def network_devices():
             return jsonify({'error': 'AdGuard credentials not configured'}), 503
 
         devices = _recent_querylog_clients(timedelta(minutes=DEVICE_WINDOW_MINUTES))
+        top_devices = sorted(devices, key=lambda d: d['queries'], reverse=True)[:2]
         return jsonify({
             'devices': devices,
             'count': len(devices),
+            'top_devices': top_devices,
+            'protection_enabled': _adguard_protection_enabled(),
             'window_minutes': DEVICE_WINDOW_MINUTES,
             'updated': datetime.now().isoformat()
         })
