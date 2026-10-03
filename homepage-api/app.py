@@ -9,7 +9,7 @@ Provides custom endpoints for:
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 import requests
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 from urllib.parse import parse_qs
 import os
@@ -746,35 +746,79 @@ def status_health(tier, index):
 # NETWORK: DEVICES + ISP/LOCAL HEALTH
 # =============================================================================
 
+# Devices are taken from AdGuard's query log rather than its client list: the
+# client list only holds ARP/DHCP/hosts entries, and misses devices that are
+# making DNS queries. The log records each query's real client IP.
+DEVICE_WINDOW_MINUTES = 30
+_QUERYLOG_PAGE_SIZE = 500
+_QUERYLOG_MAX_PAGES = 20
+
+
+def _parse_adguard_time(value):
+    """Parse AdGuard's RFC 3339 timestamps (nanosecond fractions, 'Z' suffix)."""
+    match = re.match(r'^([^.]+)(?:\.(\d+))?(Z|[+-]\d{2}:\d{2})$', value)
+    base, fraction, tz = match.groups()
+    tz = '+00:00' if tz == 'Z' else tz
+    fraction = f'.{fraction[:6]}' if fraction else ''
+    return datetime.fromisoformat(f'{base}{fraction}{tz}')
+
+
+def _recent_querylog_clients(window):
+    """Latest query per client IP, for clients that queried within `window`."""
+    cutoff = datetime.now(timezone.utc) - window
+    latest = {}
+    older_than = None
+    for _ in range(_QUERYLOG_MAX_PAGES):
+        params = {'limit': _QUERYLOG_PAGE_SIZE}
+        if older_than:
+            params['older_than'] = older_than
+        response = requests.get(
+            f'{ADGUARD_URL}/control/querylog',
+            params=params,
+            auth=(ADGUARD_USERNAME, ADGUARD_PASSWORD),
+            timeout=10
+        )
+        response.raise_for_status()
+        entries = response.json().get('data', [])
+        if not entries:
+            break
+
+        reached_cutoff = False
+        for entry in entries:  # newest first, so the first hit per client is its latest
+            seen = _parse_adguard_time(entry['time'])
+            if seen < cutoff:
+                reached_cutoff = True
+                break
+            ip = entry.get('client')
+            if ip and ip not in latest:
+                name = (entry.get('client_info') or {}).get('name')
+                latest[ip] = {
+                    'name': name or ip,
+                    'ip': ip,
+                    'last_seen': seen.astimezone(ZoneInfo('Australia/Sydney')).isoformat(),
+                }
+        if reached_cutoff:
+            break
+        older_than = entries[-1]['time']
+
+    return sorted(latest.values(), key=lambda d: d['last_seen'], reverse=True)
+
+
 @app.route('/api/network/devices')
 def network_devices():
     """
-    List devices AdGuard has seen on the network recently (DHCP + DNS clients).
-    Not a live ARP scan — reflects whatever AdGuard has already observed.
+    Devices that made a DNS query through AdGuard in the last 30 minutes.
+    Reflects DNS activity, so an idle device will not appear.
     """
     try:
         if not (ADGUARD_USERNAME and ADGUARD_PASSWORD):
             return jsonify({'error': 'AdGuard credentials not configured'}), 503
 
-        response = requests.get(
-            f'{ADGUARD_URL}/control/clients',
-            auth=(ADGUARD_USERNAME, ADGUARD_PASSWORD),
-            timeout=10
-        )
-        response.raise_for_status()
-        data = response.json()
-
-        devices = []
-        for client in data.get('auto_clients', []):
-            devices.append({
-                'name': client.get('name') or client.get('ip'),
-                'ip': client.get('ip'),
-                'source': client.get('source')
-            })
-
+        devices = _recent_querylog_clients(timedelta(minutes=DEVICE_WINDOW_MINUTES))
         return jsonify({
             'devices': devices,
             'count': len(devices),
+            'window_minutes': DEVICE_WINDOW_MINUTES,
             'updated': datetime.now().isoformat()
         })
 

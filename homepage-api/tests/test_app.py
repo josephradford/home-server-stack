@@ -3,7 +3,7 @@ Unit tests for Homepage API endpoints
 """
 import pytest
 from unittest.mock import Mock, patch, MagicMock
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 import json
 
 
@@ -719,18 +719,26 @@ class TestTransportCommuteEndpoint:
 class TestNetworkDevicesEndpoint:
     """Tests for /api/network/devices endpoint"""
 
+    @staticmethod
+    def _querylog_entry(client, minutes_ago, name=None):
+        when = (datetime.now(timezone.utc) - timedelta(minutes=minutes_ago))
+        return {
+            'client': client,
+            'time': when.strftime('%Y-%m-%dT%H:%M:%S.') + '123456789Z',
+            'client_info': {'name': name} if name else None,
+        }
+
     @patch('app.ADGUARD_PASSWORD', 'testpass')
     @patch('app.ADGUARD_USERNAME', 'testuser')
     @patch('app.requests.get')
     def test_network_devices_success(self, mock_get, client):
         mock_response = Mock()
         mock_response.status_code = 200
-        mock_response.json.return_value = {
-            'auto_clients': [
-                {'ip': '192.168.1.50', 'name': 'joes-phone', 'source': 'DHCP'},
-                {'ip': '192.168.1.51', 'name': '', 'source': 'DNS'},
-            ]
-        }
+        mock_response.json.return_value = {'data': [
+            self._querylog_entry('192.168.1.50', 1, name="joes-phone"),
+            self._querylog_entry('192.168.1.51', 5),
+            self._querylog_entry('192.168.1.50', 2, name="joes-phone"),
+        ]}
         mock_get.return_value = mock_response
 
         response = client.get('/api/network/devices')
@@ -738,9 +746,48 @@ class TestNetworkDevicesEndpoint:
 
         data = response.get_json()
         assert data['count'] == 2
+        assert data['window_minutes'] == 30
         assert data['devices'][0]['name'] == 'joes-phone'
+        assert data['devices'][0]['ip'] == '192.168.1.50'
         # Falls back to IP when AdGuard has no name for the client
         assert data['devices'][1]['name'] == '192.168.1.51'
+
+    @patch('app.ADGUARD_PASSWORD', 'testpass')
+    @patch('app.ADGUARD_USERNAME', 'testuser')
+    @patch('app.requests.get')
+    def test_network_devices_excludes_queries_older_than_window(self, mock_get, client):
+        mock_response = Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {'data': [
+            self._querylog_entry('192.168.1.60', 10),
+            self._querylog_entry('192.168.1.61', 45),
+        ]}
+        mock_get.return_value = mock_response
+
+        data = client.get('/api/network/devices').get_json()
+        assert data['count'] == 1
+        assert data['devices'][0]['ip'] == '192.168.1.60'
+
+    @patch('app.ADGUARD_PASSWORD', 'testpass')
+    @patch('app.ADGUARD_USERNAME', 'testuser')
+    @patch('app.requests.get')
+    def test_network_devices_pages_back_until_window_covered(self, mock_get, client):
+        first = Mock()
+        first.raise_for_status.return_value = None
+        first.json.return_value = {'data': [self._querylog_entry('192.168.1.70', 1)]}
+        second = Mock()
+        second.raise_for_status.return_value = None
+        second.json.return_value = {'data': [self._querylog_entry('192.168.1.71', 20)]}
+        third = Mock()
+        third.raise_for_status.return_value = None
+        third.json.return_value = {'data': [self._querylog_entry('192.168.1.72', 40)]}
+        mock_get.side_effect = [first, second, third]
+
+        data = client.get('/api/network/devices').get_json()
+        assert data['count'] == 2
+        assert {d['ip'] for d in data['devices']} == {'192.168.1.70', '192.168.1.71'}
+        assert mock_get.call_count == 3
+        assert mock_get.call_args_list[1].kwargs['params']['older_than'] == first.json.return_value['data'][0]['time']
 
     @patch('app.ADGUARD_PASSWORD', None)
     @patch('app.ADGUARD_USERNAME', None)

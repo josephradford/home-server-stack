@@ -87,7 +87,8 @@
   - Network:
       - Devices Online:
           icon: mdi-devices
-          description: Devices seen on the network (via AdGuard)
+          href: https://adguard.{{HOMEPAGE_VAR_DOMAIN}}/#logs
+          description: Devices making DNS queries in the last 30 min (AdGuard query log)
           widget:
             type: customapi
             url: http://homepage-api:5000/api/network/devices
@@ -98,7 +99,8 @@
 
       - Network Health:
           icon: mdi-wan
-          description: Local router + ISP latency and packet loss
+          href: https://prometheus.{{HOMEPAGE_VAR_DOMAIN}}/graph?g0.expr=probe_icmp_duration_seconds%7Bjob%3D%22blackbox-icmp%22%7D&g0.tab=0
+          description: Local router + ISP latency and packet loss (Prometheus)
           widget:
             type: customapi
             url: http://homepage-api:5000/api/network/health
