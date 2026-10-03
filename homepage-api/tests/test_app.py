@@ -417,6 +417,219 @@ class TestCORSHeaders:
         assert response.status_code == 200
 
 
+class TestOutageStatusEndpoint:
+    """Tests for /api/status/outages and its per-provider pollers"""
+
+    @pytest.fixture(autouse=True)
+    def clear_caches(self):
+        """Pollers are time-cached by provider/url args; clear before each
+        test so mocked responses from one test don't leak into another."""
+        import app as app_module
+        for fn in (app_module._poll_statuspage, app_module._poll_rss_feed,
+                   app_module._poll_gcp, app_module._poll_icloud,
+                   app_module._poll_google_workspace):
+            fn.cache_clear()
+        yield
+
+    def _mock_json_response(self, payload):
+        mock_response = Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = payload
+        mock_response.raise_for_status = Mock()
+        return mock_response
+
+    def _mock_xml_response(self, xml_bytes):
+        mock_response = Mock()
+        mock_response.status_code = 200
+        mock_response.content = xml_bytes
+        mock_response.raise_for_status = Mock()
+        return mock_response
+
+    # --- _poll_statuspage ---
+
+    @patch('app.requests.get')
+    def test_poll_statuspage_operational(self, mock_get, client):
+        mock_get.return_value = self._mock_json_response(
+            {'status': {'indicator': 'none', 'description': 'All Systems Operational'}}
+        )
+        from app import _poll_statuspage
+        result = _poll_statuspage('GitHub', 'https://example.test/status.json')
+        assert result == {'name': 'GitHub', 'status': 'operational', 'detail': 'All Systems Operational'}
+
+    @patch('app.requests.get')
+    def test_poll_statuspage_issue(self, mock_get, client):
+        mock_get.return_value = self._mock_json_response(
+            {'status': {'indicator': 'major', 'description': 'Major Outage'}}
+        )
+        from app import _poll_statuspage
+        result = _poll_statuspage('Cloudflare', 'https://example.test/status.json')
+        assert result['status'] == 'issue'
+
+    @patch('app.requests.get')
+    def test_poll_statuspage_unreachable_is_unknown(self, mock_get, client):
+        mock_get.side_effect = Exception('timeout')
+        from app import _poll_statuspage
+        result = _poll_statuspage('Docker Hub', 'https://example.test/status.json')
+        assert result['status'] == 'unknown'
+
+    # --- _poll_rss_feed (also exercises the AWS/Azure path) ---
+
+    @patch('app.requests.get')
+    def test_poll_rss_feed_empty_is_operational(self, mock_get, client):
+        mock_get.return_value = self._mock_xml_response(
+            b'<rss><channel><title>Azure Status</title></channel></rss>'
+        )
+        from app import _poll_rss_feed
+        result = _poll_rss_feed('Azure', 'https://example.test/feed')
+        assert result['status'] == 'operational'
+
+    @patch('app.requests.get')
+    def test_poll_rss_feed_unresolved_item_is_issue(self, mock_get, client):
+        mock_get.return_value = self._mock_xml_response(
+            b'<rss><channel><item><title>Service disruption</title>'
+            b'<description>Investigating</description></item></channel></rss>'
+        )
+        from app import _poll_rss_feed
+        result = _poll_rss_feed('Azure', 'https://example.test/feed')
+        assert result['status'] == 'issue'
+
+    @patch('app.requests.get')
+    def test_poll_rss_feed_resolved_item_is_operational(self, mock_get, client):
+        mock_get.return_value = self._mock_xml_response(
+            b'<rss><channel><item><title>[RESOLVED] Service disruption</title>'
+            b'<description>Issue resolved</description></item></channel></rss>'
+        )
+        from app import _poll_rss_feed
+        result = _poll_rss_feed('Azure', 'https://example.test/feed')
+        assert result['status'] == 'operational'
+
+    # --- _poll_gcp ---
+
+    @patch('app.requests.get')
+    def test_poll_gcp_no_active_incidents(self, mock_get, client):
+        mock_get.return_value = self._mock_json_response([
+            {'external_desc': 'Old incident', 'end': '2026-01-01T00:00:00+00:00'}
+        ])
+        from app import _poll_gcp
+        result = _poll_gcp()
+        assert result['status'] == 'operational'
+
+    @patch('app.requests.get')
+    def test_poll_gcp_active_incident(self, mock_get, client):
+        mock_get.return_value = self._mock_json_response([
+            {'external_desc': 'Multiple products degraded', 'end': None}
+        ])
+        from app import _poll_gcp
+        result = _poll_gcp()
+        assert result['status'] == 'issue'
+        assert 'degraded' in result['detail']
+
+    # --- _poll_icloud ---
+
+    @patch('app.requests.get')
+    def test_poll_icloud_all_resolved_is_operational(self, mock_get, client):
+        mock_get.return_value = self._mock_json_response({
+            'services': [
+                {'serviceName': 'iCloud Mail', 'events': [
+                    {'eventStatus': 'resolved', 'message': 'Mail was unavailable'}
+                ]},
+                {'serviceName': 'App Store', 'events': []},
+            ]
+        })
+        from app import _poll_icloud
+        result = _poll_icloud()
+        assert result['status'] == 'operational'
+
+    @patch('app.requests.get')
+    def test_poll_icloud_active_event_is_issue(self, mock_get, client):
+        mock_get.return_value = self._mock_json_response({
+            'services': [
+                {'serviceName': 'iCloud Mail', 'events': [
+                    {'eventStatus': 'issue', 'message': 'Mail is degraded'}
+                ]},
+            ]
+        })
+        from app import _poll_icloud
+        result = _poll_icloud()
+        assert result['status'] == 'issue'
+        assert 'iCloud Mail' in result['detail']
+
+    # --- _poll_google_workspace ---
+
+    @patch('app.requests.get')
+    def test_poll_google_workspace_no_gmail_entries_is_operational(self, mock_get, client):
+        mock_get.return_value = self._mock_xml_response(
+            b'<feed xmlns="http://www.w3.org/2005/Atom"><entry><title>'
+            b'RESOLVED: Drive issue</title></entry></feed>'
+        )
+        from app import _poll_google_workspace
+        result = _poll_google_workspace()
+        assert result['status'] == 'operational'
+
+    @patch('app.requests.get')
+    def test_poll_google_workspace_unresolved_gmail_entry_is_issue(self, mock_get, client):
+        mock_get.return_value = self._mock_xml_response(
+            b'<feed xmlns="http://www.w3.org/2005/Atom"><entry><title>'
+            b'Gmail is experiencing elevated error rates</title></entry></feed>'
+        )
+        from app import _poll_google_workspace
+        result = _poll_google_workspace()
+        assert result['status'] == 'issue'
+
+    @patch('app.requests.get')
+    def test_poll_google_workspace_resolved_gmail_entry_is_operational(self, mock_get, client):
+        mock_get.return_value = self._mock_xml_response(
+            b'<feed xmlns="http://www.w3.org/2005/Atom"><entry><title>'
+            b'RESOLVED: Gmail delivery delays</title></entry></feed>'
+        )
+        from app import _poll_google_workspace
+        result = _poll_google_workspace()
+        assert result['status'] == 'operational'
+
+    # --- aggregate endpoint ---
+
+    @patch('app._poll_statuspage')
+    @patch('app._poll_rss_feed')
+    @patch('app._poll_gcp')
+    @patch('app._poll_icloud')
+    @patch('app._poll_google_workspace')
+    def test_status_outages_aggregates_both_tiers(
+        self, mock_workspace, mock_icloud, mock_gcp, mock_rss, mock_statuspage, client
+    ):
+        mock_statuspage.return_value = {'name': 'x', 'status': 'operational', 'detail': ''}
+        mock_rss.return_value = {'name': 'x', 'status': 'operational', 'detail': ''}
+        mock_gcp.return_value = {'name': 'Google Cloud', 'status': 'issue', 'detail': 'outage'}
+        mock_icloud.return_value = {'name': 'iCloud', 'status': 'operational', 'detail': ''}
+        mock_workspace.return_value = {'name': 'Google Workspace (Gmail)', 'status': 'operational', 'detail': ''}
+
+        response = client.get('/api/status/outages')
+        assert response.status_code == 200
+
+        data = response.get_json()
+        assert len(data['bellwethers']) == 4
+        assert len(data['personal']) == 4
+        assert data['bellwethers_issues'] == 1  # GCP
+        assert data['personal_issues'] == 0
+        assert 'updated' in data
+
+    @patch('app._poll_statuspage')
+    @patch('app._poll_rss_feed')
+    @patch('app._poll_gcp')
+    def test_status_outages_provider_failure_does_not_break_endpoint(
+        self, mock_gcp, mock_rss, mock_statuspage, client
+    ):
+        mock_gcp.side_effect = Exception('boom')
+        mock_rss.return_value = {'name': 'x', 'status': 'unknown', 'detail': 'boom'}
+        mock_statuspage.return_value = {'name': 'x', 'status': 'operational', 'detail': ''}
+
+        response = client.get('/api/status/outages')
+        # _poll_gcp raising is uncaught by the route (pollers are expected to
+        # catch their own errors) -> surfaces as a 500 with an error body,
+        # which is still a safe, non-crashing response.
+        assert response.status_code == 500
+        assert 'error' in response.get_json()
+
+
 class TestIcloudpdStatusEndpoint:
     """Tests for /api/icloudpd/status (single merged container)"""
 

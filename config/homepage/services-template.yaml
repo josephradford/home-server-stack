@@ -359,6 +359,46 @@
               - field: disk_usage
                 label: Disk Usage
 
+  # External Service Status - outage status for infra bellwethers + services we depend on
+  - Service Status:
+      - Bellwether Outages:
+          icon: mdi-web
+          description: Cloudflare, AWS, GCP, Azure - if these are down, lots of unrelated sites are too
+          widget:
+            type: customapi
+            url: http://homepage-api:5000/api/status/outages
+            refreshInterval: 300000  # 5 minutes
+            mappings:
+              - field: bellwethers_issues
+                label: Issues
+              - field: bellwethers.0.status
+                label: Cloudflare
+              - field: bellwethers.1.status
+                label: AWS
+              - field: bellwethers.2.status
+                label: GCP
+              - field: bellwethers.3.status
+                label: Azure
+
+      - My Dependencies:
+          icon: mdi-account-check
+          description: Gmail, iCloud, GitHub, Docker Hub
+          widget:
+            type: customapi
+            url: http://homepage-api:5000/api/status/outages
+            refreshInterval: 300000  # 5 minutes
+            mappings:
+              - field: personal_issues
+                label: Issues
+              - field: personal.0.status
+                label: Gmail
+              - field: personal.1.status
+                label: iCloud
+              - field: personal.2.status
+                label: GitHub
+              - field: personal.3.status
+                label: Docker Hub
+
   # Location Services - Location tracking
   - Location:
       - OwnTracks:

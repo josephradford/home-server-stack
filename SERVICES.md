@@ -57,6 +57,7 @@ Currently deployed and active services.
   - Docker container resource monitoring (CPU, RAM, network)
   - BOM weather, Transport NSW departures, TomTom traffic
   - Google Calendar integration
+  - External outage status: infra bellwethers (Cloudflare, AWS, GCP, Azure) and personal dependencies (Gmail, iCloud, GitHub, Docker Hub)
 
 #### Homepage API
 - **Purpose:** Custom backend providing integrations for Homepage widgets

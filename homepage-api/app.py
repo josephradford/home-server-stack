@@ -14,6 +14,7 @@ import os
 import re
 import json
 from functools import lru_cache, wraps
+import xml.etree.ElementTree as ET
 from weather_au import api as weather_api
 from traffic_scheduler import get_active_routes, is_route_active
 
@@ -457,6 +458,175 @@ def active_routes():
         return jsonify({
             'routes': routes,
             'count': len(routes),
+            'updated': datetime.now().isoformat()
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+# =============================================================================
+# EXTERNAL SERVICE OUTAGE STATUS
+# =============================================================================
+# Bellwethers: large infra providers whose outages tend to take unrelated
+# sites down with them. Personal: services this household specifically
+# depends on. Each poller is best-effort — a provider that's unreachable or
+# whose response shape has changed reports 'unknown' rather than failing the
+# whole endpoint. Results are cached for 5 minutes to avoid hammering these
+# (mostly free, rate-limit-sensitive) public endpoints.
+
+_STATUS_HEADERS = {'User-Agent': 'Mozilla/5.0 (homepage-api outage-status poller)'}
+
+
+@timed_lru_cache(seconds=300)
+def _poll_statuspage(name, url):
+    """Generic poller for providers on Atlassian Statuspage (GitHub, Docker
+    Hub, Cloudflare, etc.) — they all share the same /api/v2/status.json shape."""
+    try:
+        response = requests.get(url, headers=_STATUS_HEADERS, timeout=10)
+        response.raise_for_status()
+        status_data = response.json()['status']
+        status = 'operational' if status_data.get('indicator') == 'none' else 'issue'
+        return {'name': name, 'status': status, 'detail': status_data.get('description', '')}
+    except Exception as e:
+        return {'name': name, 'status': 'unknown', 'detail': str(e)}
+
+
+@timed_lru_cache(seconds=300)
+def _poll_rss_feed(name, url):
+    """Generic poller for RSS-based status feeds (AWS, Azure). These feeds
+    only contain items for events — an empty feed means no current/recent
+    event. When an item is present, treat it as resolved only if its text
+    says so, otherwise treat it as an ongoing issue."""
+    try:
+        response = requests.get(url, headers=_STATUS_HEADERS, timeout=10)
+        response.raise_for_status()
+        root = ET.fromstring(response.content)
+        items = root.findall('.//item')
+        if not items:
+            return {'name': name, 'status': 'operational', 'detail': 'No recent events'}
+        title = items[0].findtext('title') or ''
+        description = items[0].findtext('description') or ''
+        text = f'{title} {description}'.lower()
+        if 'resolved' in text or 'operating normally' in text:
+            return {'name': name, 'status': 'operational', 'detail': title}
+        return {'name': name, 'status': 'issue', 'detail': title}
+    except Exception as e:
+        return {'name': name, 'status': 'unknown', 'detail': str(e)}
+
+
+@timed_lru_cache(seconds=300)
+def _poll_gcp():
+    try:
+        response = requests.get('https://status.cloud.google.com/incidents.json',
+                                 headers=_STATUS_HEADERS, timeout=10)
+        response.raise_for_status()
+        active = [i for i in response.json() if not i.get('end')]
+        if not active:
+            return {'name': 'Google Cloud', 'status': 'operational', 'detail': 'All services normal'}
+        return {'name': 'Google Cloud', 'status': 'issue',
+                'detail': active[0].get('external_desc', 'Active incident')}
+    except Exception as e:
+        return {'name': 'Google Cloud', 'status': 'unknown', 'detail': str(e)}
+
+
+def _poll_aws():
+    """Aggregates a few Sydney-region feeds plus one global service, since
+    AWS has no single aggregate status endpoint."""
+    feeds = [
+        ('EC2 (Sydney)', 'https://status.aws.amazon.com/rss/ec2-ap-southeast-2.rss'),
+        ('S3 (Sydney)', 'https://status.aws.amazon.com/rss/s3-ap-southeast-2.rss'),
+        ('CloudFront (Global)', 'https://status.aws.amazon.com/rss/cloudfront.rss'),
+    ]
+    results = [_poll_rss_feed(name, url) for name, url in feeds]
+    if any(r['status'] == 'issue' for r in results):
+        overall = 'issue'
+    elif any(r['status'] == 'unknown' for r in results):
+        overall = 'unknown'
+    else:
+        overall = 'operational'
+    problems = [f"{r['name']}: {r['detail']}" for r in results if r['status'] != 'operational']
+    detail = '; '.join(problems) if problems else 'All checked services normal'
+    return {'name': 'AWS (ap-southeast-2)', 'status': overall, 'detail': detail}
+
+
+@timed_lru_cache(seconds=300)
+def _poll_icloud():
+    try:
+        response = requests.get(
+            'https://www.apple.com/support/systemstatus/data/system_status_en_US.js',
+            headers=_STATUS_HEADERS, timeout=10
+        )
+        response.raise_for_status()
+        services = response.json().get('services', [])
+        icloud_services = [s for s in services if s.get('serviceName', '').startswith('iCloud')]
+
+        active_issues = []
+        for service in icloud_services:
+            for event in service.get('events', []):
+                if event.get('eventStatus') != 'resolved':
+                    active_issues.append(f"{service['serviceName']}: {event.get('message', 'issue')}")
+
+        if not active_issues:
+            return {'name': 'iCloud', 'status': 'operational', 'detail': 'All iCloud services normal'}
+        return {'name': 'iCloud', 'status': 'issue', 'detail': '; '.join(active_issues)}
+    except Exception as e:
+        return {'name': 'iCloud', 'status': 'unknown', 'detail': str(e)}
+
+
+_ATOM_NS = {'a': 'http://www.w3.org/2005/Atom'}
+
+
+@timed_lru_cache(seconds=300)
+def _poll_google_workspace():
+    try:
+        response = requests.get('https://www.google.com/appsstatus/dashboard/feed.atom',
+                                 headers=_STATUS_HEADERS, timeout=10)
+        response.raise_for_status()
+        root = ET.fromstring(response.content)
+        entries = root.findall('a:entry', _ATOM_NS)
+        gmail_entries = [
+            e for e in entries
+            if 'gmail' in (e.findtext('a:title', default='', namespaces=_ATOM_NS) or '').lower()
+        ]
+        if not gmail_entries:
+            return {'name': 'Google Workspace (Gmail)', 'status': 'operational',
+                     'detail': 'No recent incidents mentioning Gmail'}
+
+        latest_title = gmail_entries[0].findtext('a:title', default='', namespaces=_ATOM_NS) or ''
+        status = 'operational' if latest_title.strip().upper().startswith('RESOLVED') else 'issue'
+        detail = latest_title.splitlines()[0][:200] if latest_title else 'Recent Gmail incident'
+        return {'name': 'Google Workspace (Gmail)', 'status': status, 'detail': detail}
+    except Exception as e:
+        return {'name': 'Google Workspace (Gmail)', 'status': 'unknown', 'detail': str(e)}
+
+
+@app.route('/api/status/outages')
+def status_outages():
+    """
+    Outage status for external services, split into two tiers:
+    - bellwethers: major infra providers (if these are down, lots of
+      unrelated sites are likely down too)
+    - personal: services this household specifically depends on
+    """
+    try:
+        bellwethers = [
+            _poll_statuspage('Cloudflare', 'https://www.cloudflarestatus.com/api/v2/status.json'),
+            _poll_aws(),
+            _poll_gcp(),
+            _poll_rss_feed('Azure', 'https://rssfeed.azure.status.microsoft/en-us/status/feed/'),
+        ]
+        personal = [
+            _poll_google_workspace(),
+            _poll_icloud(),
+            _poll_statuspage('GitHub', 'https://www.githubstatus.com/api/v2/status.json'),
+            _poll_statuspage('Docker Hub', 'https://www.dockerstatus.com/api/v2/status.json'),
+        ]
+
+        return jsonify({
+            'bellwethers': bellwethers,
+            'bellwethers_issues': sum(1 for b in bellwethers if b['status'] == 'issue'),
+            'personal': personal,
+            'personal_issues': sum(1 for p in personal if p['status'] == 'issue'),
             'updated': datetime.now().isoformat()
         })
     except Exception as e:
