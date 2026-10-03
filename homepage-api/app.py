@@ -377,33 +377,30 @@ def _commute_stop(number):
     )
 
 
-@app.route('/api/transport/commute')
-def transport_commute():
+@app.route('/api/transport/commute/<int:slot>')
+def transport_commute(slot):
     """
-    Next departures for the commute direction that applies right now.
-    Before the cutover hour (Sydney time) it shows the 'to' stops (1 and 2);
-    from the cutover onward it shows the 'from' stops (3 and 4).
+    Next departures for one commute slot (1 = bus, 2 = tram).
+    Before the cutover hour (Sydney time) slot n shows stop n (the 'to' stops);
+    from the cutover onward it shows stop n + 2 (the 'from' stops).
     """
+    if slot not in (1, 2):
+        return jsonify({'error': 'slot must be 1 or 2'}), 404
     now = _sydney_now()
     to_work = now.hour < COMMUTE_CUTOVER_HOUR
-    stop_numbers = (1, 2) if to_work else (3, 4)
+    number = slot if to_work else slot + 2
     direction = (os.getenv('TRANSPORT_SECTION_1', 'To Parramatta') if to_work
                  else os.getenv('TRANSPORT_SECTION_2', 'From Parramatta'))
     try:
         if not TRANSPORT_NSW_API_KEY:
             return jsonify({'error': 'Transport NSW API key not configured'}), 503
 
-        departures = []
-        for number in stop_numbers:
-            stop_id, stop_name, dest, routes = _commute_stop(number)
-            for departure in _fetch_departures(stop_id, dest, routes, limit=4):
-                departure['stop'] = stop_name
-                departures.append(departure)
-
-        departures.sort(key=lambda d: d['time'] or '')
+        stop_id, stop_name, dest, routes = _commute_stop(number)
+        departures = _fetch_departures(stop_id, dest, routes, limit=4)
         return jsonify({
+            'stop': stop_name,
             'direction': direction,
-            'departures': departures[:4],
+            'departures': departures,
             'updated': now.isoformat()
         })
 

@@ -21,7 +21,7 @@ layout:
     columns: 3
   Commute:
     style: row
-    columns: 1
+    columns: 2
   Internet:
     style: row
     columns: 1

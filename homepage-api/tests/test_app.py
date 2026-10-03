@@ -651,54 +651,46 @@ class TestOutageStatusEndpoint:
         # catch their own errors) -> surfaces as a 500 with an error body,
         # which is still a safe, non-crashing response.
 class TestTransportCommuteEndpoint:
-    """Tests for /api/transport/commute (direction chosen by Sydney time)"""
+    """Tests for /api/transport/commute/<slot> (stop chosen by Sydney time)"""
 
     @patch('app.TRANSPORT_NSW_API_KEY', 'key')
+    @patch('app._commute_stop')
     @patch('app._sydney_now')
     @patch('app._fetch_departures')
-    def test_morning_shows_to_stops(self, mock_fetch, mock_now, client):
+    def test_morning_slot_uses_to_stop(self, mock_fetch, mock_now, mock_stop, client):
         from datetime import datetime
         from zoneinfo import ZoneInfo
         mock_now.return_value = datetime(2026, 10, 3, 9, 0, tzinfo=ZoneInfo('Australia/Sydney'))
-        mock_fetch.return_value = [{'time': '2026-10-03T09:10:00Z', 'line': 'T1', 'realtime': True}]
+        mock_stop.return_value = ('111', 'Bus Stop A', '', [])
+        mock_fetch.return_value = [{'time': '2026-10-03T09:10:00Z', 'line': 'T1'}]
 
-        response = client.get('/api/transport/commute')
-        assert response.status_code == 200
-        data = response.get_json()
+        data = client.get('/api/transport/commute/1').get_json()
+        mock_stop.assert_called_once_with(1)
         assert data['direction'] == 'To Parramatta'
-        assert mock_fetch.call_count == 2
+        assert data['stop'] == 'Bus Stop A'
 
     @patch('app.TRANSPORT_NSW_API_KEY', 'key')
+    @patch('app._commute_stop')
     @patch('app._sydney_now')
     @patch('app._fetch_departures')
-    def test_afternoon_shows_from_stops(self, mock_fetch, mock_now, client):
+    def test_afternoon_slot_uses_from_stop(self, mock_fetch, mock_now, mock_stop, client):
         from datetime import datetime
         from zoneinfo import ZoneInfo
         mock_now.return_value = datetime(2026, 10, 3, 13, 0, tzinfo=ZoneInfo('Australia/Sydney'))
+        mock_stop.return_value = ('444', 'Tram Stop D', '', [])
         mock_fetch.return_value = []
 
-        response = client.get('/api/transport/commute')
-        data = response.get_json()
+        data = client.get('/api/transport/commute/2').get_json()
+        mock_stop.assert_called_once_with(4)
         assert data['direction'] == 'From Parramatta'
 
-    @patch('app.TRANSPORT_NSW_API_KEY', 'key')
-    @patch('app._sydney_now')
-    @patch('app._fetch_departures')
-    def test_merges_and_sorts_departures_across_stops(self, mock_fetch, mock_now, client):
-        from datetime import datetime
-        from zoneinfo import ZoneInfo
-        mock_now.return_value = datetime(2026, 10, 3, 9, 0, tzinfo=ZoneInfo('Australia/Sydney'))
-        mock_fetch.side_effect = [
-            [{'time': '2026-10-03T09:20:00Z', 'line': 'B'}],
-            [{'time': '2026-10-03T09:10:00Z', 'line': 'A'}],
-        ]
-
-        data = client.get('/api/transport/commute').get_json()
-        assert [d['line'] for d in data['departures']] == ['A', 'B']
+    def test_invalid_slot_returns_404(self, client):
+        response = client.get('/api/transport/commute/3')
+        assert response.status_code == 404
 
     @patch('app.TRANSPORT_NSW_API_KEY', None)
     def test_commute_without_api_key_returns_503(self, client):
-        response = client.get('/api/transport/commute')
+        response = client.get('/api/transport/commute/1')
         assert response.status_code == 503
 
 
