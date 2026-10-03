@@ -25,34 +25,43 @@ layout:
   "{{HOMEPAGE_VAR_TRANSPORT_SECTION_2}}":
     style: row
     columns: 2
-  Backups:
+  Internet:
     style: row
-    columns: 2
+    columns: 1
+    Network:
+      style: row
+      columns: 4
+    Bellwethers:
+      style: row
+      columns: 4
+    My Dependencies:
+      style: row
+      columns: 4
   Services:
     icon: mdi-docker
     style: row
     columns: 1
     Core Services:
       style: row
-      columns: 3
+      columns: 4
     Monitoring:
       style: row
-      columns: 3
+      columns: 4
     Dashboard:
       style: row
-      columns: 1
+      columns: 4
     Media:
       style: row
       columns: 4
     Network & Security:
       style: row
-      columns: 3
-    AI Services:
-      style: row
-      columns: 3
-    Location:
-      style: row
-      columns: 2
+      columns: 4
+  Backups:
+    style: row
+    columns: 4
+  Location:
+    style: row
+    columns: 4
 
 
 # UI preferences

@@ -182,27 +182,159 @@
         description: View all services
 
 # Backups - Data backup services
-- Backups:
-    - "{{HOMEPAGE_VAR_ICLOUD_LABEL}}":
-        icon: mdi-cloud-download
-        href: https://icloud.{{HOMEPAGE_VAR_DOMAIN}}
-        description: iCloud photo backup
-        container: icloudpd
-        server: my-docker
-        showStats: true
-        widget:
-          type: customapi
-          url: http://homepage-api:5000/api/icloudpd/status
-          refreshInterval: 60000
-          mappings:
-            - field: statusLabel
-              label: Status
-            - field: lastSyncRelative
-              label: Last sync
-            - field: message
-              label: Detail
+# Internet - network health, devices, and external provider status
+- Internet:
+  - Network:
+      - Devices Online:
+          icon: mdi-devices
+          description: Devices seen on the network (via AdGuard)
+          widget:
+            type: customapi
+            url: http://homepage-api:5000/api/network/devices
+            refreshInterval: 60000  # 1 minute
+            mappings:
+              - field: count
+                label: Devices
 
-# Core Services - Primary user-facing services that "do stuff"
+      - Network Health:
+          icon: mdi-wan
+          description: Local router + ISP latency and packet loss
+          widget:
+            type: customapi
+            url: http://homepage-api:5000/api/network/health
+            refreshInterval: 60000  # 1 minute
+            mappings:
+              - field: probes.router.latency_ms
+                label: Router
+                suffix: "ms"
+              - field: probes.router.packet_loss_pct_24h
+                label: Loss (24h)
+                suffix: "%"
+              - field: probes.isp.latency_ms
+                label: ISP
+                suffix: "ms"
+              - field: probes.isp.packet_loss_pct_24h
+                label: Loss (24h)
+                suffix: "%"
+
+  # External Service Status - official status pages for infra bellwethers and personal dependencies
+  - Bellwethers:
+      - Cloudflare:
+          icon: si-cloudflare
+          href: https://www.cloudflarestatus.com
+          siteMonitor: http://homepage-api:5000/api/status/health/bellwethers/0
+          description: Official status page
+          widget:
+            type: customapi
+            url: http://homepage-api:5000/api/status/outages
+            refreshInterval: 300000  # 5 minutes
+            mappings:
+              - field: bellwethers.0.status
+                label: Status
+              - field: bellwethers.0.detail
+                label: Detail
+      - AWS (Sydney):
+          icon: si-amazonaws
+          href: https://status.aws.amazon.com
+          siteMonitor: http://homepage-api:5000/api/status/health/bellwethers/1
+          description: Official status page
+          widget:
+            type: customapi
+            url: http://homepage-api:5000/api/status/outages
+            refreshInterval: 300000  # 5 minutes
+            mappings:
+              - field: bellwethers.1.status
+                label: Status
+              - field: bellwethers.1.detail
+                label: Detail
+      - Google Cloud:
+          icon: si-googlecloud
+          href: https://status.cloud.google.com
+          siteMonitor: http://homepage-api:5000/api/status/health/bellwethers/2
+          description: Official status page
+          widget:
+            type: customapi
+            url: http://homepage-api:5000/api/status/outages
+            refreshInterval: 300000  # 5 minutes
+            mappings:
+              - field: bellwethers.2.status
+                label: Status
+              - field: bellwethers.2.detail
+                label: Detail
+      - Azure:
+          icon: si-microsoftazure
+          href: https://azure.status.microsoft/en-us/status
+          siteMonitor: http://homepage-api:5000/api/status/health/bellwethers/3
+          description: Official status page
+          widget:
+            type: customapi
+            url: http://homepage-api:5000/api/status/outages
+            refreshInterval: 300000  # 5 minutes
+            mappings:
+              - field: bellwethers.3.status
+                label: Status
+              - field: bellwethers.3.detail
+                label: Detail
+
+  - My Dependencies:
+      - Gmail (Workspace):
+          icon: si-gmail
+          href: https://www.google.com/appsstatus/dashboard/
+          siteMonitor: http://homepage-api:5000/api/status/health/personal/0
+          description: Official status page
+          widget:
+            type: customapi
+            url: http://homepage-api:5000/api/status/outages
+            refreshInterval: 300000  # 5 minutes
+            mappings:
+              - field: personal.0.status
+                label: Status
+              - field: personal.0.detail
+                label: Detail
+      - iCloud:
+          icon: si-icloud
+          href: https://www.apple.com/support/systemstatus/
+          siteMonitor: http://homepage-api:5000/api/status/health/personal/1
+          description: Official status page
+          widget:
+            type: customapi
+            url: http://homepage-api:5000/api/status/outages
+            refreshInterval: 300000  # 5 minutes
+            mappings:
+              - field: personal.1.status
+                label: Status
+              - field: personal.1.detail
+                label: Detail
+      - GitHub:
+          icon: si-github
+          href: https://www.githubstatus.com
+          siteMonitor: http://homepage-api:5000/api/status/health/personal/2
+          description: Official status page
+          widget:
+            type: customapi
+            url: http://homepage-api:5000/api/status/outages
+            refreshInterval: 300000  # 5 minutes
+            mappings:
+              - field: personal.2.status
+                label: Status
+              - field: personal.2.detail
+                label: Detail
+      - Docker Hub:
+          icon: si-docker
+          href: https://www.dockerstatus.com
+          siteMonitor: http://homepage-api:5000/api/status/health/personal/3
+          description: Official status page
+          widget:
+            type: customapi
+            url: http://homepage-api:5000/api/status/outages
+            refreshInterval: 300000  # 5 minutes
+            mappings:
+              - field: personal.3.status
+                label: Status
+              - field: personal.3.detail
+                label: Detail
+
+
 - Services:
   - Core Services:
       - AdGuard Home:
@@ -322,38 +454,6 @@
           server: my-docker
           showStats: true
 
-      - Devices Online:
-          icon: mdi-devices
-          description: Devices seen on the network (via AdGuard)
-          widget:
-            type: customapi
-            url: http://homepage-api:5000/api/network/devices
-            refreshInterval: 60000  # 1 minute
-            mappings:
-              - field: count
-                label: Devices
-
-      - Network Health:
-          icon: mdi-wan
-          description: Local router + ISP latency and packet loss
-          widget:
-            type: customapi
-            url: http://homepage-api:5000/api/network/health
-            refreshInterval: 60000  # 1 minute
-            mappings:
-              - field: probes.router.latency_ms
-                label: Router
-                suffix: "ms"
-              - field: probes.router.packet_loss_pct_24h
-                label: Loss (24h)
-                suffix: "%"
-              - field: probes.isp.latency_ms
-                label: ISP
-                suffix: "ms"
-              - field: probes.isp.packet_loss_pct_24h
-                label: Loss (24h)
-                suffix: "%"
-
       - Wireguard VPN:
           icon: wireguard.png
           description: VPN server (system service)
@@ -391,137 +491,41 @@
               - field: disk_usage
                 label: Disk Usage
 
-  # External Service Status - official status pages for infra bellwethers and personal dependencies
-  - Bellwethers:
-      - Cloudflare:
-          icon: si-cloudflare
-          href: https://www.cloudflarestatus.com
-          siteMonitor: http://homepage-api:5000/api/status/health/bellwethers/0
-          description: Official status page
-          widget:
-            type: customapi
-            url: http://homepage-api:5000/api/status/outages
-            refreshInterval: 300000  # 5 minutes
-            mappings:
-              - field: bellwethers.0.status
-                label: Status
-              - field: bellwethers.0.detail
-                label: Detail
-      - AWS (Sydney):
-          icon: si-amazonaws
-          href: https://status.aws.amazon.com
-          siteMonitor: http://homepage-api:5000/api/status/health/bellwethers/1
-          description: Official status page
-          widget:
-            type: customapi
-            url: http://homepage-api:5000/api/status/outages
-            refreshInterval: 300000  # 5 minutes
-            mappings:
-              - field: bellwethers.1.status
-                label: Status
-              - field: bellwethers.1.detail
-                label: Detail
-      - Google Cloud:
-          icon: si-googlecloud
-          href: https://status.cloud.google.com
-          siteMonitor: http://homepage-api:5000/api/status/health/bellwethers/2
-          description: Official status page
-          widget:
-            type: customapi
-            url: http://homepage-api:5000/api/status/outages
-            refreshInterval: 300000  # 5 minutes
-            mappings:
-              - field: bellwethers.2.status
-                label: Status
-              - field: bellwethers.2.detail
-                label: Detail
-      - Azure:
-          icon: si-microsoftazure
-          href: https://azure.status.microsoft/en-us/status
-          siteMonitor: http://homepage-api:5000/api/status/health/bellwethers/3
-          description: Official status page
-          widget:
-            type: customapi
-            url: http://homepage-api:5000/api/status/outages
-            refreshInterval: 300000  # 5 minutes
-            mappings:
-              - field: bellwethers.3.status
-                label: Status
-              - field: bellwethers.3.detail
-                label: Detail
+- Backups:
+    - "{{HOMEPAGE_VAR_ICLOUD_LABEL}}":
+        icon: mdi-cloud-download
+        href: https://icloud.{{HOMEPAGE_VAR_DOMAIN}}
+        description: iCloud photo backup
+        container: icloudpd
+        server: my-docker
+        showStats: true
+        widget:
+          type: customapi
+          url: http://homepage-api:5000/api/icloudpd/status
+          refreshInterval: 60000
+          mappings:
+            - field: statusLabel
+              label: Status
+            - field: lastSyncRelative
+              label: Last sync
+            - field: message
+              label: Detail
 
-  - My Dependencies:
-      - Gmail (Workspace):
-          icon: si-gmail
-          href: https://www.google.com/appsstatus/dashboard/
-          siteMonitor: http://homepage-api:5000/api/status/health/personal/0
-          description: Official status page
-          widget:
-            type: customapi
-            url: http://homepage-api:5000/api/status/outages
-            refreshInterval: 300000  # 5 minutes
-            mappings:
-              - field: personal.0.status
-                label: Status
-              - field: personal.0.detail
-                label: Detail
-      - iCloud:
-          icon: si-icloud
-          href: https://www.apple.com/support/systemstatus/
-          siteMonitor: http://homepage-api:5000/api/status/health/personal/1
-          description: Official status page
-          widget:
-            type: customapi
-            url: http://homepage-api:5000/api/status/outages
-            refreshInterval: 300000  # 5 minutes
-            mappings:
-              - field: personal.1.status
-                label: Status
-              - field: personal.1.detail
-                label: Detail
-      - GitHub:
-          icon: si-github
-          href: https://www.githubstatus.com
-          siteMonitor: http://homepage-api:5000/api/status/health/personal/2
-          description: Official status page
-          widget:
-            type: customapi
-            url: http://homepage-api:5000/api/status/outages
-            refreshInterval: 300000  # 5 minutes
-            mappings:
-              - field: personal.2.status
-                label: Status
-              - field: personal.2.detail
-                label: Detail
-      - Docker Hub:
-          icon: si-docker
-          href: https://www.dockerstatus.com
-          siteMonitor: http://homepage-api:5000/api/status/health/personal/3
-          description: Official status page
-          widget:
-            type: customapi
-            url: http://homepage-api:5000/api/status/outages
-            refreshInterval: 300000  # 5 minutes
-            mappings:
-              - field: personal.3.status
-                label: Status
-              - field: personal.3.detail
-                label: Detail
+# Core Services - Primary user-facing services that "do stuff"
+# Location Services - Location tracking
+- Location:
+  - OwnTracks:
+      icon: mdi-map-marker
+      href: https://owntracks.{{HOMEPAGE_VAR_DOMAIN}}
+      description: Location tracking recorder
+      container: owntracks-recorder
+      server: my-docker
+      showStats: true
 
-  # Location Services - Location tracking
-  - Location:
-      - OwnTracks:
-          icon: mdi-map-marker
-          href: https://owntracks.{{HOMEPAGE_VAR_DOMAIN}}
-          description: Location tracking recorder
-          container: owntracks-recorder
-          server: my-docker
-          showStats: true
-
-      - Radmap:
-          icon: mdi-map-outline
-          href: https://radmap.{{HOMEPAGE_VAR_DOMAIN}}
-          description: Offline NSW topo map PWA (tile archives served to the phone)
-          container: radmap
-          server: my-docker
-          showStats: true
+  - Radmap:
+      icon: mdi-map-outline
+      href: https://radmap.{{HOMEPAGE_VAR_DOMAIN}}
+      description: Offline NSW topo map PWA (tile archives served to the phone)
+      container: radmap
+      server: my-docker
+      showStats: true
