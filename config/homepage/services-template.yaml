@@ -37,19 +37,22 @@
               color: blue
               maxEvents: 5
 
-# Transport
-- "{{HOMEPAGE_VAR_TRANSPORT_SECTION_1}}":
-    - "{{HOMEPAGE_VAR_TRANSPORT_STOP_1_NAME}}":
-        icon: {{HOMEPAGE_VAR_TRANSPORT_STOP_1_ICON}}
-        description: "{{HOMEPAGE_VAR_TRANSPORT_SECTION_1}}"
+# Commute - next departures for the current direction (switches at noon, Sydney time)
+- Commute:
+    - Commute:
+        icon: mdi-bus
         widget:
           type: customapi
-          url: http://homepage-api:5000/api/transport/departures/{{HOMEPAGE_VAR_TRANSPORT_STOP_1_ID}}?{{HOMEPAGE_VAR_TRANSPORT_STOP_1_FILTER}}
+          url: http://homepage-api:5000/api/transport/commute
           refreshInterval: 60000
           display: list
           mappings:
+            - field: direction
+              label: Direction
+            - field: departures.0.stop
+              label: Next from
             - field: departures.0.line
-              label: Next
+              label: Line
             - field: departures.0.time
               label: Departs
               format: relativeDate
@@ -65,121 +68,6 @@
             - field: departures.1.time
               label: Departs
               format: relativeDate
-            - field: departures.1.realtime
-              label: Tracking
-              remap:
-                - value: true
-                  to: "● Live"
-                - value: false
-                  to: "○ Sched"
-
-    - "{{HOMEPAGE_VAR_TRANSPORT_STOP_2_NAME}}":
-        icon: {{HOMEPAGE_VAR_TRANSPORT_STOP_2_ICON}}
-        description: "{{HOMEPAGE_VAR_TRANSPORT_SECTION_1}}"
-        widget:
-          type: customapi
-          url: http://homepage-api:5000/api/transport/departures/{{HOMEPAGE_VAR_TRANSPORT_STOP_2_ID}}?{{HOMEPAGE_VAR_TRANSPORT_STOP_2_FILTER}}
-          refreshInterval: 60000
-          display: list
-          mappings:
-            - field: departures.0.line
-              label: Next
-            - field: departures.0.time
-              label: Departs
-              format: relativeDate
-            - field: departures.0.realtime
-              label: Tracking
-              remap:
-                - value: true
-                  to: "● Live"
-                - value: false
-                  to: "○ Sched"
-            - field: departures.1.line
-              label: Following
-            - field: departures.1.time
-              label: Departs
-              format: relativeDate
-            - field: departures.1.realtime
-              label: Tracking
-              remap:
-                - value: true
-                  to: "● Live"
-                - value: false
-                  to: "○ Sched"
-
-- "{{HOMEPAGE_VAR_TRANSPORT_SECTION_2}}":
-    - "{{HOMEPAGE_VAR_TRANSPORT_STOP_3_NAME}}":
-        icon: {{HOMEPAGE_VAR_TRANSPORT_STOP_3_ICON}}
-        description: "{{HOMEPAGE_VAR_TRANSPORT_SECTION_2}}"
-        widget:
-          type: customapi
-          url: http://homepage-api:5000/api/transport/departures/{{HOMEPAGE_VAR_TRANSPORT_STOP_3_ID}}?{{HOMEPAGE_VAR_TRANSPORT_STOP_3_FILTER}}
-          refreshInterval: 60000
-          display: list
-          mappings:
-            - field: departures.0.line
-              label: Next
-            - field: departures.0.time
-              label: Departs
-              format: relativeDate
-            - field: departures.0.realtime
-              label: Tracking
-              remap:
-                - value: true
-                  to: "● Live"
-                - value: false
-                  to: "○ Sched"
-            - field: departures.1.line
-              label: Following
-            - field: departures.1.time
-              label: Departs
-              format: relativeDate
-            - field: departures.1.realtime
-              label: Tracking
-              remap:
-                - value: true
-                  to: "● Live"
-                - value: false
-                  to: "○ Sched"
-
-    - "{{HOMEPAGE_VAR_TRANSPORT_STOP_4_NAME}}":
-        icon: {{HOMEPAGE_VAR_TRANSPORT_STOP_4_ICON}}
-        description: "{{HOMEPAGE_VAR_TRANSPORT_SECTION_2}}"
-        widget:
-          type: customapi
-          url: http://homepage-api:5000/api/transport/departures/{{HOMEPAGE_VAR_TRANSPORT_STOP_4_ID}}?{{HOMEPAGE_VAR_TRANSPORT_STOP_4_FILTER}}
-          refreshInterval: 60000
-          display: list
-          mappings:
-            - field: departures.0.line
-              label: Next
-            - field: departures.0.time
-              label: Departs
-              format: relativeDate
-            - field: departures.0.realtime
-              label: Tracking
-              remap:
-                - value: true
-                  to: "● Live"
-                - value: false
-                  to: "○ Sched"
-            - field: departures.1.line
-              label: Following
-            - field: departures.1.time
-              label: Departs
-              format: relativeDate
-            - field: departures.1.realtime
-              label: Tracking
-              remap:
-                - value: true
-                  to: "● Live"
-                - value: false
-                  to: "○ Sched"
-
-    - Transport NSW:
-        icon: mdi-bus-multiple
-        href: https://transportnsw.info/
-        description: View all services
 
 # Internet - network health, devices, and external provider status
 - Internet:

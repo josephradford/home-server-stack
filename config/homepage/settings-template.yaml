@@ -19,12 +19,9 @@ layout:
   Today:
     style: row
     columns: 3
-  "{{HOMEPAGE_VAR_TRANSPORT_SECTION_1}}":
+  Commute:
     style: row
-    columns: 2
-  "{{HOMEPAGE_VAR_TRANSPORT_SECTION_2}}":
-    style: row
-    columns: 2
+    columns: 1
   Internet:
     style: row
     columns: 1

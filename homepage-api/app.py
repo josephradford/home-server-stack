@@ -10,6 +10,8 @@ from flask import Flask, jsonify, request
 from flask_cors import CORS
 import requests
 from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
+from urllib.parse import parse_qs
 import os
 import re
 import json
@@ -28,6 +30,8 @@ ADGUARD_USERNAME = os.getenv('ADGUARD_USERNAME')
 ADGUARD_PASSWORD = os.getenv('ADGUARD_PASSWORD')
 ADGUARD_URL = os.getenv('ADGUARD_URL', 'http://adguard:80')
 PROMETHEUS_URL = os.getenv('PROMETHEUS_URL', 'http://prometheus:9090')
+SYDNEY_TZ = ZoneInfo('Australia/Sydney')
+COMMUTE_CUTOVER_HOUR = int(os.getenv('TRANSPORT_COMMUTE_CUTOVER_HOUR', '12'))
 
 # BOM Weather Configuration (using weather-au library)
 # Location search string - suburb name only (e.g., "parramatta", "sydney")
@@ -273,75 +277,134 @@ def transport_departures(stop_id):
         routes_filter = [r.strip() for r in request.args.get('routes', '').split(',') if r.strip()]
         limit = int(request.args.get('limit', 15))
 
-        url = 'https://api.transport.nsw.gov.au/v1/tp/departure_mon'
-        params = {
-            'outputFormat': 'rapidJSON',
-            'coordOutputFormat': 'EPSG:4326',
-            'mode': 'direct',
-            'type_dm': 'stop',
-            'name_dm': stop_id,
-            'departureMonitorMacro': 'true',
-            'TfNSWDM': 'true',
-            'version': '10.2.1.42'
-        }
-
-        headers = {
-            'Authorization': f'apikey {TRANSPORT_NSW_API_KEY}'
-        }
-
-        response = requests.get(url, params=params, headers=headers, timeout=10)
-        response.raise_for_status()
-        data = response.json()
-
-        departures = []
-        stop_events = data.get('stopEvents', [])
-        for event in stop_events:
-            if len(departures) >= limit:
-                break
-
-            if event.get('isCancelled'):
-                continue
-
-            transportation = event.get('transportation', {})
-            destination_name = transportation.get('destination', {}).get('name', '')
-            route_number = transportation.get('number', '')
-
-            if dest_filter and dest_filter not in destination_name.lower():
-                continue
-            if routes_filter and route_number not in routes_filter:
-                continue
-
-            location = event.get('location', {})
-            is_realtime = event.get('isRealtimeControlled', False)
-
-            delay_minutes = 0
-            departure_time = event.get('departureTimePlanned')
-            if is_realtime:
-                estimated_str = event.get('departureTimeEstimated')
-                if estimated_str:
-                    departure_time = estimated_str
-                try:
-                    planned_str = event.get('departureTimePlanned')
-                    if planned_str and estimated_str:
-                        planned = datetime.fromisoformat(planned_str.replace('Z', '+00:00'))
-                        estimated = datetime.fromisoformat(estimated_str.replace('Z', '+00:00'))
-                        delay_minutes = int((estimated - planned).total_seconds() / 60)
-                except (ValueError, AttributeError):
-                    delay_minutes = 0
-
-            departures.append({
-                'time': departure_time,
-                'destination': destination_name,
-                'line': route_number,
-                'platform': location.get('properties', {}).get('platformName'),
-                'realtime': is_realtime,
-                'delay_minutes': delay_minutes
-            })
+        departures = _fetch_departures(stop_id, dest_filter, routes_filter, limit)
 
         return jsonify({
             'stopId': stop_id,
             'departures': departures,
             'updated': datetime.now().isoformat()
+        })
+
+    except requests.exceptions.RequestException as e:
+        return jsonify({'error': f'Transport API error: {str(e)}'}), 500
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+def _fetch_departures(stop_id, dest_filter, routes_filter, limit):
+    """Return filtered departures for a stop. Raises on upstream failure."""
+    url = 'https://api.transport.nsw.gov.au/v1/tp/departure_mon'
+    params = {
+        'outputFormat': 'rapidJSON',
+        'coordOutputFormat': 'EPSG:4326',
+        'mode': 'direct',
+        'type_dm': 'stop',
+        'name_dm': stop_id,
+        'departureMonitorMacro': 'true',
+        'TfNSWDM': 'true',
+        'version': '10.2.1.42'
+    }
+
+    headers = {
+        'Authorization': f'apikey {TRANSPORT_NSW_API_KEY}'
+    }
+
+    response = requests.get(url, params=params, headers=headers, timeout=10)
+    response.raise_for_status()
+    data = response.json()
+
+    departures = []
+    stop_events = data.get('stopEvents', [])
+    for event in stop_events:
+        if len(departures) >= limit:
+            break
+
+        if event.get('isCancelled'):
+            continue
+
+        transportation = event.get('transportation', {})
+        destination_name = transportation.get('destination', {}).get('name', '')
+        route_number = transportation.get('number', '')
+
+        if dest_filter and dest_filter not in destination_name.lower():
+            continue
+        if routes_filter and route_number not in routes_filter:
+            continue
+
+        location = event.get('location', {})
+        is_realtime = event.get('isRealtimeControlled', False)
+
+        delay_minutes = 0
+        departure_time = event.get('departureTimePlanned')
+        if is_realtime:
+            estimated_str = event.get('departureTimeEstimated')
+            if estimated_str:
+                departure_time = estimated_str
+            try:
+                planned_str = event.get('departureTimePlanned')
+                if planned_str and estimated_str:
+                    planned = datetime.fromisoformat(planned_str.replace('Z', '+00:00'))
+                    estimated = datetime.fromisoformat(estimated_str.replace('Z', '+00:00'))
+                    delay_minutes = int((estimated - planned).total_seconds() / 60)
+            except (ValueError, AttributeError):
+                delay_minutes = 0
+
+        departures.append({
+            'time': departure_time,
+            'destination': destination_name,
+            'line': route_number,
+            'platform': location.get('properties', {}).get('platformName'),
+            'realtime': is_realtime,
+            'delay_minutes': delay_minutes
+        })
+    return departures
+
+
+def _sydney_now():
+    return datetime.now(SYDNEY_TZ)
+
+
+def _commute_stop(number):
+    """Stop ID, display name and filters for TRANSPORT_STOP_<number> from env."""
+    query = parse_qs(os.getenv(f'TRANSPORT_STOP_{number}_FILTER', ''))
+    dest = query.get('destination', [''])[0].lower()
+    routes = [r.strip() for r in query.get('routes', [''])[0].split(',') if r.strip()]
+    return (
+        os.getenv(f'TRANSPORT_STOP_{number}_ID', ''),
+        os.getenv(f'TRANSPORT_STOP_{number}_NAME', f'Stop {number}'),
+        dest,
+        routes,
+    )
+
+
+@app.route('/api/transport/commute')
+def transport_commute():
+    """
+    Next departures for the commute direction that applies right now.
+    Before the cutover hour (Sydney time) it shows the 'to' stops (1 and 2);
+    from the cutover onward it shows the 'from' stops (3 and 4).
+    """
+    now = _sydney_now()
+    to_work = now.hour < COMMUTE_CUTOVER_HOUR
+    stop_numbers = (1, 2) if to_work else (3, 4)
+    direction = (os.getenv('TRANSPORT_SECTION_1', 'To Parramatta') if to_work
+                 else os.getenv('TRANSPORT_SECTION_2', 'From Parramatta'))
+    try:
+        if not TRANSPORT_NSW_API_KEY:
+            return jsonify({'error': 'Transport NSW API key not configured'}), 503
+
+        departures = []
+        for number in stop_numbers:
+            stop_id, stop_name, dest, routes = _commute_stop(number)
+            for departure in _fetch_departures(stop_id, dest, routes, limit=4):
+                departure['stop'] = stop_name
+                departures.append(departure)
+
+        departures.sort(key=lambda d: d['time'] or '')
+        return jsonify({
+            'direction': direction,
+            'departures': departures[:4],
+            'updated': now.isoformat()
         })
 
     except requests.exceptions.RequestException as e:
