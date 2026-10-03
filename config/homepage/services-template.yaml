@@ -322,6 +322,38 @@
           server: my-docker
           showStats: true
 
+      - Devices Online:
+          icon: mdi-devices
+          description: Devices seen on the network (via AdGuard)
+          widget:
+            type: customapi
+            url: http://homepage-api:5000/api/network/devices
+            refreshInterval: 60000  # 1 minute
+            mappings:
+              - field: count
+                label: Devices
+
+      - Network Health:
+          icon: mdi-wan
+          description: Local router + ISP latency and packet loss
+          widget:
+            type: customapi
+            url: http://homepage-api:5000/api/network/health
+            refreshInterval: 60000  # 1 minute
+            mappings:
+              - field: probes.router.latency_ms
+                label: Router
+                suffix: "ms"
+              - field: probes.router.packet_loss_pct_24h
+                label: Loss (24h)
+                suffix: "%"
+              - field: probes.isp.latency_ms
+                label: ISP
+                suffix: "ms"
+              - field: probes.isp.packet_loss_pct_24h
+                label: Loss (24h)
+                suffix: "%"
+
       - Wireguard VPN:
           icon: wireguard.png
           description: VPN server (system service)

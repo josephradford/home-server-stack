@@ -23,6 +23,10 @@ CORS(app)
 # Configuration from environment variables
 TRANSPORT_NSW_API_KEY = os.getenv('TRANSPORT_NSW_API_KEY')
 TOMTOM_API_KEY = os.getenv('TOMTOM_API_KEY')
+ADGUARD_USERNAME = os.getenv('ADGUARD_USERNAME')
+ADGUARD_PASSWORD = os.getenv('ADGUARD_PASSWORD')
+ADGUARD_URL = os.getenv('ADGUARD_URL', 'http://adguard:80')
+PROMETHEUS_URL = os.getenv('PROMETHEUS_URL', 'http://prometheus:9090')
 
 # BOM Weather Configuration (using weather-au library)
 # Location search string - suburb name only (e.g., "parramatta", "sydney")
@@ -459,6 +463,112 @@ def active_routes():
             'count': len(routes),
             'updated': datetime.now().isoformat()
         })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+# =============================================================================
+# NETWORK: DEVICES + ISP/LOCAL HEALTH
+# =============================================================================
+
+@app.route('/api/network/devices')
+def network_devices():
+    """
+    List devices AdGuard has seen on the network recently (DHCP + DNS clients).
+    Not a live ARP scan — reflects whatever AdGuard has already observed.
+    """
+    try:
+        if not (ADGUARD_USERNAME and ADGUARD_PASSWORD):
+            return jsonify({'error': 'AdGuard credentials not configured'}), 503
+
+        response = requests.get(
+            f'{ADGUARD_URL}/control/clients',
+            auth=(ADGUARD_USERNAME, ADGUARD_PASSWORD),
+            timeout=10
+        )
+        response.raise_for_status()
+        data = response.json()
+
+        devices = []
+        for client in data.get('auto_clients', []):
+            devices.append({
+                'name': client.get('name') or client.get('ip'),
+                'ip': client.get('ip'),
+                'source': client.get('source')
+            })
+
+        return jsonify({
+            'devices': devices,
+            'count': len(devices),
+            'updated': datetime.now().isoformat()
+        })
+
+    except requests.exceptions.RequestException as e:
+        return jsonify({'error': f'AdGuard API error: {str(e)}'}), 500
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+def _prometheus_query(query):
+    """Run an instant PromQL query, return the `result` list of the response."""
+    response = requests.get(
+        f'{PROMETHEUS_URL}/api/v1/query',
+        params={'query': query},
+        timeout=10
+    )
+    response.raise_for_status()
+    data = response.json()
+    if data.get('status') != 'success':
+        raise RuntimeError(data.get('error', 'Prometheus query failed'))
+    return data['data']['result']
+
+
+# Must match the targets configured in monitoring/prometheus/prometheus.yml's
+# 'blackbox-icmp' job, keyed by role so the homepage widget can reference
+# stable field names instead of array positions.
+_NETWORK_PROBE_TARGETS = {
+    'router': os.getenv('ROUTER_IP', '192.168.1.1'),
+    'isp': '1.1.1.1',
+    'isp_secondary': '8.8.8.8',
+}
+
+
+@app.route('/api/network/health')
+def network_health():
+    """
+    Local network / ISP health, derived from blackbox_exporter ICMP probes.
+    Reports current latency + packet loss (24h window) per probed target.
+    """
+    try:
+        latency_results = _prometheus_query('probe_duration_seconds{job="blackbox-icmp"}')
+        loss_results = _prometheus_query(
+            '(1 - avg_over_time(probe_success{job="blackbox-icmp"}[24h])) * 100'
+        )
+
+        latency_by_instance = {
+            r['metric'].get('instance'): float(r['value'][1]) * 1000  # seconds -> ms
+            for r in latency_results
+        }
+        loss_by_instance = {
+            r['metric'].get('instance'): float(r['value'][1])
+            for r in loss_results
+        }
+
+        probes = {}
+        for role, instance in _NETWORK_PROBE_TARGETS.items():
+            probes[role] = {
+                'target': instance,
+                'latency_ms': round(latency_by_instance[instance], 1) if instance in latency_by_instance else None,
+                'packet_loss_pct_24h': round(loss_by_instance[instance], 2) if instance in loss_by_instance else None
+            }
+
+        return jsonify({
+            'probes': probes,
+            'updated': datetime.now().isoformat()
+        })
+
+    except requests.exceptions.RequestException as e:
+        return jsonify({'error': f'Prometheus API error: {str(e)}'}), 500
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 

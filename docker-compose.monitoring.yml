@@ -114,6 +114,19 @@ services:
       retries: 3
       start_period: 40s
 
+  blackbox-exporter:
+    image: prom/blackbox-exporter:v0.26.0
+    container_name: blackbox-exporter
+    restart: unless-stopped
+    volumes:
+      - ./monitoring/blackbox:/etc/blackbox_exporter
+    command:
+      - '--config.file=/etc/blackbox_exporter/blackbox.yml'
+    cap_add:
+      - NET_RAW
+    networks:
+      - homeserver
+
 volumes:
   prometheus_data:
   grafana_data:
