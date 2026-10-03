@@ -53,9 +53,6 @@ layout:
     Dashboard:
       style: row
       columns: 4
-    Media:
-      style: row
-      columns: 4
     Backups:
       style: row
       columns: 4

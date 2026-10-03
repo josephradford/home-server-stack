@@ -400,6 +400,38 @@
           server: my-docker
           showStats: true
 
+      - Immich:
+          icon: mdi-image-multiple
+          href: https://immich.{{HOMEPAGE_VAR_DOMAIN}}
+          description: Photo library viewer
+          container: immich-server
+          server: my-docker
+          showStats: true
+
+      - Ebook Library:
+          icon: mdi-bookshelf
+          href: https://books.{{HOMEPAGE_VAR_DOMAIN}}
+          description: Calibre-Web-Automated + Kobo sync
+          container: cwa
+          server: my-docker
+          showStats: true
+
+      - Kitchen Kiosk:
+          icon: mdi-tablet-dashboard
+          href: https://kiosk.{{HOMEPAGE_VAR_DOMAIN}}
+          description: Kitchen photo screensaver + radio/calendar/recipes
+          container: kiosk-web
+          server: my-docker
+          showStats: true
+
+      - Kitchen Kiosk API:
+          icon: mdi-tablet-dashboard
+          href: https://kiosk-api.{{HOMEPAGE_VAR_DOMAIN}}
+          description: Kitchen kiosk backend (weather, calendar, photos, recipes, radio)
+          container: kiosk-api
+          server: my-docker
+          showStats: true
+
   # Monitoring Stack - Metrics collection and visualization
   - Monitoring:
       - Prometheus:
@@ -454,40 +486,6 @@
           icon: mdi-api
           description: Backend API for custom widgets
           container: homepage-api
-          server: my-docker
-          showStats: true
-
-  # Media - Photo and media viewers
-  - Media:
-      - Immich:
-          icon: mdi-image-multiple
-          href: https://immich.{{HOMEPAGE_VAR_DOMAIN}}
-          description: Photo library viewer
-          container: immich-server
-          server: my-docker
-          showStats: true
-
-      - Ebook Library:
-          icon: mdi-bookshelf
-          href: https://books.{{HOMEPAGE_VAR_DOMAIN}}
-          description: Calibre-Web-Automated + Kobo sync
-          container: cwa
-          server: my-docker
-          showStats: true
-
-      - Kitchen Kiosk:
-          icon: mdi-tablet-dashboard
-          href: https://kiosk.{{HOMEPAGE_VAR_DOMAIN}}
-          description: Kitchen photo screensaver + radio/calendar/recipes
-          container: kiosk-web
-          server: my-docker
-          showStats: true
-
-      - Kitchen Kiosk API:
-          icon: mdi-tablet-dashboard
-          href: https://kiosk-api.{{HOMEPAGE_VAR_DOMAIN}}
-          description: Kitchen kiosk backend (weather, calendar, photos, recipes, radio)
-          container: kiosk-api
           server: my-docker
           showStats: true
 
