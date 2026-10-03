@@ -9,11 +9,14 @@ Provides custom endpoints for:
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 import requests
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
+from zoneinfo import ZoneInfo
+from urllib.parse import parse_qs
 import os
 import re
 import json
 from functools import lru_cache, wraps
+import xml.etree.ElementTree as ET
 from weather_au import api as weather_api
 from traffic_scheduler import get_active_routes, is_route_active
 
@@ -23,6 +26,12 @@ CORS(app)
 # Configuration from environment variables
 TRANSPORT_NSW_API_KEY = os.getenv('TRANSPORT_NSW_API_KEY')
 TOMTOM_API_KEY = os.getenv('TOMTOM_API_KEY')
+ADGUARD_USERNAME = os.getenv('ADGUARD_USERNAME')
+ADGUARD_PASSWORD = os.getenv('ADGUARD_PASSWORD')
+ADGUARD_URL = os.getenv('ADGUARD_URL', 'http://adguard:80')
+PROMETHEUS_URL = os.getenv('PROMETHEUS_URL', 'http://prometheus:9090')
+SYDNEY_TZ = ZoneInfo('Australia/Sydney')
+COMMUTE_CUTOVER_HOUR = int(os.getenv('TRANSPORT_COMMUTE_CUTOVER_HOUR', '12'))
 
 # BOM Weather Configuration (using weather-au library)
 # Location search string - suburb name only (e.g., "parramatta", "sydney")
@@ -268,70 +277,7 @@ def transport_departures(stop_id):
         routes_filter = [r.strip() for r in request.args.get('routes', '').split(',') if r.strip()]
         limit = int(request.args.get('limit', 15))
 
-        url = 'https://api.transport.nsw.gov.au/v1/tp/departure_mon'
-        params = {
-            'outputFormat': 'rapidJSON',
-            'coordOutputFormat': 'EPSG:4326',
-            'mode': 'direct',
-            'type_dm': 'stop',
-            'name_dm': stop_id,
-            'departureMonitorMacro': 'true',
-            'TfNSWDM': 'true',
-            'version': '10.2.1.42'
-        }
-
-        headers = {
-            'Authorization': f'apikey {TRANSPORT_NSW_API_KEY}'
-        }
-
-        response = requests.get(url, params=params, headers=headers, timeout=10)
-        response.raise_for_status()
-        data = response.json()
-
-        departures = []
-        stop_events = data.get('stopEvents', [])
-        for event in stop_events:
-            if len(departures) >= limit:
-                break
-
-            if event.get('isCancelled'):
-                continue
-
-            transportation = event.get('transportation', {})
-            destination_name = transportation.get('destination', {}).get('name', '')
-            route_number = transportation.get('number', '')
-
-            if dest_filter and dest_filter not in destination_name.lower():
-                continue
-            if routes_filter and route_number not in routes_filter:
-                continue
-
-            location = event.get('location', {})
-            is_realtime = event.get('isRealtimeControlled', False)
-
-            delay_minutes = 0
-            departure_time = event.get('departureTimePlanned')
-            if is_realtime:
-                estimated_str = event.get('departureTimeEstimated')
-                if estimated_str:
-                    departure_time = estimated_str
-                try:
-                    planned_str = event.get('departureTimePlanned')
-                    if planned_str and estimated_str:
-                        planned = datetime.fromisoformat(planned_str.replace('Z', '+00:00'))
-                        estimated = datetime.fromisoformat(estimated_str.replace('Z', '+00:00'))
-                        delay_minutes = int((estimated - planned).total_seconds() / 60)
-                except (ValueError, AttributeError):
-                    delay_minutes = 0
-
-            departures.append({
-                'time': departure_time,
-                'destination': destination_name,
-                'line': route_number,
-                'platform': location.get('properties', {}).get('platformName'),
-                'realtime': is_realtime,
-                'delay_minutes': delay_minutes
-            })
+        departures = _fetch_departures(stop_id, dest_filter, routes_filter, limit)
 
         return jsonify({
             'stopId': stop_id,
@@ -343,6 +289,144 @@ def transport_departures(stop_id):
         return jsonify({'error': f'Transport API error: {str(e)}'}), 500
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+
+def _fetch_departures(stop_id, dest_filter, routes_filter, limit):
+    """Return filtered departures for a stop. Raises on upstream failure."""
+    url = 'https://api.transport.nsw.gov.au/v1/tp/departure_mon'
+    params = {
+        'outputFormat': 'rapidJSON',
+        'coordOutputFormat': 'EPSG:4326',
+        'mode': 'direct',
+        'type_dm': 'stop',
+        'name_dm': stop_id,
+        'departureMonitorMacro': 'true',
+        'TfNSWDM': 'true',
+        'version': '10.2.1.42'
+    }
+
+    headers = {
+        'Authorization': f'apikey {TRANSPORT_NSW_API_KEY}'
+    }
+
+    response = requests.get(url, params=params, headers=headers, timeout=10)
+    response.raise_for_status()
+    data = response.json()
+
+    departures = []
+    stop_events = data.get('stopEvents', [])
+    for event in stop_events:
+        if len(departures) >= limit:
+            break
+
+        if event.get('isCancelled'):
+            continue
+
+        transportation = event.get('transportation', {})
+        destination_name = transportation.get('destination', {}).get('name', '')
+        route_number = transportation.get('number', '')
+
+        if dest_filter and dest_filter not in destination_name.lower():
+            continue
+        if routes_filter and route_number not in routes_filter:
+            continue
+
+        location = event.get('location', {})
+        is_realtime = event.get('isRealtimeControlled', False)
+
+        delay_minutes = 0
+        departure_time = event.get('departureTimePlanned')
+        if is_realtime:
+            estimated_str = event.get('departureTimeEstimated')
+            if estimated_str:
+                departure_time = estimated_str
+            try:
+                planned_str = event.get('departureTimePlanned')
+                if planned_str and estimated_str:
+                    planned = datetime.fromisoformat(planned_str.replace('Z', '+00:00'))
+                    estimated = datetime.fromisoformat(estimated_str.replace('Z', '+00:00'))
+                    delay_minutes = int((estimated - planned).total_seconds() / 60)
+            except (ValueError, AttributeError):
+                delay_minutes = 0
+
+        departures.append({
+            'time': departure_time,
+            'destination': destination_name,
+            'line': route_number,
+            'platform': location.get('properties', {}).get('platformName'),
+            'realtime': is_realtime,
+            'delay_minutes': delay_minutes
+        })
+    return departures
+
+
+def _sydney_now():
+    return datetime.now(SYDNEY_TZ)
+
+
+def _commute_stop(number):
+    """Stop ID, display name and filters for TRANSPORT_STOP_<number> from env."""
+    query = parse_qs(os.getenv(f'TRANSPORT_STOP_{number}_FILTER', ''))
+    dest = query.get('destination', [''])[0].lower()
+    routes = [r.strip() for r in query.get('routes', [''])[0].split(',') if r.strip()]
+    return (
+        os.getenv(f'TRANSPORT_STOP_{number}_ID', ''),
+        os.getenv(f'TRANSPORT_STOP_{number}_NAME', f'Stop {number}'),
+        dest,
+        routes,
+    )
+
+
+def _commute_slot(slot):
+    """Stop, direction and next departures for a commute slot (1 = bus, 2 = tram)."""
+    now = _sydney_now()
+    to_work = now.hour < COMMUTE_CUTOVER_HOUR
+    number = slot if to_work else slot + 2
+    direction = (os.getenv('TRANSPORT_SECTION_1', 'To Parramatta') if to_work
+                 else os.getenv('TRANSPORT_SECTION_2', 'From Parramatta'))
+    stop_id, stop_name, dest, routes = _commute_stop(number)
+    departures = _fetch_departures(stop_id, dest, routes, limit=4)
+    return {
+        'stop': stop_name,
+        'direction': direction,
+        'departures': departures,
+        'updated': now.isoformat()
+    }
+
+
+@app.route('/api/transport/commute/<int:slot>')
+def transport_commute(slot):
+    """
+    Next departures for one commute slot (1 = bus, 2 = tram).
+    Before the cutover hour (Sydney time) slot n shows stop n (the 'to' stops);
+    from the cutover onward it shows stop n + 2 (the 'from' stops).
+    """
+    if slot not in (1, 2):
+        return jsonify({'error': 'slot must be 1 or 2'}), 404
+    try:
+        if not TRANSPORT_NSW_API_KEY:
+            return jsonify({'error': 'Transport NSW API key not configured'}), 503
+        return jsonify(_commute_slot(slot))
+    except requests.exceptions.RequestException as e:
+        return jsonify({'error': f'Transport API error: {str(e)}'}), 500
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/transport/live/<int:slot>')
+def transport_live(slot):
+    """Returns 200 when the next departure for the slot is live-tracked, 503 otherwise.
+    Lets Homepage's siteMonitor show a green dot for live tracking."""
+    if slot not in (1, 2):
+        return jsonify({'error': 'slot must be 1 or 2'}), 404
+    try:
+        if not TRANSPORT_NSW_API_KEY:
+            return jsonify({'error': 'Transport NSW API key not configured'}), 503
+        payload = _commute_slot(slot)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 503
+    live = bool(payload['departures']) and payload['departures'][0]['realtime']
+    return jsonify({'live': live, 'stop': payload['stop']}), (200 if live else 503)
 
 
 # =============================================================================
@@ -459,6 +543,370 @@ def active_routes():
             'count': len(routes),
             'updated': datetime.now().isoformat()
         })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+# =============================================================================
+# EXTERNAL SERVICE OUTAGE STATUS
+# =============================================================================
+# Bellwethers: large infra providers whose outages tend to take unrelated
+# sites down with them. Personal: services this household specifically
+# depends on. Each poller is best-effort — a provider that's unreachable or
+# whose response shape has changed reports 'unknown' rather than failing the
+# whole endpoint. Results are cached for 5 minutes to avoid hammering these
+# (mostly free, rate-limit-sensitive) public endpoints.
+
+_STATUS_HEADERS = {'User-Agent': 'Mozilla/5.0 (homepage-api outage-status poller)'}
+
+
+@timed_lru_cache(seconds=300)
+def _poll_statuspage(name, url):
+    """Generic poller for providers on Atlassian Statuspage (GitHub, Docker
+    Hub, Cloudflare, etc.) — they all share the same /api/v2/status.json shape."""
+    try:
+        response = requests.get(url, headers=_STATUS_HEADERS, timeout=10)
+        response.raise_for_status()
+        status_data = response.json()['status']
+        status = 'operational' if status_data.get('indicator') == 'none' else 'issue'
+        return {'name': name, 'status': status, 'detail': status_data.get('description', '')}
+    except Exception as e:
+        return {'name': name, 'status': 'unknown', 'detail': str(e)}
+
+
+@timed_lru_cache(seconds=300)
+def _poll_rss_feed(name, url):
+    """Generic poller for RSS-based status feeds (AWS, Azure). These feeds
+    only contain items for events — an empty feed means no current/recent
+    event. When an item is present, treat it as resolved only if its text
+    says so, otherwise treat it as an ongoing issue."""
+    try:
+        response = requests.get(url, headers=_STATUS_HEADERS, timeout=10)
+        response.raise_for_status()
+        root = ET.fromstring(response.content)
+        items = root.findall('.//item')
+        if not items:
+            return {'name': name, 'status': 'operational', 'detail': 'No recent events'}
+        title = items[0].findtext('title') or ''
+        description = items[0].findtext('description') or ''
+        text = f'{title} {description}'.lower()
+        if 'resolved' in text or 'operating normally' in text:
+            return {'name': name, 'status': 'operational', 'detail': title}
+        return {'name': name, 'status': 'issue', 'detail': title}
+    except Exception as e:
+        return {'name': name, 'status': 'unknown', 'detail': str(e)}
+
+
+@timed_lru_cache(seconds=300)
+def _poll_gcp():
+    try:
+        response = requests.get('https://status.cloud.google.com/incidents.json',
+                                 headers=_STATUS_HEADERS, timeout=10)
+        response.raise_for_status()
+        active = [i for i in response.json() if not i.get('end')]
+        if not active:
+            return {'name': 'Google Cloud', 'status': 'operational', 'detail': 'All services normal'}
+        return {'name': 'Google Cloud', 'status': 'issue',
+                'detail': active[0].get('external_desc', 'Active incident')}
+    except Exception as e:
+        return {'name': 'Google Cloud', 'status': 'unknown', 'detail': str(e)}
+
+
+def _poll_aws():
+    """Aggregates a few Sydney-region feeds plus one global service, since
+    AWS has no single aggregate status endpoint."""
+    feeds = [
+        ('EC2 (Sydney)', 'https://status.aws.amazon.com/rss/ec2-ap-southeast-2.rss'),
+        ('S3 (Sydney)', 'https://status.aws.amazon.com/rss/s3-ap-southeast-2.rss'),
+        ('CloudFront (Global)', 'https://status.aws.amazon.com/rss/cloudfront.rss'),
+    ]
+    results = [_poll_rss_feed(name, url) for name, url in feeds]
+    if any(r['status'] == 'issue' for r in results):
+        overall = 'issue'
+    elif any(r['status'] == 'unknown' for r in results):
+        overall = 'unknown'
+    else:
+        overall = 'operational'
+    problems = [f"{r['name']}: {r['detail']}" for r in results if r['status'] != 'operational']
+    detail = '; '.join(problems) if problems else 'All checked services normal'
+    return {'name': 'AWS (ap-southeast-2)', 'status': overall, 'detail': detail}
+
+
+@timed_lru_cache(seconds=300)
+def _poll_icloud():
+    try:
+        response = requests.get(
+            'https://www.apple.com/support/systemstatus/data/system_status_en_US.js',
+            headers=_STATUS_HEADERS, timeout=10
+        )
+        response.raise_for_status()
+        services = response.json().get('services', [])
+        icloud_services = [s for s in services if s.get('serviceName', '').startswith('iCloud')]
+
+        active_issues = []
+        for service in icloud_services:
+            for event in service.get('events', []):
+                if event.get('eventStatus') != 'resolved':
+                    active_issues.append(f"{service['serviceName']}: {event.get('message', 'issue')}")
+
+        if not active_issues:
+            return {'name': 'iCloud', 'status': 'operational', 'detail': 'All iCloud services normal'}
+        return {'name': 'iCloud', 'status': 'issue', 'detail': '; '.join(active_issues)}
+    except Exception as e:
+        return {'name': 'iCloud', 'status': 'unknown', 'detail': str(e)}
+
+
+_ATOM_NS = {'a': 'http://www.w3.org/2005/Atom'}
+
+
+@timed_lru_cache(seconds=300)
+def _poll_google_workspace():
+    try:
+        response = requests.get('https://www.google.com/appsstatus/dashboard/feed.atom',
+                                 headers=_STATUS_HEADERS, timeout=10)
+        response.raise_for_status()
+        root = ET.fromstring(response.content)
+        entries = root.findall('a:entry', _ATOM_NS)
+        gmail_entries = [
+            e for e in entries
+            if 'gmail' in (e.findtext('a:title', default='', namespaces=_ATOM_NS) or '').lower()
+        ]
+        if not gmail_entries:
+            return {'name': 'Google Workspace (Gmail)', 'status': 'operational',
+                     'detail': 'No recent incidents mentioning Gmail'}
+
+        latest_title = gmail_entries[0].findtext('a:title', default='', namespaces=_ATOM_NS) or ''
+        status = 'operational' if latest_title.strip().upper().startswith('RESOLVED') else 'issue'
+        detail = latest_title.splitlines()[0][:200] if latest_title else 'Recent Gmail incident'
+        return {'name': 'Google Workspace (Gmail)', 'status': status, 'detail': detail}
+    except Exception as e:
+        return {'name': 'Google Workspace (Gmail)', 'status': 'unknown', 'detail': str(e)}
+
+
+def _outage_snapshot():
+    return {
+        'bellwethers': [
+            _poll_statuspage('Cloudflare', 'https://www.cloudflarestatus.com/api/v2/status.json'),
+            _poll_aws(),
+            _poll_gcp(),
+            _poll_rss_feed('Azure', 'https://rssfeed.azure.status.microsoft/en-us/status/feed/'),
+        ],
+        'personal': [
+            _poll_google_workspace(),
+            _poll_icloud(),
+            _poll_statuspage('GitHub', 'https://www.githubstatus.com/api/v2/status.json'),
+            _poll_statuspage('Docker Hub', 'https://www.dockerstatus.com/api/v2/status.json'),
+        ],
+    }
+
+
+@app.route('/api/status/outages')
+def status_outages():
+    """
+    Outage status for external services, split into two tiers:
+    - bellwethers: major infra providers (if these are down, lots of
+      unrelated sites are likely down too)
+    - personal: services this household specifically depends on
+    """
+    try:
+        snapshot = _outage_snapshot()
+        bellwethers, personal = snapshot['bellwethers'], snapshot['personal']
+        return jsonify({
+            'bellwethers': bellwethers,
+            'bellwethers_issues': sum(1 for b in bellwethers if b['status'] == 'issue'),
+            'personal': personal,
+            'personal_issues': sum(1 for p in personal if p['status'] == 'issue'),
+            'updated': datetime.now().isoformat()
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/status/health/<tier>/<int:index>')
+def status_health(tier, index):
+    """
+    Returns 200 when the provider reports operational, 503 otherwise.
+    Lets Homepage's siteMonitor show a green/red dot per provider.
+    """
+    if tier not in ('bellwethers', 'personal'):
+        return jsonify({'error': 'unknown tier'}), 404
+    try:
+        providers = _outage_snapshot()[tier]
+        provider = providers[index]
+    except IndexError:
+        return jsonify({'error': 'unknown provider'}), 404
+    except Exception as e:
+        return jsonify({'error': str(e)}), 503
+    if provider['status'] == 'operational':
+        return jsonify(provider), 200
+    return jsonify(provider), 503
+
+
+# =============================================================================
+# NETWORK: DEVICES + ISP/LOCAL HEALTH
+# =============================================================================
+
+# Devices are taken from AdGuard's query log rather than its client list: the
+# client list only holds ARP/DHCP/hosts entries, and misses devices that are
+# making DNS queries. The log records each query's real client IP.
+DEVICE_WINDOW_MINUTES = 30
+_QUERYLOG_PAGE_SIZE = 500
+_QUERYLOG_MAX_PAGES = 20
+
+
+def _parse_adguard_time(value):
+    """Parse AdGuard's RFC 3339 timestamps (nanosecond fractions, 'Z' suffix)."""
+    match = re.match(r'^([^.]+)(?:\.(\d+))?(Z|[+-]\d{2}:\d{2})$', value)
+    base, fraction, tz = match.groups()
+    tz = '+00:00' if tz == 'Z' else tz
+    fraction = f'.{fraction[:6]}' if fraction else ''
+    return datetime.fromisoformat(f'{base}{fraction}{tz}')
+
+
+def _recent_querylog_clients(window):
+    """Latest query and query count per client IP, for queries within `window`."""
+    cutoff = datetime.now(timezone.utc) - window
+    latest = {}
+    counts = {}
+    older_than = None
+    for _ in range(_QUERYLOG_MAX_PAGES):
+        params = {'limit': _QUERYLOG_PAGE_SIZE}
+        if older_than:
+            params['older_than'] = older_than
+        response = requests.get(
+            f'{ADGUARD_URL}/control/querylog',
+            params=params,
+            auth=(ADGUARD_USERNAME, ADGUARD_PASSWORD),
+            timeout=10
+        )
+        response.raise_for_status()
+        entries = response.json().get('data', [])
+        if not entries:
+            break
+
+        reached_cutoff = False
+        for entry in entries:  # newest first, so the first hit per client is its latest
+            seen = _parse_adguard_time(entry['time'])
+            if seen < cutoff:
+                reached_cutoff = True
+                break
+            ip = entry.get('client')
+            if ip:
+                counts[ip] = counts.get(ip, 0) + 1
+            if ip and ip not in latest:
+                name = (entry.get('client_info') or {}).get('name')
+                latest[ip] = {
+                    'name': name or ip,
+                    'ip': ip,
+                    'last_seen': seen.astimezone(ZoneInfo('Australia/Sydney')).isoformat(),
+                }
+        if reached_cutoff:
+            break
+        older_than = entries[-1]['time']
+
+    for ip, device in latest.items():
+        device['queries'] = counts[ip]
+    return sorted(latest.values(), key=lambda d: d['last_seen'], reverse=True)
+
+
+def _adguard_protection_enabled():
+    response = requests.get(
+        f'{ADGUARD_URL}/control/status',
+        auth=(ADGUARD_USERNAME, ADGUARD_PASSWORD),
+        timeout=10
+    )
+    response.raise_for_status()
+    return bool(response.json().get('protection_enabled'))
+
+
+@app.route('/api/network/devices')
+def network_devices():
+    """
+    Devices that made a DNS query through AdGuard in the last 30 minutes, the
+    two busiest by query count, and whether AdGuard protection is on.
+    Reflects DNS activity, so an idle device will not appear.
+    """
+    try:
+        if not (ADGUARD_USERNAME and ADGUARD_PASSWORD):
+            return jsonify({'error': 'AdGuard credentials not configured'}), 503
+
+        devices = _recent_querylog_clients(timedelta(minutes=DEVICE_WINDOW_MINUTES))
+        top_devices = sorted(devices, key=lambda d: d['queries'], reverse=True)[:2]
+        return jsonify({
+            'devices': devices,
+            'count': len(devices),
+            'top_devices': top_devices,
+            'protection_enabled': _adguard_protection_enabled(),
+            'window_minutes': DEVICE_WINDOW_MINUTES,
+            'updated': datetime.now().isoformat()
+        })
+
+    except requests.exceptions.RequestException as e:
+        return jsonify({'error': f'AdGuard API error: {str(e)}'}), 500
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+def _prometheus_query(query):
+    """Run an instant PromQL query, return the `result` list of the response."""
+    response = requests.get(
+        f'{PROMETHEUS_URL}/api/v1/query',
+        params={'query': query},
+        timeout=10
+    )
+    response.raise_for_status()
+    data = response.json()
+    if data.get('status') != 'success':
+        raise RuntimeError(data.get('error', 'Prometheus query failed'))
+    return data['data']['result']
+
+
+# Must match the targets configured in monitoring/prometheus/prometheus.yml's
+# 'blackbox-icmp' job, keyed by role so the homepage widget can reference
+# stable field names instead of array positions.
+_NETWORK_PROBE_TARGETS = {
+    'router': os.getenv('ROUTER_IP', '192.168.1.1'),
+    'isp': '1.1.1.1',
+    'isp_secondary': '8.8.8.8',
+}
+
+
+@app.route('/api/network/health')
+def network_health():
+    """
+    Local network / ISP health, derived from blackbox_exporter ICMP probes.
+    Reports current latency + packet loss (24h window) per probed target.
+    """
+    try:
+        latency_results = _prometheus_query('probe_duration_seconds{job="blackbox-icmp"}')
+        loss_results = _prometheus_query(
+            '(1 - avg_over_time(probe_success{job="blackbox-icmp"}[24h])) * 100'
+        )
+
+        latency_by_instance = {
+            r['metric'].get('instance'): float(r['value'][1]) * 1000  # seconds -> ms
+            for r in latency_results
+        }
+        loss_by_instance = {
+            r['metric'].get('instance'): float(r['value'][1])
+            for r in loss_results
+        }
+
+        probes = {}
+        for role, instance in _NETWORK_PROBE_TARGETS.items():
+            probes[role] = {
+                'target': instance,
+                'latency_ms': round(latency_by_instance[instance], 1) if instance in latency_by_instance else None,
+                'packet_loss_pct_24h': round(loss_by_instance[instance], 2) if instance in loss_by_instance else None
+            }
+
+        return jsonify({
+            'probes': probes,
+            'updated': datetime.now().isoformat()
+        })
+
+    except requests.exceptions.RequestException as e:
+        return jsonify({'error': f'Prometheus API error: {str(e)}'}), 500
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 

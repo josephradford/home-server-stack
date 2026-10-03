@@ -18,16 +18,22 @@ useEqualHeights: true
 layout:
   Today:
     style: row
-    columns: 3
-  "{{HOMEPAGE_VAR_TRANSPORT_SECTION_1}}":
+    columns: 4
+  Internet:
     style: row
-    columns: 2
-  "{{HOMEPAGE_VAR_TRANSPORT_SECTION_2}}":
+    columns: 1
+    Network:
+      style: row
+      columns: 4
+    Bellwethers:
+      style: row
+      columns: 4
+    My Dependencies:
+      style: row
+      columns: 4
+  Network & Security:
     style: row
-    columns: 2
-  Backups:
-    style: row
-    columns: 2
+    columns: 4
   Services:
     icon: mdi-docker
     style: row
@@ -38,21 +44,6 @@ layout:
     Monitoring:
       style: row
       columns: 3
-    Dashboard:
-      style: row
-      columns: 1
-    Media:
-      style: row
-      columns: 4
-    Network & Security:
-      style: row
-      columns: 3
-    AI Services:
-      style: row
-      columns: 3
-    Location:
-      style: row
-      columns: 2
 
 
 # UI preferences

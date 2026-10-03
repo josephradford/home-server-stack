@@ -9,6 +9,7 @@
           type: customapi
           url: http://homepage-api:5000/api/bom/weather
           refreshInterval: 300000  # 5 minutes
+          display: list
           mappings:
             - field: observations.temp
               label: Temperature
@@ -37,172 +38,266 @@
               color: blue
               maxEvents: 5
 
-# Transport
-- "{{HOMEPAGE_VAR_TRANSPORT_SECTION_1}}":
-    - "{{HOMEPAGE_VAR_TRANSPORT_STOP_1_NAME}}":
-        icon: {{HOMEPAGE_VAR_TRANSPORT_STOP_1_ICON}}
-        description: "{{HOMEPAGE_VAR_TRANSPORT_SECTION_1}}"
+    - Bus:
+        icon: mdi-bus
+        siteMonitor: http://homepage-api:5000/api/transport/live/1
         widget:
           type: customapi
-          url: http://homepage-api:5000/api/transport/departures/{{HOMEPAGE_VAR_TRANSPORT_STOP_1_ID}}?{{HOMEPAGE_VAR_TRANSPORT_STOP_1_FILTER}}
+          url: http://homepage-api:5000/api/transport/commute/1
           refreshInterval: 60000
           display: list
           mappings:
+            - field: direction
+              label: Direction
             - field: departures.0.line
               label: Next
             - field: departures.0.time
               label: Departs
               format: relativeDate
-            - field: departures.0.realtime
-              label: Tracking
-              remap:
-                - value: true
-                  to: "● Live"
-                - value: false
-                  to: "○ Sched"
             - field: departures.1.line
               label: Following
             - field: departures.1.time
               label: Departs
               format: relativeDate
-            - field: departures.1.realtime
-              label: Tracking
-              remap:
-                - value: true
-                  to: "● Live"
-                - value: false
-                  to: "○ Sched"
 
-    - "{{HOMEPAGE_VAR_TRANSPORT_STOP_2_NAME}}":
-        icon: {{HOMEPAGE_VAR_TRANSPORT_STOP_2_ICON}}
-        description: "{{HOMEPAGE_VAR_TRANSPORT_SECTION_1}}"
+    - Tram:
+        icon: mdi-tram
+        siteMonitor: http://homepage-api:5000/api/transport/live/2
         widget:
           type: customapi
-          url: http://homepage-api:5000/api/transport/departures/{{HOMEPAGE_VAR_TRANSPORT_STOP_2_ID}}?{{HOMEPAGE_VAR_TRANSPORT_STOP_2_FILTER}}
+          url: http://homepage-api:5000/api/transport/commute/2
           refreshInterval: 60000
           display: list
           mappings:
+            - field: direction
+              label: Direction
             - field: departures.0.line
               label: Next
             - field: departures.0.time
               label: Departs
               format: relativeDate
-            - field: departures.0.realtime
-              label: Tracking
-              remap:
-                - value: true
-                  to: "● Live"
-                - value: false
-                  to: "○ Sched"
             - field: departures.1.line
               label: Following
             - field: departures.1.time
               label: Departs
               format: relativeDate
-            - field: departures.1.realtime
-              label: Tracking
-              remap:
-                - value: true
-                  to: "● Live"
-                - value: false
-                  to: "○ Sched"
 
-- "{{HOMEPAGE_VAR_TRANSPORT_SECTION_2}}":
-    - "{{HOMEPAGE_VAR_TRANSPORT_STOP_3_NAME}}":
-        icon: {{HOMEPAGE_VAR_TRANSPORT_STOP_3_ICON}}
-        description: "{{HOMEPAGE_VAR_TRANSPORT_SECTION_2}}"
-        widget:
-          type: customapi
-          url: http://homepage-api:5000/api/transport/departures/{{HOMEPAGE_VAR_TRANSPORT_STOP_3_ID}}?{{HOMEPAGE_VAR_TRANSPORT_STOP_3_FILTER}}
-          refreshInterval: 60000
-          display: list
-          mappings:
-            - field: departures.0.line
-              label: Next
-            - field: departures.0.time
-              label: Departs
-              format: relativeDate
-            - field: departures.0.realtime
-              label: Tracking
-              remap:
-                - value: true
-                  to: "● Live"
-                - value: false
-                  to: "○ Sched"
-            - field: departures.1.line
-              label: Following
-            - field: departures.1.time
-              label: Departs
-              format: relativeDate
-            - field: departures.1.realtime
-              label: Tracking
-              remap:
-                - value: true
-                  to: "● Live"
-                - value: false
-                  to: "○ Sched"
+# Internet - network health, devices, and external provider status
+- Internet:
+  - Network:
+      - Devices Online:
+          icon: mdi-devices
+          href: https://adguard.{{HOMEPAGE_VAR_DOMAIN}}/#logs
+          description: Devices making DNS queries in the last 30 min (AdGuard query log)
+          widget:
+            type: customapi
+            url: http://homepage-api:5000/api/network/devices
+            refreshInterval: 60000  # 1 minute
+            mappings:
+              - field: count
+                label: Devices (30 min)
+              - field: top_devices.0.name
+                label: Top
+              - field: top_devices.0.queries
+                label: Queries
+              - field: top_devices.1.name
+                label: Next
+              - field: top_devices.1.queries
+                label: Queries
+              - field: protection_enabled
+                label: Protection
 
-    - "{{HOMEPAGE_VAR_TRANSPORT_STOP_4_NAME}}":
-        icon: {{HOMEPAGE_VAR_TRANSPORT_STOP_4_ICON}}
-        description: "{{HOMEPAGE_VAR_TRANSPORT_SECTION_2}}"
-        widget:
-          type: customapi
-          url: http://homepage-api:5000/api/transport/departures/{{HOMEPAGE_VAR_TRANSPORT_STOP_4_ID}}?{{HOMEPAGE_VAR_TRANSPORT_STOP_4_FILTER}}
-          refreshInterval: 60000
-          display: list
-          mappings:
-            - field: departures.0.line
-              label: Next
-            - field: departures.0.time
-              label: Departs
-              format: relativeDate
-            - field: departures.0.realtime
-              label: Tracking
-              remap:
-                - value: true
-                  to: "● Live"
-                - value: false
-                  to: "○ Sched"
-            - field: departures.1.line
-              label: Following
-            - field: departures.1.time
-              label: Departs
-              format: relativeDate
-            - field: departures.1.realtime
-              label: Tracking
-              remap:
-                - value: true
-                  to: "● Live"
-                - value: false
-                  to: "○ Sched"
+      - Network Health:
+          icon: mdi-wan
+          href: https://prometheus.{{HOMEPAGE_VAR_DOMAIN}}/graph?g0.expr=probe_icmp_duration_seconds%7Bjob%3D%22blackbox-icmp%22%7D&g0.tab=0
+          description: Local router + ISP latency and packet loss (Prometheus)
+          widget:
+            type: customapi
+            url: http://homepage-api:5000/api/network/health
+            refreshInterval: 60000  # 1 minute
+            mappings:
+              - field: probes.router.latency_ms
+                label: Router
+                suffix: "ms"
+              - field: probes.router.packet_loss_pct_24h
+                label: Loss (24h)
+                suffix: "%"
+              - field: probes.isp.latency_ms
+                label: ISP
+                suffix: "ms"
+              - field: probes.isp.packet_loss_pct_24h
+                label: Loss (24h)
+                suffix: "%"
 
-    - Transport NSW:
-        icon: mdi-bus-multiple
-        href: https://transportnsw.info/
-        description: View all services
+  # External Service Status - official status pages for infra bellwethers and personal dependencies
+  - Bellwethers:
+      - Cloudflare:
+          icon: si-cloudflare
+          href: https://www.cloudflarestatus.com
+          siteMonitor: http://homepage-api:5000/api/status/health/bellwethers/0
+          description: Official status page
+          widget:
+            type: customapi
+            url: http://homepage-api:5000/api/status/outages
+            refreshInterval: 300000  # 5 minutes
+            mappings:
+              - field: bellwethers.0.status
+                label: Status
+              - field: bellwethers.0.detail
+                label: Detail
+      - AWS (Sydney):
+          icon: si-amazonaws
+          href: https://status.aws.amazon.com
+          siteMonitor: http://homepage-api:5000/api/status/health/bellwethers/1
+          description: Official status page
+          widget:
+            type: customapi
+            url: http://homepage-api:5000/api/status/outages
+            refreshInterval: 300000  # 5 minutes
+            mappings:
+              - field: bellwethers.1.status
+                label: Status
+              - field: bellwethers.1.detail
+                label: Detail
+      - Google Cloud:
+          icon: si-googlecloud
+          href: https://status.cloud.google.com
+          siteMonitor: http://homepage-api:5000/api/status/health/bellwethers/2
+          description: Official status page
+          widget:
+            type: customapi
+            url: http://homepage-api:5000/api/status/outages
+            refreshInterval: 300000  # 5 minutes
+            mappings:
+              - field: bellwethers.2.status
+                label: Status
+              - field: bellwethers.2.detail
+                label: Detail
+      - Azure:
+          icon: si-microsoftazure
+          href: https://azure.status.microsoft/en-us/status
+          siteMonitor: http://homepage-api:5000/api/status/health/bellwethers/3
+          description: Official status page
+          widget:
+            type: customapi
+            url: http://homepage-api:5000/api/status/outages
+            refreshInterval: 300000  # 5 minutes
+            mappings:
+              - field: bellwethers.3.status
+                label: Status
+              - field: bellwethers.3.detail
+                label: Detail
 
-# Backups - Data backup services
-- Backups:
-    - "{{HOMEPAGE_VAR_ICLOUD_LABEL}}":
-        icon: mdi-cloud-download
-        href: https://icloud.{{HOMEPAGE_VAR_DOMAIN}}
-        description: iCloud photo backup
-        container: icloudpd
-        server: my-docker
-        showStats: true
-        widget:
-          type: customapi
-          url: http://homepage-api:5000/api/icloudpd/status
-          refreshInterval: 60000
-          mappings:
-            - field: statusLabel
-              label: Status
-            - field: lastSyncRelative
-              label: Last sync
-            - field: message
-              label: Detail
+  - My Dependencies:
+      - Gmail (Workspace):
+          icon: si-gmail
+          href: https://www.google.com/appsstatus/dashboard/
+          siteMonitor: http://homepage-api:5000/api/status/health/personal/0
+          description: Official status page
+          widget:
+            type: customapi
+            url: http://homepage-api:5000/api/status/outages
+            refreshInterval: 300000  # 5 minutes
+            mappings:
+              - field: personal.0.status
+                label: Status
+              - field: personal.0.detail
+                label: Detail
+      - iCloud:
+          icon: si-icloud
+          href: https://www.apple.com/support/systemstatus/
+          siteMonitor: http://homepage-api:5000/api/status/health/personal/1
+          description: Official status page
+          widget:
+            type: customapi
+            url: http://homepage-api:5000/api/status/outages
+            refreshInterval: 300000  # 5 minutes
+            mappings:
+              - field: personal.1.status
+                label: Status
+              - field: personal.1.detail
+                label: Detail
+      - GitHub:
+          icon: si-github
+          href: https://www.githubstatus.com
+          siteMonitor: http://homepage-api:5000/api/status/health/personal/2
+          description: Official status page
+          widget:
+            type: customapi
+            url: http://homepage-api:5000/api/status/outages
+            refreshInterval: 300000  # 5 minutes
+            mappings:
+              - field: personal.2.status
+                label: Status
+              - field: personal.2.detail
+                label: Detail
+      - Docker Hub:
+          icon: si-docker
+          href: https://www.dockerstatus.com
+          siteMonitor: http://homepage-api:5000/api/status/health/personal/3
+          description: Official status page
+          widget:
+            type: customapi
+            url: http://homepage-api:5000/api/status/outages
+            refreshInterval: 300000  # 5 minutes
+            mappings:
+              - field: personal.3.status
+                label: Status
+              - field: personal.3.detail
+                label: Detail
 
-# Core Services - Primary user-facing services that "do stuff"
+
+# Network & Security - Infrastructure services for routing, VPN, and security
+- Network & Security:
+  - Traefik:
+      icon: traefik.png
+      href: https://traefik.{{HOMEPAGE_VAR_DOMAIN}}
+      description: Reverse proxy management
+      widget:
+        type: traefik
+        url: http://traefik:8080
+      container: traefik
+      server: my-docker
+      showStats: true
+
+  - Wireguard VPN:
+      icon: wireguard.png
+      description: VPN server (system service)
+      widget:
+        type: customapi
+        url: http://homepage-api:5000/api/wireguard/status
+        refreshInterval: 30000  # 30 seconds
+        mappings:
+          - field: status
+            label: Status
+          - field: interface
+            label: Interface
+
+  - Fail2ban:
+      icon: mdi-shield-lock
+      description: Intrusion prevention system
+      container: fail2ban
+      server: my-docker
+      showStats: true
+
+  - Docker Daemon:
+      icon: mdi-docker
+      description: Container runtime (system service)
+      widget:
+        type: customapi
+        url: http://homepage-api:5000/api/docker/status
+        refreshInterval: 30000  # 30 seconds
+        mappings:
+          - field: status
+            label: Status
+          - field: containers
+            label: Containers
+          - field: version
+            label: Version
+          - field: disk_usage
+            label: Disk Usage
+
+
 - Services:
   - Core Services:
       - AdGuard Home:
@@ -215,6 +310,77 @@
             username: {{HOMEPAGE_VAR_ADGUARD_USER}}
             password: {{HOMEPAGE_VAR_ADGUARD_PASS}}
           container: adguard-home
+          server: my-docker
+          showStats: true
+
+      - Immich:
+          icon: si-immich
+          href: https://immich.{{HOMEPAGE_VAR_DOMAIN}}
+          description: Photo library viewer
+          container: immich-server
+          server: my-docker
+          showStats: true
+
+      - Ebook Library:
+          icon: mdi-bookshelf
+          href: https://books.{{HOMEPAGE_VAR_DOMAIN}}
+          description: Calibre-Web-Automated + Kobo sync
+          container: cwa
+          server: my-docker
+          showStats: true
+
+      - Kitchen Kiosk:
+          icon: mdi-tablet-dashboard
+          href: https://kiosk.{{HOMEPAGE_VAR_DOMAIN}}
+          description: Kitchen photo screensaver + radio/calendar/recipes
+          container: kiosk-web
+          server: my-docker
+          showStats: true
+
+      - Kitchen Kiosk API:
+          icon: mdi-tablet-dashboard
+          href: https://kiosk-api.{{HOMEPAGE_VAR_DOMAIN}}
+          description: Kitchen kiosk backend (weather, calendar, photos, recipes, radio)
+          container: kiosk-api
+          server: my-docker
+          showStats: true
+
+      - Homepage API:
+          icon: mdi-api
+          description: Backend API for custom widgets
+          container: homepage-api
+          server: my-docker
+          showStats: true
+      - "{{HOMEPAGE_VAR_ICLOUD_LABEL}}":
+          icon: mdi-cloud-download
+          href: https://icloud.{{HOMEPAGE_VAR_DOMAIN}}
+          description: iCloud photo backup
+          container: icloudpd
+          server: my-docker
+          showStats: true
+          widget:
+            type: customapi
+            url: http://homepage-api:5000/api/icloudpd/status
+            refreshInterval: 60000
+            mappings:
+              - field: statusLabel
+                label: Status
+              - field: lastSyncRelative
+                label: Last sync
+              - field: message
+                label: Detail
+      - OwnTracks:
+          icon: mdi-map-marker
+          href: https://owntracks.{{HOMEPAGE_VAR_DOMAIN}}
+          description: Location tracking recorder
+          container: owntracks-recorder
+          server: my-docker
+          showStats: true
+      - Radmap:
+          icon: mdi-map-outline
+          href: https://radmap.{{HOMEPAGE_VAR_DOMAIN}}
+          description: Offline NSW topo map PWA (tile archives served to the phone)
+          container: radmap
           server: my-docker
           showStats: true
 
@@ -263,116 +429,5 @@
           icon: mdi-docker
           description: Container metrics exporter
           container: cadvisor
-          server: my-docker
-          showStats: true
-
-  # Dashboard Services - Homepage dashboard and backend
-  - Dashboard:
-      - Homepage API:
-          icon: mdi-api
-          description: Backend API for custom widgets
-          container: homepage-api
-          server: my-docker
-          showStats: true
-
-  # Media - Photo and media viewers
-  - Media:
-      - Immich:
-          icon: mdi-image-multiple
-          href: https://immich.{{HOMEPAGE_VAR_DOMAIN}}
-          description: Photo library viewer
-          container: immich-server
-          server: my-docker
-          showStats: true
-
-      - Ebook Library:
-          icon: mdi-bookshelf
-          href: https://books.{{HOMEPAGE_VAR_DOMAIN}}
-          description: Calibre-Web-Automated + Kobo sync
-          container: cwa
-          server: my-docker
-          showStats: true
-
-      - Kitchen Kiosk:
-          icon: mdi-tablet-dashboard
-          href: https://kiosk.{{HOMEPAGE_VAR_DOMAIN}}
-          description: Kitchen photo screensaver + radio/calendar/recipes
-          container: kiosk-web
-          server: my-docker
-          showStats: true
-
-      - Kitchen Kiosk API:
-          icon: mdi-tablet-dashboard
-          href: https://kiosk-api.{{HOMEPAGE_VAR_DOMAIN}}
-          description: Kitchen kiosk backend (weather, calendar, photos, recipes, radio)
-          container: kiosk-api
-          server: my-docker
-          showStats: true
-
-  # Network & Security - Infrastructure services for routing, VPN, and security
-  - Network & Security:
-      - Traefik:
-          icon: traefik.png
-          href: https://traefik.{{HOMEPAGE_VAR_DOMAIN}}
-          description: Reverse proxy management
-          widget:
-            type: traefik
-            url: http://traefik:8080
-          container: traefik
-          server: my-docker
-          showStats: true
-
-      - Wireguard VPN:
-          icon: wireguard.png
-          description: VPN server (system service)
-          widget:
-            type: customapi
-            url: http://homepage-api:5000/api/wireguard/status
-            refreshInterval: 30000  # 30 seconds
-            mappings:
-              - field: status
-                label: Status
-              - field: interface
-                label: Interface
-
-      - Fail2ban:
-          icon: mdi-shield-lock
-          description: Intrusion prevention system
-          container: fail2ban
-          server: my-docker
-          showStats: true
-
-      - Docker Daemon:
-          icon: mdi-docker
-          description: Container runtime (system service)
-          widget:
-            type: customapi
-            url: http://homepage-api:5000/api/docker/status
-            refreshInterval: 30000  # 30 seconds
-            mappings:
-              - field: status
-                label: Status
-              - field: containers
-                label: Containers
-              - field: version
-                label: Version
-              - field: disk_usage
-                label: Disk Usage
-
-  # Location Services - Location tracking
-  - Location:
-      - OwnTracks:
-          icon: mdi-map-marker
-          href: https://owntracks.{{HOMEPAGE_VAR_DOMAIN}}
-          description: Location tracking recorder
-          container: owntracks-recorder
-          server: my-docker
-          showStats: true
-
-      - Radmap:
-          icon: mdi-map-outline
-          href: https://radmap.{{HOMEPAGE_VAR_DOMAIN}}
-          description: Offline NSW topo map PWA (tile archives served to the phone)
-          container: radmap
           server: my-docker
           showStats: true

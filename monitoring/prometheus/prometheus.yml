@@ -28,3 +28,20 @@ scrape_configs:
     static_configs:
       - targets: ['adguard:3000']
     metrics_path: '/control/stats'
+
+  - job_name: 'blackbox-icmp'
+    metrics_path: /probe
+    params:
+      module: [icmp]
+    static_configs:
+      - targets:
+          - '192.168.1.1'        # router — update if your gateway IP differs
+          - '1.1.1.1'            # ISP/internet health
+          - '8.8.8.8'            # ISP/internet health (secondary)
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: blackbox-exporter:9115

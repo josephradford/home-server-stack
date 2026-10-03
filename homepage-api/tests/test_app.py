@@ -3,7 +3,7 @@ Unit tests for Homepage API endpoints
 """
 import pytest
 from unittest.mock import Mock, patch, MagicMock
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 import json
 
 
@@ -415,6 +415,459 @@ class TestCORSHeaders:
         # CORS headers should be present (handled by flask-cors)
         # The exact header name might vary, so we just check the response is successful
         assert response.status_code == 200
+
+
+class TestOutageStatusEndpoint:
+    """Tests for /api/status/outages and its per-provider pollers"""
+
+    @pytest.fixture(autouse=True)
+    def clear_caches(self):
+        """Pollers are time-cached by provider/url args; clear before each
+        test so mocked responses from one test don't leak into another."""
+        import app as app_module
+        for fn in (app_module._poll_statuspage, app_module._poll_rss_feed,
+                   app_module._poll_gcp, app_module._poll_icloud,
+                   app_module._poll_google_workspace):
+            fn.cache_clear()
+        yield
+
+    def _mock_json_response(self, payload):
+        mock_response = Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = payload
+        mock_response.raise_for_status = Mock()
+        return mock_response
+
+    def _mock_xml_response(self, xml_bytes):
+        mock_response = Mock()
+        mock_response.status_code = 200
+        mock_response.content = xml_bytes
+        mock_response.raise_for_status = Mock()
+        return mock_response
+
+    # --- _poll_statuspage ---
+
+    @patch('app.requests.get')
+    def test_poll_statuspage_operational(self, mock_get, client):
+        mock_get.return_value = self._mock_json_response(
+            {'status': {'indicator': 'none', 'description': 'All Systems Operational'}}
+        )
+        from app import _poll_statuspage
+        result = _poll_statuspage('GitHub', 'https://example.test/status.json')
+        assert result == {'name': 'GitHub', 'status': 'operational', 'detail': 'All Systems Operational'}
+
+    @patch('app.requests.get')
+    def test_poll_statuspage_issue(self, mock_get, client):
+        mock_get.return_value = self._mock_json_response(
+            {'status': {'indicator': 'major', 'description': 'Major Outage'}}
+        )
+        from app import _poll_statuspage
+        result = _poll_statuspage('Cloudflare', 'https://example.test/status.json')
+        assert result['status'] == 'issue'
+
+    @patch('app.requests.get')
+    def test_poll_statuspage_unreachable_is_unknown(self, mock_get, client):
+        mock_get.side_effect = Exception('timeout')
+        from app import _poll_statuspage
+        result = _poll_statuspage('Docker Hub', 'https://example.test/status.json')
+        assert result['status'] == 'unknown'
+
+    # --- _poll_rss_feed (also exercises the AWS/Azure path) ---
+
+    @patch('app.requests.get')
+    def test_poll_rss_feed_empty_is_operational(self, mock_get, client):
+        mock_get.return_value = self._mock_xml_response(
+            b'<rss><channel><title>Azure Status</title></channel></rss>'
+        )
+        from app import _poll_rss_feed
+        result = _poll_rss_feed('Azure', 'https://example.test/feed')
+        assert result['status'] == 'operational'
+
+    @patch('app.requests.get')
+    def test_poll_rss_feed_unresolved_item_is_issue(self, mock_get, client):
+        mock_get.return_value = self._mock_xml_response(
+            b'<rss><channel><item><title>Service disruption</title>'
+            b'<description>Investigating</description></item></channel></rss>'
+        )
+        from app import _poll_rss_feed
+        result = _poll_rss_feed('Azure', 'https://example.test/feed')
+        assert result['status'] == 'issue'
+
+    @patch('app.requests.get')
+    def test_poll_rss_feed_resolved_item_is_operational(self, mock_get, client):
+        mock_get.return_value = self._mock_xml_response(
+            b'<rss><channel><item><title>[RESOLVED] Service disruption</title>'
+            b'<description>Issue resolved</description></item></channel></rss>'
+        )
+        from app import _poll_rss_feed
+        result = _poll_rss_feed('Azure', 'https://example.test/feed')
+        assert result['status'] == 'operational'
+
+    # --- _poll_gcp ---
+
+    @patch('app.requests.get')
+    def test_poll_gcp_no_active_incidents(self, mock_get, client):
+        mock_get.return_value = self._mock_json_response([
+            {'external_desc': 'Old incident', 'end': '2026-01-01T00:00:00+00:00'}
+        ])
+        from app import _poll_gcp
+        result = _poll_gcp()
+        assert result['status'] == 'operational'
+
+    @patch('app.requests.get')
+    def test_poll_gcp_active_incident(self, mock_get, client):
+        mock_get.return_value = self._mock_json_response([
+            {'external_desc': 'Multiple products degraded', 'end': None}
+        ])
+        from app import _poll_gcp
+        result = _poll_gcp()
+        assert result['status'] == 'issue'
+        assert 'degraded' in result['detail']
+
+    # --- _poll_icloud ---
+
+    @patch('app.requests.get')
+    def test_poll_icloud_all_resolved_is_operational(self, mock_get, client):
+        mock_get.return_value = self._mock_json_response({
+            'services': [
+                {'serviceName': 'iCloud Mail', 'events': [
+                    {'eventStatus': 'resolved', 'message': 'Mail was unavailable'}
+                ]},
+                {'serviceName': 'App Store', 'events': []},
+            ]
+        })
+        from app import _poll_icloud
+        result = _poll_icloud()
+        assert result['status'] == 'operational'
+
+    @patch('app.requests.get')
+    def test_poll_icloud_active_event_is_issue(self, mock_get, client):
+        mock_get.return_value = self._mock_json_response({
+            'services': [
+                {'serviceName': 'iCloud Mail', 'events': [
+                    {'eventStatus': 'issue', 'message': 'Mail is degraded'}
+                ]},
+            ]
+        })
+        from app import _poll_icloud
+        result = _poll_icloud()
+        assert result['status'] == 'issue'
+        assert 'iCloud Mail' in result['detail']
+
+    # --- _poll_google_workspace ---
+
+    @patch('app.requests.get')
+    def test_poll_google_workspace_no_gmail_entries_is_operational(self, mock_get, client):
+        mock_get.return_value = self._mock_xml_response(
+            b'<feed xmlns="http://www.w3.org/2005/Atom"><entry><title>'
+            b'RESOLVED: Drive issue</title></entry></feed>'
+        )
+        from app import _poll_google_workspace
+        result = _poll_google_workspace()
+        assert result['status'] == 'operational'
+
+    @patch('app.requests.get')
+    def test_poll_google_workspace_unresolved_gmail_entry_is_issue(self, mock_get, client):
+        mock_get.return_value = self._mock_xml_response(
+            b'<feed xmlns="http://www.w3.org/2005/Atom"><entry><title>'
+            b'Gmail is experiencing elevated error rates</title></entry></feed>'
+        )
+        from app import _poll_google_workspace
+        result = _poll_google_workspace()
+        assert result['status'] == 'issue'
+
+    @patch('app.requests.get')
+    def test_poll_google_workspace_resolved_gmail_entry_is_operational(self, mock_get, client):
+        mock_get.return_value = self._mock_xml_response(
+            b'<feed xmlns="http://www.w3.org/2005/Atom"><entry><title>'
+            b'RESOLVED: Gmail delivery delays</title></entry></feed>'
+        )
+        from app import _poll_google_workspace
+        result = _poll_google_workspace()
+        assert result['status'] == 'operational'
+
+    # --- /api/status/health (siteMonitor dot) ---
+
+    @patch('app._outage_snapshot')
+    def test_status_health_operational_returns_200(self, mock_snapshot, client):
+        mock_snapshot.return_value = {
+            'bellwethers': [{'name': 'Cloudflare', 'status': 'operational', 'detail': ''}],
+            'personal': [],
+        }
+        response = client.get('/api/status/health/bellwethers/0')
+        assert response.status_code == 200
+
+    @patch('app._outage_snapshot')
+    def test_status_health_issue_returns_503(self, mock_snapshot, client):
+        mock_snapshot.return_value = {
+            'bellwethers': [{'name': 'Cloudflare', 'status': 'issue', 'detail': 'Minor outage'}],
+            'personal': [],
+        }
+        response = client.get('/api/status/health/bellwethers/0')
+        assert response.status_code == 503
+
+    def test_status_health_unknown_tier_returns_404(self, client):
+        response = client.get('/api/status/health/nope/0')
+        assert response.status_code == 404
+
+    # --- aggregate endpoint ---
+
+    @patch('app._poll_statuspage')
+    @patch('app._poll_rss_feed')
+    @patch('app._poll_gcp')
+    @patch('app._poll_icloud')
+    @patch('app._poll_google_workspace')
+    def test_status_outages_aggregates_both_tiers(
+        self, mock_workspace, mock_icloud, mock_gcp, mock_rss, mock_statuspage, client
+    ):
+        mock_statuspage.return_value = {'name': 'x', 'status': 'operational', 'detail': ''}
+        mock_rss.return_value = {'name': 'x', 'status': 'operational', 'detail': ''}
+        mock_gcp.return_value = {'name': 'Google Cloud', 'status': 'issue', 'detail': 'outage'}
+        mock_icloud.return_value = {'name': 'iCloud', 'status': 'operational', 'detail': ''}
+        mock_workspace.return_value = {'name': 'Google Workspace (Gmail)', 'status': 'operational', 'detail': ''}
+
+        response = client.get('/api/status/outages')
+        assert response.status_code == 200
+
+        data = response.get_json()
+        assert len(data['bellwethers']) == 4
+        assert len(data['personal']) == 4
+        assert data['bellwethers_issues'] == 1  # GCP
+        assert data['personal_issues'] == 0
+        assert 'updated' in data
+
+    @patch('app._poll_statuspage')
+    @patch('app._poll_rss_feed')
+    @patch('app._poll_gcp')
+    def test_status_outages_provider_failure_does_not_break_endpoint(
+        self, mock_gcp, mock_rss, mock_statuspage, client
+    ):
+        mock_gcp.side_effect = Exception('boom')
+        mock_rss.return_value = {'name': 'x', 'status': 'unknown', 'detail': 'boom'}
+        mock_statuspage.return_value = {'name': 'x', 'status': 'operational', 'detail': ''}
+
+        response = client.get('/api/status/outages')
+        # _poll_gcp raising is uncaught by the route (pollers are expected to
+        # catch their own errors) -> surfaces as a 500 with an error body,
+        # which is still a safe, non-crashing response.
+class TestTransportCommuteEndpoint:
+    """Tests for /api/transport/commute/<slot> (stop chosen by Sydney time)"""
+
+    @patch('app.TRANSPORT_NSW_API_KEY', 'key')
+    @patch('app._commute_stop')
+    @patch('app._sydney_now')
+    @patch('app._fetch_departures')
+    def test_morning_slot_uses_to_stop(self, mock_fetch, mock_now, mock_stop, client):
+        from datetime import datetime
+        from zoneinfo import ZoneInfo
+        mock_now.return_value = datetime(2026, 10, 3, 9, 0, tzinfo=ZoneInfo('Australia/Sydney'))
+        mock_stop.return_value = ('111', 'Bus Stop A', '', [])
+        mock_fetch.return_value = [{'time': '2026-10-03T09:10:00Z', 'line': 'T1'}]
+
+        data = client.get('/api/transport/commute/1').get_json()
+        mock_stop.assert_called_once_with(1)
+        assert data['direction'] == 'To Parramatta'
+        assert data['stop'] == 'Bus Stop A'
+
+    @patch('app.TRANSPORT_NSW_API_KEY', 'key')
+    @patch('app._commute_stop')
+    @patch('app._sydney_now')
+    @patch('app._fetch_departures')
+    def test_afternoon_slot_uses_from_stop(self, mock_fetch, mock_now, mock_stop, client):
+        from datetime import datetime
+        from zoneinfo import ZoneInfo
+        mock_now.return_value = datetime(2026, 10, 3, 13, 0, tzinfo=ZoneInfo('Australia/Sydney'))
+        mock_stop.return_value = ('444', 'Tram Stop D', '', [])
+        mock_fetch.return_value = []
+
+        data = client.get('/api/transport/commute/2').get_json()
+        mock_stop.assert_called_once_with(4)
+        assert data['direction'] == 'From Parramatta'
+
+    def test_invalid_slot_returns_404(self, client):
+        response = client.get('/api/transport/commute/3')
+        assert response.status_code == 404
+
+    @patch('app.TRANSPORT_NSW_API_KEY', 'key')
+    @patch('app._commute_slot')
+    def test_live_returns_200_when_next_departure_realtime(self, mock_slot, client):
+        mock_slot.return_value = {'stop': 'Bus', 'departures': [{'realtime': True}]}
+        response = client.get('/api/transport/live/1')
+        assert response.status_code == 200
+        assert response.get_json()['live'] is True
+
+    @patch('app.TRANSPORT_NSW_API_KEY', 'key')
+    @patch('app._commute_slot')
+    def test_live_returns_503_when_scheduled(self, mock_slot, client):
+        mock_slot.return_value = {'stop': 'Bus', 'departures': [{'realtime': False}]}
+        response = client.get('/api/transport/live/1')
+        assert response.status_code == 503
+
+    @patch('app.TRANSPORT_NSW_API_KEY', 'key')
+    @patch('app._commute_slot')
+    def test_live_returns_503_when_no_departures(self, mock_slot, client):
+        mock_slot.return_value = {'stop': 'Bus', 'departures': []}
+        response = client.get('/api/transport/live/2')
+        assert response.status_code == 503
+
+    @patch('app.TRANSPORT_NSW_API_KEY', None)
+    def test_commute_without_api_key_returns_503(self, client):
+        response = client.get('/api/transport/commute/1')
+        assert response.status_code == 503
+
+
+class TestNetworkDevicesEndpoint:
+    """Tests for /api/network/devices endpoint"""
+
+    @staticmethod
+    def _ok(json_body):
+        response = Mock()
+        response.raise_for_status.return_value = None
+        response.json.return_value = json_body
+        return response
+
+    @staticmethod
+    def _querylog_entry(client, minutes_ago, name=None):
+        when = (datetime.now(timezone.utc) - timedelta(minutes=minutes_ago))
+        return {
+            'client': client,
+            'time': when.strftime('%Y-%m-%dT%H:%M:%S.') + '123456789Z',
+            'client_info': {'name': name} if name else None,
+        }
+
+    @patch('app.ADGUARD_PASSWORD', 'testpass')
+    @patch('app.ADGUARD_USERNAME', 'testuser')
+    @patch('app.requests.get')
+    def test_network_devices_success(self, mock_get, client):
+        mock_get.side_effect = [
+            self._ok({'data': [
+                self._querylog_entry('192.168.1.50', 1, name="joes-phone"),
+                self._querylog_entry('192.168.1.51', 5),
+                self._querylog_entry('192.168.1.50', 2, name="joes-phone"),
+            ]}),
+            self._ok({'data': []}),
+            self._ok({'protection_enabled': False}),
+        ]
+
+        response = client.get('/api/network/devices')
+        assert response.status_code == 200
+
+        data = response.get_json()
+        assert data['count'] == 2
+        assert data['window_minutes'] == 30
+        assert data['devices'][0]['name'] == 'joes-phone'
+        assert data['devices'][0]['ip'] == '192.168.1.50'
+        # Falls back to IP when AdGuard has no name for the client
+        assert data['devices'][1]['name'] == '192.168.1.51'
+        assert data['devices'][0]['queries'] == 2
+        assert data['top_devices'][0]['ip'] == '192.168.1.50'
+        assert len(data['top_devices']) == 2
+        assert data['protection_enabled'] is False
+
+    @patch('app.ADGUARD_PASSWORD', 'testpass')
+    @patch('app.ADGUARD_USERNAME', 'testuser')
+    @patch('app.requests.get')
+    def test_network_devices_excludes_queries_older_than_window(self, mock_get, client):
+        mock_response = Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {'data': [
+            self._querylog_entry('192.168.1.60', 10),
+            self._querylog_entry('192.168.1.61', 45),
+        ]}
+        mock_get.return_value = mock_response
+
+        data = client.get('/api/network/devices').get_json()
+        assert data['count'] == 1
+        assert data['devices'][0]['ip'] == '192.168.1.60'
+
+    @patch('app.ADGUARD_PASSWORD', 'testpass')
+    @patch('app.ADGUARD_USERNAME', 'testuser')
+    @patch('app.requests.get')
+    def test_network_devices_pages_back_until_window_covered(self, mock_get, client):
+        first = Mock()
+        first.raise_for_status.return_value = None
+        first.json.return_value = {'data': [self._querylog_entry('192.168.1.70', 1)]}
+        second = Mock()
+        second.raise_for_status.return_value = None
+        second.json.return_value = {'data': [self._querylog_entry('192.168.1.71', 20)]}
+        third = Mock()
+        third.raise_for_status.return_value = None
+        third.json.return_value = {'data': [self._querylog_entry('192.168.1.72', 40)]}
+        status = self._ok({'protection_enabled': True})
+        mock_get.side_effect = [first, second, third, status]
+
+        data = client.get('/api/network/devices').get_json()
+        assert data['count'] == 2
+        assert {d['ip'] for d in data['devices']} == {'192.168.1.70', '192.168.1.71'}
+        assert mock_get.call_count == 4
+        assert data['protection_enabled'] is True
+        assert mock_get.call_args_list[1].kwargs['params']['older_than'] == first.json.return_value['data'][0]['time']
+
+    @patch('app.ADGUARD_PASSWORD', None)
+    @patch('app.ADGUARD_USERNAME', None)
+    def test_network_devices_missing_credentials(self, client):
+        response = client.get('/api/network/devices')
+        assert response.status_code == 503
+        assert 'error' in response.get_json()
+
+    @patch('app.ADGUARD_PASSWORD', 'testpass')
+    @patch('app.ADGUARD_USERNAME', 'testuser')
+    @patch('app.requests.get')
+    def test_network_devices_adguard_error(self, mock_get, client):
+        mock_get.side_effect = Exception('connection refused')
+
+        response = client.get('/api/network/devices')
+        assert response.status_code == 500
+        assert 'error' in response.get_json()
+
+
+class TestNetworkHealthEndpoint:
+    """Tests for /api/network/health endpoint"""
+
+    @patch('app._NETWORK_PROBE_TARGETS',
+           {'router': '192.168.1.1', 'isp': '1.1.1.1', 'isp_secondary': '8.8.8.8'})
+    @patch('app.requests.get')
+    def test_network_health_success(self, mock_get, client):
+        def fake_get(url, params=None, timeout=None):
+            mock_response = Mock()
+            mock_response.status_code = 200
+            if 'probe_duration_seconds' in params['query']:
+                mock_response.json.return_value = {
+                    'status': 'success',
+                    'data': {'result': [
+                        {'metric': {'instance': '192.168.1.1'}, 'value': [0, '0.002']},
+                        {'metric': {'instance': '1.1.1.1'}, 'value': [0, '0.012']},
+                    ]}
+                }
+            else:
+                mock_response.json.return_value = {
+                    'status': 'success',
+                    'data': {'result': [
+                        {'metric': {'instance': '192.168.1.1'}, 'value': [0, '0']},
+                        {'metric': {'instance': '1.1.1.1'}, 'value': [0, '0.5']},
+                    ]}
+                }
+            return mock_response
+        mock_get.side_effect = fake_get
+
+        response = client.get('/api/network/health')
+        assert response.status_code == 200
+
+        data = response.get_json()
+        assert data['probes']['router']['latency_ms'] == 2.0
+        assert data['probes']['router']['packet_loss_pct_24h'] == 0.0
+        assert data['probes']['isp']['latency_ms'] == 12.0
+        assert data['probes']['isp']['packet_loss_pct_24h'] == 0.5
+        # No data returned for isp_secondary in this mock -> nulls, not an error
+        assert data['probes']['isp_secondary']['latency_ms'] is None
+
+    @patch('app.requests.get')
+    def test_network_health_prometheus_error(self, mock_get, client):
+        mock_get.side_effect = Exception('connection refused')
+
+        response = client.get('/api/network/health')
+        assert response.status_code == 500
+        assert 'error' in response.get_json()
 
 
 class TestIcloudpdStatusEndpoint:
