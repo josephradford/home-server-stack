@@ -302,7 +302,7 @@
           showStats: true
 
       - Immich:
-          icon: mdi-image-multiple
+          icon: si-immich
           href: https://immich.{{HOMEPAGE_VAR_DOMAIN}}
           description: Photo library viewer
           container: immich-server
