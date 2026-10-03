@@ -40,10 +40,10 @@ layout:
     columns: 1
     Core Services:
       style: row
-      columns: 4
+      columns: 3
     Monitoring:
       style: row
-      columns: 5
+      columns: 3
 
 
 # UI preferences

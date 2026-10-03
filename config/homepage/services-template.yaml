@@ -9,6 +9,7 @@
           type: customapi
           url: http://homepage-api:5000/api/bom/weather
           refreshInterval: 300000  # 5 minutes
+          display: list
           mappings:
             - field: observations.temp
               label: Temperature
