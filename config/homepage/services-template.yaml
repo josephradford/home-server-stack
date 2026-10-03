@@ -358,6 +358,45 @@
           server: my-docker
           showStats: true
 
+      - Homepage API:
+          icon: mdi-api
+          description: Backend API for custom widgets
+          container: homepage-api
+          server: my-docker
+          showStats: true
+      - "{{HOMEPAGE_VAR_ICLOUD_LABEL}}":
+          icon: mdi-cloud-download
+          href: https://icloud.{{HOMEPAGE_VAR_DOMAIN}}
+          description: iCloud photo backup
+          container: icloudpd
+          server: my-docker
+          showStats: true
+          widget:
+            type: customapi
+            url: http://homepage-api:5000/api/icloudpd/status
+            refreshInterval: 60000
+            mappings:
+              - field: statusLabel
+                label: Status
+              - field: lastSyncRelative
+                label: Last sync
+              - field: message
+                label: Detail
+      - OwnTracks:
+          icon: mdi-map-marker
+          href: https://owntracks.{{HOMEPAGE_VAR_DOMAIN}}
+          description: Location tracking recorder
+          container: owntracks-recorder
+          server: my-docker
+          showStats: true
+      - Radmap:
+          icon: mdi-map-outline
+          href: https://radmap.{{HOMEPAGE_VAR_DOMAIN}}
+          description: Offline NSW topo map PWA (tile archives served to the phone)
+          container: radmap
+          server: my-docker
+          showStats: true
+
   # Monitoring Stack - Metrics collection and visualization
   - Monitoring:
       - Prometheus:
@@ -403,52 +442,5 @@
           icon: mdi-docker
           description: Container metrics exporter
           container: cadvisor
-          server: my-docker
-          showStats: true
-
-  # Dashboard Services - Homepage dashboard and backend
-  - Dashboard:
-      - Homepage API:
-          icon: mdi-api
-          description: Backend API for custom widgets
-          container: homepage-api
-          server: my-docker
-          showStats: true
-
-  - Backups:
-        - "{{HOMEPAGE_VAR_ICLOUD_LABEL}}":
-            icon: mdi-cloud-download
-            href: https://icloud.{{HOMEPAGE_VAR_DOMAIN}}
-            description: iCloud photo backup
-            container: icloudpd
-            server: my-docker
-            showStats: true
-            widget:
-              type: customapi
-              url: http://homepage-api:5000/api/icloudpd/status
-              refreshInterval: 60000
-              mappings:
-                - field: statusLabel
-                  label: Status
-                - field: lastSyncRelative
-                  label: Last sync
-                - field: message
-                  label: Detail
-
-  # Location Services - Location tracking
-  - Location:
-      - OwnTracks:
-          icon: mdi-map-marker
-          href: https://owntracks.{{HOMEPAGE_VAR_DOMAIN}}
-          description: Location tracking recorder
-          container: owntracks-recorder
-          server: my-docker
-          showStats: true
-
-      - Radmap:
-          icon: mdi-map-outline
-          href: https://radmap.{{HOMEPAGE_VAR_DOMAIN}}
-          description: Offline NSW topo map PWA (tile archives served to the phone)
-          container: radmap
           server: my-docker
           showStats: true
