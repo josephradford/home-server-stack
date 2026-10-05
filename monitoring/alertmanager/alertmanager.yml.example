@@ -41,24 +41,26 @@ receivers:
       - to: '${ALERT_EMAIL_TO}'
         send_resolved: true
         headers:
-          Subject: 'Alert: {{ range .Alerts }}{{ .Annotations.summary }}{{ end }}'
+          Subject: '{{ if eq .Status "firing" }}ALERT{{ else }}RESOLVED{{ end }}: {{ range .Alerts }}{{ .Annotations.summary }}{{ end }}'
 
   - name: 'critical-alerts'
     email_configs:
       - to: '${ALERT_EMAIL_TO}'
         send_resolved: true
         headers:
-          Subject: 'CRITICAL: {{ range .Alerts }}{{ .Annotations.summary }}{{ end }}'
+          Subject: '{{ if eq .Status "firing" }}CRITICAL{{ else }}RESOLVED{{ end }}: {{ range .Alerts }}{{ .Annotations.summary }}{{ end }}'
         html: |
           <html>
           <body>
-            <h2 style="color: #d9534f;">Critical Alert</h2>
+            {{ if eq .Status "firing" }}<h2 style="color: #d9534f;">Critical Alert</h2>{{ else }}<h2 style="color: #5cb85c;">Resolved</h2>{{ end }}
             {{ range .Alerts }}
-            <div style="border-left: 4px solid #d9534f; padding-left: 10px; margin: 10px 0;">
+            <div style="border-left: 4px solid {{ if eq .Status "firing" }}#d9534f{{ else }}#5cb85c{{ end }}; padding-left: 10px; margin: 10px 0;">
               <p><strong>Alert:</strong> {{ .Annotations.summary }}</p>
               <p><strong>Description:</strong> {{ .Annotations.description }}</p>
               <p><strong>Severity:</strong> {{ .Labels.severity }}</p>
-              <p><strong>Time:</strong> {{ .StartsAt }}</p>
+              <p><strong>Status:</strong> {{ .Status }}</p>
+              <p><strong>Started:</strong> {{ .StartsAt }}</p>
+              {{ if eq .Status "resolved" }}<p><strong>Resolved:</strong> {{ .EndsAt }}</p>{{ end }}
             </div>
             {{ end }}
           </body>
@@ -69,17 +71,19 @@ receivers:
       - to: '${ALERT_EMAIL_TO}'
         send_resolved: true
         headers:
-          Subject: 'WARNING: {{ range .Alerts }}{{ .Annotations.summary }}{{ end }}'
+          Subject: '{{ if eq .Status "firing" }}WARNING{{ else }}RESOLVED{{ end }}: {{ range .Alerts }}{{ .Annotations.summary }}{{ end }}'
         html: |
           <html>
           <body>
-            <h2 style="color: #f0ad4e;">Warning Alert</h2>
+            {{ if eq .Status "firing" }}<h2 style="color: #f0ad4e;">Warning Alert</h2>{{ else }}<h2 style="color: #5cb85c;">Resolved</h2>{{ end }}
             {{ range .Alerts }}
-            <div style="border-left: 4px solid #f0ad4e; padding-left: 10px; margin: 10px 0;">
+            <div style="border-left: 4px solid {{ if eq .Status "firing" }}#f0ad4e{{ else }}#5cb85c{{ end }}; padding-left: 10px; margin: 10px 0;">
               <p><strong>Alert:</strong> {{ .Annotations.summary }}</p>
               <p><strong>Description:</strong> {{ .Annotations.description }}</p>
               <p><strong>Severity:</strong> {{ .Labels.severity }}</p>
-              <p><strong>Time:</strong> {{ .StartsAt }}</p>
+              <p><strong>Status:</strong> {{ .Status }}</p>
+              <p><strong>Started:</strong> {{ .StartsAt }}</p>
+              {{ if eq .Status "resolved" }}<p><strong>Resolved:</strong> {{ .EndsAt }}</p>{{ end }}
             </div>
             {{ end }}
           </body>
