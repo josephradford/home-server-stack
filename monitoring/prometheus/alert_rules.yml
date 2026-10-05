@@ -101,11 +101,12 @@ groups:
           description: "15-minute load average on {{ $labels.instance }} is above 2x CPU count for more than 10 minutes"
 
       # Critical container availability monitoring via cAdvisor
-      # Checks when cAdvisor last saw critical containers (adguard)
+      # Checks when cAdvisor last saw critical containers (adguard-home, radmap)
+      # Names are matched exactly (anchored regex) against the container_name
       # 60s threshold: Container not seen by cAdvisor for over a minute indicates it's stopped
       # for: 0m - Immediate alert as these are core services requiring high availability
       - alert: ContainerDown
-        expr: time() - container_last_seen{name=~"adguard|radmap"} > 60
+        expr: time() - container_last_seen{name=~"adguard-home|radmap"} > 60
         for: 0m
         labels:
           severity: critical
@@ -133,7 +134,9 @@ groups:
       # 85% threshold: Warning before hitting limit and potential OOM kill
       # 10m duration: Allows for temporary memory spikes
       - alert: ContainerHighMemory
-        expr: (container_memory_usage_bytes{name=~".+"} / container_spec_memory_limit_bytes{name=~".+"}) * 100 > 85
+        # Containers without a memory limit report a limit of 0 (usage/0 = +Inf),
+        # so only evaluate containers that actually have a limit set.
+        expr: (container_memory_usage_bytes{name=~".+"} / (container_spec_memory_limit_bytes{name=~".+"} > 0)) * 100 > 85
         for: 10m
         labels:
           severity: warning
@@ -143,11 +146,12 @@ groups:
           description: "Container {{ $labels.name }} memory usage is above 85% for more than 10 minutes (current value: {{ printf \"%.2f\" $value }}%)"
 
       # Container crash/restart loop detection
-      # Tracks container start events - multiple starts indicate restart loop
+      # container_start_time_seconds is a timestamp gauge that changes on each (re)start,
+      # so count how many times its value changed (increase() would give nonsense).
       # >3 restarts in 1h threshold: Indicates persistent failure (crash loop)
       # for: 0m - Immediate alert as restart loops indicate critical configuration/bug issues
       - alert: ContainerRestartLoop
-        expr: increase(container_start_time_seconds{name=~".+"}[1h]) > 3
+        expr: changes(container_start_time_seconds{name=~".+"}[1h]) > 3
         for: 0m
         labels:
           severity: warning
@@ -173,19 +177,6 @@ groups:
         annotations:
           summary: "Monitoring target {{ $labels.job }} is down"
           description: "{{ $labels.job }} monitoring target on {{ $labels.instance }} has been down for more than 1 minute"
-
-      # AdGuard Home DNS and ad-blocking service availability
-      # Critical as network clients depend on this for DNS resolution
-      # 1m threshold: DNS failures impact all network operations immediately
-      - alert: AdGuardDown
-        expr: up{job="adguard"} == 0
-        for: 1m
-        labels:
-          severity: critical
-          category: availability
-        annotations:
-          summary: "AdGuard DNS service is down"
-          description: "AdGuard service is not responding for more than 1 minute"
 
   # Note: WireGuard VPN monitoring removed - WireGuard is now a system service (not Docker container)
   # Monitor WireGuard via system service checks instead of container metrics
