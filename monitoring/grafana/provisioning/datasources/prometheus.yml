@@ -1,8 +1,19 @@
 apiVersion: 1
 
+# Dashboards in monitoring/grafana/dashboards reference this datasource by
+# uid "prometheus". Without a fixed uid Grafana generates a random one and every
+# panel shows "No data" (Data source not found).
+#
+# deleteDatasources drops the existing auto-uid datasource so it is recreated
+# with the fixed uid; it is a no-op once the uid is already correct.
+deleteDatasources:
+  - name: Prometheus
+    orgId: 1
+
 datasources:
   - name: Prometheus
     type: prometheus
+    uid: prometheus
     access: proxy
     url: http://prometheus:9090
     isDefault: true
