@@ -54,9 +54,22 @@ services:
             echo "backup drive disappeared mid-run"; kill 1
           }
         done &
+        # Delay the first sync so it (and every subsequent run, 24h apart via
+        # --watch-with-interval) lands in the small hours — ICLOUD_SYNC_HOUR
+        # defaults to 1am server time. Only affects the first run; later runs
+        # stay anchored to this time of day since each sync only takes minutes
+        # (drift only ever pushes later, so starting early in the window
+        # leaves headroom before it creeps into daytime).
+        target_hour="$${ICLOUD_SYNC_HOUR:-1}"
+        now_hour=$$((10#$$(date +%H)))
+        now_min=$$((10#$$(date +%M)))
+        wait_seconds=$$(( ( (target_hour - now_hour + 24) % 24 ) * 3600 - now_min * 60 ))
+        [ "$$wait_seconds" -lt 0 ] && wait_seconds=$$(( wait_seconds + 86400 ))
+        echo "waiting $${wait_seconds}s for next $${target_hour}:00 sync window"
+        sleep "$$wait_seconds"
         exec /app/icloudpd \
           --cookie-directory /cookies \
-          --watch-with-interval "${ICLOUD_INTERVAL:-21600}" \
+          --watch-with-interval "${ICLOUD_INTERVAL:-86400}" \
           --folder-structure "${ICLOUD_FOLDER_STRUCTURE}" \
           --password-provider webui \
           --mfa-provider webui \
