@@ -40,3 +40,20 @@ scrape_configs:
         target_label: instance
       - target_label: __address__
         replacement: blackbox-exporter:9115
+
+  # DNS health: ask AdGuard (target = the DNS server to query) to resolve a real
+  # name. Container-level checks can't tell "running" from "answering DNS".
+  - job_name: 'blackbox-dns'
+    metrics_path: /probe
+    params:
+      module: [dns_a]
+    static_configs:
+      - targets:
+          - 'adguard:53'
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: blackbox-exporter:9115

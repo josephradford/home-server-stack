@@ -97,9 +97,9 @@ Currently deployed and active services.
 - **Port:** 8080 (internal only)
 
 #### blackbox-exporter
-- **Purpose:** ICMP probes for router + ISP latency/packet-loss (feeds the Homepage "Network Health" widget)
+- **Purpose:** ICMP probes for router + ISP latency/packet-loss (feeds the Homepage "Network Health" widget), and a DNS probe that resolves a real name against AdGuard (`AdGuardDNSFailing` alert)
 - **Port:** 9115 (internal only)
-- **Config:** `monitoring/blackbox/blackbox.yml` (probe module); probe targets are set in `monitoring/prometheus/prometheus.yml`'s `blackbox-icmp` job — update the router IP there if it differs from the default `192.168.1.1`
+- **Config:** `monitoring/blackbox/blackbox.yml` (probe modules `icmp`, `dns_a`); probe targets are set in `monitoring/prometheus/prometheus.yml`'s `blackbox-icmp` and `blackbox-dns` jobs — update the router IP in `blackbox-icmp` if it differs from the default `192.168.1.1`
 
 ### Location Services
 

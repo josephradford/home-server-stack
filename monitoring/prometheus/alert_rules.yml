@@ -178,6 +178,20 @@ groups:
           summary: "Monitoring target {{ $labels.job }} is down"
           description: "{{ $labels.job }} monitoring target on {{ $labels.instance }} has been down for more than 1 minute"
 
+      # AdGuard Home DNS resolution (real lookup via blackbox dns_a module)
+      # Container-level ContainerDown can't detect a running-but-not-answering resolver.
+      # Critical: every client on the network depends on this for DNS.
+      # 2m threshold: avoids alerting on a single dropped probe or a restart.
+      - alert: AdGuardDNSFailing
+        expr: probe_success{job="blackbox-dns"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          category: availability
+        annotations:
+          summary: "AdGuard is not answering DNS queries"
+          description: "DNS lookups against {{ $labels.instance }} have been failing for more than 2 minutes"
+
   # Note: WireGuard VPN monitoring removed - WireGuard is now a system service (not Docker container)
   # Monitor WireGuard via system service checks instead of container metrics
   # Example: systemctl is-active wg-quick@wg0

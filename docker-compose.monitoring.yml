@@ -56,6 +56,12 @@ services:
     image: prom/alertmanager:v0.34.1
     container_name: alertmanager
     restart: unless-stopped
+    # Resolve external names (smtp.gmail.com) via public DNS, not the host resolver:
+    # the host uses AdGuard, so if AdGuard dies the alert email would fail too.
+    # Docker's embedded DNS still handles container names.
+    dns:
+      - 1.1.1.1
+      - 9.9.9.9
     ports:
       - "${SERVER_IP}:9093:9093"
     volumes:
