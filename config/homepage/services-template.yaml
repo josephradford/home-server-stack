@@ -431,3 +431,10 @@
           container: cadvisor
           server: my-docker
           showStats: true
+
+      - Blackbox Exporter:
+          icon: mdi-radar
+          description: Network & DNS probes
+          container: blackbox-exporter
+          server: my-docker
+          showStats: true
