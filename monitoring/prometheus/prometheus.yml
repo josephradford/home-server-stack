@@ -24,11 +24,6 @@ scrape_configs:
     static_configs:
       - targets: ['cadvisor:8080']
 
-  - job_name: 'adguard'
-    static_configs:
-      - targets: ['adguard:3000']
-    metrics_path: '/control/stats'
-
   - job_name: 'blackbox-icmp'
     metrics_path: /probe
     params:
