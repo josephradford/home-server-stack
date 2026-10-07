@@ -1,8 +1,9 @@
 timezone: Australia/Sydney
 
 # One entry per subscribable calendar; `name` becomes /<name>.ics.
-#   cricket_com_au: `discover: true` scans cricket.com.au/matches/series for current series and keeps
-#                   fixtures for `team`. `series` pins ids (CA:<id> in
+#   cricket_com_au: `discover: true` scans cricket.com.au/matches/series for series whose URL slug mentions the
+#                   team's first word ("Australia Men" -> "australia") and keeps fixtures for
+#                   `team`; suits national teams. `series` pins ids (CA:<id> in
 #                   https://www.cricket.com.au/matches/series/CA:<id>/...) for competitions that
 #                   page doesn't link, like the Sheffield Shield; they change every season.
 #   playhq:         team_id is the last segment of the team's page URL on playhq.com

@@ -5,7 +5,8 @@ fixture list as `window.FIXTURES_DATA = JSON.parse('...')`. The slug after the i
 ignored by the site, so only the id is needed.
 
 New tours get new series ids, so a calendar can set `discover: true`: the /matches/series
-index links every current series, and each one is fetched and filtered by team. Pinned `series`
+index links every current series; those whose URL slug mentions the team's first word (so
+"Australia Men" -> "australia") are fetched and filtered by team. Pinned `series`
 ids are still needed for competitions that index doesn't link (e.g. the Sheffield Shield).
 """
 from __future__ import annotations
@@ -27,7 +28,8 @@ log = logging.getLogger("oddjobs.cricket")
 SERIES_URL = "https://www.cricket.com.au/matches/series/{series_id}"
 SERIES_INDEX_URL = "https://www.cricket.com.au/matches/series"
 THROTTLE_SECONDS = 1.5  # between discovered-series fetches; the site 429s a fast scan
-_SERIES_LINK_RE = re.compile(r"/matches/series/(CA:\d+)")
+RETRY_429_SECONDS = 10.0
+_SERIES_LINK_RE = re.compile(r"/matches/series/(CA:\d+)(?:/([a-z0-9-]*))?")
 _BLOB_RE = re.compile(r"FIXTURES_DATA\s*=\s*JSON\.parse\('(.*?)'\);", re.S)
 _SERIES_ID_RE = re.compile(r"^CA:\d+$")
 _JS_ESCAPE_RE = re.compile(r"\\(u[0-9a-fA-F]{4}|x[0-9a-fA-F]{2}|.)", re.S)
@@ -122,23 +124,27 @@ def parse_fixtures(raw_fixtures: list[dict], *, team: str, tz: ZoneInfo, series_
     return list(fixtures.values())
 
 
-def discover_series(client: httpx.Client) -> list[str]:
-    """Series ids linked from the series index page, in page order."""
+def discover_series(client: httpx.Client, team: str) -> list[str]:
+    """Series ids from the index whose slug mentions the team's first word, in page order."""
     try:
         response = client.get(SERIES_INDEX_URL)
         response.raise_for_status()
     except httpx.HTTPError as e:
         raise AdapterError(f"cricket.com.au: fetching {SERIES_INDEX_URL} failed: {e}") from None
-    ids = list(dict.fromkeys(_SERIES_LINK_RE.findall(response.text)))
-    if not ids:
+    links = _SERIES_LINK_RE.findall(response.text)
+    if not links:
         raise AdapterError("cricket.com.au: no series links found on the series index (page layout changed?)")
-    return ids
+    token = team.split()[0].lower()
+    return list(dict.fromkeys(series_id for series_id, slug in links if token in slug))
 
 
 def _fetch_series(client: httpx.Client, series_id: str, *, team: str, tz: ZoneInfo) -> list[Fixture]:
     url = SERIES_URL.format(series_id=series_id)
     try:
         response = client.get(url)
+        if response.status_code == 429:  # rate limited: back off once, then let it fail
+            time.sleep(RETRY_429_SECONDS)
+            response = client.get(url)
         response.raise_for_status()
     except httpx.HTTPError as e:
         raise AdapterError(f"cricket.com.au: fetching {url} failed: {e}") from None
@@ -161,7 +167,7 @@ def fetch_fixtures(
         for fixture in _fetch_series(client, series_id, team=team, tz=tz):
             fixtures[fixture.source_id] = fixture
     if discover:
-        for series_id in discover_series(client):
+        for series_id in discover_series(client, team):
             if series_id in series:
                 continue
             time.sleep(THROTTLE_SECONDS)
