@@ -1,6 +1,8 @@
 ---
 # Network Monitoring
 # - netalertx: Scans the LAN (ARP) for devices, tracks presence and alerts on new/unknown devices.
+# - docker-socket-proxy: Read-only Docker API (containers/info/networks) for NetAlertX's DOCKERDISC plugin,
+#                        so NetAlertX never mounts docker.sock itself. Bound to 127.0.0.1 only.
 #
 # Uses host networking so ARP scans see the real LAN. Because of that it cannot join the
 # homeserver bridge network, so the Traefik labels below point at host.docker.internal:20211
@@ -39,3 +41,18 @@ services:
       # UI fires 70+ requests per page load plus constant polling; admin-ratelimit (100/min) returns 429s
       - "traefik.http.routers.netalertx.middlewares=admin-secure-no-ratelimit@docker"
       - "traefik.http.services.netalertx.loadbalancer.server.url=http://host.docker.internal:20211"
+
+  docker-socket-proxy:
+    image: tecnativa/docker-socket-proxy:0.3.0
+    container_name: docker-socket-proxy
+    restart: unless-stopped
+    environment:
+      CONTAINERS: 1
+      INFO: 1
+      NETWORKS: 1
+      POST: 0
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    # netalertx uses host networking so can't resolve this service by name; publish to loopback only
+    ports:
+      - "127.0.0.1:2375:2375"
