@@ -8,7 +8,7 @@ calendars:
   - name: australia-tests
     title: Australia Men's Tests
     source: cricket_com_au
-    series: ["CA:4605"]
+    series: ["CA:4568", "CA:4605"]   # 4568 South Africa (away), 4605 New Zealand (home)
     team: "Australia Men"
 
   - name: nsw-shield
