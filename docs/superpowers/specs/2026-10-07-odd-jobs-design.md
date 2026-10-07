@@ -175,3 +175,17 @@ An alert rule in `monitoring/prometheus/alert_rules.yml` fires if a job has not 
 1. Confirm the Sheffield Shield series page lists the full season (see cricket.com.au adapter).
 2. Confirm in Apple Calendar that subscribed `.ics` refreshes work against `jobs.${DOMAIN}` (private DNS and a certificate valid for the wildcard domain).
 3. Decide the container port and the internal framework (FastAPI vs Starlette) at plan time.
+## Amendments made during planning (2026-10-07)
+
+Changes agreed while turning this spec into `docs/superpowers/plans/2026-10-07-odd-jobs.md`. They supersede the text above.
+
+- Code lives in `apps/odd-jobs/` (repo convention), not `services/odd-jobs/`. Runtime data is `./data/odd-jobs/`, not `./data/jobs/`.
+- `calendars.yaml` is checked in at `config/odd-jobs/calendars.yaml` and mounted read-only at `/config` (like `config/library/feeds.txt`), not kept in `data/`. A calendar entry may carry an optional `url` (link back to the team page; PlayHQ events use it).
+- `Fixture` has `source_id`, `title`, `days`, `status`, `venue`, `description`, `url`. The unused `competition`, `home` and `away` fields were dropped; `description` carries the series or round name.
+- Event times are written in UTC (converted from Sydney local time with `zoneinfo`), not with a TZID, so clients need no VTIMEZONE and DST stays correct.
+- Multi-day titles are always `<title>, Day N`; the "Day 1 of 2" form for grade games was dropped.
+- `/metrics` is hand-formatted text (two gauges), so `prometheus_client` is not a dependency. The web framework is Starlette with uvicorn, single process. `tzdata` is pinned explicitly because the slim image has no system zoneinfo.
+- Tests build their source responses with `tests/helpers.py`, shaped like the live responses probed on 2026-10-07, instead of checking in captured files; `make jobs-probe` is what checks reality.
+- Parsing is tolerant of TBC teams, unscheduled fixtures, null PlayHQ times and provisional teams (skipped or titled "TBC"); a zero-fixture result is the signal that a source changed.
+- `make jobs-test` and `make jobs-probe` are the Makefile entry points; the probe is `python -m oddjobs.probe` inside the container.
+- Open item 2 (Apple Calendar against `jobs.${DOMAIN}`) is verified in the plan's final task; open item 3 is resolved (Starlette, port 8080).
