@@ -3,8 +3,8 @@
 # - netalertx: Scans the LAN (ARP) for devices, tracks presence and alerts on new/unknown devices.
 #
 # Uses host networking so ARP scans see the real LAN. Because of that it cannot join the
-# homeserver bridge network, so Traefik reaches it via host.docker.internal using the file
-# provider (config/traefik-routes/netalertx.yml) instead of Docker labels.
+# homeserver bridge network, so the Traefik labels below point at host.docker.internal:20211
+# (mapped to the host gateway in docker-compose.network.yml) instead of a container address.
 #
 # First run: the data dir must be writable by the container user (uid 20211):
 #   sudo mkdir -p data/netalertx && sudo chown -R 20211:20211 data/netalertx
@@ -31,3 +31,10 @@ services:
       - ./data/netalertx:/data
     tmpfs:
       - /tmp:uid=20211,gid=20211,mode=1700
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.netalertx.rule=Host(`netalertx.${DOMAIN}`)"
+      - "traefik.http.routers.netalertx.entrypoints=websecure"
+      - "traefik.http.routers.netalertx.tls=true"
+      - "traefik.http.routers.netalertx.middlewares=admin-secure@docker"
+      - "traefik.http.services.netalertx.loadbalancer.server.url=http://host.docker.internal:20211"

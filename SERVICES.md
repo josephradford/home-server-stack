@@ -113,7 +113,7 @@ Currently deployed and active services.
 - **Access:** https://netalertx.${DOMAIN}
 - **Direct Access:** http://SERVER_IP:20211
 - **Authentication:** IP-restricted via Traefik `admin-secure`
-- **Networking:** Runs with `network_mode: host` so scans see the real LAN. Traefik routes to it through the file provider (`config/traefik-routes/netalertx.yml`) via `host.docker.internal`; UFW needs the `Traefik to NetAlertX` rule from `scripts/system/setup-firewall.sh`
+- **Networking:** Runs with `network_mode: host` so scans see the real LAN. Traefik routes to it via an explicit `server.url` label pointing at `host.docker.internal:20211`; UFW needs the `Traefik to NetAlertX` rule from `scripts/system/setup-firewall.sh`
 - **Data:** `./data/netalertx` must be owned by uid 20211 (`sudo chown -R 20211:20211 data/netalertx`)
 
 #### Radmap
