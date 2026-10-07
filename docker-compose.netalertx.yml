@@ -17,6 +17,7 @@ services:
     container_name: netalertx
     restart: unless-stopped
     network_mode: host
+    user: "20211:20211"
     cap_drop:
       - ALL
     cap_add:
