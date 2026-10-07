@@ -170,8 +170,9 @@ they still parse). Access: `https://jobs.${DOMAIN}` (home/VPN only). Subscribe i
 Calendar to `https://jobs.${DOMAIN}/<name>.ics` where `<name>` is `australia-tests`,
 `nsw-shield` or `parramatta-first-grade`; the status page at `/` lists each job's last
 run. Calendars are defined in `config/odd-jobs/calendars.yaml`. Australia Tests uses
-`discover: true` to find new tours automatically from the cricket.com.au series index
-(throttled, with 429 retry); the Sheffield Shield isn't linked there, so its series id is
+`discover: true` with the team's cricket.com.au `team_id` to find new tours automatically
+(it asks the site's competitions API for the team's series this year and next; throttled,
+with 429 retry); the Sheffield Shield isn't returned for that, so its series id is
 pinned and changes every season. If a refresh fails the old calendar keeps being served and the `OddJobsStale`
 alert fires after 3 days. Design: `docs/superpowers/specs/2026-10-07-odd-jobs-design.md`.
 

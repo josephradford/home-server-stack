@@ -4,10 +4,12 @@ Each series page (https://www.cricket.com.au/matches/series/CA:<id>) embeds the 
 fixture list as `window.FIXTURES_DATA = JSON.parse('...')`. The slug after the id is
 ignored by the site, so only the id is needed.
 
-New tours get new series ids, so a calendar can set `discover: true`: the /matches/series
-index links every current series; those whose URL slug mentions the team's first word (so
-"Australia Men" -> "australia") are fetched and filtered by team. Pinned `series`
-ids are still needed for competitions that index doesn't link (e.g. the Sheffield Shield).
+New tours get new series ids, so a calendar can set `discover: true` with the site's numeric
+`team_id`: the competitions API the site's own series listing uses
+(https://apiv2.cricket.com.au/web/competitions/format/year) is asked for the team's series in
+this year and next, and each is fetched and filtered by team. The HTML series index can't be
+used for this: it omits some series (e.g. Australia v England T20Is) and only shows one year.
+Pinned `series` ids remain for anything the API doesn't return.
 """
 from __future__ import annotations
 
@@ -26,10 +28,10 @@ from oddjobs.models import Day, Fixture, Status
 log = logging.getLogger("oddjobs.cricket")
 
 SERIES_URL = "https://www.cricket.com.au/matches/series/{series_id}"
-SERIES_INDEX_URL = "https://www.cricket.com.au/matches/series"
+COMPETITIONS_URL = "https://apiv2.cricket.com.au/web/competitions/format/year"
+COMPETITIONS_LIMIT = 25  # the API rejects larger values; a team has far fewer series per year
 THROTTLE_SECONDS = 1.5  # between discovered-series fetches; the site 429s a fast scan
 RETRY_429_SECONDS = 10.0
-_SERIES_LINK_RE = re.compile(r"/matches/series/(CA:\d+)(?:/([a-z0-9-]*))?")
 _BLOB_RE = re.compile(r"FIXTURES_DATA\s*=\s*JSON\.parse\('(.*?)'\);", re.S)
 _SERIES_ID_RE = re.compile(r"^CA:\d+$")
 _JS_ESCAPE_RE = re.compile(r"\\(u[0-9a-fA-F]{4}|x[0-9a-fA-F]{2}|.)", re.S)
@@ -135,26 +137,41 @@ def parse_fixtures(
     return list(fixtures.values())
 
 
-def _get(client: httpx.Client, url: str) -> httpx.Response:
-    response = client.get(url)
+def _get(client: httpx.Client, url: str, params: dict | None = None) -> httpx.Response:
+    response = client.get(url, params=params)
     if response.status_code == 429:  # rate limited: back off once, then let it fail
         time.sleep(RETRY_429_SECONDS)
-        response = client.get(url)
+        response = client.get(url, params=params)
     response.raise_for_status()
     return response
 
 
-def discover_series(client: httpx.Client, team: str) -> list[str]:
-    """Series ids from the index whose slug mentions the team's first word, in page order."""
-    try:
-        response = _get(client, SERIES_INDEX_URL)
-    except httpx.HTTPError as e:
-        raise AdapterError(f"cricket.com.au: fetching {SERIES_INDEX_URL} failed: {e}") from None
-    links = _SERIES_LINK_RE.findall(response.text)
-    if not links:
-        raise AdapterError("cricket.com.au: no series links found on the series index (page layout changed?)")
-    token = team.split()[0].lower()
-    return list(dict.fromkeys(series_id for series_id, slug in links if token in slug))
+def discover_series(client: httpx.Client, team_id: int, years: tuple[int, ...]) -> list[str]:
+    """Series ids (CA:<id>) the site lists for this team in the given years, upcoming and in progress."""
+    ids: dict[str, None] = {}
+    for year in years:
+        try:
+            response = _get(
+                client,
+                COMPETITIONS_URL,
+                params={
+                    "year": year,
+                    "teamId": team_id,
+                    "isCompleted": "false",
+                    "limit": COMPETITIONS_LIMIT,
+                    "jsconfig": "eccn:true",
+                    "format": "json",
+                },
+            )
+            data = response.json()
+        except (httpx.HTTPError, ValueError) as e:
+            raise AdapterError(f"cricket.com.au: fetching competitions for {year} failed: {e}") from None
+        if not isinstance(data, dict) or data.get("responseError"):
+            raise AdapterError(f"cricket.com.au: competitions API error for {year}: {data!r:.200}")
+        for competition in data.get("competitionDetails") or []:
+            if isinstance(competition, dict) and isinstance(competition.get("competitionId"), int):
+                ids[f"CA:{competition['competitionId']}"] = None
+    return list(ids)
 
 
 def _fetch_series(
@@ -177,6 +194,8 @@ def fetch_fixtures(
     team: str,
     tz: ZoneInfo,
     discover: bool = False,
+    team_id: int | None = None,
+    years: tuple[int, ...] | None = None,
     game_types: tuple[str, ...] = (),
 ) -> list[Fixture]:
     for series_id in series:
@@ -187,7 +206,12 @@ def fetch_fixtures(
         for fixture in _fetch_series(client, series_id, team=team, tz=tz, game_types=game_types):
             fixtures[fixture.source_id] = fixture
     if discover:
-        for series_id in discover_series(client, team):
+        if team_id is None:
+            raise AdapterError("cricket.com.au: discover needs a team_id")
+        if years is None:
+            this_year = datetime.now(tz).year
+            years = (this_year, this_year + 1)
+        for series_id in discover_series(client, team_id, years):
             if series_id in series:
                 continue
             time.sleep(THROTTLE_SECONDS)
