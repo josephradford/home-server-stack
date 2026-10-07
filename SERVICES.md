@@ -115,6 +115,8 @@ Currently deployed and active services.
 - **Authentication:** IP-restricted via Traefik `admin-secure`
 - **Networking:** Runs with `network_mode: host` so scans see the real LAN. Traefik routes to it via an explicit `server.url` label pointing at `host.docker.internal:20211`; UFW needs the `Traefik to NetAlertX` rule from `scripts/system/setup-firewall.sh`
 - **Data:** `./data/netalertx` must be owned by uid 20211 (`sudo chown -R 20211:20211 data/netalertx`)
+- **Docker containers:** the `docker-socket-proxy` service (read-only: containers/info/networks, published on `127.0.0.1:2375` only) feeds NetAlertX's DOCKERDISC plugin. Containers are listed on the server's device page under Plugins → Docker discovery (image, Compose project, network driver); bridge-network containers have no LAN-visible IP/MAC, so they are not Network-tree nodes
+- **Post-install config** (in `data/netalertx/config/app.conf`, not in git): set `SCAN_SUBNETS` to the LAN only, `TIMEZONE`, replace the generated `NEWDEV_*='{value}'` defaults (they break the devices table), add `'DOCKERDISC'` to `LOADED_PLUGINS`, and set `DOCKERDISC_RUN='schedule'` plus a `DOCKERDISC_hosts` entry pointing at `http://127.0.0.1:2375` (see the plugin README in the container)
 
 #### Radmap
 - **Purpose:** Offline NSW topographic map PWA. nginx serves static files only (no backend); the phone downloads tile archives into IndexedDB, then works offline
