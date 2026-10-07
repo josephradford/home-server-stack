@@ -36,5 +36,6 @@ services:
       - "traefik.http.routers.netalertx.rule=Host(`netalertx.${DOMAIN}`)"
       - "traefik.http.routers.netalertx.entrypoints=websecure"
       - "traefik.http.routers.netalertx.tls=true"
-      - "traefik.http.routers.netalertx.middlewares=admin-secure@docker"
+      # UI fires 70+ requests per page load plus constant polling; admin-ratelimit (100/min) returns 429s
+      - "traefik.http.routers.netalertx.middlewares=admin-secure-no-ratelimit@docker"
       - "traefik.http.services.netalertx.loadbalancer.server.url=http://host.docker.internal:20211"
