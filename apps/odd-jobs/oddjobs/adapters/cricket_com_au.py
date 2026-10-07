@@ -4,15 +4,16 @@ Each series page (https://www.cricket.com.au/matches/series/CA:<id>) embeds the 
 fixture list as `window.FIXTURES_DATA = JSON.parse('...')`. The slug after the id is
 ignored by the site, so only the id is needed.
 
-New tours get new series ids, so a calendar can set `discover: true`: the /matches page
-links every current series, and each one is fetched and filtered by team. Pinned `series`
-ids are still needed for competitions that page doesn't link (e.g. the Sheffield Shield).
+New tours get new series ids, so a calendar can set `discover: true`: the /matches/series
+index links every current series, and each one is fetched and filtered by team. Pinned `series`
+ids are still needed for competitions that index doesn't link (e.g. the Sheffield Shield).
 """
 from __future__ import annotations
 
 import json
 import logging
 import re
+import time
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
@@ -24,7 +25,8 @@ from oddjobs.models import Day, Fixture, Status
 log = logging.getLogger("oddjobs.cricket")
 
 SERIES_URL = "https://www.cricket.com.au/matches/series/{series_id}"
-MATCHES_URL = "https://www.cricket.com.au/matches"
+SERIES_INDEX_URL = "https://www.cricket.com.au/matches/series"
+THROTTLE_SECONDS = 1.5  # between discovered-series fetches; the site 429s a fast scan
 _SERIES_LINK_RE = re.compile(r"/matches/series/(CA:\d+)")
 _BLOB_RE = re.compile(r"FIXTURES_DATA\s*=\s*JSON\.parse\('(.*?)'\);", re.S)
 _SERIES_ID_RE = re.compile(r"^CA:\d+$")
@@ -121,15 +123,15 @@ def parse_fixtures(raw_fixtures: list[dict], *, team: str, tz: ZoneInfo, series_
 
 
 def discover_series(client: httpx.Client) -> list[str]:
-    """Series ids linked from the /matches page, in page order."""
+    """Series ids linked from the series index page, in page order."""
     try:
-        response = client.get(MATCHES_URL)
+        response = client.get(SERIES_INDEX_URL)
         response.raise_for_status()
     except httpx.HTTPError as e:
-        raise AdapterError(f"cricket.com.au: fetching {MATCHES_URL} failed: {e}") from None
+        raise AdapterError(f"cricket.com.au: fetching {SERIES_INDEX_URL} failed: {e}") from None
     ids = list(dict.fromkeys(_SERIES_LINK_RE.findall(response.text)))
     if not ids:
-        raise AdapterError("cricket.com.au: no series links found on /matches (page layout changed?)")
+        raise AdapterError("cricket.com.au: no series links found on the series index (page layout changed?)")
     return ids
 
 
@@ -162,6 +164,7 @@ def fetch_fixtures(
         for series_id in discover_series(client):
             if series_id in series:
                 continue
+            time.sleep(THROTTLE_SECONDS)
             try:  # discovered: one unrelated series misbehaving must not cost the calendar
                 found = _fetch_series(client, series_id, team=team, tz=tz)
             except AdapterError as e:

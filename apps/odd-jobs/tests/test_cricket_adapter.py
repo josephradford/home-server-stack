@@ -74,6 +74,11 @@ def test_duplicate_ids_are_collapsed():
     assert len(ca.parse_fixtures(dup, team="Australia Men", tz=SYDNEY, series_url="https://s")) == 1
 
 
+@pytest.fixture(autouse=True)
+def no_throttle(monkeypatch):
+    monkeypatch.setattr(ca, "THROTTLE_SECONDS", 0)
+
+
 def client_for(handler):
     return httpx.Client(transport=httpx.MockTransport(handler))
 
@@ -151,13 +156,13 @@ def discovery_handler(pages):
 
 
 def test_discover_series_returns_unique_ids_in_page_order():
-    handler, _ = discovery_handler({"/matches": MATCHES_HTML})
+    handler, _ = discovery_handler({"/matches/series": MATCHES_HTML})
     with client_for(handler) as client:
         assert ca.discover_series(client) == ["CA:4568", "CA:4605", "CA:4687"]
 
 
 def test_discover_raises_when_page_has_no_series_links():
-    handler, _ = discovery_handler({"/matches": "<html>redesigned</html>"})
+    handler, _ = discovery_handler({"/matches/series": "<html>redesigned</html>"})
     with client_for(handler) as client:
         with pytest.raises(AdapterError, match="no series links"):
             ca.discover_series(client)
@@ -165,7 +170,7 @@ def test_discover_raises_when_page_has_no_series_links():
 
 def test_fetch_with_discover_adds_new_series_and_dedupes_pinned():
     handler, seen = discovery_handler({
-        "/matches": MATCHES_HTML,
+        "/matches/series": MATCHES_HTML,
         "/matches/series/CA:4605": series_html(TESTS),
         "/matches/series/CA:4568": series_html([SA_TEST]),
         "/matches/series/CA:4687": series_html([]),
@@ -180,7 +185,7 @@ def test_fetch_with_discover_adds_new_series_and_dedupes_pinned():
 
 def test_discovered_series_failure_is_skipped_but_pinned_failure_is_not():
     pages = {
-        "/matches": MATCHES_HTML,
+        "/matches/series": MATCHES_HTML,
         "/matches/series/CA:4605": series_html(TESTS),
         "/matches/series/CA:4687": series_html([]),
     }  # CA:4568 returns 503
