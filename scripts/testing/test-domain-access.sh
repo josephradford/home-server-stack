@@ -158,7 +158,9 @@ echo "----------------------------------------"
 
 # Services with Traefik routing (accessible via domains)
 # Based on actual docker-compose.yml configurations
-services=("traefik" "grafana" "adguard-home" "prometheus" "alertmanager" "homepage" "homepage-api")
+services=("traefik" "grafana" "adguard-home" "prometheus" "alertmanager" "homepage" "homepage-api"
+          "cwa" "icloudpd" "immich-server" "kiosk-web" "kiosk-api" "netalertx" "odd-jobs"
+          "owntracks-recorder" "radmap")
 all_running=true
 
 for service in "${services[@]}"; do
@@ -205,6 +207,15 @@ test_domain "grafana.${DOMAIN}" "Grafana Monitoring"
 test_domain "prometheus.${DOMAIN}" "Prometheus Monitoring"
 test_domain "alerts.${DOMAIN}" "Alertmanager"
 test_domain "traefik.${DOMAIN}" "Traefik Dashboard"
+test_domain "books.${DOMAIN}" "Ebook Library"
+test_domain "icloud.${DOMAIN}" "iCloud Photo Backup"
+test_domain "immich.${DOMAIN}" "Immich"
+test_domain "kiosk.${DOMAIN}" "Kitchen Kiosk"
+test_domain "kiosk-api.${DOMAIN}" "Kiosk API" "/api/health"
+test_domain "netalertx.${DOMAIN}" "NetAlertX"
+test_domain "jobs.${DOMAIN}" "Odd Jobs"
+test_domain "owntracks.${DOMAIN}" "OwnTracks"
+test_domain "radmap.${DOMAIN}" "Radmap"
 
 # Summary
 echo "========================================"
@@ -228,6 +239,15 @@ if [ $FAILED_TESTS -eq 0 ]; then
     echo "  • Alertmanager: https://alerts.${DOMAIN}"
     echo "  • Traefik:      https://traefik.${DOMAIN}"
     echo "  • Homepage API: https://homepage-api.${DOMAIN}"
+    echo "  • Books:        https://books.${DOMAIN}"
+    echo "  • iCloud:       https://icloud.${DOMAIN}"
+    echo "  • Immich:       https://immich.${DOMAIN}"
+    echo "  • Kiosk:        https://kiosk.${DOMAIN}"
+    echo "  • Kiosk API:    https://kiosk-api.${DOMAIN}"
+    echo "  • NetAlertX:    https://netalertx.${DOMAIN}"
+    echo "  • Odd Jobs:     https://jobs.${DOMAIN}"
+    echo "  • OwnTracks:    https://owntracks.${DOMAIN}"
+    echo "  • Radmap:       https://radmap.${DOMAIN}"
     echo ""
     echo "Note: You may see certificate warnings if using self-signed certificates."
     exit 0
