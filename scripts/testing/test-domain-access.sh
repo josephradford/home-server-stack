@@ -89,12 +89,16 @@ test_http_redirect() {
 # Function to test HTTPS endpoint
 test_https_endpoint() {
     local domain=$1
+    local path=${2:-/}
     TOTAL_TESTS=$((TOTAL_TESTS + 1))
 
     echo -n "Testing HTTPS endpoint for $domain... "
 
-    # Test HTTPS endpoint (allow self-signed certs with -k)
-    HTTPS_RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" -k -H "Host: ${domain}" https://${SERVER_IP} 2>/dev/null || echo "000")
+    # Test HTTPS endpoint (allow self-signed certs with -k). --resolve sends the domain as
+    # SNI, which Traefik requires (sniStrict: true); a bare IP + Host header fails the handshake.
+    # Without -f/|| echo, a failed connection leaves "000" from -w rather than "000000".
+    HTTPS_RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" -k --max-time 10 --resolve "${domain}:443:${SERVER_IP}" "https://${domain}${path}" 2>/dev/null) || true
+    HTTPS_RESPONSE="${HTTPS_RESPONSE:-000}"
 
     if [ "$HTTPS_RESPONSE" = "200" ] || [ "$HTTPS_RESPONSE" = "302" ] || [ "$HTTPS_RESPONSE" = "401" ]; then
         echo -e "${GREEN}PASSED${NC} (${HTTPS_RESPONSE})"
@@ -133,14 +137,17 @@ test_traefik_routing() {
 test_domain() {
     local domain=$1
     local service_name=$2
+    local path=${3:-/}   # HTTPS path to request, for services with no root route
 
     echo -e "${BLUE}Testing ${service_name}${NC}"
     echo "----------------------------------------"
 
-    test_dns "$domain"
-    test_http_redirect "$domain"
-    test_https_endpoint "$domain"
-    test_traefik_routing "$domain" "301"
+    # Each test records its own failure; `|| true` stops `set -e` ending the run at the
+    # first failing check, so every service is tested and the summary is always printed.
+    test_dns "$domain" || true
+    test_http_redirect "$domain" || true
+    test_https_endpoint "$domain" "$path" || true
+    test_traefik_routing "$domain" "301" || true
 
     echo ""
 }
@@ -193,7 +200,7 @@ DOMAIN="${DOMAIN:-home.local}"
 # Run tests for each service (based on actual docker-compose configurations)
 test_domain "adguard.${DOMAIN}" "AdGuard Home"
 test_domain "homepage.${DOMAIN}" "Homepage Dashboard"
-test_domain "homepage-api.${DOMAIN}" "Homepage API"
+test_domain "homepage-api.${DOMAIN}" "Homepage API" "/api/health"
 test_domain "grafana.${DOMAIN}" "Grafana Monitoring"
 test_domain "prometheus.${DOMAIN}" "Prometheus Monitoring"
 test_domain "alerts.${DOMAIN}" "Alertmanager"
