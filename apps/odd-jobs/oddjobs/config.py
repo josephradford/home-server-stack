@@ -23,6 +23,7 @@ class CalendarConfig:
     duration_hours: float = 6
     series: tuple[str, ...] = ()
     discover: bool = False
+    game_types: tuple[str, ...] = ()
     team_id: str | None = None
     url: str | None = None
 
@@ -94,6 +95,7 @@ def _parse_calendar(entry: object, seen: set[str]) -> CalendarConfig:
         duration_hours=float(entry.get("duration_hours", 6)),
         series=series,
         discover=discover,
+        game_types=tuple(entry.get("game_types") or ()),
         team_id=str(team_id) if team_id else None,
         url=entry.get("url"),
     )

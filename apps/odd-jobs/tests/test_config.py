@@ -65,3 +65,9 @@ def test_cricket_calendar_can_discover_without_pinned_series(tmp_path):
     text = VALID.replace('    series: ["CA:4605"]\n', "    discover: true\n")
     tests, _ = load_config(write(tmp_path, text)).calendars
     assert tests.discover is True and tests.series == ()
+
+
+def test_game_types_is_optional_and_loaded(tmp_path):
+    text = VALID.replace('    series: ["CA:4605"]\n', '    series: ["CA:4605"]\n    game_types: ["Test"]\n')
+    tests, grade = load_config(write(tmp_path, text)).calendars
+    assert tests.game_types == ("Test",) and grade.game_types == ()

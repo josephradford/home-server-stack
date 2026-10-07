@@ -93,8 +93,12 @@ def _venue(raw: dict) -> str | None:
     return f"{name}, {location}" if location else name
 
 
-def _parse_one(raw: dict, *, team: str, tz: ZoneInfo, series_url: str) -> Fixture | None:
+def _parse_one(
+    raw: dict, *, team: str, tz: ZoneInfo, series_url: str, game_types: tuple[str, ...] = ()
+) -> Fixture | None:
     if team not in (_team_name(raw, "homeTeam"), _team_name(raw, "awayTeam")):
+        return None
+    if game_types and raw.get("gameType") not in game_types:
         return None
     if not raw.get("startDateTime"):
         return None  # not yet scheduled; nothing to put on a calendar
@@ -112,11 +116,18 @@ def _parse_one(raw: dict, *, team: str, tz: ZoneInfo, series_url: str) -> Fixtur
     )
 
 
-def parse_fixtures(raw_fixtures: list[dict], *, team: str, tz: ZoneInfo, series_url: str) -> list[Fixture]:
+def parse_fixtures(
+    raw_fixtures: list[dict],
+    *,
+    team: str,
+    tz: ZoneInfo,
+    series_url: str,
+    game_types: tuple[str, ...] = (),
+) -> list[Fixture]:
     fixtures: dict[str, Fixture] = {}
     for raw in raw_fixtures:
         try:
-            fixture = _parse_one(raw, team=team, tz=tz, series_url=series_url)
+            fixture = _parse_one(raw, team=team, tz=tz, series_url=series_url, game_types=game_types)
         except (KeyError, ValueError, TypeError):
             continue  # one malformed record must not cost the whole calendar; if the format itself changed, zero fixtures trips the job check
         if fixture:
@@ -146,13 +157,17 @@ def discover_series(client: httpx.Client, team: str) -> list[str]:
     return list(dict.fromkeys(series_id for series_id, slug in links if token in slug))
 
 
-def _fetch_series(client: httpx.Client, series_id: str, *, team: str, tz: ZoneInfo) -> list[Fixture]:
+def _fetch_series(
+    client: httpx.Client, series_id: str, *, team: str, tz: ZoneInfo, game_types: tuple[str, ...]
+) -> list[Fixture]:
     url = SERIES_URL.format(series_id=series_id)
     try:
         response = _get(client, url)
     except httpx.HTTPError as e:
         raise AdapterError(f"cricket.com.au: fetching {url} failed: {e}") from None
-    return parse_fixtures(extract_fixtures_data(response.text), team=team, tz=tz, series_url=url)
+    return parse_fixtures(
+        extract_fixtures_data(response.text), team=team, tz=tz, series_url=url, game_types=game_types
+    )
 
 
 def fetch_fixtures(
@@ -162,13 +177,14 @@ def fetch_fixtures(
     team: str,
     tz: ZoneInfo,
     discover: bool = False,
+    game_types: tuple[str, ...] = (),
 ) -> list[Fixture]:
     for series_id in series:
         if not _SERIES_ID_RE.match(series_id):
             raise AdapterError(f"cricket.com.au: bad series id {series_id!r} (expected CA:<digits>)")
     fixtures: dict[str, Fixture] = {}
     for series_id in series:  # pinned: a failure here fails the calendar
-        for fixture in _fetch_series(client, series_id, team=team, tz=tz):
+        for fixture in _fetch_series(client, series_id, team=team, tz=tz, game_types=game_types):
             fixtures[fixture.source_id] = fixture
     if discover:
         for series_id in discover_series(client, team):
@@ -176,7 +192,7 @@ def fetch_fixtures(
                 continue
             time.sleep(THROTTLE_SECONDS)
             try:  # discovered: one unrelated series misbehaving must not cost the calendar
-                found = _fetch_series(client, series_id, team=team, tz=tz)
+                found = _fetch_series(client, series_id, team=team, tz=tz, game_types=game_types)
             except AdapterError as e:
                 log.warning("skipping discovered series %s: %s", series_id, e)
                 continue

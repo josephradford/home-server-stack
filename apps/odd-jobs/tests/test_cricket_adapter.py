@@ -211,3 +211,11 @@ def test_fetch_retries_once_after_429():
     with client_for(handler) as client:
         fixtures = ca.fetch_fixtures(client, series=("CA:4605",), team="Australia Men", tz=SYDNEY)
     assert len(fixtures) == 2 and len(calls) == 2
+
+
+def test_game_types_filter_keeps_only_listed_formats():
+    test = ca_fixture(1, "1st Test", "2026-12-09T02:20:00Z", 5, "Australia Men", "India Men", gameType="Test")
+    odi = ca_fixture(2, "1st ODI", "2026-11-13T03:00:00Z", 1, "Australia Men", "England Men", gameType="One Day International")
+    kept = ca.parse_fixtures([test, odi], team="Australia Men", tz=SYDNEY, series_url="https://s", game_types=("Test",))
+    assert [f.source_id for f in kept] == ["1"]
+    assert len(ca.parse_fixtures([test, odi], team="Australia Men", tz=SYDNEY, series_url="https://s")) == 2
