@@ -80,28 +80,34 @@ def _venue(raw: dict) -> str | None:
     return f"{name}, {location}" if location else name
 
 
+def _parse_one(raw: dict, *, team: str, tz: ZoneInfo, series_url: str) -> Fixture | None:
+    if team not in (_team_name(raw, "homeTeam"), _team_name(raw, "awayTeam")):
+        return None
+    if not raw.get("startDateTime"):
+        return None  # not yet scheduled; nothing to put on a calendar
+    start = datetime.fromisoformat(raw["startDateTime"].replace("Z", "+00:00")).astimezone(tz)
+    day_count = max(1, int(raw.get("numberOfDays") or 1))
+    days = tuple(Day(date=start.date() + timedelta(days=i), start=start.time()) for i in range(day_count))
+    return Fixture(
+        source_id=str(raw["id"]),
+        title=_title(raw),
+        days=days,
+        status=_status(raw),
+        venue=_venue(raw),
+        description=(raw.get("competition") or {}).get("name"),
+        url=series_url,
+    )
+
+
 def parse_fixtures(raw_fixtures: list[dict], *, team: str, tz: ZoneInfo, series_url: str) -> list[Fixture]:
     fixtures: dict[str, Fixture] = {}
     for raw in raw_fixtures:
-        if team not in (_team_name(raw, "homeTeam"), _team_name(raw, "awayTeam")):
-            continue
-        if not raw.get("startDateTime"):
-            continue  # not yet scheduled; nothing to put on a calendar
-        start = datetime.fromisoformat(raw["startDateTime"].replace("Z", "+00:00")).astimezone(tz)
-        day_count = max(1, int(raw.get("numberOfDays") or 1))
-        days = tuple(
-            Day(date=start.date() + timedelta(days=i), start=start.time()) for i in range(day_count)
-        )
-        source_id = str(raw["id"])
-        fixtures[source_id] = Fixture(
-            source_id=source_id,
-            title=_title(raw),
-            days=days,
-            status=_status(raw),
-            venue=_venue(raw),
-            description=(raw.get("competition") or {}).get("name"),
-            url=series_url,
-        )
+        try:
+            fixture = _parse_one(raw, team=team, tz=tz, series_url=series_url)
+        except (KeyError, ValueError, TypeError):
+            continue  # one malformed record must not cost the whole calendar; if the format itself changed, zero fixtures trips the job check
+        if fixture:
+            fixtures[fixture.source_id] = fixture
     return list(fixtures.values())
 
 

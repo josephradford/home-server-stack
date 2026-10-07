@@ -71,6 +71,26 @@ def _days(allocation: dict) -> tuple[Day, ...]:
     return tuple(days)
 
 
+def _parse_game(game: dict, *, round_name: str | None, team: str, url: str | None) -> Fixture | None:
+    home = (game.get("home") or {}).get("name") or ""
+    away = (game.get("away") or {}).get("name") or ""
+    if team not in (home, away):
+        return None
+    allocation = game.get("allocation") or {}
+    days = _days(allocation)
+    if not days:
+        return None  # not yet scheduled; nothing to put on a calendar
+    return Fixture(
+        source_id=str(game["id"]),
+        title=f"{_short(home)} v {_short(away)}",
+        days=days,
+        status=_status((game.get("status") or {}).get("value", "")),
+        venue=_venue(allocation),
+        description=round_name,
+        url=url,
+    )
+
+
 def parse_rounds(data: dict, *, team: str, url: str | None) -> list[Fixture]:
     rounds = (data.get("data") or {}).get("discoverTeamFixture")
     if rounds is None:
@@ -78,24 +98,12 @@ def parse_rounds(data: dict, *, team: str, url: str | None) -> list[Fixture]:
     fixtures: dict[str, Fixture] = {}
     for rnd in rounds:
         for game in (rnd.get("fixture") or {}).get("games") or []:
-            home = (game.get("home") or {}).get("name") or ""
-            away = (game.get("away") or {}).get("name") or ""
-            if team not in (home, away):
-                continue
-            allocation = game.get("allocation") or {}
-            days = _days(allocation)
-            if not days:
-                continue  # not yet scheduled; nothing to put on a calendar
-            source_id = str(game["id"])
-            fixtures[source_id] = Fixture(
-                source_id=source_id,
-                title=f"{_short(home)} v {_short(away)}",
-                days=days,
-                status=_status((game.get("status") or {}).get("value", "")),
-                venue=_venue(allocation),
-                description=rnd.get("name"),
-                url=url,
-            )
+            try:
+                fixture = _parse_game(game, round_name=rnd.get("name"), team=team, url=url)
+            except (KeyError, ValueError, TypeError, AttributeError):
+                continue  # one malformed game must not cost the whole season
+            if fixture:
+                fixtures[fixture.source_id] = fixture
     return list(fixtures.values())
 
 

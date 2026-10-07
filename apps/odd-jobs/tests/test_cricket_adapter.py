@@ -118,3 +118,13 @@ def test_tbc_teams_and_unscheduled_fixtures_do_not_break_parsing():
     unrelated["homeTeam"] = None
     fixtures = ca.parse_fixtures([final, unscheduled, unrelated], team="NSW Men", tz=SYDNEY, series_url="https://s")
     assert [f.title for f in fixtures] == ["NSW v TBC: Final"]
+
+
+def test_one_malformed_fixture_is_skipped_without_losing_the_rest():
+    good = ca_fixture(1, "1st Test", "2026-12-09T02:20:00Z", 5, "Australia Men", "New Zealand Men")
+    bad_date = ca_fixture(2, "2nd Test", "not-a-date", 5, "Australia Men", "New Zealand Men")
+    no_id = ca_fixture(3, "3rd Test", "2026-12-25T23:30:00Z", 5, "Australia Men", "New Zealand Men")
+    del no_id["id"]
+    bad_days = ca_fixture(4, "4th Test", "2027-01-03T23:30:00Z", "five", "Australia Men", "New Zealand Men")
+    fixtures = ca.parse_fixtures([bad_date, good, no_id, bad_days], team="Australia Men", tz=SYDNEY, series_url="https://s")
+    assert [f.source_id for f in fixtures] == ["1"]

@@ -53,12 +53,12 @@ def test_healthz(tmp_path):
 def test_metrics_before_and_after_a_run(tmp_path):
     client, state = make_client(tmp_path)
     before = client.get("/metrics").text
-    assert 'odd_jobs_last_success_timestamp_seconds{job="calendars"} 0' in before
-    assert 'odd_jobs_last_run_ok{job="calendars"} 0' in before
+    assert 'odd_jobs_last_success_timestamp_seconds{name="calendars"} 0' in before
+    assert 'odd_jobs_last_run_ok{name="calendars"} 0' in before
     state.record_success("calendars", "x", now=1234.0)
     after = client.get("/metrics").text
-    assert 'odd_jobs_last_success_timestamp_seconds{job="calendars"} 1234.0' in after
-    assert 'odd_jobs_last_run_ok{job="calendars"} 1' in after
+    assert 'odd_jobs_last_success_timestamp_seconds{name="calendars"} 1234.0' in after
+    assert 'odd_jobs_last_run_ok{name="calendars"} 1' in after
 
 
 def test_failed_run_reports_not_ok_but_keeps_last_success(tmp_path):
@@ -66,8 +66,8 @@ def test_failed_run_reports_not_ok_but_keeps_last_success(tmp_path):
     state.record_success("calendars", "x", now=1234.0)
     state.record_failure("calendars", "boom", now=2000.0)
     text = client.get("/metrics").text
-    assert 'odd_jobs_last_success_timestamp_seconds{job="calendars"} 1234.0' in text
-    assert 'odd_jobs_last_run_ok{job="calendars"} 0' in text
+    assert 'odd_jobs_last_success_timestamp_seconds{name="calendars"} 1234.0' in text
+    assert 'odd_jobs_last_run_ok{name="calendars"} 0' in text
 
 
 def test_manual_run_and_unknown_job(tmp_path):

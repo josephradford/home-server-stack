@@ -59,8 +59,8 @@ def build_routes(scheduler: Scheduler, state: State, out_dir: Path) -> list[Rout
             rec = state.get(name)
             success = rec.last_success_at if rec and rec.last_success_at else 0
             ok = 1 if rec and rec.ok else 0
-            lines.append(f'odd_jobs_last_success_timestamp_seconds{{job="{name}"}} {success}')
-            lines.append(f'odd_jobs_last_run_ok{{job="{name}"}} {ok}')
+            lines.append(f'odd_jobs_last_success_timestamp_seconds{{name="{name}"}} {success}')
+            lines.append(f'odd_jobs_last_run_ok{{name="{name}"}} {ok}')
         return PlainTextResponse("\n".join(lines) + "\n", media_type="text/plain; version=0.0.4")
 
     async def run_now(request: Request) -> Response:

@@ -202,7 +202,7 @@ groups:
           severity: warning
           category: availability
         annotations:
-          summary: "odd-jobs job {{ $labels.job }} has not succeeded for 3 days"
+          summary: "odd-jobs job {{ $labels.name }} has not succeeded for 3 days"
           description: "Fixture calendars are stale. Check the source with `make jobs-probe` and `make logs-odd-jobs`; new seasons need new series ids in config/odd-jobs/calendars.yaml."
 
   # Note: WireGuard VPN monitoring removed - WireGuard is now a system service (not Docker container)

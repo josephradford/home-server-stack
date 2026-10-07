@@ -189,3 +189,5 @@ Changes agreed while turning this spec into `docs/superpowers/plans/2026-10-07-o
 - Parsing is tolerant of TBC teams, unscheduled fixtures, null PlayHQ times and provisional teams (skipped or titled "TBC"); a zero-fixture result is the signal that a source changed.
 - `make jobs-test` and `make jobs-probe` are the Makefile entry points; the probe is `python -m oddjobs.probe` inside the container.
 - Open item 2 (Apple Calendar against `jobs.${DOMAIN}`) is verified in the plan's final task; open item 3 is resolved (Starlette, port 8080).
+- Metric label is `name`, not `job` (`odd_jobs_last_success_timestamp_seconds{name=...}`): Prometheus reserves `job` for the scrape job and would rename the app's label to `exported_job`. The alert uses `$labels.name`.
+- One malformed fixture or game (bad date, missing id) is skipped instead of failing its whole calendar; a source whose format changed wholesale still yields zero fixtures and trips the job check.

@@ -108,3 +108,10 @@ def test_unset_times_and_provisional_teams_do_not_break_parsing():
     fixtures = playhq.parse_rounds(response, team=ME, url=None)
     assert [f.source_id for f in fixtures] == ["a", "b"]
     assert [d.date.day for d in fixtures[1].days] == [8]  # the entry without a time is dropped
+
+
+def test_one_malformed_game_is_skipped_without_losing_the_rest():
+    broken = playhq_game("x", ME, "Gordon 1st", [("2026-10-31", "10:00:00")])
+    del broken["id"]
+    response = playhq_response([("Round 5", [broken, playhq_game("ok", ME, "Mosman 1st", [("2026-11-07", "10:00:00")])])])
+    assert [f.source_id for f in playhq.parse_rounds(response, team=ME, url=None)] == ["ok"]
