@@ -68,6 +68,8 @@ services:
       - ./data/traefik/certs:/certs
       - ./data/traefik/logs:/var/log/traefik
       - ./config/traefik:/etc/traefik:ro
+      # Static route for host-networked NetAlertX (config/traefik is generated/gitignored)
+      - ./config/traefik-routes/netalertx.yml:/etc/traefik/netalertx.yml:ro
 
     # Lets Traefik reach host-networked services (e.g. NetAlertX) via the file provider
     extra_hosts:

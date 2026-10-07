@@ -1,0 +1,18 @@
+# Dynamic Traefik config for NetAlertX (host-networked, so no Docker labels).
+# Port must match PORT in docker-compose.netalertx.yml. Reached via host.docker.internal,
+# which docker-compose.network.yml maps to the host gateway.
+http:
+  routers:
+    netalertx:
+      rule: "HostRegexp(`^netalertx\\..+$`)"
+      entryPoints:
+        - websecure
+      tls: {}
+      middlewares:
+        - admin-secure@docker
+      service: netalertx
+  services:
+    netalertx:
+      loadBalancer:
+        servers:
+          - url: "http://host.docker.internal:20211"
