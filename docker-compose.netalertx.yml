@@ -13,7 +13,7 @@
 
 services:
   netalertx:
-    image: ghcr.io/netalertx/netalertx:latest
+    image: ghcr.io/netalertx/netalertx:26.10.0
     container_name: netalertx
     restart: unless-stopped
     network_mode: host
