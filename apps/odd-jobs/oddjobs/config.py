@@ -85,6 +85,8 @@ def _parse_calendar(entry: object, seen: set[str]) -> CalendarConfig:
     discover = bool(entry.get("discover", False))
     if source == "cricket_com_au" and not series and not discover:
         raise ConfigError(f"calendar {name}: cricket_com_au needs a non-empty 'series' list or 'discover: true'")
+    if source == "cricket_com_au" and discover and not str(team_id or "").isdigit():
+        raise ConfigError(f"calendar {name}: discover needs 'team_id' set to cricket.com.au's numeric team id")
     if source == "playhq" and not team_id:
         raise ConfigError(f"calendar {name}: playhq needs 'team_id'")
     return CalendarConfig(

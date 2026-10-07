@@ -136,67 +136,102 @@ def test_one_malformed_fixture_is_skipped_without_losing_the_rest():
     assert [f.source_id for f in fixtures] == ["1"]
 
 
-MATCHES_HTML = (
-    '<a href="/matches/series/CA:4568/south-africa-v-australia-tests-2026-men">SA</a>'
-    '<a href="/matches/series/CA:4605/">NZ</a>'
-    '<a href="/matches/series/CA:4605/australia-v-new-zealand-tests-2026-27-men">NZ</a>'
-    '<a href="/matches/series/CA:4687/weber-wbbl-12">WBBL</a>'
-    '<a href="/matches/series/CA:4717/pakistan-v-sri-lanka-tests-2026-men">PAK</a>'
-)
 SA_TEST = ca_fixture(20, "1st Test", "2026-10-09T07:30:00Z", 5, "South Africa Men", "Australia Men")
+INDIA_TEST = ca_fixture(30, "1st Test", "2027-01-21T04:00:00Z", 5, "India Men", "Australia Men")
+COMPETITIONS_PATH = "/web/competitions/format/year"
 
 
-def discovery_handler(pages):
+def competitions(*ids):
+    return {"competitionDetails": [{"competitionId": i, "name": f"series {i}"} for i in ids], "responseError": False}
+
+
+def discovery_handler(by_year, pages):
+    """by_year: {year: competitions payload}; pages: {series path: html}. Records every request."""
     seen = []
 
     def handler(request):
-        seen.append(request.url.path)
+        seen.append(request)
+        if request.url.path == COMPETITIONS_PATH:
+            payload = by_year.get(int(request.url.params["year"]))
+            return httpx.Response(200, json=payload) if payload is not None else httpx.Response(503)
         body = pages.get(request.url.path)
         return httpx.Response(200, text=body) if body is not None else httpx.Response(503)
 
     return handler, seen
 
 
-def test_discover_series_keeps_unique_ids_whose_slug_mentions_the_team():
-    handler, _ = discovery_handler({"/matches/series": MATCHES_HTML})
+def test_discover_series_asks_the_api_per_year_for_the_team_and_dedupes():
+    handler, seen = discovery_handler({2026: competitions(4568, 4605), 2027: competitions(4605, 4617, 4698)}, {})
     with client_for(handler) as client:
-        assert ca.discover_series(client, "Australia Men") == ["CA:4568", "CA:4605"]
+        ids = ca.discover_series(client, 23, (2026, 2027))
+    assert ids == ["CA:4568", "CA:4605", "CA:4617", "CA:4698"]
+    params = [dict(r.url.params) for r in seen]
+    assert [p["year"] for p in params] == ["2026", "2027"]
+    assert all(p["teamId"] == "23" and p["isCompleted"] == "false" and p["limit"] == "25" for p in params)
 
 
-def test_discover_raises_when_page_has_no_series_links():
-    handler, _ = discovery_handler({"/matches/series": "<html>redesigned</html>"})
+def test_discover_raises_on_api_error_payloads_and_http_failures():
+    bad = {"competitionDetails": [], "responseError": True, "responseStatus": {"message": "nope"}}
+    handler, _ = discovery_handler({2026: bad}, {})
     with client_for(handler) as client:
-        with pytest.raises(AdapterError, match="no series links"):
-            ca.discover_series(client, "Australia Men")
+        with pytest.raises(AdapterError, match="API error"):
+            ca.discover_series(client, 23, (2026,))
+        with pytest.raises(AdapterError, match="failed"):
+            ca.discover_series(client, 23, (2030,))  # handler answers 503
 
 
 def test_fetch_with_discover_adds_new_series_and_dedupes_pinned():
-    handler, seen = discovery_handler({
-        "/matches/series": MATCHES_HTML,
-        "/matches/series/CA:4605": series_html(TESTS),
-        "/matches/series/CA:4568": series_html([SA_TEST]),
-    })
+    handler, seen = discovery_handler(
+        {2026: competitions(4568, 4605), 2027: competitions(4617)},
+        {
+            "/matches/series/CA:4605": series_html(TESTS),
+            "/matches/series/CA:4568": series_html([SA_TEST]),
+            "/matches/series/CA:4617": series_html([INDIA_TEST]),
+        },
+    )
     with client_for(handler) as client:
         fixtures = ca.fetch_fixtures(
-            client, series=("CA:4605",), team="Australia Men", tz=SYDNEY, discover=True
+            client, series=("CA:4605",), team="Australia Men", tz=SYDNEY,
+            discover=True, team_id=23, years=(2026, 2027),
         )
-    assert sorted(f.source_id for f in fixtures) == ["1", "2", "20"]
-    assert seen.count("/matches/series/CA:4605") == 1  # pinned series is not fetched twice
+    assert sorted(f.source_id for f in fixtures) == ["1", "2", "20", "30"]
+    assert [r.url.path for r in seen].count("/matches/series/CA:4605") == 1  # pinned series is not fetched twice
 
 
 def test_discovered_series_failure_is_skipped_but_pinned_failure_is_not():
-    pages = {
-        "/matches/series": MATCHES_HTML,
-        "/matches/series/CA:4605": series_html(TESTS),
-    }  # CA:4568 returns 503
-    handler, _ = discovery_handler(pages)
+    handler, _ = discovery_handler(
+        {2026: competitions(4568, 4605)},
+        {"/matches/series/CA:4605": series_html(TESTS)},  # CA:4568 returns 503
+    )
     with client_for(handler) as client:
         fixtures = ca.fetch_fixtures(
-            client, series=("CA:4605",), team="Australia Men", tz=SYDNEY, discover=True
+            client, series=(), team="Australia Men", tz=SYDNEY, discover=True, team_id=23, years=(2026,)
         )
         assert [f.source_id for f in fixtures] == ["1", "2"]
         with pytest.raises(AdapterError, match="failed"):
             ca.fetch_fixtures(client, series=("CA:4568",), team="Australia Men", tz=SYDNEY)
+
+
+def test_discover_requires_a_team_id():
+    with client_for(lambda r: httpx.Response(200)) as client:
+        with pytest.raises(AdapterError, match="team_id"):
+            ca.fetch_fixtures(client, series=(), team="Australia Men", tz=SYDNEY, discover=True)
+
+
+def test_default_years_are_this_year_and_next(monkeypatch):
+    seen_years = []
+
+    def handler(request):
+        if request.url.path == COMPETITIONS_PATH:
+            seen_years.append(int(request.url.params["year"]))
+            return httpx.Response(200, json=competitions())
+        return httpx.Response(503)
+
+    with client_for(handler) as client:
+        ca.fetch_fixtures(client, series=(), team="Australia Men", tz=SYDNEY, discover=True, team_id=23)
+    from datetime import datetime
+    year = datetime.now(SYDNEY).year
+    assert seen_years == [year, year + 1]
 
 
 def test_fetch_retries_once_after_429():

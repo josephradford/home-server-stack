@@ -1,18 +1,19 @@
 timezone: Australia/Sydney
 
 # One entry per subscribable calendar; `name` becomes /<name>.ics.
-#   cricket_com_au: `discover: true` scans cricket.com.au/matches/series for series whose URL slug mentions the
-#                   team's first word ("Australia Men" -> "australia") and keeps fixtures for
-#                   `team`; suits national teams. `series` pins ids (CA:<id> in
-#                   https://www.cricket.com.au/matches/series/CA:<id>/...) for competitions that
-#                   page doesn't link, like the Sheffield Shield; they change every season.
-#                   `game_types` optionally keeps only those match formats (e.g. Test).
+#   cricket_com_au: `discover: true` + `team_id` (the site's numeric id for `team`) asks the site's
+#                   own competitions API which series that team plays this year and next, so
+#                   new tours and unlisted series (India Tests, the Ashes) are picked up.
+#                   `series` pins ids (CA:<id> in https://www.cricket.com.au/matches/series/
+#                   CA:<id>/...) for anything else, like the Sheffield Shield; they change
+#                   every season. `game_types` optionally keeps only those formats (e.g. Test).
 #   playhq:         team_id is the last segment of the team's page URL on playhq.com
 calendars:
   - name: australia-tests
     title: Australia Men's Tests
     source: cricket_com_au
-    discover: true   # picks up new tours automatically from cricket.com.au/matches/series
+    discover: true   # asks the site which series Australia Men are in (this year and next)
+    team_id: 23      # cricket.com.au team id for "Australia Men" (homeTeam.id in any series page)
     game_types: ["Test"]   # cricket.com.au gameType; leaves out ODIs and T20Is
     team: "Australia Men"
 

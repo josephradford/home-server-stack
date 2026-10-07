@@ -62,9 +62,15 @@ def test_invalid_configs(tmp_path, mutation, message):
 
 
 def test_cricket_calendar_can_discover_without_pinned_series(tmp_path):
-    text = VALID.replace('    series: ["CA:4605"]\n', "    discover: true\n")
+    text = VALID.replace('    series: ["CA:4605"]\n', "    discover: true\n    team_id: 23\n")
     tests, _ = load_config(write(tmp_path, text)).calendars
-    assert tests.discover is True and tests.series == ()
+    assert tests.discover is True and tests.series == () and tests.team_id == "23"
+
+
+def test_cricket_discover_needs_a_numeric_team_id(tmp_path):
+    text = VALID.replace('    series: ["CA:4605"]\n', "    discover: true\n")
+    with pytest.raises(ConfigError, match="team_id"):
+        load_config(write(tmp_path, text))
 
 
 def test_game_types_is_optional_and_loaded(tmp_path):
