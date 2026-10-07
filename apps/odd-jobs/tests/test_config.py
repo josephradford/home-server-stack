@@ -59,3 +59,9 @@ def test_missing_file_is_a_config_error(tmp_path):
 def test_invalid_configs(tmp_path, mutation, message):
     with pytest.raises(ConfigError, match=message):
         load_config(write(tmp_path, mutation(VALID)))
+
+
+def test_cricket_calendar_can_discover_without_pinned_series(tmp_path):
+    text = VALID.replace('    series: ["CA:4605"]\n', "    discover: true\n")
+    tests, _ = load_config(write(tmp_path, text)).calendars
+    assert tests.discover is True and tests.series == ()

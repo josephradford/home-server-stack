@@ -56,7 +56,7 @@ class CalendarsJob:
 def fetch_calendar(calendar: CalendarConfig, config: Config, client: httpx.Client) -> list[Fixture]:
     if calendar.source == "cricket_com_au":
         return cricket_com_au.fetch_fixtures(
-            client, series=calendar.series, team=calendar.team, tz=config.tz
+            client, series=calendar.series, team=calendar.team, tz=config.tz, discover=calendar.discover
         )
     return playhq.fetch_fixtures(
         client, team_id=calendar.team_id, team=calendar.team, url=calendar.url

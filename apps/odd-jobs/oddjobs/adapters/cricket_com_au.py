@@ -3,10 +3,15 @@
 Each series page (https://www.cricket.com.au/matches/series/CA:<id>) embeds the full
 fixture list as `window.FIXTURES_DATA = JSON.parse('...')`. The slug after the id is
 ignored by the site, so only the id is needed.
+
+New tours get new series ids, so a calendar can set `discover: true`: the /matches page
+links every current series, and each one is fetched and filtered by team. Pinned `series`
+ids are still needed for competitions that page doesn't link (e.g. the Sheffield Shield).
 """
 from __future__ import annotations
 
 import json
+import logging
 import re
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
@@ -16,7 +21,11 @@ import httpx
 from oddjobs.core.errors import AdapterError
 from oddjobs.models import Day, Fixture, Status
 
+log = logging.getLogger("oddjobs.cricket")
+
 SERIES_URL = "https://www.cricket.com.au/matches/series/{series_id}"
+MATCHES_URL = "https://www.cricket.com.au/matches"
+_SERIES_LINK_RE = re.compile(r"/matches/series/(CA:\d+)")
 _BLOB_RE = re.compile(r"FIXTURES_DATA\s*=\s*JSON\.parse\('(.*?)'\);", re.S)
 _SERIES_ID_RE = re.compile(r"^CA:\d+$")
 _JS_ESCAPE_RE = re.compile(r"\\(u[0-9a-fA-F]{4}|x[0-9a-fA-F]{2}|.)", re.S)
@@ -111,20 +120,55 @@ def parse_fixtures(raw_fixtures: list[dict], *, team: str, tz: ZoneInfo, series_
     return list(fixtures.values())
 
 
+def discover_series(client: httpx.Client) -> list[str]:
+    """Series ids linked from the /matches page, in page order."""
+    try:
+        response = client.get(MATCHES_URL)
+        response.raise_for_status()
+    except httpx.HTTPError as e:
+        raise AdapterError(f"cricket.com.au: fetching {MATCHES_URL} failed: {e}") from None
+    ids = list(dict.fromkeys(_SERIES_LINK_RE.findall(response.text)))
+    if not ids:
+        raise AdapterError("cricket.com.au: no series links found on /matches (page layout changed?)")
+    return ids
+
+
+def _fetch_series(client: httpx.Client, series_id: str, *, team: str, tz: ZoneInfo) -> list[Fixture]:
+    url = SERIES_URL.format(series_id=series_id)
+    try:
+        response = client.get(url)
+        response.raise_for_status()
+    except httpx.HTTPError as e:
+        raise AdapterError(f"cricket.com.au: fetching {url} failed: {e}") from None
+    return parse_fixtures(extract_fixtures_data(response.text), team=team, tz=tz, series_url=url)
+
+
 def fetch_fixtures(
-    client: httpx.Client, *, series: tuple[str, ...], team: str, tz: ZoneInfo
+    client: httpx.Client,
+    *,
+    series: tuple[str, ...],
+    team: str,
+    tz: ZoneInfo,
+    discover: bool = False,
 ) -> list[Fixture]:
-    fixtures: list[Fixture] = []
     for series_id in series:
         if not _SERIES_ID_RE.match(series_id):
             raise AdapterError(f"cricket.com.au: bad series id {series_id!r} (expected CA:<digits>)")
-        url = SERIES_URL.format(series_id=series_id)
-        try:
-            response = client.get(url)
-            response.raise_for_status()
-        except httpx.HTTPError as e:
-            raise AdapterError(f"cricket.com.au: fetching {url} failed: {e}") from None
-        fixtures.extend(
-            parse_fixtures(extract_fixtures_data(response.text), team=team, tz=tz, series_url=url)
-        )
-    return fixtures
+    fixtures: dict[str, Fixture] = {}
+    for series_id in series:  # pinned: a failure here fails the calendar
+        for fixture in _fetch_series(client, series_id, team=team, tz=tz):
+            fixtures[fixture.source_id] = fixture
+    if discover:
+        for series_id in discover_series(client):
+            if series_id in series:
+                continue
+            try:  # discovered: one unrelated series misbehaving must not cost the calendar
+                found = _fetch_series(client, series_id, team=team, tz=tz)
+            except AdapterError as e:
+                log.warning("skipping discovered series %s: %s", series_id, e)
+                continue
+            if found:
+                log.info("discovered series %s has %d fixtures for %s", series_id, len(found), team)
+            for fixture in found:
+                fixtures.setdefault(fixture.source_id, fixture)
+    return list(fixtures.values())

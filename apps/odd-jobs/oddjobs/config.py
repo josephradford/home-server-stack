@@ -22,6 +22,7 @@ class CalendarConfig:
     team: str
     duration_hours: float = 6
     series: tuple[str, ...] = ()
+    discover: bool = False
     team_id: str | None = None
     url: str | None = None
 
@@ -80,8 +81,9 @@ def _parse_calendar(entry: object, seen: set[str]) -> CalendarConfig:
         raise ConfigError(f"calendar {name}: unknown source {source!r} (expected one of {SOURCES})")
     series = tuple(entry.get("series") or ())
     team_id = entry.get("team_id")
-    if source == "cricket_com_au" and not series:
-        raise ConfigError(f"calendar {name}: cricket_com_au needs a non-empty 'series' list")
+    discover = bool(entry.get("discover", False))
+    if source == "cricket_com_au" and not series and not discover:
+        raise ConfigError(f"calendar {name}: cricket_com_au needs a non-empty 'series' list or 'discover: true'")
     if source == "playhq" and not team_id:
         raise ConfigError(f"calendar {name}: playhq needs 'team_id'")
     return CalendarConfig(
@@ -91,6 +93,7 @@ def _parse_calendar(entry: object, seen: set[str]) -> CalendarConfig:
         team=entry["team"],
         duration_hours=float(entry.get("duration_hours", 6)),
         series=series,
+        discover=discover,
         team_id=str(team_id) if team_id else None,
         url=entry.get("url"),
     )

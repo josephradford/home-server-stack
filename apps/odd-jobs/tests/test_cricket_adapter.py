@@ -91,7 +91,7 @@ def test_fetch_requests_each_series_page():
         "https://www.cricket.com.au/matches/series/CA:4605",
         "https://www.cricket.com.au/matches/series/CA:4689",
     ]
-    assert len(fixtures) == 4  # same fixture ids across series pages are kept per page
+    assert len(fixtures) == 2  # the same fixture id seen in two series is one fixture
 
 
 def test_fetch_wraps_http_errors():
@@ -128,3 +128,67 @@ def test_one_malformed_fixture_is_skipped_without_losing_the_rest():
     bad_days = ca_fixture(4, "4th Test", "2027-01-03T23:30:00Z", "five", "Australia Men", "New Zealand Men")
     fixtures = ca.parse_fixtures([bad_date, good, no_id, bad_days], team="Australia Men", tz=SYDNEY, series_url="https://s")
     assert [f.source_id for f in fixtures] == ["1"]
+
+
+MATCHES_HTML = (
+    '<a href="/matches/series/CA:4568/south-africa-v-australia-tests-2026-men">SA</a>'
+    '<a href="/matches/series/CA:4605/">NZ</a>'
+    '<a href="/matches/series/CA:4605/australia-v-new-zealand-tests-2026-27-men">NZ</a>'
+    '<a href="/matches/series/CA:4687/weber-wbbl-12">WBBL</a>'
+)
+SA_TEST = ca_fixture(20, "1st Test", "2026-10-09T07:30:00Z", 5, "South Africa Men", "Australia Men")
+
+
+def discovery_handler(pages):
+    seen = []
+
+    def handler(request):
+        seen.append(request.url.path)
+        body = pages.get(request.url.path)
+        return httpx.Response(200, text=body) if body is not None else httpx.Response(503)
+
+    return handler, seen
+
+
+def test_discover_series_returns_unique_ids_in_page_order():
+    handler, _ = discovery_handler({"/matches": MATCHES_HTML})
+    with client_for(handler) as client:
+        assert ca.discover_series(client) == ["CA:4568", "CA:4605", "CA:4687"]
+
+
+def test_discover_raises_when_page_has_no_series_links():
+    handler, _ = discovery_handler({"/matches": "<html>redesigned</html>"})
+    with client_for(handler) as client:
+        with pytest.raises(AdapterError, match="no series links"):
+            ca.discover_series(client)
+
+
+def test_fetch_with_discover_adds_new_series_and_dedupes_pinned():
+    handler, seen = discovery_handler({
+        "/matches": MATCHES_HTML,
+        "/matches/series/CA:4605": series_html(TESTS),
+        "/matches/series/CA:4568": series_html([SA_TEST]),
+        "/matches/series/CA:4687": series_html([]),
+    })
+    with client_for(handler) as client:
+        fixtures = ca.fetch_fixtures(
+            client, series=("CA:4605",), team="Australia Men", tz=SYDNEY, discover=True
+        )
+    assert sorted(f.source_id for f in fixtures) == ["1", "2", "20"]
+    assert seen.count("/matches/series/CA:4605") == 1  # pinned series is not fetched twice
+
+
+def test_discovered_series_failure_is_skipped_but_pinned_failure_is_not():
+    pages = {
+        "/matches": MATCHES_HTML,
+        "/matches/series/CA:4605": series_html(TESTS),
+        "/matches/series/CA:4687": series_html([]),
+    }  # CA:4568 returns 503
+    handler, _ = discovery_handler(pages)
+    with client_for(handler) as client:
+        fixtures = ca.fetch_fixtures(
+            client, series=("CA:4605",), team="Australia Men", tz=SYDNEY, discover=True
+        )
+        assert [f.source_id for f in fixtures] == ["1", "2"]
+        with pytest.raises(AdapterError, match="failed"):
+            ca.fetch_fixtures(client, series=("CA:4568",), team="Australia Men", tz=SYDNEY)
