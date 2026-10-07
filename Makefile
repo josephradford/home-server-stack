@@ -4,6 +4,7 @@
 .PHONY: help setup update start stop restart logs build build-custom pull status clean purge validate env-check
 .PHONY: logs-homepage logs-owntracks logs-icloudpd logs-immich logs-cwa logs-library-digest
 .PHONY: library-digest-now
+.PHONY: logs-odd-jobs jobs-test jobs-probe
 .PHONY: setup-certs test-domain-access
 .PHONY: wireguard-status wireguard-install wireguard-setup wireguard-routing wireguard-test wireguard-peers wireguard-check
 .PHONY: ssl-setup ssl-renew-test
@@ -28,7 +29,7 @@
 # COMPOSE_CORE: Core + Network + Monitoring (used for operations that shouldn't restart dashboard or AI)
 # COMPOSE: All services including dashboard and AI (default for most operations)
 COMPOSE_CORE := docker compose -f docker-compose.yml -f docker-compose.network.yml -f docker-compose.monitoring.yml
-COMPOSE := docker compose -f docker-compose.yml -f docker-compose.network.yml -f docker-compose.monitoring.yml -f docker-compose.dashboard.yml -f docker-compose.photos.yml -f docker-compose.location.yml -f docker-compose.immich.yml -f docker-compose.library.yml -f docker-compose.kiosk.yml -f docker-compose.radmap.yml
+COMPOSE := docker compose -f docker-compose.yml -f docker-compose.network.yml -f docker-compose.monitoring.yml -f docker-compose.dashboard.yml -f docker-compose.photos.yml -f docker-compose.location.yml -f docker-compose.immich.yml -f docker-compose.library.yml -f docker-compose.kiosk.yml -f docker-compose.radmap.yml -f docker-compose.jobs.yml
 
 # Default target - show help
 help:
@@ -62,6 +63,9 @@ help:
 	@echo "  make logs-owntracks     - Show OwnTracks Recorder logs only"
 	@echo "  make logs-cwa           - Show Calibre Web Archive logs only"
 	@echo "  make logs-library-digest - Show library digest logs only"
+	@echo "  make logs-odd-jobs      - Show odd-jobs logs only"
+	@echo "  make jobs-test          - Run odd-jobs unit tests (local venv)"
+	@echo "  make jobs-probe         - Check live fixture sources (writes nothing)"
 	@echo "  make library-digest-now - Run the reading digest once, immediately"
 	@echo ""
 	@echo "OwnTracks Location (Individual Service Management):"
@@ -355,6 +359,18 @@ logs-cwa:
 
 logs-library-digest:
 	@$(COMPOSE) logs -f library-digest
+
+logs-odd-jobs:
+	@$(COMPOSE) logs -f odd-jobs
+
+# Unit tests for the odd-jobs service; uses a local venv in apps/odd-jobs/.venv
+jobs-test:
+	@cd apps/odd-jobs && python3 -m venv .venv && .venv/bin/pip install -q -r requirements-dev.txt && .venv/bin/python -m pytest -q
+
+# Fetch every configured fixture source once and report what was found (writes nothing).
+# Run this after a suspected source change; a FAIL line means an adapter needs updating.
+jobs-probe:
+	@$(COMPOSE) run --rm --no-deps odd-jobs python -m oddjobs.probe /config/calendars.yaml
 
 # Run the RSS-to-EPUB digest once, immediately, instead of waiting for the
 # container's internal sleep loop.

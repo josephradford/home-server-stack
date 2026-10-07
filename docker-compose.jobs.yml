@@ -1,0 +1,44 @@
+# Odd jobs: deterministic life-admin jobs (no AI). v1 publishes sports fixture calendars
+# at https://jobs.${DOMAIN}/<name>.ics for Apple Calendar subscription.
+# Follows the conventions of docker-compose.library.yml (external homeserver network,
+# Traefik labels with the wildcard cert, admin middleware).
+#
+# One-time prep:
+#   mkdir -p data/odd-jobs
+#   chown -R ${PUID}:${PGID} data/odd-jobs
+
+services:
+  odd-jobs:
+    build: ./apps/odd-jobs
+    container_name: odd-jobs
+    restart: unless-stopped
+    user: "${PUID:-1000}:${PGID:-1000}"
+    networks:
+      - homeserver
+    environment:
+      TZ: ${TIMEZONE:-UTC}
+      DOMAIN: ${DOMAIN}
+      ODD_JOBS_RUN_AT: ${ODD_JOBS_RUN_AT:-04:00}
+    volumes:
+      - ./data/odd-jobs:/data               # state.db and out/*.ics (the served calendars)
+      - ./config/odd-jobs:/config:ro        # calendars.yaml
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8080/healthz', timeout=5)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.odd-jobs.rule=Host(`jobs.${DOMAIN}`)"
+      - "traefik.http.routers.odd-jobs.entrypoints=websecure"
+      - "traefik.http.routers.odd-jobs.tls=true"
+      - "traefik.http.services.odd-jobs.loadbalancer.server.port=8080"
+      # Local/VPN only. Apple Calendar keeps its last fetched events when a refresh
+      # fails, so being off-network only means slightly stale data.
+      - "traefik.http.routers.odd-jobs.middlewares=admin-secure"
+
+networks:
+  homeserver:
+    external: true
+    name: home-server-stack_homeserver
