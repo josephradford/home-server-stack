@@ -1,0 +1,31 @@
+timezone: Australia/Sydney
+
+# One entry per subscribable calendar; `name` becomes /<name>.ics.
+#   cricket_com_au: `discover: true` scans cricket.com.au/matches/series for series whose URL slug mentions the
+#                   team's first word ("Australia Men" -> "australia") and keeps fixtures for
+#                   `team`; suits national teams. `series` pins ids (CA:<id> in
+#                   https://www.cricket.com.au/matches/series/CA:<id>/...) for competitions that
+#                   page doesn't link, like the Sheffield Shield; they change every season.
+#                   `game_types` optionally keeps only those match formats (e.g. Test).
+#   playhq:         team_id is the last segment of the team's page URL on playhq.com
+calendars:
+  - name: australia-tests
+    title: Australia Men's Tests
+    source: cricket_com_au
+    discover: true   # picks up new tours automatically from cricket.com.au/matches/series
+    game_types: ["Test"]   # cricket.com.au gameType; leaves out ODIs and T20Is
+    team: "Australia Men"
+
+  - name: nsw-shield
+    title: NSW Blues, Sheffield Shield
+    source: cricket_com_au
+    series: ["CA:4689"]
+    team: "NSW Men"
+
+  - name: parramatta-first-grade
+    title: Parramatta First Grade
+    source: playhq
+    team_id: bb481fee
+    team: "Parramatta First Grade"
+    duration_hours: 7
+    url: https://www.playhq.com/cricket-australia/org/parramatta-district-cricket-club/40fec43b/nsw-premier-cricket-mens-summer-202627/teams/parramatta-first-grade/bb481fee

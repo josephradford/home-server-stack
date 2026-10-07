@@ -329,6 +329,14 @@
           server: my-docker
           showStats: true
 
+      - Odd Jobs:
+          icon: mdi-calendar-sync
+          href: https://jobs.{{HOMEPAGE_VAR_DOMAIN}}
+          description: Sports fixture calendars
+          container: odd-jobs
+          server: my-docker
+          showStats: true
+
       - Kitchen Kiosk:
           icon: mdi-tablet-dashboard
           href: https://kiosk.{{HOMEPAGE_VAR_DOMAIN}}

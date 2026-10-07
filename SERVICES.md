@@ -159,6 +159,19 @@ posts from `config/library/feeds.txt` into one EPUB per day and drops it
 into CWA's ingest folder for auto-import. Full setup:
 `docs/ebook-library.md`.
 
+#### Odd Jobs (sports fixture calendars)
+
+Small AI-free service (`odd-jobs`) for deterministic life-admin jobs. The first job
+scrapes official cricket fixtures once a day (04:00, plus once at start-up) and serves
+them as subscribable calendars, one event per played day: Australia men's Tests,
+NSW Sheffield Shield and Parramatta first grade. Sources: cricket.com.au series pages
+and PlayHQ's anonymous GraphQL endpoint (both undocumented, so `make jobs-probe` checks
+they still parse). Access: `https://jobs.${DOMAIN}` (home/VPN only). Subscribe in Apple
+Calendar to `https://jobs.${DOMAIN}/<name>.ics` where `<name>` is `australia-tests`,
+`nsw-shield` or `parramatta-first-grade`; the status page at `/` lists each job's last
+run. Calendars are defined in `config/odd-jobs/calendars.yaml`; series ids change every
+season. If a refresh fails the old calendar keeps being served and the `OddJobsStale`
+alert fires after 3 days. Design: `docs/superpowers/specs/2026-10-07-odd-jobs-design.md`.
 ### Kitchen Kiosk
 
 #### Kitchen Kiosk API

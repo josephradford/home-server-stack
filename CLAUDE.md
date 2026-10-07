@@ -46,6 +46,7 @@ Add peers: `sudo ./scripts/wireguard/wireguard-add-peer.sh <name>`
 - `docker-compose.photos.yml` — iCloud photo backup (icloudpd)
 - `docker-compose.immich.yml` — Photo viewer (immich-server, immich-machine-learning, immich-postgres, immich-redis)
 - `docker-compose.library.yml` — Ebook library (cwa, library-digest)
+- `docker-compose.jobs.yml` — Odd jobs (odd-jobs: AI-free life-admin jobs, v1 = sports fixture calendars at jobs.${DOMAIN})
 
 The Makefile combines all of these files by default (see `COMPOSE` in the Makefile
 for the authoritative list).
