@@ -1,0 +1,32 @@
+---
+# Network Monitoring
+# - netalertx: Scans the LAN (ARP) for devices, tracks presence and alerts on new/unknown devices.
+#
+# Uses host networking so ARP scans see the real LAN. Because of that it cannot join the
+# homeserver bridge network, so Traefik reaches it via host.docker.internal using the file
+# provider (config/traefik/netalertx.yml) instead of Docker labels.
+#
+# First run: the data dir must be writable by the container user (uid 20211):
+#   sudo mkdir -p data/netalertx && sudo chown -R 20211:20211 data/netalertx
+#
+# Web UI: https://netalertx.DOMAIN  |  Direct: http://SERVER_IP:20211
+
+services:
+  netalertx:
+    image: ghcr.io/netalertx/netalertx:latest
+    container_name: netalertx
+    restart: unless-stopped
+    network_mode: host
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+      - NET_BIND_SERVICE
+    environment:
+      TZ: ${TIMEZONE}
+      PORT: "20211"
+    volumes:
+      - ./data/netalertx:/data
+    tmpfs:
+      - /tmp:uid=20211,gid=20211,mode=1700

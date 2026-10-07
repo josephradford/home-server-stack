@@ -108,6 +108,14 @@ Currently deployed and active services.
 - **Access:** https://owntracks.${DOMAIN}
 - **Authentication:** IP-restricted via Traefik `admin-secure`
 
+#### NetAlertX
+- **Purpose:** Scans the LAN (ARP) for devices, tracks presence and alerts on new/unknown devices
+- **Access:** https://netalertx.${DOMAIN}
+- **Direct Access:** http://SERVER_IP:20211
+- **Authentication:** IP-restricted via Traefik `admin-secure`
+- **Networking:** Runs with `network_mode: host` so scans see the real LAN. Traefik routes to it through the file provider (`config/traefik/netalertx.yml`) via `host.docker.internal`; UFW needs the `Traefik to NetAlertX` rule from `scripts/system/setup-firewall.sh`
+- **Data:** `./data/netalertx` must be owned by uid 20211 (`sudo chown -R 20211:20211 data/netalertx`)
+
 #### Radmap
 - **Purpose:** Offline NSW topographic map PWA. nginx serves static files only (no backend); the phone downloads tile archives into IndexedDB, then works offline
 - **Access:** https://radmap.${DOMAIN}
@@ -175,6 +183,7 @@ into CWA's ingest folder for auto-import. Full setup:
 | Prometheus | https://prometheus.${DOMAIN} | http://IP:9090 |
 | Alertmanager | https://alerts.${DOMAIN} | http://IP:9093 |
 | owntracks-recorder | https://owntracks.${DOMAIN} | N/A |
+| NetAlertX | https://netalertx.${DOMAIN} | http://IP:20211 |
 | icloudpd | https://icloud.${DOMAIN} | N/A |
 | Immich | https://immich.${DOMAIN} | N/A |
 | Ebook Library (CWA) | https://books.${DOMAIN} | N/A |

@@ -69,6 +69,10 @@ services:
       - ./data/traefik/logs:/var/log/traefik
       - ./config/traefik:/etc/traefik:ro
 
+    # Lets Traefik reach host-networked services (e.g. NetAlertX) via the file provider
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
     networks:
       - homeserver
 

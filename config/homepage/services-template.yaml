@@ -376,6 +376,13 @@
           container: owntracks-recorder
           server: my-docker
           showStats: true
+      - NetAlertX:
+          icon: mdi-lan-connect
+          href: https://netalertx.{{HOMEPAGE_VAR_DOMAIN}}
+          description: LAN device scanner and new-device alerts
+          container: netalertx
+          server: my-docker
+          showStats: true
       - Radmap:
           icon: mdi-map-outline
           href: https://radmap.{{HOMEPAGE_VAR_DOMAIN}}
