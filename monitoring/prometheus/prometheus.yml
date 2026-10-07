@@ -44,6 +44,9 @@ scrape_configs:
   # DNS health: ask AdGuard (target = the DNS server to query) to resolve a real
   # name. Container-level checks can't tell "running" from "answering DNS".
   - job_name: 'blackbox-dns'
+    # 30s (not the 15s global default) to halve the example.com query noise in
+    # AdGuard's log/stats; AdGuardDNSFailing still needs 2m of failures to fire.
+    scrape_interval: 30s
     metrics_path: /probe
     params:
       module: [dns_a]
