@@ -192,6 +192,19 @@ groups:
           summary: "AdGuard is not answering DNS queries"
           description: "DNS lookups against {{ $labels.instance }} have been failing for more than 2 minutes"
 
+      # odd-jobs daily refresh: Apple Calendar keeps showing old fixtures if refreshes quietly fail.
+      # 3 days without a successful run = ~3 failed daily runs (or the container is down).
+      # 1h `for`: the metric reads 0 between container start and the first run finishing.
+      - alert: OddJobsStale
+        expr: time() - odd_jobs_last_success_timestamp_seconds > 3 * 86400
+        for: 1h
+        labels:
+          severity: warning
+          category: availability
+        annotations:
+          summary: "odd-jobs job {{ $labels.job }} has not succeeded for 3 days"
+          description: "Fixture calendars are stale. Check the source with `make jobs-probe` and `make logs-odd-jobs`; new seasons need new series ids in config/odd-jobs/calendars.yaml."
+
   # Note: WireGuard VPN monitoring removed - WireGuard is now a system service (not Docker container)
   # Monitor WireGuard via system service checks instead of container metrics
   # Example: systemctl is-active wg-quick@wg0
