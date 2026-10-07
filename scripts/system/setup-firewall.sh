@@ -75,6 +75,9 @@ echo ""
 echo -e "${GREEN}Step 5/7: Allowing local network access (192.168.1.0/24)...${NC}"
 sudo ufw allow from 192.168.1.0/24 comment 'Local Network'
 
+# Traefik (Docker bridge) proxies to host-networked NetAlertX on 20211
+sudo ufw allow from 172.16.0.0/12 to any port 20211 proto tcp comment 'Traefik to NetAlertX'
+
 echo ""
 echo -e "${GREEN}Step 6/7: Allowing WireGuard VPN clients (${WIREGUARD_SUBNET})...${NC}"
 sudo ufw allow from ${WIREGUARD_SUBNET} comment 'WireGuard Clients'

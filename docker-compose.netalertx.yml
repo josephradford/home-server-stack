@@ -1,0 +1,58 @@
+---
+# Network Monitoring
+# - netalertx: Scans the LAN (ARP) for devices, tracks presence and alerts on new/unknown devices.
+# - docker-socket-proxy: Read-only Docker API (containers/info/networks) for NetAlertX's DOCKERDISC plugin,
+#                        so NetAlertX never mounts docker.sock itself. Bound to 127.0.0.1 only.
+#
+# Uses host networking so ARP scans see the real LAN. Because of that it cannot join the
+# homeserver bridge network, so the Traefik labels below point at host.docker.internal:20211
+# (mapped to the host gateway in docker-compose.network.yml) instead of a container address.
+#
+# First run: the data dir must be writable by the container user (uid 20211):
+#   sudo mkdir -p data/netalertx && sudo chown -R 20211:20211 data/netalertx
+#
+# Web UI: https://netalertx.DOMAIN  |  Direct: http://SERVER_IP:20211
+
+services:
+  netalertx:
+    image: ghcr.io/netalertx/netalertx:26.10.0
+    container_name: netalertx
+    restart: unless-stopped
+    network_mode: host
+    user: "20211:20211"
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+      - NET_BIND_SERVICE
+    environment:
+      TZ: ${TIMEZONE}
+      PORT: "20211"
+    volumes:
+      - ./data/netalertx:/data
+    tmpfs:
+      - /tmp:uid=20211,gid=20211,mode=1700
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.netalertx.rule=Host(`netalertx.${DOMAIN}`)"
+      - "traefik.http.routers.netalertx.entrypoints=websecure"
+      - "traefik.http.routers.netalertx.tls=true"
+      # UI fires 70+ requests per page load plus constant polling; admin-ratelimit (100/min) returns 429s
+      - "traefik.http.routers.netalertx.middlewares=admin-secure-no-ratelimit@docker"
+      - "traefik.http.services.netalertx.loadbalancer.server.url=http://host.docker.internal:20211"
+
+  docker-socket-proxy:
+    image: tecnativa/docker-socket-proxy:0.3.0
+    container_name: docker-socket-proxy
+    restart: unless-stopped
+    environment:
+      CONTAINERS: 1
+      INFO: 1
+      NETWORKS: 1
+      POST: 0
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    # netalertx uses host networking so can't resolve this service by name; publish to loopback only
+    ports:
+      - "127.0.0.1:2375:2375"

@@ -2,7 +2,7 @@
 # Simplifies deployment and maintenance operations
 
 .PHONY: help setup update start stop restart logs build build-custom pull status clean purge validate env-check
-.PHONY: logs-homepage logs-owntracks logs-icloudpd logs-immich logs-cwa logs-library-digest
+.PHONY: logs-homepage logs-owntracks logs-icloudpd logs-immich logs-cwa logs-library-digest logs-netalertx
 .PHONY: library-digest-now
 .PHONY: logs-odd-jobs jobs-test jobs-probe
 .PHONY: setup-certs test-domain-access
@@ -18,6 +18,7 @@
 # - docker-compose.monitoring.yml: Monitoring stack (Prometheus, Grafana, Alertmanager, exporters)
 # - docker-compose.dashboard.yml: Dashboard (Homepage, Homepage API)
 # - docker-compose.location.yml: Location services (owntracks-recorder)
+# - docker-compose.netalertx.yml: Network monitoring (netalertx)
 # - docker-compose.photos.yml: iCloud photo backup (icloudpd)
 # - docker-compose.immich.yml: Immich photo viewer (immich-server, immich-machine-learning, immich-postgres, immich-redis)
 # - docker-compose.library.yml: Ebook library (cwa, library-digest)
@@ -29,7 +30,7 @@
 # COMPOSE_CORE: Core + Network + Monitoring (used for operations that shouldn't restart dashboard or AI)
 # COMPOSE: All services including dashboard and AI (default for most operations)
 COMPOSE_CORE := docker compose -f docker-compose.yml -f docker-compose.network.yml -f docker-compose.monitoring.yml
-COMPOSE := docker compose -f docker-compose.yml -f docker-compose.network.yml -f docker-compose.monitoring.yml -f docker-compose.dashboard.yml -f docker-compose.photos.yml -f docker-compose.location.yml -f docker-compose.immich.yml -f docker-compose.library.yml -f docker-compose.kiosk.yml -f docker-compose.radmap.yml -f docker-compose.jobs.yml
+COMPOSE := docker compose -f docker-compose.yml -f docker-compose.network.yml -f docker-compose.monitoring.yml -f docker-compose.dashboard.yml -f docker-compose.photos.yml -f docker-compose.location.yml -f docker-compose.immich.yml -f docker-compose.library.yml -f docker-compose.kiosk.yml -f docker-compose.radmap.yml -f docker-compose.netalertx.yml -f docker-compose.jobs.yml
 
 # Default target - show help
 help:
@@ -61,6 +62,7 @@ help:
 	@echo "  make logs               - Show logs from all services"
 	@echo "  make logs-homepage      - Show Homepage logs only"
 	@echo "  make logs-owntracks     - Show OwnTracks Recorder logs only"
+	@echo "  make logs-netalertx     - Show NetAlertX logs only"
 	@echo "  make logs-cwa           - Show Calibre Web Archive logs only"
 	@echo "  make logs-library-digest - Show library digest logs only"
 	@echo "  make logs-odd-jobs      - Show odd-jobs logs only"
@@ -344,6 +346,9 @@ logs:
 # View logs from specific services
 logs-homepage:
 	@$(COMPOSE) logs -f homepage
+
+logs-netalertx:
+	@$(COMPOSE) logs -f netalertx
 
 logs-owntracks:
 	@$(COMPOSE) logs -f owntracks-recorder mosquitto
