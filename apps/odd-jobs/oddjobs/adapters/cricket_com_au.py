@@ -124,11 +124,19 @@ def parse_fixtures(raw_fixtures: list[dict], *, team: str, tz: ZoneInfo, series_
     return list(fixtures.values())
 
 
+def _get(client: httpx.Client, url: str) -> httpx.Response:
+    response = client.get(url)
+    if response.status_code == 429:  # rate limited: back off once, then let it fail
+        time.sleep(RETRY_429_SECONDS)
+        response = client.get(url)
+    response.raise_for_status()
+    return response
+
+
 def discover_series(client: httpx.Client, team: str) -> list[str]:
     """Series ids from the index whose slug mentions the team's first word, in page order."""
     try:
-        response = client.get(SERIES_INDEX_URL)
-        response.raise_for_status()
+        response = _get(client, SERIES_INDEX_URL)
     except httpx.HTTPError as e:
         raise AdapterError(f"cricket.com.au: fetching {SERIES_INDEX_URL} failed: {e}") from None
     links = _SERIES_LINK_RE.findall(response.text)
@@ -141,11 +149,7 @@ def discover_series(client: httpx.Client, team: str) -> list[str]:
 def _fetch_series(client: httpx.Client, series_id: str, *, team: str, tz: ZoneInfo) -> list[Fixture]:
     url = SERIES_URL.format(series_id=series_id)
     try:
-        response = client.get(url)
-        if response.status_code == 429:  # rate limited: back off once, then let it fail
-            time.sleep(RETRY_429_SECONDS)
-            response = client.get(url)
-        response.raise_for_status()
+        response = _get(client, url)
     except httpx.HTTPError as e:
         raise AdapterError(f"cricket.com.au: fetching {url} failed: {e}") from None
     return parse_fixtures(extract_fixtures_data(response.text), team=team, tz=tz, series_url=url)
