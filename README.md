@@ -6,13 +6,19 @@ A complete self-hosted infrastructure for home automation, AI, and network servi
 
 **Core:** [AdGuard Home](https://github.com/AdguardTeam/AdGuardHome) (DNS/ad-blocking), [WireGuard](https://github.com/wireguard) (VPN), [Traefik](https://github.com/traefik/traefik) (reverse proxy), OwnTracks Recorder (location)
 
-**Monitoring:** [Grafana](https://github.com/grafana/grafana), [Prometheus](https://github.com/prometheus/prometheus), [Alertmanager](https://github.com/prometheus/alertmanager), Node Exporter, cAdvisor
+**Monitoring:** [Grafana](https://github.com/grafana/grafana), [Prometheus](https://github.com/prometheus/prometheus), [Alertmanager](https://github.com/prometheus/alertmanager), Node Exporter, cAdvisor, blackbox-exporter
 
 **Dashboard:** [Homepage](https://github.com/gethomepage/homepage) + custom API backend
 
 **Backup:** [icloudpd](https://github.com/icloud-photos-downloader/icloud_photos_downloader) container mirroring iCloud photo libraries to an external drive
 
 **Library:** [Calibre-Web-Automated](https://github.com/crocodilestick/Calibre-Web-Automated) ebook library with Kobo sync, paired with a `library-digest` sidecar that turns RSS feeds into a daily EPUB
+
+**Photos:** [Immich](https://github.com/immich-app/immich) viewer over the icloudpd backups (read-only)
+
+**Network:** [NetAlertX](https://github.com/jokob-sk/NetAlertX) LAN device scanner, blackbox-exporter router/ISP/DNS probes
+
+**Home:** Kitchen Kiosk (iPad photo/calendar/radio display), [Radmap](https://github.com/josephradford/radmap) offline topo maps, Odd Jobs (AI-free life-admin jobs; v1 publishes cricket fixture calendars)
 
 See [SERVICES.md](SERVICES.md) for the complete catalog including planned services.
 
@@ -131,6 +137,12 @@ All services are accessible via domain names on your local network:
 - **Alertmanager:** `https://alerts.${DOMAIN}` (Alerts)
 - **Homepage:** `https://homepage.${DOMAIN}` (Dashboard)
 - **OwnTracks Recorder:** `https://owntracks.${DOMAIN}` (Location history API)
+- **NetAlertX:** `https://netalertx.${DOMAIN}` (LAN device scanner)
+- **Immich:** `https://immich.${DOMAIN}` (Photos)
+- **Books:** `https://books.${DOMAIN}` (Calibre-Web-Automated)
+- **Kitchen Kiosk:** `https://kiosk.${DOMAIN}`
+- **Radmap:** `https://radmap.${DOMAIN}` (Offline maps)
+- **Odd Jobs:** `https://jobs.${DOMAIN}` (calendar subscriptions at `/<name>.ics`)
 
 **Note:** Services are accessible via domain names thanks to Traefik reverse proxy and AdGuard Home DNS. Your devices must use AdGuard Home as their DNS server (configured automatically if DHCP points to the server).
 
@@ -208,6 +220,7 @@ See **[CLAUDE.md](CLAUDE.md)** for detailed dashboard setup instructions.
 - 📅 Google Calendar integration
 - 🚊 Real-time Transport NSW departures
 - 🚗 Traffic conditions for configurable routes
+- 🌐 Network health (router/ISP latency, devices on the network) and external outage status
 - 🐳 Docker container monitoring
 
 ## 🤝 Contributing
@@ -242,4 +255,4 @@ This project is open source. Individual services maintain their own licenses:
 ---
 
 **Project Status:** Active Development
-**Latest Update:** 2026-05-07
+**Latest Update:** 2026-10-07

@@ -169,15 +169,20 @@ and PlayHQ's anonymous GraphQL endpoint (both undocumented, so `make jobs-probe`
 they still parse). Access: `https://jobs.${DOMAIN}` (home/VPN only). Subscribe in Apple
 Calendar to `https://jobs.${DOMAIN}/<name>.ics` where `<name>` is `australia-tests`,
 `nsw-shield` or `parramatta-first-grade`; the status page at `/` lists each job's last
-run. Calendars are defined in `config/odd-jobs/calendars.yaml`; series ids change every
-season. If a refresh fails the old calendar keeps being served and the `OddJobsStale`
+run. Calendars are defined in `config/odd-jobs/calendars.yaml`. Australia Tests uses
+`discover: true` to find new tours automatically from the cricket.com.au series index
+(throttled, with 429 retry); the Sheffield Shield isn't linked there, so its series id is
+pinned and changes every season. If a refresh fails the old calendar keeps being served and the `OddJobsStale`
 alert fires after 3 days. Design: `docs/superpowers/specs/2026-10-07-odd-jobs-design.md`.
+
 ### Kitchen Kiosk
 
 #### Kitchen Kiosk API
 - **Purpose:** Aggregates weather (via homepage-api), calendar, Immich photos, recipes, and radio presets for the kiosk frontend
 - **Access:** https://kiosk-api.${DOMAIN}
-- **Authentication:** IP-restricted (local network / VPN only)
+- **Authentication:** IP-restricted (local network / VPN only; no rate limit, as the frontend polls continuously)
+- **Presence:** reads the host ARP table (`/proc/net` mounted read-only) and sleeps the display when none of `KIOSK_PRESENCE_KNOWN_MACS` are on the network
+- **Design:** `docs/superpowers/specs/2026-09-25-kitchen-kiosk-design.md`
 
 #### Kitchen Kiosk Web
 - **Purpose:** Static frontend served full-screen on the kitchen iPad via Safari "Add to Home Screen" + Guided Access
@@ -199,11 +204,13 @@ alert fires after 3 days. Design: `docs/superpowers/specs/2026-10-07-odd-jobs-de
 | Alertmanager | https://alerts.${DOMAIN} | http://IP:9093 |
 | owntracks-recorder | https://owntracks.${DOMAIN} | N/A |
 | NetAlertX | https://netalertx.${DOMAIN} | http://IP:20211 |
+| Radmap | https://radmap.${DOMAIN} | N/A |
 | icloudpd | https://icloud.${DOMAIN} | N/A |
 | Immich | https://immich.${DOMAIN} | N/A |
 | Ebook Library (CWA) | https://books.${DOMAIN} | N/A |
 | Kitchen Kiosk API | https://kiosk-api.${DOMAIN} | N/A |
 | Kitchen Kiosk | https://kiosk.${DOMAIN} | N/A |
+| Odd Jobs | https://jobs.${DOMAIN} | N/A |
 
 ---
 

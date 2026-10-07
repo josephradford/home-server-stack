@@ -83,6 +83,43 @@ graph TB
         :5000"]
     end
 
+    subgraph Media["Photos & Library
+    photos / immich / library.yml"]
+        Icloudpd["icloudpd
+        iCloud backup"]
+        Immich["Immich
+        Photo viewer
+        server, ML, postgres, redis"]
+        CWA["Calibre-Web-Automated
+        Ebooks + Kobo sync"]
+        LibDigest["library-digest
+        Daily RSS EPUB"]
+    end
+
+    subgraph Apps["Home Apps
+    kiosk / radmap / jobs.yml"]
+        KioskAPI["kiosk-api
+        Weather, calendar, photos
+        :5100"]
+        KioskWeb["kiosk-web
+        iPad frontend (nginx)"]
+        Radmap["Radmap
+        Offline topo map PWA"]
+        OddJobs["odd-jobs
+        Fixture .ics calendars
+        :8080"]
+    end
+
+    subgraph NetMon["Network Monitoring
+    docker-compose.netalertx.yml"]
+        NetAlertX["NetAlertX
+        LAN ARP scanner
+        host network :20211"]
+        SockProxy["docker-socket-proxy
+        read-only API
+        127.0.0.1:2375"]
+    end
+
     subgraph Data["Data Persistence
     ./data/ bind mounts"]
         AdGuardData[(AdGuard Data)]
@@ -91,6 +128,8 @@ graph TB
         PrometheusData[(Prometheus TSDB)]
         WireGuardData[(WireGuard Configs)]
         OwnTracksData[(OwnTracks Store)]
+        AppData[("Immich, CWA, kiosk recipes,
+        radmap tiles, odd-jobs, netalertx")]
     end
 
     %% External connections
@@ -113,6 +152,13 @@ graph TB
     Traefik -->|*.domain routing| Alertmanager
     Traefik -->|*.domain routing| Homepage
     Traefik -->|owntracks.domain routing| OwnTracks
+    Traefik -->|immich / books routing| Immich
+    Traefik -->|immich / books routing| CWA
+    Traefik -->|kiosk routing| KioskWeb
+    Traefik -->|kiosk-api routing| KioskAPI
+    Traefik -->|radmap routing| Radmap
+    Traefik -->|jobs routing| OddJobs
+    Traefik -->|host.docker.internal:20211| NetAlertX
 
     %% DNS resolution
     AdGuard -.->|DNS Rewrites| Traefik
@@ -121,7 +167,9 @@ graph TB
     Prometheus -->|Scrape| NodeExporter
     Prometheus -->|Scrape| CAdvisor
     Prometheus -->|Scrape| Traefik
-    Prometheus -->|Scrape| AdGuard
+    Prometheus -->|Scrape| OddJobs
+    Prometheus -->|Probe| Blackbox["blackbox-exporter
+    Router/ISP ICMP, AdGuard DNS"]
     Grafana -->|Query| Prometheus
     Prometheus -->|Alerts| Alertmanager
 
@@ -129,6 +177,11 @@ graph TB
     Homepage -->|API Calls| HomepageAPI
     HomepageAPI -->|Docker Stats| Core
     HomepageAPI -->|Docker Stats| Monitoring
+    KioskAPI -->|Weather| HomepageAPI
+    KioskAPI -->|Photos| Immich
+    Immich -.->|Reads read-only| Icloudpd
+    LibDigest -.->|Ingest folder| CWA
+    NetAlertX -.->|Container discovery| SockProxy
 
     %% Certificate management
     Certbot -->|Copies Certs| TraefikData
@@ -141,6 +194,8 @@ graph TB
     Prometheus -.->|Stores| PrometheusData
     VPN -.->|Stores| WireGuardData
     OwnTracks -.->|Stores| OwnTracksData
+    Immich -.->|Stores| AppData
+    OddJobs -.->|Stores| AppData
 
     classDef external fill:#ff6b6b,stroke:#c92a2a,stroke-width:2px,color:#fff
     classDef network fill:#4dabf7,stroke:#1971c2,stroke-width:2px,color:#fff
@@ -153,9 +208,9 @@ graph TB
     class VPN,HTTP external
     class Traefik,Fail2ban,UFW network
     class AdGuard core
-    class Prometheus,Grafana,Alertmanager,NodeExporter,CAdvisor monitoring
-    class Homepage,HomepageAPI dashboard
-    class AdGuardData,TraefikData,GrafanaData,PrometheusData,WireGuardData,OwnTracksData data
+    class Prometheus,Grafana,Alertmanager,NodeExporter,CAdvisor,Blackbox monitoring
+    class Homepage,HomepageAPI,KioskAPI,KioskWeb,Radmap,OddJobs,Immich,CWA,Icloudpd,LibDigest,NetAlertX,SockProxy dashboard
+    class AdGuardData,TraefikData,GrafanaData,PrometheusData,WireGuardData,OwnTracksData,AppData data
     class Certbot system
 ```
 
@@ -195,7 +250,9 @@ graph TB
             AdminSecure["admin-secure
             IP Whitelist: RFC1918
             Rate Limit: 10/min
-            Security Headers"]
+            Security Headers
+            (-no-ratelimit variant for
+            polled UIs: kiosk, NetAlertX, Immich)"]
             WebhookSecure["webhook-secure
             Public Access
             Rate Limit: 100/min
@@ -216,9 +273,11 @@ graph TB
         Traefik Dashboard, AdGuard
         Homepage, Homepage API
         Grafana, Prometheus, Alertmanager
-        owntracks-recorder"]
+        owntracks-recorder, NetAlertX
+        Immich, Books, Kiosk, Radmap, Odd Jobs"]
         Internal["Internal-Only Services
-        node-exporter, cadvisor"]
+        node-exporter, cadvisor
+        blackbox-exporter"]
         Webhooks["Public Webhooks
         Future"]
     end
@@ -326,6 +385,20 @@ graph TD
     %% Location services
     OwnTracks["owntracks-recorder
     Location API"]
+
+    %% Photos, library, apps
+    Icloudpd["icloudpd"]
+    Immich["Immich
+    server, ML, postgres, redis"]
+    CWA["Calibre-Web-Automated"]
+    LibDigest["library-digest"]
+    KioskAPI["kiosk-api"]
+    KioskWeb["kiosk-web"]
+    Radmap["Radmap"]
+    OddJobs["odd-jobs"]
+    NetAlertX["NetAlertX"]
+    SockProxy["docker-socket-proxy"]
+    Blackbox["blackbox-exporter"]
     %% Dependencies
     Docker --> Traefik
     Docker --> Fail2ban
@@ -338,12 +411,39 @@ graph TD
     Docker --> HomepageAPI
     Docker --> Homepage
     Docker --> OwnTracks
+    Docker --> Icloudpd
+    Docker --> Immich
+    Docker --> CWA
+    Docker --> LibDigest
+    Docker --> KioskAPI
+    Docker --> KioskWeb
+    Docker --> Radmap
+    Docker --> OddJobs
+    Docker --> NetAlertX
+    Docker --> SockProxy
+    Docker --> Blackbox
 
     Traefik --> Grafana
     Traefik --> Prometheus
     Traefik --> Alertmanager
     Traefik --> Homepage
     Traefik --> OwnTracks
+    Traefik --> Immich
+    Traefik --> CWA
+    Traefik --> KioskWeb
+    Traefik --> KioskAPI
+    Traefik --> Radmap
+    Traefik --> OddJobs
+    Traefik --> NetAlertX
+
+    Icloudpd -.->|Backup files, read-only| Immich
+    LibDigest -->|Ingest folder| CWA
+    HomepageAPI -->|Weather| KioskAPI
+    Immich -->|Photos| KioskAPI
+    KioskAPI --> KioskWeb
+    SockProxy -->|Docker API| NetAlertX
+    Blackbox --> Prometheus
+    OddJobs -->|Metrics| Prometheus
 
     NodeExporter --> Prometheus
     CAdvisor --> Prometheus
@@ -368,8 +468,8 @@ graph TD
     class Docker,WireGuard,Certbot system
     class Traefik,Fail2ban network
     class AdGuard core
-    class Prometheus,NodeExporter,CAdvisor,Grafana,Alertmanager monitoring
-    class HomepageAPI,Homepage,OwnTracks dashboard
+    class Prometheus,NodeExporter,CAdvisor,Grafana,Alertmanager,Blackbox monitoring
+    class HomepageAPI,Homepage,OwnTracks,Icloudpd,Immich,CWA,LibDigest,KioskAPI,KioskWeb,Radmap,OddJobs,NetAlertX,SockProxy dashboard
 ```
 
 ---
@@ -399,6 +499,9 @@ graph LR
             notifications/"]
             WireGuardDir["./data/wireguard/
             peers/"]
+            AppDirs["./data/immich, cwa, radmap/tiles,
+            kitchen-kiosk/recipes, odd-jobs,
+            netalertx"]
         end
 
         subgraph ConfigDir["./config/ Directory
@@ -414,6 +517,8 @@ graph LR
             alertmanager.yml"]
             HomepageConfig["./config/homepage/
             services.yaml, docker.yaml"]
+            AppConfig["./config/odd-jobs/calendars.yaml
+            ./config/library/feeds.txt"]
         end
 
         EnvFile[".env
@@ -439,6 +544,7 @@ graph LR
         Alertmanager[Alertmanager]
         Fail2ban[Fail2ban]
         Homepage[Homepage]
+        Apps["Immich, CWA, Radmap, kiosk, odd-jobs, NetAlertX"]
     end
 
     %% Data mounts
@@ -456,6 +562,8 @@ graph LR
     PromConfig -.->|Mount config ro| Prometheus
     AlertConfig -.->|Mount config ro| Alertmanager
     HomepageConfig -.->|Mount config ro| Homepage
+    AppConfig -.->|Mount config ro| Apps
+    AppDirs -.->|Mount to container| Apps
 
     %% Environment variables
     EnvFile -.->|Injected at runtime| Containers
@@ -477,9 +585,9 @@ graph LR
     classDef system fill:#ff922b,stroke:#e67700,stroke-width:2px,color:#fff
     classDef backup fill:#ffd43b,stroke:#f08c00,stroke-width:2px,color:#000
 
-    class AdGuardDir,TraefikDir,PrometheusDir,GrafanaDir,AlertmanagerDir,WireGuardDir data
-    class TraefikConfig,Fail2banConfig,PromConfig,AlertConfig,HomepageConfig,EnvFile config
-    class AdGuard,Traefik,Prometheus,Grafana,Alertmanager,Fail2ban,Homepage container
+    class AdGuardDir,TraefikDir,PrometheusDir,GrafanaDir,AlertmanagerDir,WireGuardDir,AppDirs data
+    class TraefikConfig,Fail2banConfig,PromConfig,AlertConfig,HomepageConfig,AppConfig,EnvFile config
+    class AdGuard,Traefik,Prometheus,Grafana,Alertmanager,Fail2ban,Homepage,Apps container
     class LetsEncrypt,WGSystem,WireGuard system
     class Backup backup
 ```
@@ -492,12 +600,24 @@ graph LR
 The stack uses multiple compose files for logical separation:
 - **docker-compose.yml**: Core services (AdGuard)
 - **docker-compose.network.yml**: Network & Security (Traefik, Fail2ban)
-- **docker-compose.monitoring.yml**: Monitoring stack (Prometheus, Grafana, Alertmanager, exporters)
+- **docker-compose.monitoring.yml**: Monitoring stack (Prometheus, Grafana, Alertmanager, node-exporter, cAdvisor, blackbox-exporter)
 - **docker-compose.dashboard.yml**: Dashboard (Homepage, Homepage API)
 - **docker-compose.location.yml**: Location stack (owntracks-recorder)
 - **docker-compose.photos.yml**: iCloud photo backup (icloudpd)
 - **docker-compose.immich.yml**: Immich photo viewer (immich-server, immich-machine-learning, immich-postgres, immich-redis)
 - **docker-compose.library.yml**: Ebook library (cwa, library-digest)
+- **docker-compose.kiosk.yml**: Kitchen kiosk (kiosk-api, kiosk-web)
+- **docker-compose.radmap.yml**: Radmap offline topo map PWA
+- **docker-compose.netalertx.yml**: LAN scanner (netalertx, docker-socket-proxy)
+- **docker-compose.jobs.yml**: Odd jobs (odd-jobs fixture calendars)
+
+The Makefile `COMPOSE` variable combines all of these files.
+
+### Host-Networked Services
+NetAlertX runs with `network_mode: host` so ARP scans see the real LAN. It cannot join the `homeserver` bridge, so Traefik reaches it at `host.docker.internal:20211` (via `extra_hosts` on Traefik) and UFW allows Docker subnets to port 20211. Its `docker-socket-proxy` companion exposes a read-only Docker API on `127.0.0.1:2375` for container discovery, so NetAlertX never mounts `docker.sock`.
+
+### Custom-Built Services
+`homepage-api`, `kiosk-api` and `odd-jobs` are built locally from this repo (`apps/` and `homepage-api/`) by `make build`; Radmap is a prebuilt GHCR image. Odd-jobs runs a daily scheduler (04:00 plus at start-up), publishes `.ics` calendars from `./data/odd-jobs/out/`, and exposes `/metrics` for the `OddJobsStale` alert.
 
 ### Domain-Based Routing
 All services accessible via `https://<service>.${DOMAIN}`:
@@ -551,6 +671,11 @@ tar -czf backup.tar.gz data/ .env
 - **OwnTracks Recorder** - https://owntracks.${DOMAIN}
 - **Immich** - https://immich.${DOMAIN}
 - **Calibre-Web-Automated** - https://books.${DOMAIN}
+- **NetAlertX** - https://netalertx.${DOMAIN} (also http://${SERVER_IP}:20211)
+- **Kitchen Kiosk** - https://kiosk.${DOMAIN} (API at https://kiosk-api.${DOMAIN})
+- **Radmap** - https://radmap.${DOMAIN}
+- **Odd Jobs** - https://jobs.${DOMAIN} (calendars at `/<name>.ics`)
+- **icloudpd** - https://icloud.${DOMAIN}
 
 ### Direct Access (monitoring, not exposed externally)
 - **9090** - Prometheus (metrics)
@@ -558,6 +683,8 @@ tar -czf backup.tar.gz data/ .env
 - **9100** - Node Exporter (host metrics)
 - **9323** - Docker daemon metrics
 - **8080** - cAdvisor (container metrics)
+- **9115** - blackbox-exporter (router/ISP/DNS probes)
+- **2375** - docker-socket-proxy (127.0.0.1 only, for NetAlertX)
 
 ---
 
