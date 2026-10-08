@@ -15,6 +15,9 @@ class JobContext:
     out_dir: Path
     uid_domain: str
     client: httpx.Client
+    feeds_path: Path | None = None  # digest: one RSS URL per line
+    ingest_dir: Path | None = None  # digest: where the EPUB lands (CWA ingest)
+    data_dir: Path | None = None  # digest: persistent state (seen items)
 
 
 @dataclass(frozen=True)

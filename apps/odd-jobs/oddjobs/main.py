@@ -14,6 +14,12 @@ from oddjobs.core.server import build_app
 from oddjobs.core.state import State
 from oddjobs.jobs import JobContext
 from oddjobs.jobs.calendars import CalendarsJob
+from oddjobs.jobs.digest import DigestJob
+
+
+def _run_at(var: str, default: str) -> time:
+    hour, minute = os.environ.get(var, default).split(":")
+    return time(int(hour), int(minute))
 
 
 def create_app():
@@ -21,13 +27,20 @@ def create_app():
     data_dir = Path(os.environ.get("ODD_JOBS_DATA", "/data"))
     config_path = Path(os.environ.get("ODD_JOBS_CONFIG", "/config/calendars.yaml"))
     domain = os.environ.get("DOMAIN", "localhost")
-    hour, minute = os.environ.get("ODD_JOBS_RUN_AT", "04:00").split(":")
+    feeds_path = Path(os.environ.get("ODD_JOBS_FEEDS", "/library-config/feeds.txt"))
+    ingest_dir = Path(os.environ.get("ODD_JOBS_INGEST", "/ingest"))
 
     data_dir.mkdir(parents=True, exist_ok=True)
     out_dir = data_dir / "out"
     state = State(data_dir / "state.db")
     ctx = JobContext(
-        config_path=config_path, out_dir=out_dir, uid_domain=f"jobs.{domain}", client=make_client()
+        config_path=config_path,
+        out_dir=out_dir,
+        uid_domain=f"jobs.{domain}",
+        client=make_client(),
+        feeds_path=feeds_path,
+        ingest_dir=ingest_dir,
+        data_dir=data_dir,
     )
     # The scheduler needs the timezone for "04:00 local"; fall back to the server default.
     try:
@@ -36,7 +49,11 @@ def create_app():
         from zoneinfo import ZoneInfo
 
         tz = ZoneInfo("Australia/Sydney")
-    scheduler = Scheduler([CalendarsJob(run_at=time(int(hour), int(minute)))], ctx, state, tz)
+    jobs = [
+        CalendarsJob(run_at=_run_at("ODD_JOBS_RUN_AT", "04:00")),
+        DigestJob(run_at=_run_at("ODD_JOBS_DIGEST_RUN_AT", "05:00")),
+    ]
+    scheduler = Scheduler(jobs, ctx, state, tz)
 
     @asynccontextmanager
     async def lifespan(_):

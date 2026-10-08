@@ -29,9 +29,9 @@ class Scheduler:
         self._tz = tz
         self._lock = threading.Lock()  # jobs never overlap, including manual runs
 
-    def run_job(self, name: str) -> bool:
-        """Run a job now. Returns False if another run is already in progress."""
-        if not self._lock.acquire(blocking=False):
+    def run_job(self, name: str, wait: bool = False) -> bool:
+        """Run a job now. Unless `wait`, returns False if another run is in progress."""
+        if not self._lock.acquire(blocking=wait):
             return False
         try:
             job = self.jobs[name]
@@ -48,10 +48,10 @@ class Scheduler:
             self._lock.release()
 
     async def _loop(self, job: Job) -> None:
-        await asyncio.to_thread(self.run_job, job.name)
+        await asyncio.to_thread(self.run_job, job.name, True)
         while True:
             await asyncio.sleep(seconds_until_next_run(datetime.now(self._tz), job.run_at))
-            await asyncio.to_thread(self.run_job, job.name)
+            await asyncio.to_thread(self.run_job, job.name, True)
 
     def start(self) -> list[asyncio.Task]:
         return [asyncio.create_task(self._loop(job)) for job in self.jobs.values()]

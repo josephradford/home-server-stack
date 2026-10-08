@@ -83,3 +83,34 @@ def test_overlapping_run_is_refused(tmp_path):
     assert scheduler.run_job("fake") is False
     release.set()
     worker.join(5)
+
+
+def test_jobs_starting_together_both_run_at_startup(tmp_path):
+    import asyncio
+
+    class Named(FakeJob):
+        def __init__(self, name):
+            super().__init__(lambda: (time_sleep(0.2), JobResult(name))[1])
+            self.name = name
+
+    def time_sleep(s):
+        import time as _t
+
+        _t.sleep(s)
+
+    ctx = JobContext(Path("c"), tmp_path, "d", httpx.Client())
+    state = State(tmp_path / "s.db")
+    scheduler = Scheduler([Named("a"), Named("b")], ctx, state, SYDNEY)
+
+    async def go():
+        tasks = scheduler.start()
+        for _ in range(100):
+            if state.get("a") and state.get("b"):
+                break
+            await asyncio.sleep(0.05)
+        for t in tasks:
+            t.cancel()
+
+    asyncio.run(go())
+    assert state.get("a") and state.get("a").ok
+    assert state.get("b") and state.get("b").ok

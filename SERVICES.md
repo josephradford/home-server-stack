@@ -154,7 +154,7 @@ toggled at any time, no redeploy needed. Full setup:
 Self-hosted EPUB/PDF library and Kobo sync server (`cwa`), fed by a daily
 RSS digest of curated reading. Access: `https://books.${DOMAIN}` (home/VPN
 only, plus CWA's own login). Includes a Kobo Sync API for wireless delivery
-to a Kobo Clara BW over home Wi-Fi. The `library-digest` sidecar bundles new
+to a Kobo Clara BW over home Wi-Fi. The `digest` job in odd-jobs bundles new
 posts from `config/library/feeds.txt` into one EPUB per day and drops it
 into CWA's ingest folder for auto-import. Full setup:
 `docs/ebook-library.md`.

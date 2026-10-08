@@ -12,7 +12,7 @@ A complete self-hosted infrastructure for home automation, AI, and network servi
 
 **Backup:** [icloudpd](https://github.com/icloud-photos-downloader/icloud_photos_downloader) container mirroring iCloud photo libraries to an external drive
 
-**Library:** [Calibre-Web-Automated](https://github.com/crocodilestick/Calibre-Web-Automated) ebook library with Kobo sync, paired with a `library-digest` sidecar that turns RSS feeds into a daily EPUB
+**Library:** [Calibre-Web-Automated](https://github.com/crocodilestick/Calibre-Web-Automated) ebook library with Kobo sync, paired with an `odd-jobs` digest job that turns RSS feeds into a daily EPUB
 
 **Photos:** [Immich](https://github.com/immich-app/immich) viewer over the icloudpd backups (read-only)
 
