@@ -47,11 +47,11 @@ Add peers: `sudo ./scripts/wireguard/wireguard-add-peer.sh <name>`
 - `docker-compose.location.yml` — Location services (owntracks-recorder)
 - `docker-compose.photos.yml` — iCloud photo backup (icloudpd)
 - `docker-compose.immich.yml` — Photo viewer (immich-server, immich-machine-learning, immich-postgres, immich-redis)
-- `docker-compose.library.yml` — Ebook library (cwa, library-digest)
+- `docker-compose.library.yml` — Ebook library (cwa)
 - `docker-compose.kiosk.yml` — Kitchen kiosk (kiosk-api, kiosk-web; sources in `apps/kitchen-kiosk/`)
 - `docker-compose.radmap.yml` — Radmap (offline NSW topo map PWA; prebuilt GHCR image, tiles in `./data/radmap/tiles`)
 - `docker-compose.netalertx.yml` — Network monitoring (netalertx on host networking, docker-socket-proxy)
-- `docker-compose.jobs.yml` — Odd jobs (odd-jobs: AI-free life-admin jobs, v1 = sports fixture calendars at jobs.${DOMAIN}; sources in `apps/odd-jobs/`)
+- `docker-compose.jobs.yml` — Odd jobs (odd-jobs: AI-free life-admin jobs: sports fixture calendars at jobs.${DOMAIN} and the daily RSS-to-EPUB reading digest into `data/cwa/ingest`; sources in `apps/odd-jobs/`)
 
 The Makefile combines all of these files by default (see `COMPOSE` in the Makefile
 for the authoritative list).

@@ -25,3 +25,12 @@ def test_create_app_survives_a_bad_config_so_the_status_page_can_report_it(tmp_p
     monkeypatch.setenv("ODD_JOBS_CONFIG", str(tmp_path / "missing.yaml"))
     client = TestClient(create_app())
     assert client.get("/healthz").status_code == 200
+
+
+def test_create_app_registers_calendars_and_digest_jobs(tmp_path, monkeypatch):
+    monkeypatch.setenv("ODD_JOBS_DATA", str(tmp_path / "data"))
+    monkeypatch.setenv("ODD_JOBS_CONFIG", str(tmp_path / "missing.yaml"))
+    monkeypatch.setenv("ODD_JOBS_DIGEST_RUN_AT", "06:15")
+    client = TestClient(create_app())
+    page = client.get("/").text
+    assert "calendars" in page and "digest" in page

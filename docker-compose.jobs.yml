@@ -1,11 +1,16 @@
-# Odd jobs: deterministic life-admin jobs (no AI). v1 publishes sports fixture calendars
-# at https://jobs.${DOMAIN}/<name>.ics for Apple Calendar subscription.
+# Odd jobs: deterministic life-admin jobs (no AI). Publishes sports fixture calendars
+# at https://jobs.${DOMAIN}/<name>.ics for Apple Calendar subscription, and builds the
+# daily RSS-to-EPUB reading digest into the CWA ingest folder.
 # Follows the conventions of docker-compose.library.yml (external homeserver network,
 # Traefik labels with the wildcard cert, admin middleware).
 #
-# One-time prep:
-#   mkdir -p data/odd-jobs
-#   chown -R ${PUID}:${PGID} data/odd-jobs
+# One-time prep (data/cwa/ingest must exist and be owned by PUID:PGID, otherwise Docker
+# creates it as root and the digest job cannot write there):
+#   mkdir -p data/odd-jobs data/cwa/ingest
+#   chown -R ${PUID}:${PGID} data/odd-jobs data/cwa/ingest
+# Migrating from the old library-digest container (keeps already-bundled posts from
+# being re-sent):
+#   mv data/library-digest/seen.json data/odd-jobs/digest-seen.json
 
 services:
   odd-jobs:
@@ -19,9 +24,12 @@ services:
       TZ: ${TIMEZONE:-UTC}
       DOMAIN: ${DOMAIN}
       ODD_JOBS_RUN_AT: ${ODD_JOBS_RUN_AT:-04:00}
+      ODD_JOBS_DIGEST_RUN_AT: ${ODD_JOBS_DIGEST_RUN_AT:-05:00}
     volumes:
-      - ./data/odd-jobs:/data               # state.db and out/*.ics (the served calendars)
+      - ./data/odd-jobs:/data               # state.db, out/*.ics (the served calendars), digest-seen.json
       - ./config/odd-jobs:/config:ro        # calendars.yaml
+      - ./config/library:/library-config:ro # feeds.txt for the reading digest
+      - ./data/cwa/ingest:/ingest           # digest EPUBs; CWA imports and clears them
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8080/healthz', timeout=5)"]
       interval: 30s

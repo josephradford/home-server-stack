@@ -1,9 +1,9 @@
 # Ebook Library (Calibre-Web-Automated + Kobo sync)
 
 Self-hosted EPUB/PDF library (`cwa`, Calibre-Web-Automated) at
-`https://books.${DOMAIN}`, paired with a `library-digest` sidecar that turns a
-curated RSS feed list into one EPUB per day. Defined in
-`docker-compose.library.yml`.
+`https://books.${DOMAIN}`, paired with the `digest` job in `odd-jobs` that turns a
+curated RSS feed list into one EPUB per day (daily at `ODD_JOBS_DIGEST_RUN_AT`, default 05:00).
+CWA is defined in `docker-compose.library.yml`; the digest in `docker-compose.jobs.yml`.
 
 A Kobo Clara BW (bought separately) syncs wirelessly from `cwa` over home
 Wi-Fi. The Kobo doesn't run WireGuard, so sync only works on the home
@@ -14,8 +14,10 @@ network — USB sideloading remains a fallback that always works.
 ### 1. Prep data directories
 
 ```bash
-mkdir -p data/cwa/{config,ingest,library} data/library-digest
-chown -R $(id -u):$(id -g) data/cwa data/library-digest
+mkdir -p data/cwa/{config,ingest,library}
+chown -R $(id -u):$(id -g) data/cwa
+# odd-jobs also mounts data/cwa/ingest; it must be owned by PUID:PGID
+# (if you used the old library-digest container: mv data/library-digest/seen.json data/odd-jobs/digest-seen.json)
 ```
 
 ### 2. Start the containers
@@ -56,26 +58,24 @@ On your user profile in CWA, create a **Kobo sync token**. This produces an
 Edit `config/library/feeds.txt` (one RSS URL per line, `#` to comment out).
 Any Substack's feed is `https://<name>.substack.com/feed`. This is a curated,
 short list by design — the point is a finite nightly batch, not an endless
-feed. Changes take effect on the next `library-digest` run (or immediately via
+feed. Changes take effect on the next `digest` run (or immediately via
 `make library-digest-now`).
 
 ## Operating
 
-- `make logs-cwa` / `make logs-library-digest` — tail logs for each container.
+- `make logs-cwa` / `make logs-odd-jobs` — tail logs (the digest logs under odd-jobs; run status is at `https://jobs.${DOMAIN}`).
 - `make library-digest-now` — run the digest immediately instead of waiting
-  for the daily cycle (`DIGEST_INTERVAL`, default 86400s, in `.env`).
+  for the daily run (`ODD_JOBS_DIGEST_RUN_AT`, default 05:00, in `.env`).
 - Drop an EPUB or PDF directly into `data/cwa/ingest/` at any time — CWA
   imports and clears it within about a minute, independent of the digest job.
 
 ## Troubleshooting
 
-- **Digest writes nothing:** check `make logs-library-digest` — a feed URL
-  that 404s or times out is skipped silently per-feed but should still show
-  up in feedparser's output; verify the URL resolves with
+- **Digest writes nothing:** check the digest status on `https://jobs.${DOMAIN}` and `make logs-odd-jobs` — a feed URL
+  that 404s or times out is skipped per-feed and counted in the run detail; verify the URL resolves with
   `curl -sI <feed-url>`.
 - **A daily EPUB never triggers a re-import:** confirm `data/cwa/ingest`'s
-  ownership matches CWA's `PUID`/`PGID` (both containers must agree — see
-  `DIGEST_PUID`/`DIGEST_PGID` in `docker-compose.library.yml`); a file CWA
+  ownership matches CWA's `PUID`/`PGID` (odd-jobs runs as `PUID:PGID`, so both containers must agree); a file CWA
   can't read/delete will sit in the ingest folder forever.
 - **Kobo won't sync:** re-check the `api_endpoint` line in
   `Kobo eReader.conf` — a typo there is the most common cause. The Kobo must

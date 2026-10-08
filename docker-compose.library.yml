@@ -1,10 +1,11 @@
-# Ebook library: Calibre-Web-Automated at books.${DOMAIN} + a daily RSS-to-EPUB digest.
+# Ebook library: Calibre-Web-Automated at books.${DOMAIN}. The daily RSS-to-EPUB digest
+# now runs as a job inside odd-jobs (docker-compose.jobs.yml) and drops into data/cwa/ingest.
 # Follows the conventions of docker-compose.photos.yml (external homeserver network,
 # Traefik labels with the wildcard cert, admin middleware).
 #
 # One-time prep:
-#   mkdir -p data/cwa/{config,ingest,library} data/library-digest
-#   chown -R ${PUID}:${PGID} data/cwa data/library-digest
+#   mkdir -p data/cwa/{config,ingest,library}
+#   chown -R ${PUID}:${PGID} data/cwa
 
 services:
   cwa:
@@ -30,27 +31,6 @@ services:
       # Local/VPN only. The no-ratelimit variant is used because Kobo sync makes bursts
       # of requests (metadata, covers) that the 10 req/min admin limit would throttle.
       - "traefik.http.routers.books.middlewares=admin-secure-no-ratelimit"
-
-  library-digest:
-    image: python:3.12.8-slim
-    container_name: library-digest
-    restart: unless-stopped
-    networks:
-      - homeserver
-    environment:
-      TZ: ${TIMEZONE:-UTC}
-      DIGEST_PUID: ${PUID:-1000}
-      DIGEST_PGID: ${PGID:-1000}
-    volumes:
-      - ./scripts/library:/app:ro
-      - ./config/library:/config:ro           # feeds.txt lives here
-      - ./data/library-digest:/data           # seen.json (what's already been bundled)
-      - ./data/cwa/ingest:/ingest
-    # Runs at container start, then every DIGEST_INTERVAL seconds (drifts from start
-    # time; fine for a daily digest, not a cron guarantee).
-    command: >
-      sh -c "pip install -q feedparser==6.0.11 ebooklib==0.18 lxml==5.3.0 &&
-      while true; do python /app/digest.py; sleep ${DIGEST_INTERVAL:-86400}; done"
 
 networks:
   homeserver:

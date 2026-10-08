@@ -2,7 +2,7 @@
 # Simplifies deployment and maintenance operations
 
 .PHONY: help setup update start stop restart logs build build-custom pull status clean purge validate env-check
-.PHONY: logs-homepage logs-owntracks logs-icloudpd logs-immich logs-cwa logs-library-digest logs-netalertx
+.PHONY: logs-homepage logs-owntracks logs-icloudpd logs-immich logs-cwa logs-netalertx
 .PHONY: library-digest-now
 .PHONY: logs-odd-jobs jobs-test jobs-probe
 .PHONY: setup-certs test-domain-access
@@ -21,7 +21,7 @@
 # - docker-compose.netalertx.yml: Network monitoring (netalertx)
 # - docker-compose.photos.yml: iCloud photo backup (icloudpd)
 # - docker-compose.immich.yml: Immich photo viewer (immich-server, immich-machine-learning, immich-postgres, immich-redis)
-# - docker-compose.library.yml: Ebook library (cwa, library-digest)
+# - docker-compose.library.yml: Ebook library (cwa)
 #
 # NOTE: WireGuard is now a system service, not Docker service
 # Install with: sudo ./scripts/wireguard/install-wireguard.sh
@@ -64,7 +64,6 @@ help:
 	@echo "  make logs-owntracks     - Show OwnTracks Recorder logs only"
 	@echo "  make logs-netalertx     - Show NetAlertX logs only"
 	@echo "  make logs-cwa           - Show Calibre Web Archive logs only"
-	@echo "  make logs-library-digest - Show library digest logs only"
 	@echo "  make logs-odd-jobs      - Show odd-jobs logs only"
 	@echo "  make jobs-test          - Run odd-jobs unit tests (local venv)"
 	@echo "  make jobs-probe         - Check live fixture sources (writes nothing)"
@@ -362,9 +361,6 @@ logs-immich:
 logs-cwa:
 	@$(COMPOSE) logs -f cwa
 
-logs-library-digest:
-	@$(COMPOSE) logs -f library-digest
-
 logs-odd-jobs:
 	@$(COMPOSE) logs -f odd-jobs
 
@@ -377,10 +373,9 @@ jobs-test:
 jobs-probe:
 	@$(COMPOSE) run --rm --no-deps odd-jobs python -m oddjobs.probe /config/calendars.yaml
 
-# Run the RSS-to-EPUB digest once, immediately, instead of waiting for the
-# container's internal sleep loop.
+# Run the RSS-to-EPUB digest job once, immediately, instead of waiting for its daily run.
 library-digest-now:
-	@$(COMPOSE) exec library-digest python /app/digest.py
+	@$(COMPOSE) exec odd-jobs python -c "import urllib.request as u; print(u.urlopen(u.Request('http://localhost:8080/run/digest', method='POST'), timeout=300).read().decode())"
 
 # Location services (docker-compose.location.yml)
 COMPOSE_LOCATION := docker compose -f docker-compose.location.yml

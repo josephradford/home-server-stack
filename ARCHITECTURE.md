@@ -92,8 +92,6 @@ graph TB
         server, ML, postgres, redis"]
         CWA["Calibre-Web-Automated
         Ebooks + Kobo sync"]
-        LibDigest["library-digest
-        Daily RSS EPUB"]
     end
 
     subgraph Apps["Home Apps
@@ -180,7 +178,7 @@ graph TB
     KioskAPI -->|Weather| HomepageAPI
     KioskAPI -->|Photos| Immich
     Immich -.->|Reads read-only| Icloudpd
-    LibDigest -.->|Ingest folder| CWA
+    OddJobs -.->|Digest EPUB ingest| CWA
     NetAlertX -.->|Container discovery| SockProxy
 
     %% Certificate management
@@ -209,7 +207,7 @@ graph TB
     class Traefik,Fail2ban,UFW network
     class AdGuard core
     class Prometheus,Grafana,Alertmanager,NodeExporter,CAdvisor,Blackbox monitoring
-    class Homepage,HomepageAPI,KioskAPI,KioskWeb,Radmap,OddJobs,Immich,CWA,Icloudpd,LibDigest,NetAlertX,SockProxy dashboard
+    class Homepage,HomepageAPI,KioskAPI,KioskWeb,Radmap,OddJobs,Immich,CWA,Icloudpd,NetAlertX,SockProxy dashboard
     class AdGuardData,TraefikData,GrafanaData,PrometheusData,WireGuardData,OwnTracksData,AppData data
     class Certbot system
 ```
@@ -391,7 +389,6 @@ graph TD
     Immich["Immich
     server, ML, postgres, redis"]
     CWA["Calibre-Web-Automated"]
-    LibDigest["library-digest"]
     KioskAPI["kiosk-api"]
     KioskWeb["kiosk-web"]
     Radmap["Radmap"]
@@ -414,7 +411,6 @@ graph TD
     Docker --> Icloudpd
     Docker --> Immich
     Docker --> CWA
-    Docker --> LibDigest
     Docker --> KioskAPI
     Docker --> KioskWeb
     Docker --> Radmap
@@ -437,7 +433,7 @@ graph TD
     Traefik --> NetAlertX
 
     Icloudpd -.->|Backup files, read-only| Immich
-    LibDigest -->|Ingest folder| CWA
+    OddJobs -->|Digest EPUB ingest| CWA
     HomepageAPI -->|Weather| KioskAPI
     Immich -->|Photos| KioskAPI
     KioskAPI --> KioskWeb
@@ -469,7 +465,7 @@ graph TD
     class Traefik,Fail2ban network
     class AdGuard core
     class Prometheus,NodeExporter,CAdvisor,Grafana,Alertmanager,Blackbox monitoring
-    class HomepageAPI,Homepage,OwnTracks,Icloudpd,Immich,CWA,LibDigest,KioskAPI,KioskWeb,Radmap,OddJobs,NetAlertX,SockProxy dashboard
+    class HomepageAPI,Homepage,OwnTracks,Icloudpd,Immich,CWA,KioskAPI,KioskWeb,Radmap,OddJobs,NetAlertX,SockProxy dashboard
 ```
 
 ---
@@ -605,7 +601,7 @@ The stack uses multiple compose files for logical separation:
 - **docker-compose.location.yml**: Location stack (owntracks-recorder)
 - **docker-compose.photos.yml**: iCloud photo backup (icloudpd)
 - **docker-compose.immich.yml**: Immich photo viewer (immich-server, immich-machine-learning, immich-postgres, immich-redis)
-- **docker-compose.library.yml**: Ebook library (cwa, library-digest)
+- **docker-compose.library.yml**: Ebook library (cwa)
 - **docker-compose.kiosk.yml**: Kitchen kiosk (kiosk-api, kiosk-web)
 - **docker-compose.radmap.yml**: Radmap offline topo map PWA
 - **docker-compose.netalertx.yml**: LAN scanner (netalertx, docker-socket-proxy)
