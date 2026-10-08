@@ -5,8 +5,7 @@ timezone: Australia/Sydney
 #                   own competitions API which series that team plays this year and next, so
 #                   new tours and unlisted series (India Tests, the Ashes) are picked up.
 #                   `series` pins ids (CA:<id> in https://www.cricket.com.au/matches/series/
-#                   CA:<id>/...) for anything else, like the Sheffield Shield; they change
-#                   every season. `game_types` optionally keeps only those formats (e.g. Test).
+#                   CA:<id>/...) for anything the API doesn't return; they change every season. `game_types` optionally keeps only those formats (e.g. Test).
 #   playhq:         team_id is the last segment of the team's page URL on playhq.com
 calendars:
   - name: australia-tests
@@ -20,7 +19,9 @@ calendars:
   - name: nsw-shield
     title: NSW Blues, Sheffield Shield
     source: cricket_com_au
-    series: ["CA:4689"]
+    discover: true
+    team_id: 674     # NSW Men; the API also returns the One-Day Cup, hence game_types
+    game_types: ["First Class Domestic"]   # Sheffield Shield (the One-Day Cup is "One Day Domestic")
     team: "NSW Men"
 
   - name: parramatta-first-grade
