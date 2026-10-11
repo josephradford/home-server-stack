@@ -205,9 +205,7 @@ groups:
           summary: "odd-jobs job {{ $labels.name }} has not succeeded for 3 days"
           description: "Fixture calendars are stale. Check the source with `make jobs-probe` and `make logs-odd-jobs`; new seasons need new series ids in config/odd-jobs/calendars.yaml."
 
-  # Note: WireGuard VPN monitoring removed - WireGuard is now a system service (not Docker container)
-  # Monitor WireGuard via system service checks instead of container metrics
-  # Example: systemctl is-active wg-quick@wg0
+  # Note: the VPN runs on the UDR7, so there is no VPN service to monitor here.
 
   # Security Monitoring
   # Monitors for suspicious activity and potential attacks

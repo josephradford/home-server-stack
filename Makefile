@@ -6,7 +6,6 @@
 .PHONY: library-digest-now
 .PHONY: logs-odd-jobs jobs-test jobs-probe
 .PHONY: setup-certs test-domain-access
-.PHONY: wireguard-status wireguard-install wireguard-setup wireguard-routing wireguard-test wireguard-peers wireguard-check
 .PHONY: ssl-setup ssl-renew-test
 .PHONY: ddns-setup ddns-update ddns-status
 .PHONY: location-start location-stop location-restart location-status
@@ -23,9 +22,7 @@
 # - docker-compose.immich.yml: Immich photo viewer (immich-server, immich-machine-learning, immich-postgres, immich-redis)
 # - docker-compose.library.yml: Ebook library (cwa)
 #
-# NOTE: WireGuard is now a system service, not Docker service
-# Install with: sudo ./scripts/wireguard/install-wireguard.sh
-# Check status: make wireguard-status
+# NOTE: The VPN (WireGuard) runs on the UniFi Dream Router 7, not on this server.
 #
 # COMPOSE_CORE: Core + Network + Monitoring (used for operations that shouldn't restart dashboard or AI)
 # COMPOSE: All services including dashboard and AI (default for most operations)
@@ -74,14 +71,6 @@ help:
 	@echo "  make location-stop      - Stop OwnTracks Recorder only"
 	@echo "  make location-restart   - Restart OwnTracks Recorder only"
 	@echo "  make location-status    - Show OwnTracks container status"
-	@echo ""
-	@echo "WireGuard VPN Management:"
-	@echo "  make wireguard-install  - Install WireGuard packages (one-time, requires sudo)"
-	@echo "  make wireguard-setup    - Create server config and start service (requires sudo)"
-	@echo "  make wireguard-routing  - Set up Docker bridge forwarding for VPN clients (run after make start)"
-	@echo "  make wireguard-peers    - List, view, and manage VPN peers"
-	@echo "  make wireguard-test     - Test VPN routing and connectivity"
-	@echo "  make wireguard-status   - Check WireGuard service status"
 	@echo ""
 	@echo "SSL/TLS Certificate Management:"
 	@echo "  make ssl-setup          - Complete Let's Encrypt SSL setup (certbot + renewal)"
@@ -136,7 +125,7 @@ pull: validate
 	@echo "✓ Images pulled"
 
 # First time setup
-setup: env-check validate wireguard-check
+setup: env-check validate
 	@echo "Starting first-time setup..."
 	@echo ""
 	@echo "Step 1/10: Setting up Traefik dashboard password..."
@@ -177,7 +166,7 @@ setup: env-check validate wireguard-check
 	@echo ""
 	@set -a; . ./.env; set +a; \
 	if [ -n "$$WIREGUARD_DDNS_SUBDOMAIN" ]; then \
-		echo "Step 10/10: Setting up dynamic DNS for WireGuard VPN..."; \
+		echo "Step 10/10: Setting up dynamic DNS for the UDR7 VPN hostname..."; \
 		echo ""; \
 		sudo ./scripts/ddns/setup-gandi-ddns.sh; \
 		echo ""; \
@@ -270,33 +259,8 @@ setup: env-check validate wireguard-check
 	fi
 	@echo ""
 
-# Check WireGuard is running (required for all Docker operations)
-wireguard-check:
-	@if ! systemctl is-active --quiet wg-quick@wg0; then \
-		echo "❌ ERROR: WireGuard VPN is not running!"; \
-		echo ""; \
-		echo "WireGuard must be running before starting Docker services."; \
-		echo "This ensures your remote VPN access survives Docker restarts."; \
-		echo ""; \
-		echo "To set up WireGuard:"; \
-		echo ""; \
-		echo "1. Install WireGuard (one-time):"; \
-		echo "   make wireguard-install"; \
-		echo ""; \
-		echo "2. Create server configuration:"; \
-		echo "   sudo ./scripts/wireguard/setup-wireguard-server.sh"; \
-		echo ""; \
-		echo "3. Enable and start the service:"; \
-		echo "   sudo systemctl enable --now wg-quick@wg0"; \
-		echo ""; \
-		echo "4. Verify it's running:"; \
-		echo "   make wireguard-status"; \
-		echo ""; \
-		exit 1; \
-	fi
-
 # Update all services
-update: env-check validate wireguard-check
+update: env-check validate
 	@echo "Updating all services..."
 	@echo ""
 	@echo "Step 1/4: Regenerating Alertmanager config from .env..."
@@ -316,7 +280,7 @@ update: env-check validate wireguard-check
 	@echo "Check status with: make status"
 
 # Start all services
-start: env-check wireguard-check
+start: env-check
 	@echo "Starting all services..."
 	@./scripts/monitoring/configure-alertmanager.sh
 	@$(COMPOSE) up -d
@@ -329,7 +293,7 @@ stop:
 	@echo "✓ All services stopped"
 
 # Restart all services
-restart: env-check wireguard-check
+restart: env-check
 	@echo "Restarting all services..."
 	@$(COMPOSE) restart
 	@echo "✓ All services restarted"
@@ -415,7 +379,6 @@ purge:
 	@echo "  - All Docker containers and volumes"
 	@echo "  - All Docker images (requires re-download on next setup)"
 	@echo "  - AdGuard configuration and logs"
-	@echo "  - WireGuard VPN configs"
 	@echo "  - All monitoring data (Grafana, Prometheus)"
 	@echo "  - Homepage dashboard configuration"
 	@echo "  - Let's Encrypt SSL certificates and renewal hooks"
@@ -447,67 +410,6 @@ purge:
 	@echo "Removing all Docker images..."
 	@docker image prune -af
 	@echo "✓ Purge complete - ALL DATA DELETED"
-
-# WireGuard VPN Management (System Service)
-wireguard-status:
-	@echo "Checking WireGuard service status..."
-	@systemctl is-active wg-quick@wg0 > /dev/null 2>&1 && echo "✓ WireGuard is running" || echo "✗ WireGuard is not running"
-	@systemctl is-enabled wg-quick@wg0 > /dev/null 2>&1 && echo "✓ WireGuard is enabled" || echo "✗ WireGuard is not enabled"
-	@echo ""
-	@echo "For detailed status:"
-	@echo "  sudo wg show"
-	@echo "  sudo systemctl status wg-quick@wg0"
-
-wireguard-install:
-	@echo "Installing WireGuard as a system service..."
-	@echo ""
-	@echo "This script requires sudo. You will be prompted for your password."
-	@sudo ./scripts/wireguard/install-wireguard.sh
-
-wireguard-setup: env-check
-	@echo "Setting up WireGuard VPN server..."
-	@echo ""
-	@echo "This script requires sudo. You will be prompted for your password."
-	@echo ""
-	@sudo ./scripts/wireguard/setup-wireguard-server.sh
-	@echo ""
-	@echo "Enabling and starting WireGuard service..."
-	@sudo systemctl enable --now wg-quick@wg0
-	@echo ""
-	@echo "✓ WireGuard setup complete!"
-	@echo ""
-	@make wireguard-status
-	@echo ""
-	@echo "Next steps:"
-	@echo "  1. Start Docker services:  make start"
-	@echo "  2. Set up VPN routing:     make wireguard-routing  (run after make start)"
-	@echo "  3. Add VPN peers:          sudo ./scripts/wireguard/wireguard-add-peer.sh <peer-name>"
-	@echo ""
-	@echo "Optional — if your public IP is dynamic:"
-	@echo "  Set WIREGUARD_DDNS_SUBDOMAIN=vpn in .env, then:"
-	@echo "  4. Set up automatic DNS:   make ddns-setup"
-
-# Set up iptables rules for VPN clients to access Docker services and LAN
-# Must be run after 'make start' so Docker networks exist for accurate subnet detection
-wireguard-routing:
-	@echo "Setting up WireGuard routing for Docker bridge access..."
-	@echo ""
-	@echo "This configures iptables DOCKER-USER rules so VPN clients can reach"
-	@echo "services running in Docker containers and the local network."
-	@echo ""
-	@echo "Note: Run this after 'make start' so Docker networks exist."
-	@echo ""
-	@sudo ./scripts/wireguard/setup-wireguard-routing.sh
-
-# Manage VPN peers (list, view stats, remove)
-wireguard-peers:
-	@./scripts/wireguard/wireguard-peer-management.sh
-
-# Test WireGuard routing and connectivity
-wireguard-test:
-	@echo "Testing WireGuard routing and connectivity..."
-	@echo ""
-	@./scripts/wireguard/test-wireguard-routing.sh
 
 ddns-setup:
 	@echo "Setting up Gandi LiveDNS dynamic DNS..."

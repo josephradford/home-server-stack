@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-Self-hosted Docker Compose infrastructure stack: home automation, workflow automation, VPN, DNS/ad-blocking, and monitoring. Domain-based routing via Traefik reverse proxy with Let's Encrypt SSL.
+Self-hosted Docker Compose infrastructure stack: home automation, workflow automation, DNS/ad-blocking, and monitoring. Built around a UniFi Dream Router 7 (UDR7), which provides routing, DHCP and the WireGuard VPN. Domain-based routing via Traefik reverse proxy with Let's Encrypt SSL.
 
 ## Development Environment
 
@@ -34,8 +34,7 @@ Self-hosted Docker Compose infrastructure stack: home automation, workflow autom
 
 **SSL**: `make ssl-setup` / `ssl-renew-test`
 
-**WireGuard**: `make wireguard-status` / `wireguard-peers` / `wireguard-test` / `wireguard-routing`
-Add peers: `sudo ./scripts/wireguard/wireguard-add-peer.sh <name>`
+**Dynamic DNS**: `make ddns-setup` / `ddns-update` / `ddns-status` (keeps `vpn.DOMAIN` pointed at the public IP for the UDR7 VPN)
 
 ## Architecture
 
@@ -69,11 +68,11 @@ for the authoritative list).
 ### SSL (certbot, not Traefik ACME)
 Uses certbot with Gandi DNS plugin because Traefik v3.2's Lego library has a bug with Gandi API v5 (returns 403 on DNS-01 challenge despite valid credentials). Certbot generates wildcard certs for `*.DOMAIN`, copies them to `./data/traefik/certs/`, Traefik loads via file provider. Auto-renewal runs twice daily via snap timer with a post-hook that copies certs and restarts Traefik.
 
-### WireGuard VPN
-Runs as a **system service** (`wg-quick@wg0`), not Docker — stays up when Docker restarts. Split tunneling only routes home network and VPN subnet traffic. **Do not use `0.0.0.0/0` for AllowedIPs** unless full tunneling is explicitly required.
+### Router and VPN (UniFi Dream Router 7)
+The UDR7 is the network's router, DHCP server and **WireGuard VPN endpoint**; WireGuard no longer runs on this server (the old `wg-quick@wg0` service and `scripts/wireguard/` were removed). Its DHCP DNS and the VPN's DNS point at `SERVER_IP`, so AdGuard Home on this server stays the LAN resolver (and resolves `*.DOMAIN`). VPN peers are managed in the UniFi Network app. The VPN subnet is `VPN_SUBNET` in `.env` (used by UFW). Keep split tunneling (home network + VPN subnet only); **do not route `0.0.0.0/0`** unless full tunneling is explicitly required. If this server is down, DNS (and so the internet) is down, but VPN access to the router survives.
 
 ### Security Model (Defense in Depth)
-1. **UFW firewall** — default deny, allow SSH/HTTP/HTTPS/WireGuard + local/VPN subnets (`scripts/system/setup-firewall.sh`)
+1. **UFW firewall** — default deny, allow SSH/HTTP/HTTPS + local/UDR7-VPN subnets (`scripts/system/setup-firewall.sh`)
 2. **Traefik middleware** — `admin-secure` chain: RFC1918 IP whitelist + security headers + rate limiting on all admin UIs; `webhook-secure` chain for public endpoints
 3. **Fail2ban** — two layers: system-level sshd jail (`scripts/system/setup-fail2ban.sh`, whitelists local/VPN subnets) + Docker-level for Traefik auth failures, scanner patterns, rate limit abuse (`config/fail2ban/`)
 4. **Prometheus alerts** — monitors 401s, 404s, 429s, 5xx errors (rules in `monitoring/prometheus/alert_rules.yml`)

@@ -2,9 +2,11 @@
 
 A complete self-hosted infrastructure for home automation, AI, and network services using Docker Compose.
 
+**Built around a UniFi Dream Router 7 (UDR7).** The UDR7 is the network's router, Wi-Fi, DHCP server and WireGuard VPN endpoint. This server is a plain LAN host behind it: it runs DNS (AdGuard Home), reverse proxy and apps, and nothing on it terminates the VPN. See [Network setup (UDR7)](#-network-setup-udr7).
+
 ## 🚀 Services
 
-**Core:** [AdGuard Home](https://github.com/AdguardTeam/AdGuardHome) (DNS/ad-blocking), [WireGuard](https://github.com/wireguard) (VPN), [Traefik](https://github.com/traefik/traefik) (reverse proxy), OwnTracks Recorder (location)
+**Core:** [AdGuard Home](https://github.com/AdguardTeam/AdGuardHome) (DNS/ad-blocking), [Traefik](https://github.com/traefik/traefik) (reverse proxy), OwnTracks Recorder (location)
 
 **Monitoring:** [Grafana](https://github.com/grafana/grafana), [Prometheus](https://github.com/prometheus/prometheus), [Alertmanager](https://github.com/prometheus/alertmanager), Node Exporter, cAdvisor, blackbox-exporter
 
@@ -67,13 +69,13 @@ At minimum, set:
 
 ### Step 5 — Configure firewall (UFW)
 
-Requires the `.env` file (reads `WIREGUARD_PORT` and `WIREGUARD_SUBNET`).
+Requires the `.env` file (reads `VPN_SUBNET`, the VPN subnet configured on the UDR7).
 
 ```bash
 ./scripts/system/setup-firewall.sh
 ```
 
-This sets default-deny incoming, rate-limits SSH, and opens ports for WireGuard, HTTP, and HTTPS.
+This sets default-deny incoming, rate-limits SSH, and opens ports for HTTP and HTTPS and allows the local network and UDR7 VPN subnet.
 
 ### Step 6 — First-time setup (SSL + services)
 
@@ -83,35 +85,14 @@ make setup
 
 This runs SSL certificate generation (Let's Encrypt wildcard via certbot + Gandi DNS), configures AdGuard DNS rewrites, and starts all services.
 
-### Step 7 — Install and configure WireGuard VPN
+### Step 7 — Set up the VPN on the UDR7
 
-WireGuard runs as a **system service** (not Docker) so VPN access survives Docker restarts.
+The VPN is WireGuard running on the UDR7, so remote access works even when this server is down. Follow [Network setup (UDR7)](#-network-setup-udr7) below. If your public IP is dynamic, run `make ddns-setup` so `vpn.DOMAIN` follows it (see [docs/ddns.md](docs/ddns.md)).
 
-```bash
-# Install WireGuard package
-make wireguard-install
-
-# Generate server keys and write /etc/wireguard/wg0.conf
-make wireguard-setup
-
-# Configure iptables so VPN clients can reach Docker containers and LAN
-# Must run AFTER make start/setup because it inspects the Docker bridge network
-make wireguard-routing
-```
-
-### Step 8 — Add VPN client devices
-
-Run once per device. Generates a config file and QR code in `data/wireguard/peers/<name>/`.
-
-```bash
-sudo ./scripts/wireguard/wireguard-add-peer.sh <device-name>
-```
-
-### Step 9 — Verify everything is running
+### Step 8 — Verify everything is running
 
 ```bash
 make status          # All services healthy
-make wireguard-status  # WireGuard system service active
 make test-domain-access  # Domain routing works
 ```
 
@@ -167,6 +148,18 @@ All operational knowledge is consolidated in CLAUDE.md which covers:
 - Troubleshooting common issues
 - Architecture and design decisions
 
+## 🌐 Network setup (UDR7)
+
+The UDR7 handles routing, DHCP and the VPN. Configure it in the UniFi Network app:
+
+1. **LAN**: keep the server on a fixed address (DHCP reservation for `SERVER_IP`). The stack assumes `192.168.1.0/24`.
+2. **DNS**: set the LAN's DHCP DNS server to `SERVER_IP` so every device uses AdGuard Home. This is what resolves `*.DOMAIN` to the server and does the ad blocking. AdGuard stays on this server; the UDR7's built-in blocking is coarser.
+3. **VPN**: create a WireGuard VPN server (Settings > VPN) and add one peer per device. Set the VPN **DNS server to `SERVER_IP`**, otherwise remote clients can't resolve `*.DOMAIN`. Keep split tunnelling (home network and VPN subnet only; never `0.0.0.0/0` unless you really want full tunnelling).
+4. **Subnet**: set `VPN_SUBNET` in `.env` to the VPN subnet you chose, then re-run `./scripts/system/setup-firewall.sh` so UFW allows it.
+5. **Endpoint**: clients connect to `vpn.DOMAIN` (kept current by `make ddns-setup`) or your static public IP. No port forwarding to this server is needed, because the UDR7 is the VPN endpoint.
+
+VPN clients reach this server as routed LAN traffic from the VPN subnet. Traefik's `admin-secure` allowlist already covers all private ranges.
+
 ## 🔐 Security
 
 This project implements **multi-layered defense-in-depth security** with four protection layers:
@@ -175,8 +168,8 @@ This project implements **multi-layered defense-in-depth security** with four pr
 
 **🔥 Layer 1: Network Firewall (UFW)**
 - Default deny incoming, SSH rate-limited
-- Only WireGuard VPN (51820/UDP) and HTTP/HTTPS (80/443) exposed
-- Local network and VPN clients have full access
+- Nothing is exposed to the internet; remote access goes through the UDR7's VPN
+- HTTP/HTTPS (80/443) are open to the local network and VPN clients, who have full access
 
 **🛡️ Layer 2: Traefik Middleware**
 - **IP Whitelisting**: Admin interfaces only accessible from local network/VPN
@@ -197,7 +190,7 @@ This project implements **multi-layered defense-in-depth security** with four pr
 
 - **Admin Interfaces** (Grafana, etc.): VPN or local network only
 - **Future Webhooks**: Public access with rate limiting (not yet configured)
-- **VPN Primary Boundary**: WireGuard for all remote admin access
+- **VPN Primary Boundary**: the UDR7's WireGuard VPN for all remote admin access
 
 ## 📊 Dashboard & Automation
 
