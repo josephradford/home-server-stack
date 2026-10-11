@@ -23,8 +23,8 @@ graph TB
 
     subgraph External["External Access Points"]
         VPN["WireGuard VPN
-        UDP :51820
-        System Service"]
+        on the UDR7 router
+        (not on this server)"]
         HTTP["HTTP/HTTPS
         :80/:443"]
     end
@@ -124,7 +124,6 @@ graph TB
         TraefikData[(Traefik Certs/Logs)]
         GrafanaData[(Grafana Config)]
         PrometheusData[(Prometheus TSDB)]
-        WireGuardData[(WireGuard Configs)]
         OwnTracksData[(OwnTracks Store)]
         AppData[("Immich, CWA, kiosk recipes,
         radmap tiles, odd-jobs, netalertx")]
@@ -190,7 +189,6 @@ graph TB
     Traefik -.->|Stores| TraefikData
     Grafana -.->|Stores| GrafanaData
     Prometheus -.->|Stores| PrometheusData
-    VPN -.->|Stores| WireGuardData
     OwnTracks -.->|Stores| OwnTracksData
     Immich -.->|Stores| AppData
     OddJobs -.->|Stores| AppData
@@ -208,7 +206,7 @@ graph TB
     class AdGuard core
     class Prometheus,Grafana,Alertmanager,NodeExporter,CAdvisor,Blackbox monitoring
     class Homepage,HomepageAPI,KioskAPI,KioskWeb,Radmap,OddJobs,Immich,CWA,Icloudpd,NetAlertX,SockProxy dashboard
-    class AdGuardData,TraefikData,GrafanaData,PrometheusData,WireGuardData,OwnTracksData,AppData data
+    class AdGuardData,TraefikData,GrafanaData,PrometheusData,OwnTracksData,AppData data
     class Certbot system
 ```
 
@@ -228,17 +226,16 @@ graph TB
 
     subgraph L1["Layer 1: Network Firewall"]
         UFW["UFW Rules
-        SSH, WireGuard
-        HTTP/HTTPS
-        LAN + VPN allowed"]
+        SSH, HTTP/HTTPS
+        LAN + UDR7 VPN subnet allowed"]
     end
 
-    subgraph L2["Layer 2: VPN Access"]
+    subgraph L2["Layer 2: VPN Access (UniFi Dream Router 7)"]
         WG["WireGuard Server
-        10.13.13.1
+        on the UDR7
         Split Tunneling"]
         VPNSubnet["VPN Subnet
-        10.13.13.0/24"]
+        192.168.2.0/24"]
     end
 
     subgraph L3["Layer 3: Reverse Proxy & Middleware"]
@@ -291,11 +288,10 @@ graph TB
     end
 
     %% Request flow - Remote via VPN
-    Remote -->|1. VPN Connection| UFW
-    UFW -->|2. Allow :51820| WG
-    WG -->|3. Tunnel to VPN Subnet| VPNSubnet
-    VPNSubnet -->|4. HTTPS Request| UFW
-    UFW -->|5. Allow :443 from VPN| Traefik
+    Remote -->|1. VPN Connection to UDR7| WG
+    WG -->|2. Tunnel to VPN Subnet| VPNSubnet
+    VPNSubnet -->|3. Routed HTTPS Request| UFW
+    UFW -->|4. Allow :443 from VPN subnet| Traefik
 
     %% Request flow - Local network
     Local -->|1. HTTPS Request| UFW
@@ -345,9 +341,6 @@ graph TD
     %% System services
     Docker["Docker Engine
     System Service"]
-    WireGuard["WireGuard
-    System Service
-    wg-quick@wg0"]
     Certbot["certbot
     System Service
     Snap Timer"]
@@ -461,7 +454,7 @@ graph TD
     classDef monitoring fill:#ffd43b,stroke:#f08c00,stroke-width:2px,color:#000
     classDef dashboard fill:#da77f2,stroke:#9c36b5,stroke-width:2px,color:#fff
 
-    class Docker,WireGuard,Certbot system
+    class Docker,Certbot system
     class Traefik,Fail2ban network
     class AdGuard core
     class Prometheus,NodeExporter,CAdvisor,Grafana,Alertmanager,Blackbox monitoring
@@ -493,8 +486,6 @@ graph LR
             grafana.db, dashboards/"]
             AlertmanagerDir["./data/alertmanager/
             notifications/"]
-            WireGuardDir["./data/wireguard/
-            peers/"]
             AppDirs["./data/immich, cwa, radmap/tiles,
             kitchen-kiosk/recipes, odd-jobs,
             netalertx"]
@@ -527,8 +518,6 @@ graph LR
         LetsEncrypt["/etc/letsencrypt/
         live/DOMAIN/
         fullchain.pem, privkey.pem"]
-        WGSystem["/etc/wireguard/
-        wg0.conf"]
     end
 
     subgraph Containers["Docker Containers"]
@@ -566,9 +555,6 @@ graph LR
 
     %% System paths
     LetsEncrypt -.->|Copied by certbot hook| TraefikDir
-    WGSystem -.->|Used by wg-quick| WireGuard["WireGuard
-    System Service"]
-    WireGuardDir -.->|Peer configs| WGSystem
 
     %% Backup scope
     DataDir -.->|Backup Target| Backup["Backup Strategy
@@ -581,10 +567,10 @@ graph LR
     classDef system fill:#ff922b,stroke:#e67700,stroke-width:2px,color:#fff
     classDef backup fill:#ffd43b,stroke:#f08c00,stroke-width:2px,color:#000
 
-    class AdGuardDir,TraefikDir,PrometheusDir,GrafanaDir,AlertmanagerDir,WireGuardDir,AppDirs data
+    class AdGuardDir,TraefikDir,PrometheusDir,GrafanaDir,AlertmanagerDir,AppDirs data
     class TraefikConfig,Fail2banConfig,PromConfig,AlertConfig,HomepageConfig,AppConfig,EnvFile config
     class AdGuard,Traefik,Prometheus,Grafana,Alertmanager,Fail2ban,Homepage,Apps container
-    class LetsEncrypt,WGSystem,WireGuard system
+    class LetsEncrypt system
     class Backup backup
 ```
 
@@ -623,8 +609,8 @@ All services accessible via `https://<service>.${DOMAIN}`:
 
 ### Defense-in-Depth Security
 Six security layers protect the stack:
-1. **Network Firewall (UFW)**: Default deny, rate-limited SSH, WireGuard + HTTP/HTTPS only
-2. **VPN Access (WireGuard)**: Primary remote access, split tunneling to home network only
+1. **Network Firewall (UFW)**: Default deny, rate-limited SSH, HTTP/HTTPS only; nothing is exposed to the internet
+2. **VPN Access (WireGuard on the UDR7)**: Primary remote access, split tunneling to home network only; terminates on the router, so it survives this server being down
 3. **Reverse Proxy Middleware (Traefik)**: IP whitelisting, rate limiting, security headers
 4. **Intrusion Detection (Fail2ban)**: Monitors auth failures, scanning, rate limit abuse
 5. **Application Services**: Admin interfaces require VPN/LAN, future webhooks separated
@@ -639,7 +625,7 @@ Uses **certbot with Gandi DNS plugin** for Let's Encrypt wildcard certificates:
 - Hook copies renewed certs and restarts Traefik container
 
 ### System-Level Services
-**WireGuard VPN** runs as system service (not Docker) to ensure VPN access remains available when Docker services restart. certbot also runs as system service via snap timer for reliable certificate renewal.
+**WireGuard VPN** runs on the UniFi Dream Router 7, not on this server, so remote access stays up when Docker or this host is down (and DNS is the only thing lost then). The UDR7 is also the DHCP server and hands out `SERVER_IP` as the LAN's DNS, keeping AdGuard Home the resolver. certbot also runs as system service via snap timer for reliable certificate renewal.
 
 ### Data Persistence Strategy
 All persistent data uses **bind mounts** (not Docker volumes) in `./data/` for easy backups:
@@ -653,7 +639,6 @@ tar -czf backup.tar.gz data/ .env
 
 ### External Access
 - **22** - SSH (rate-limited via UFW)
-- **51820** - WireGuard VPN (UDP)
 - **80** - HTTP (redirects to HTTPS)
 - **443** - HTTPS (Traefik reverse proxy)
 

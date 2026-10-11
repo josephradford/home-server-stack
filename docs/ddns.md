@@ -1,16 +1,22 @@
 # Dynamic DNS (DDNS)
 
 If your ISP assigns a dynamic public IP, DDNS keeps a DNS hostname pointed at
-your current IP. This is a prerequisite for external WireGuard access — without
-it, `WIREGUARD_SERVERURL` breaks whenever your IP changes.
+your current IP. This is a prerequisite for external VPN access: the WireGuard
+server runs on the UniFi Dream Router 7, and VPN clients use `vpn.DOMAIN` as its
+endpoint, so it must follow your public IP when your ISP changes it.
 
-If you have a **static public IP**, skip this entirely and set
-`WIREGUARD_SERVERURL` to that IP directly.
+If you have a **static public IP**, skip this entirely and use that IP as the
+endpoint in the UDR7's VPN peer configs.
+
+DDNS runs on this server as a systemd timer (independent of Docker), not on the
+router because it is already set up and working with Gandi LiveDNS. The UDR7 also has
+a built-in Dynamic DNS setting; if it supports your DNS provider you could use that
+instead and retire this timer.
 
 ## How it works
 
 The update script (`scripts/ddns/gandi-ddns-update.sh`) runs every 5 minutes
-via cron. It:
+via a systemd timer. It:
 
 1. Fetches your current public IP from `ifconfig.me` (falls back to `ipinfo.io`)
 2. Reads the current A record for `WIREGUARD_DDNS_SUBDOMAIN.DOMAIN` from Gandi LiveDNS
@@ -25,10 +31,8 @@ The same Gandi API token used for SSL certificates (`GANDIV5_PERSONAL_ACCESS_TOK
 In `.env`:
 
 ```bash
-# Hostname VPN clients connect to — set this to the subdomain DDNS manages
-WIREGUARD_SERVERURL=vpn.your-domain.com
-
 # Subdomain for the A record DDNS will create and maintain
+# (the name is historical; it is the VPN endpoint hostname, not a WireGuard setting)
 WIREGUARD_DDNS_SUBDOMAIN=vpn
 ```
 
@@ -45,7 +49,7 @@ This will:
 - Create the A record in Gandi LiveDNS
 - Create `/var/log/gandi-ddns.log` with correct ownership
 - Configure daily log rotation under `/etc/logrotate.d/gandi-ddns`
-- Install a cron entry for your user that runs the update script every 5 minutes
+- Install a systemd timer (`gandi-ddns.timer`) that runs the update script every 5 minutes
 
 ### 3. Verify
 
@@ -56,24 +60,20 @@ make ddns-update
 # Show current public IP vs what Gandi has
 make ddns-status
 
-# Tail the cron log
+# Tail the update log
 tail -f /var/log/gandi-ddns.log
 ```
 
-### 4. Regenerate WireGuard peer configs
+### 4. Use the hostname in the UDR7 VPN
 
-If you already had WireGuard peers configured with a raw IP as `Endpoint`, you
-need to regenerate their configs so they use the hostname instead:
-
-```bash
-sudo ./scripts/wireguard/wireguard-add-peer.sh <peer-name>
-```
-
-Re-scan the QR code in the WireGuard app on that device.
+In the UniFi Network app, set the WireGuard VPN server's endpoint/hostname to
+`vpn.DOMAIN` (rather than a raw IP) before generating peer configs. If peers
+were created with a raw IP as `Endpoint`, regenerate them and re-scan the QR code
+in the WireGuard app on that device.
 
 ## Ongoing use
 
-The cron job runs silently every 5 minutes and only writes to the log when the
+The timer runs silently every 5 minutes and only writes to the log when the
 IP changes (or on error). Normal operation produces no output.
 
 ```bash

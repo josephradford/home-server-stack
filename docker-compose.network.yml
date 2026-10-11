@@ -4,9 +4,7 @@
 # - Traefik: Reverse proxy with automatic SSL and domain-based routing
 # - Fail2ban: Intrusion prevention system that monitors and blocks malicious traffic
 #
-# NOTE: WireGuard is now installed as a system service (not Docker)
-# This prevents VPN disconnection when Docker services are restarted.
-# See: ./scripts/install-wireguard.sh
+# NOTE: The VPN (WireGuard) runs on the UniFi Dream Router 7, not on this server.
 
 services:
   # Traefik - Reverse proxy for domain-based service access
@@ -116,7 +114,7 @@ services:
       - "traefik.http.middlewares.admin-ratelimit.ratelimit.period=1m"
       - "traefik.http.middlewares.admin-ratelimit.ratelimit.burst=50"
 
-      # IP Allow List for Internal Services (RFC1918 + VPN)
+      # IP Allow List for Internal Services (RFC1918, which covers LAN and UDR7 VPN clients)
       # Note: v3.x uses ipallowlist (ipwhitelist deprecated but still works for compatibility)
       - "traefik.http.middlewares.internal-only.ipallowlist.sourcerange=192.168.0.0/16,172.16.0.0/12,10.0.0.0/8"
 

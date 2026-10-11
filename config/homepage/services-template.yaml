@@ -247,7 +247,7 @@
                 label: Detail
 
 
-# Network & Security - Infrastructure services for routing, VPN, and security
+# Network & Security - Infrastructure services for routing and security
 - Network & Security:
   - Traefik:
       icon: traefik.png
@@ -259,19 +259,6 @@
       container: traefik
       server: my-docker
       showStats: true
-
-  - Wireguard VPN:
-      icon: wireguard.png
-      description: VPN server (system service)
-      widget:
-        type: customapi
-        url: http://homepage-api:5000/api/wireguard/status
-        refreshInterval: 30000  # 30 seconds
-        mappings:
-          - field: status
-            label: Status
-          - field: interface
-            label: Interface
 
   - Fail2ban:
       icon: mdi-shield-lock

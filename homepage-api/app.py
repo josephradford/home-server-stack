@@ -47,7 +47,6 @@ def health_check():
         'services': {
             'transport_nsw': 'configured' if TRANSPORT_NSW_API_KEY else 'not configured',
             'tomtom': 'configured' if TOMTOM_API_KEY else 'not configured',
-            'wireguard': 'system service',
             'docker': 'system service'
         }
     })
@@ -909,48 +908,6 @@ def network_health():
         return jsonify({'error': f'Prometheus API error: {str(e)}'}), 500
     except Exception as e:
         return jsonify({'error': str(e)}), 500
-
-
-# =============================================================================
-# WIREGUARD VPN STATUS
-# =============================================================================
-
-def _wg_interface_up():
-    """Return True if the wg0 network interface exists in the host sysfs.
-    Uses os.listdir rather than os.path.isdir because sysfs symlinks don't
-    resolve correctly inside a container with a bind-mounted /sys/class/net.
-    """
-    try:
-        return 'wg0' in os.listdir('/sys/class/net')
-    except Exception:
-        return False
-
-
-@app.route('/api/wireguard/status')
-def wireguard_status():
-    """
-    Get WireGuard VPN status by inspecting the host sysfs.
-    No systemctl or wg CLI required — works inside a container.
-    """
-    try:
-        up = _wg_interface_up()
-        if not up:
-            return jsonify({
-                'status': 'Inactive',
-                'interface': 'wg0 (down)',
-                'service_status': 'inactive',
-                'updated': datetime.now().isoformat()
-            })
-
-        return jsonify({
-            'status': 'Active',
-            'interface': 'wg0 (up)',
-            'service_status': 'active',
-            'updated': datetime.now().isoformat()
-        })
-
-    except Exception as e:
-        return jsonify({'error': f'Unexpected error: {str(e)}'}), 500
 
 
 # =============================================================================

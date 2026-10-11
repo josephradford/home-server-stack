@@ -102,5 +102,5 @@ Keep the summary short. Paste relevant log lines rather than paraphrasing them.
 | 502 Bad Gateway in browser | Container not healthy or wrong port | `make status` + traefik logs |
 | SSL cert warnings | Certs missing or expired | `data/traefik/certs/` + certbot |
 | DNS not resolving | AdGuard not running or misconfigured | `make logs-adguard` (if it exists) or adguard container logs |
-| WireGuard not routing | iptables rules missing after reboot | `make wireguard-test` |
+| VPN clients can't reach services | UDR7 VPN DNS not set to `SERVER_IP`, or UFW missing `VPN_SUBNET` rule | UniFi VPN settings + `sudo ufw status` |
 | `make validate` fails | .env missing or compose syntax error | Check `.env` exists, then read the error |

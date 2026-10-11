@@ -22,8 +22,6 @@ if [ -f .env ]; then
     set +a
 fi
 
-WIREGUARD_SUBNET="${WIREGUARD_SUBNET:-10.13.13.0/24}"
-
 echo -e "${GREEN}Step 1/4: Installing fail2ban...${NC}"
 if ! command -v fail2ban-client &> /dev/null; then
     sudo apt-get update -qq
@@ -62,7 +60,7 @@ bantime = 30m
 EOF
 echo -e "${GREEN}✓ /etc/fail2ban/jail.local written${NC}"
 echo "  sshd jail: 10 failed attempts in 5 minutes → 30 minute ban"
-echo "  Ignored: localhost, RFC1918 (local net), WireGuard subnet"
+echo "  Ignored: localhost, RFC1918 (local net and UDR7 VPN subnet)"
 
 echo ""
 echo -e "${GREEN}Step 4/4: Enabling and starting fail2ban...${NC}"

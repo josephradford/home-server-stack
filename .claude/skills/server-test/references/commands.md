@@ -18,11 +18,13 @@ docker compose -f docker-compose.yml -f docker-compose.network.yml -f docker-com
 docker ps -a  # shows exit codes and restart counts
 ```
 
-## WireGuard (system service, not Docker)
+## Dynamic DNS (VPN endpoint hostname)
+
+The VPN itself runs on the UDR7, not on this server. Only the DDNS timer is local.
 
 ```bash
-systemctl is-active wg-quick@wg0
-sudo wg show
+systemctl list-timers gandi-ddns.timer
+make ddns-status
 ```
 
 ## SSL certificates
