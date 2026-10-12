@@ -12,6 +12,7 @@ import requests
 from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 from urllib.parse import parse_qs
+import math
 import os
 import re
 import json
@@ -901,6 +902,62 @@ def network_health():
 
         return jsonify({
             'probes': probes,
+            'updated': datetime.now().isoformat()
+        })
+
+    except requests.exceptions.RequestException as e:
+        return jsonify({'error': f'Prometheus API error: {str(e)}'}), 500
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+# unpoller labels the UDR7 as type "udm". Selecting on it keeps the numbers
+# about the router if APs/switches are ever added to the site.
+_ROUTER_DEVICE_TYPE = 'udm'
+
+
+def _prometheus_scalar(query):
+    """First sample of an instant query as a float, or None when there is no
+    series or the value is not a finite number (Prometheus may return NaN)."""
+    results = _prometheus_query(query)
+    if not results:
+        return None
+    value = float(results[0]['value'][1])
+    return None if math.isnan(value) or math.isinf(value) else value
+
+
+def _round_or_none(value, digits):
+    return None if value is None else round(value, digits)
+
+
+@app.route('/api/network/router')
+def network_router():
+    """
+    UDR7 health from unpoller metrics in Prometheus: CPU, memory, temperature,
+    uptime, WAN throughput and client counts. Any value Prometheus has no
+    data for is null, so the Homepage tile degrades instead of failing.
+    """
+    try:
+        dev = f'type="{_ROUTER_DEVICE_TYPE}"'
+        cpu = _prometheus_scalar(f'max(unpoller_device_cpu_utilization_ratio{{{dev}}}) * 100')
+        memory = _prometheus_scalar(f'max(unpoller_device_memory_utilization_ratio{{{dev}}}) * 100')
+        temperature = _prometheus_scalar(f'max(unpoller_device_temperature_celsius{{{dev}}})')
+        uptime_s = _prometheus_scalar(f'max(unpoller_device_uptime_seconds{{{dev}}})')
+        wan_down = _prometheus_scalar(f'sum(unpoller_device_wan_receive_rate_bytes{{{dev}}})')
+        wan_up = _prometheus_scalar(f'sum(unpoller_device_wan_transmit_rate_bytes{{{dev}}})')
+        clients = _prometheus_scalar('sum(unpoller_site_users{subsystem=~"lan|wlan"})')
+        vpn_clients = _prometheus_scalar('sum(unpoller_site_users{subsystem="vpn"})')
+
+        return jsonify({
+            'cpu_pct': _round_or_none(cpu, 1),
+            'memory_pct': _round_or_none(memory, 1),
+            'temperature_c': _round_or_none(temperature, 1),
+            'uptime_days': _round_or_none(None if uptime_s is None else uptime_s / 86400, 1),
+            # unpoller reports bytes/second; the tile shows megabits/second.
+            'wan_down_mbps': _round_or_none(None if wan_down is None else wan_down * 8 / 1e6, 1),
+            'wan_up_mbps': _round_or_none(None if wan_up is None else wan_up * 8 / 1e6, 1),
+            'clients': None if clients is None else int(clients),
+            'vpn_clients': None if vpn_clients is None else int(vpn_clients),
             'updated': datetime.now().isoformat()
         })
 

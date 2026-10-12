@@ -870,6 +870,124 @@ class TestNetworkHealthEndpoint:
         assert 'error' in response.get_json()
 
 
+def _router_fake_get(values):
+    """Build a requests.get stand-in answering Prometheus instant queries.
+
+    `values` maps a distinctive substring of the PromQL query to the sample
+    value (a string, like Prometheus returns). Queries that match nothing get
+    an empty result, the same as a metric Prometheus has no series for.
+    """
+    def fake_get(url, params=None, timeout=None):
+        query = params['query']
+        result = []
+        for fragment, value in values.items():
+            if fragment in query:
+                result = [{'metric': {}, 'value': [0, value]}]
+                break
+        mock_response = Mock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {'status': 'success', 'data': {'result': result}}
+        return mock_response
+    return fake_get
+
+
+_ROUTER_FULL_VALUES = {
+    'unpoller_device_cpu_utilization_ratio': '22.4',
+    'unpoller_device_memory_utilization_ratio': '55.2',
+    'unpoller_device_temperature_celsius': '63',
+    'unpoller_device_uptime_seconds': '245584',
+    'unpoller_device_wan_receive_rate_bytes': '587937',
+    'unpoller_device_wan_transmit_rate_bytes': '571582',
+    'subsystem=~"lan|wlan"': '10',
+    'subsystem="vpn"': '0',
+}
+
+
+class TestNetworkRouterEndpoint:
+    """Tests for /api/network/router (UDR7 stats from unpoller via Prometheus)"""
+
+    @patch('app.requests.get')
+    def test_router_success(self, mock_get, client):
+        mock_get.side_effect = _router_fake_get(_ROUTER_FULL_VALUES)
+
+        response = client.get('/api/network/router')
+        assert response.status_code == 200
+
+        data = response.get_json()
+        assert data['cpu_pct'] == 22.4
+        assert data['memory_pct'] == 55.2
+        assert data['temperature_c'] == 63.0
+        assert data['uptime_days'] == 2.8          # 245584 s / 86400
+        assert data['wan_down_mbps'] == 4.7        # 587937 B/s * 8 / 1e6
+        assert data['wan_up_mbps'] == 4.6          # 571582 B/s * 8 / 1e6
+        assert data['clients'] == 10
+        assert data['vpn_clients'] == 0
+        assert 'updated' in data
+
+    @patch('app.requests.get')
+    def test_router_no_data_returns_nulls(self, mock_get, client):
+        """unpoller down / router unreachable: no series -> 200 with all nulls."""
+        mock_get.side_effect = _router_fake_get({})
+
+        response = client.get('/api/network/router')
+        assert response.status_code == 200
+
+        data = response.get_json()
+        for field in ('cpu_pct', 'memory_pct', 'temperature_c', 'uptime_days',
+                      'wan_down_mbps', 'wan_up_mbps', 'clients', 'vpn_clients'):
+            assert data[field] is None, field
+
+    @patch('app.requests.get')
+    def test_router_partial_data(self, mock_get, client):
+        """A missing metric nulls only that field."""
+        values = dict(_ROUTER_FULL_VALUES)
+        del values['unpoller_device_temperature_celsius']
+        mock_get.side_effect = _router_fake_get(values)
+
+        data = client.get('/api/network/router').get_json()
+        assert data['temperature_c'] is None
+        assert data['cpu_pct'] == 22.4
+        assert data['clients'] == 10
+
+    @patch('app.requests.get')
+    def test_router_nan_becomes_null(self, mock_get, client):
+        """Prometheus can return 'NaN'; it must not leak into the JSON."""
+        values = dict(_ROUTER_FULL_VALUES)
+        values['unpoller_device_cpu_utilization_ratio'] = 'NaN'
+        mock_get.side_effect = _router_fake_get(values)
+
+        response = client.get('/api/network/router')
+        assert response.status_code == 200
+        assert b'NaN' not in response.data
+        assert response.get_json()['cpu_pct'] is None
+
+    @patch('app.requests.get')
+    def test_router_queries_use_aggregates(self, mock_get, client):
+        """Several sensors/devices must collapse to one value (hottest temp, summed rates)."""
+        seen = []
+        inner = _router_fake_get(_ROUTER_FULL_VALUES)
+
+        def recording_get(url, params=None, timeout=None):
+            seen.append(params['query'])
+            return inner(url, params=params, timeout=timeout)
+        mock_get.side_effect = recording_get
+
+        client.get('/api/network/router')
+
+        temperature_query = next(q for q in seen if 'temperature_celsius' in q)
+        assert temperature_query.startswith('max(')
+        wan_query = next(q for q in seen if 'wan_receive_rate_bytes' in q)
+        assert wan_query.startswith('sum(')
+
+    @patch('app.requests.get')
+    def test_router_prometheus_error(self, mock_get, client):
+        mock_get.side_effect = Exception('connection refused')
+
+        response = client.get('/api/network/router')
+        assert response.status_code == 500
+        assert 'error' in response.get_json()
+
+
 class TestIcloudpdStatusEndpoint:
     """Tests for /api/icloudpd/status (single merged container)"""
 
