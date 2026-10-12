@@ -57,7 +57,7 @@ Currently deployed and active services.
   - Docker container resource monitoring (CPU, RAM, network)
   - BOM weather, Transport NSW departures, TomTom traffic
   - Google Calendar integration
-  - Devices seen on the network (via AdGuard) and router/ISP latency & packet loss (via blackbox_exporter)
+  - ISP latency & packet loss (via blackbox_exporter) and UDR7 router stats (via unpoller)
   - External outage status: infra bellwethers (Cloudflare, AWS, GCP, Azure) and personal dependencies (Gmail, iCloud, GitHub, Docker Hub)
 
 #### Homepage API
@@ -238,7 +238,7 @@ Services queued for implementation.
 
 ### Infrastructure & Security
 - [x] **Router upgrade** - Replaced the TP-Link Archer VR1600v with a UniFi Dream Router 7 (built-in Wi-Fi, native WireGuard VPN server, DHCP). WireGuard moved off this server onto the UDR7; AdGuard Home stays here as the LAN DNS. OPNsense remains a longer-term option once a spare mini-PC is available (e.g. after migrating the home server to a Mac mini).
-- [x] **Router hardware stats on Homepage** (CPU, temp, uptime, clients) - Shipped via unpoller to Prometheus and a Homepage "Router" tile (Homepage shows four fields per tile; WAN throughput is on the linked Grafana dashboard and in `/api/network/router`), plus UniFi Grafana dashboards. Devices-on-network and ISP/local latency + packet-loss widgets use AdGuard + blackbox_exporter.
+- [x] **Router hardware stats on Homepage** (CPU, temp, uptime, clients) - Shipped via unpoller to Prometheus and a Homepage "Router" tile (Homepage shows four fields per tile; WAN throughput is on the linked Grafana dashboard and in `/api/network/router`), plus UniFi Grafana dashboards. The ISP latency + packet-loss widget uses blackbox_exporter.
 - [ ] **[Ollama](https://github.com/ollama/ollama)** - Run large language models locally
 - [ ] **[Watchtower](https://github.com/containrrr/watchtower)** - A process for automating Docker container base image updates
 - [ ] **[SearXNG](https://github.com/searxng/searxng)** - Free internet metasearch engine which aggregates results from various search services

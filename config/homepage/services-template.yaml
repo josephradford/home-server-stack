@@ -82,46 +82,18 @@
               label: Departs
               format: relativeDate
 
-# Internet - network health, devices, and external provider status
+# Internet - network health, router stats, and external provider status
 - Internet:
   - Network:
-      - Devices Online:
-          icon: mdi-devices
-          href: https://adguard.{{HOMEPAGE_VAR_DOMAIN}}/#logs
-          description: Devices making DNS queries in the last 30 min (AdGuard query log)
-          widget:
-            type: customapi
-            url: http://homepage-api:5000/api/network/devices
-            refreshInterval: 60000  # 1 minute
-            mappings:
-              - field: count
-                label: Devices (30 min)
-              - field: top_devices.0.name
-                label: Top
-              - field: top_devices.0.queries
-                label: Queries
-              - field: top_devices.1.name
-                label: Next
-              - field: top_devices.1.queries
-                label: Queries
-              - field: protection_enabled
-                label: Protection
-
       - Network Health:
           icon: mdi-wan
           href: https://prometheus.{{HOMEPAGE_VAR_DOMAIN}}/graph?g0.expr=probe_icmp_duration_seconds%7Bjob%3D%22blackbox-icmp%22%7D&g0.tab=0
-          description: Local router + ISP latency and packet loss (Prometheus)
+          description: ISP latency and packet loss (Prometheus)
           widget:
             type: customapi
             url: http://homepage-api:5000/api/network/health
             refreshInterval: 60000  # 1 minute
             mappings:
-              - field: probes.router.latency_ms
-                label: Router
-                suffix: "ms"
-              - field: probes.router.packet_loss_pct_24h
-                label: Loss (24h)
-                suffix: "%"
               - field: probes.isp.latency_ms
                 label: ISP
                 suffix: "ms"

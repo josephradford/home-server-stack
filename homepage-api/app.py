@@ -9,7 +9,7 @@ Provides custom endpoints for:
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 import requests
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 from urllib.parse import parse_qs
 import math
@@ -27,9 +27,6 @@ CORS(app)
 # Configuration from environment variables
 TRANSPORT_NSW_API_KEY = os.getenv('TRANSPORT_NSW_API_KEY')
 TOMTOM_API_KEY = os.getenv('TOMTOM_API_KEY')
-ADGUARD_USERNAME = os.getenv('ADGUARD_USERNAME')
-ADGUARD_PASSWORD = os.getenv('ADGUARD_PASSWORD')
-ADGUARD_URL = os.getenv('ADGUARD_URL', 'http://adguard:80')
 PROMETHEUS_URL = os.getenv('PROMETHEUS_URL', 'http://prometheus:9090')
 SYDNEY_TZ = ZoneInfo('Australia/Sydney')
 COMMUTE_CUTOVER_HOUR = int(os.getenv('TRANSPORT_COMMUTE_CUTOVER_HOUR', '12'))
@@ -743,109 +740,8 @@ def status_health(tier, index):
 
 
 # =============================================================================
-# NETWORK: DEVICES + ISP/LOCAL HEALTH
+# NETWORK: ISP/LOCAL HEALTH
 # =============================================================================
-
-# Devices are taken from AdGuard's query log rather than its client list: the
-# client list only holds ARP/DHCP/hosts entries, and misses devices that are
-# making DNS queries. The log records each query's real client IP.
-DEVICE_WINDOW_MINUTES = 30
-_QUERYLOG_PAGE_SIZE = 500
-_QUERYLOG_MAX_PAGES = 20
-
-
-def _parse_adguard_time(value):
-    """Parse AdGuard's RFC 3339 timestamps (nanosecond fractions, 'Z' suffix)."""
-    match = re.match(r'^([^.]+)(?:\.(\d+))?(Z|[+-]\d{2}:\d{2})$', value)
-    base, fraction, tz = match.groups()
-    tz = '+00:00' if tz == 'Z' else tz
-    fraction = f'.{fraction[:6]}' if fraction else ''
-    return datetime.fromisoformat(f'{base}{fraction}{tz}')
-
-
-def _recent_querylog_clients(window):
-    """Latest query and query count per client IP, for queries within `window`."""
-    cutoff = datetime.now(timezone.utc) - window
-    latest = {}
-    counts = {}
-    older_than = None
-    for _ in range(_QUERYLOG_MAX_PAGES):
-        params = {'limit': _QUERYLOG_PAGE_SIZE}
-        if older_than:
-            params['older_than'] = older_than
-        response = requests.get(
-            f'{ADGUARD_URL}/control/querylog',
-            params=params,
-            auth=(ADGUARD_USERNAME, ADGUARD_PASSWORD),
-            timeout=10
-        )
-        response.raise_for_status()
-        entries = response.json().get('data', [])
-        if not entries:
-            break
-
-        reached_cutoff = False
-        for entry in entries:  # newest first, so the first hit per client is its latest
-            seen = _parse_adguard_time(entry['time'])
-            if seen < cutoff:
-                reached_cutoff = True
-                break
-            ip = entry.get('client')
-            if ip:
-                counts[ip] = counts.get(ip, 0) + 1
-            if ip and ip not in latest:
-                name = (entry.get('client_info') or {}).get('name')
-                latest[ip] = {
-                    'name': name or ip,
-                    'ip': ip,
-                    'last_seen': seen.astimezone(ZoneInfo('Australia/Sydney')).isoformat(),
-                }
-        if reached_cutoff:
-            break
-        older_than = entries[-1]['time']
-
-    for ip, device in latest.items():
-        device['queries'] = counts[ip]
-    return sorted(latest.values(), key=lambda d: d['last_seen'], reverse=True)
-
-
-def _adguard_protection_enabled():
-    response = requests.get(
-        f'{ADGUARD_URL}/control/status',
-        auth=(ADGUARD_USERNAME, ADGUARD_PASSWORD),
-        timeout=10
-    )
-    response.raise_for_status()
-    return bool(response.json().get('protection_enabled'))
-
-
-@app.route('/api/network/devices')
-def network_devices():
-    """
-    Devices that made a DNS query through AdGuard in the last 30 minutes, the
-    two busiest by query count, and whether AdGuard protection is on.
-    Reflects DNS activity, so an idle device will not appear.
-    """
-    try:
-        if not (ADGUARD_USERNAME and ADGUARD_PASSWORD):
-            return jsonify({'error': 'AdGuard credentials not configured'}), 503
-
-        devices = _recent_querylog_clients(timedelta(minutes=DEVICE_WINDOW_MINUTES))
-        top_devices = sorted(devices, key=lambda d: d['queries'], reverse=True)[:2]
-        return jsonify({
-            'devices': devices,
-            'count': len(devices),
-            'top_devices': top_devices,
-            'protection_enabled': _adguard_protection_enabled(),
-            'window_minutes': DEVICE_WINDOW_MINUTES,
-            'updated': datetime.now().isoformat()
-        })
-
-    except requests.exceptions.RequestException as e:
-        return jsonify({'error': f'AdGuard API error: {str(e)}'}), 500
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
 
 def _prometheus_query(query):
     """Run an instant PromQL query, return the `result` list of the response."""
