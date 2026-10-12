@@ -192,6 +192,20 @@ groups:
           summary: "AdGuard is not answering DNS queries"
           description: "DNS lookups against {{ $labels.instance }} have been failing for more than 2 minutes"
 
+      # Ad blocking stopped working while DNS itself still answers (protection
+      # paused, or the filter no longer covers the probe domain). Suppressed when
+      # DNS is down, which AdGuardDNSFailing already covers. 15m grace avoids
+      # firing on a short, deliberate pause.
+      - alert: AdGuardBlockingOff
+        expr: probe_success{job="blackbox-dns-blocking"} == 0 and on(instance) probe_success{job="blackbox-dns"} == 1
+        for: 15m
+        labels:
+          severity: warning
+          category: availability
+        annotations:
+          summary: "AdGuard is answering DNS but not blocking ads"
+          description: "A blocked ad domain has resolved to a real address via {{ $labels.instance }} for more than 15 minutes. Check that AdGuard protection is enabled and the filter lists are loaded."
+
       # odd-jobs daily refresh: Apple Calendar keeps showing old fixtures if refreshes quietly fail.
       # 3 days without a successful run = ~3 failed daily runs (or the container is down).
       # 1h `for`: the metric reads 0 between container start and the first run finishing.

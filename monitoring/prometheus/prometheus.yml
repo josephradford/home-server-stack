@@ -60,6 +60,23 @@ scrape_configs:
         target_label: instance
       - target_label: __address__
         replacement: blackbox-exporter:9115
+  # Is AdGuard actually blocking? Same target as blackbox-dns, but queries a
+  # blocked ad domain and expects 0.0.0.0. 60s keeps the extra query-log noise low.
+  - job_name: 'blackbox-dns-blocking'
+    scrape_interval: 60s
+    metrics_path: /probe
+    params:
+      module: [dns_blocked]
+    static_configs:
+      - targets:
+          - 'adguard:53'
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: blackbox-exporter:9115
   # odd-jobs: daily fixture-calendar refresh. Exposes last-success time and last-run
   # status per job; the OddJobsStale alert fires when refreshes stop succeeding.
   - job_name: 'odd-jobs'
