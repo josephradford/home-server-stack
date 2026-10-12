@@ -129,6 +129,33 @@
                 label: Loss (24h)
                 suffix: "%"
 
+      - Router:
+          icon: mdi-router-wireless
+          href: https://grafana.{{HOMEPAGE_VAR_DOMAIN}}/d/4Yo8IZ-Wk
+          description: UDR7 health (unpoller via Prometheus)
+          widget:
+            type: customapi
+            url: http://homepage-api:5000/api/network/router
+            refreshInterval: 60000  # 1 minute (unpoller refreshes every minute)
+            mappings:
+              - field: cpu_pct
+                label: CPU
+                suffix: "%"
+              - field: temperature_c
+                label: Temp
+                suffix: "°C"
+              - field: uptime_days
+                label: Uptime
+                suffix: " d"
+              - field: clients
+                label: Clients
+              - field: wan_down_mbps
+                label: WAN down
+                suffix: " Mbps"
+              - field: wan_up_mbps
+                label: WAN up
+                suffix: " Mbps"
+
   # External Service Status - official status pages for infra bellwethers and personal dependencies
   - Bellwethers:
       - Cloudflare:

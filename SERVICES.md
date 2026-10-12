@@ -101,6 +101,12 @@ Currently deployed and active services.
 - **Port:** 9115 (internal only)
 - **Config:** `monitoring/blackbox/blackbox.yml` (probe modules `icmp`, `dns_a`); probe targets are set in `monitoring/prometheus/prometheus.yml`'s `blackbox-icmp` and `blackbox-dns` jobs — update the router IP in `blackbox-icmp` if it differs from the default `192.168.1.1`
 
+#### unpoller
+- **Purpose:** Exports UDR7 metrics (gateway CPU/memory/temperature, uptime, WAN throughput, clients, Wi-Fi) to Prometheus. Feeds the UniFi Grafana dashboards and the Homepage "Router" tile (via `homepage-api` `/api/network/router`).
+- **Access:** Internal only (`unpoller:9130` on the `homeserver` network; no Traefik route, no published port)
+- **Config:** `UNIFI_URL` and `UNIFI_API_KEY` in `.env` (read-only Network application API key; see `.env.example`). Prometheus job `unpoller` in `monitoring/prometheus/prometheus.yml`. Dashboards in `monitoring/grafana/dashboards/unifi-*.json`.
+- **Notes:** unpoller caches its output for a minute, so the job scrapes every 60s. If the Router tile shows empty values, check `docker logs unpoller` (authentication errors) and the `unpoller` target on the Prometheus targets page.
+
 ### Location Services
 
 #### owntracks-recorder
@@ -232,7 +238,7 @@ Services queued for implementation.
 
 ### Infrastructure & Security
 - [x] **Router upgrade** - Replaced the TP-Link Archer VR1600v with a UniFi Dream Router 7 (built-in Wi-Fi, native WireGuard VPN server, DHCP). WireGuard moved off this server onto the UDR7; AdGuard Home stays here as the LAN DNS. OPNsense remains a longer-term option once a spare mini-PC is available (e.g. after migrating the home server to a Mac mini).
-- [ ] **Router hardware stats on Homepage** (temp, CPU, uptime) - Unblocked by the UDR7 (`unpoller` Prometheus exporter); not yet set up. Devices-on-network and ISP/local latency + packet-loss widgets already shipped without needing this (via AdGuard + blackbox_exporter).
+- [x] **Router hardware stats on Homepage** (CPU, temp, uptime, WAN throughput, clients) - Shipped via unpoller to Prometheus and a Homepage "Router" tile, plus UniFi Grafana dashboards. Devices-on-network and ISP/local latency + packet-loss widgets use AdGuard + blackbox_exporter.
 - [ ] **[Ollama](https://github.com/ollama/ollama)** - Run large language models locally
 - [ ] **[Watchtower](https://github.com/containrrr/watchtower)** - A process for automating Docker container base image updates
 - [ ] **[SearXNG](https://github.com/searxng/searxng)** - Free internet metasearch engine which aggregates results from various search services
