@@ -980,6 +980,24 @@ class TestNetworkRouterEndpoint:
         assert wan_query.startswith('sum(')
 
     @patch('app.requests.get')
+    def test_router_wan_queries_do_not_filter_on_device_type(self, mock_get, client):
+        """unpoller's WAN rate metrics carry a `port` label but no `type` label
+        (confirmed on the live UDR7), so filtering on type would match nothing."""
+        seen = []
+        inner = _router_fake_get(_ROUTER_FULL_VALUES)
+
+        def recording_get(url, params=None, timeout=None):
+            seen.append(params['query'])
+            return inner(url, params=params, timeout=timeout)
+        mock_get.side_effect = recording_get
+
+        client.get('/api/network/router')
+
+        for metric in ('wan_receive_rate_bytes', 'wan_transmit_rate_bytes'):
+            query = next(q for q in seen if metric in q)
+            assert 'type=' not in query, query
+
+    @patch('app.requests.get')
     def test_router_prometheus_error(self, mock_get, client):
         mock_get.side_effect = Exception('connection refused')
 

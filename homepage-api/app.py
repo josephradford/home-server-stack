@@ -943,8 +943,10 @@ def network_router():
         memory = _prometheus_scalar(f'max(unpoller_device_memory_utilization_ratio{{{dev}}}) * 100')
         temperature = _prometheus_scalar(f'max(unpoller_device_temperature_celsius{{{dev}}})')
         uptime_s = _prometheus_scalar(f'max(unpoller_device_uptime_seconds{{{dev}}})')
-        wan_down = _prometheus_scalar(f'sum(unpoller_device_wan_receive_rate_bytes{{{dev}}})')
-        wan_up = _prometheus_scalar(f'sum(unpoller_device_wan_transmit_rate_bytes{{{dev}}})')
+        # The WAN rate metrics are labelled by `port` and have no `type` label, so the
+        # device-type selector must not be applied to them (it would match nothing).
+        wan_down = _prometheus_scalar('sum(unpoller_device_wan_receive_rate_bytes)')
+        wan_up = _prometheus_scalar('sum(unpoller_device_wan_transmit_rate_bytes)')
         clients = _prometheus_scalar('sum(unpoller_site_users{subsystem=~"lan|wlan"})')
         vpn_clients = _prometheus_scalar('sum(unpoller_site_users{subsystem="vpn"})')
 
