@@ -67,3 +67,8 @@ scrape_configs:
     metrics_path: /metrics
     static_configs:
       - targets: ['odd-jobs:8080']
+
+  - job_name: 'unpoller'
+    scrape_interval: 60s   # unpoller caches its output for 1 minute
+    static_configs:
+      - targets: ['unpoller:9130']
