@@ -11,12 +11,16 @@ services:
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
       - '--storage.tsdb.path=/prometheus'
-      - '--web.console.libraries=/etc/prometheus/console_libraries'
-      - '--web.console.templates=/etc/prometheus/consoles'
       - '--storage.tsdb.retention.time=30d'
       - '--web.enable-lifecycle'
     networks:
       - homeserver
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:9090/-/healthy"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.prometheus.rule=Host(`prometheus.${DOMAIN}`)"
@@ -41,6 +45,12 @@ services:
       - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards
     networks:
       - homeserver
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.grafana.rule=Host(`grafana.${DOMAIN}`)"
@@ -68,6 +78,12 @@ services:
       - ./monitoring/alertmanager:/etc/alertmanager
     networks:
       - homeserver
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:9093/-/healthy"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.alertmanager.rule=Host(`alerts.${DOMAIN}`)"
@@ -82,12 +98,14 @@ services:
     image: prom/node-exporter:v1.12.1
     container_name: node-exporter
     restart: unless-stopped
-    ports:
-      - "9100:9100"
+    # Scraped by Prometheus over the homeserver network; no host port published.
+    # pid: host lets it see host processes (process/fork metrics).
+    pid: host
+    cpus: 0.25
     volumes:
       - /proc:/host/proc:ro
       - /sys:/host/sys:ro
-      - /:/rootfs:ro
+      - /:/rootfs:ro,rslave
     command:
       - '--path.procfs=/host/proc'
       - '--path.rootfs=/rootfs'
@@ -95,22 +113,40 @@ services:
       - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
     networks:
       - homeserver
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:9100/metrics"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
 
   cadvisor:
     image: ghcr.io/google/cadvisor:v0.60.6
     container_name: cadvisor
     restart: unless-stopped
-    ports:
-      - "8081:8080"
+    # Scraped by Prometheus over the homeserver network; no host port published.
+    # Capped so a runaway collector can't heat the host.
+    cpus: 0.5
+    mem_limit: 512m
+    # Collect only Docker containers, every 15s (matches the Prometheus scrape
+    # interval), and skip metric groups nothing here uses. Dashboards and alerts
+    # use cpu, memory, network, last_seen, start_time and spec_memory_limit.
+    command:
+      - '--docker_only=true'
+      - '--housekeeping_interval=15s'
+      - '--disable_metrics=percpu,sched,tcp,udp,advtcp,hugetlb,referenced_memory,cpu_topology,resctrl'
     volumes:
       - /:/rootfs:ro
       - /var/run:/var/run:ro
       - /sys:/sys:ro
+      # Docker uses the containerd snapshotter here; without this mount cAdvisor
+      # logs "could not stat /var/lib/docker/rootfs/overlayfs/..." and burns CPU.
+      - /var/lib/docker/:/var/lib/docker:ro
       - /dev/disk/:/dev/disk:ro
-    # Use privileged mode for cAdvisor to access system metrics
-    # Security note: cAdvisor requires extensive system access to monitor containers
-    # The read_only filesystem prevents binary execution ("operation not permitted")
-    privileged: true
+    # Not privileged (docs/security-audit-2026-04-17.md #3): the mounts above plus
+    # /dev/kmsg are what cAdvisor needs.
+    devices:
+      - /dev/kmsg
     networks:
       - homeserver
     healthcheck:
@@ -132,6 +168,12 @@ services:
       - NET_RAW
     networks:
       - homeserver
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:9115/-/healthy"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
 
   unpoller:
     image: ghcr.io/unpoller/unpoller:v5.5.1
@@ -143,6 +185,7 @@ services:
       UP_UNIFI_DEFAULT_API_KEY: ${UNIFI_API_KEY:-}
       UP_UNIFI_DEFAULT_VERIFY_SSL: "false"   # the router's certificate is self-signed
       UP_INFLUXDB_DISABLE: "true"            # Prometheus output only
+    # No healthcheck: the image has no shell or wget to run one with.
     networks:
       - homeserver
 
