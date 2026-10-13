@@ -68,9 +68,6 @@ echo ""
 echo -e "${GREEN}Step 4/6: Allowing local network access (192.168.1.0/24)...${NC}"
 sudo ufw allow from 192.168.1.0/24 comment 'Local Network'
 
-# Traefik (Docker bridge) proxies to host-networked NetAlertX on 20211
-sudo ufw allow from 172.16.0.0/12 to any port 20211 proto tcp comment 'Traefik to NetAlertX'
-
 echo ""
 echo -e "${GREEN}Step 5/6: Allowing UDR7 VPN clients (${VPN_SUBNET})...${NC}"
 sudo ufw allow from ${VPN_SUBNET} comment 'UDR7 VPN Clients'

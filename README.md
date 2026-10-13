@@ -18,7 +18,7 @@ A complete self-hosted infrastructure for home automation, AI, and network servi
 
 **Photos:** [Immich](https://github.com/immich-app/immich) viewer over the icloudpd backups (read-only)
 
-**Network:** [NetAlertX](https://github.com/jokob-sk/NetAlertX) LAN device scanner, blackbox-exporter router/ISP/DNS probes
+**Network:** blackbox-exporter router/ISP/DNS probes
 
 **Home:** Kitchen Kiosk (iPad photo/calendar/radio display), [Radmap](https://github.com/josephradford/radmap) offline topo maps, Odd Jobs (AI-free life-admin jobs; v1 publishes cricket fixture calendars)
 
@@ -118,7 +118,6 @@ All services are accessible via domain names on your local network:
 - **Alertmanager:** `https://alerts.${DOMAIN}` (Alerts)
 - **Homepage:** `https://homepage.${DOMAIN}` (Dashboard)
 - **OwnTracks Recorder:** `https://owntracks.${DOMAIN}` (Location history API)
-- **NetAlertX:** `https://netalertx.${DOMAIN}` (LAN device scanner)
 - **Immich:** `https://immich.${DOMAIN}` (Photos)
 - **Books:** `https://books.${DOMAIN}` (Calibre-Web-Automated)
 - **Kitchen Kiosk:** `https://kiosk.${DOMAIN}`

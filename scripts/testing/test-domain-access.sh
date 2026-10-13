@@ -159,7 +159,7 @@ echo "----------------------------------------"
 # Services with Traefik routing (accessible via domains)
 # Based on actual docker-compose.yml configurations
 services=("traefik" "grafana" "adguard-home" "prometheus" "alertmanager" "homepage" "homepage-api"
-          "cwa" "icloudpd" "immich-server" "kiosk-web" "kiosk-api" "netalertx" "odd-jobs"
+          "cwa" "icloudpd" "immich-server" "kiosk-web" "kiosk-api" "odd-jobs"
           "owntracks-recorder" "radmap")
 all_running=true
 
@@ -212,7 +212,6 @@ test_domain "icloud.${DOMAIN}" "iCloud Photo Backup"
 test_domain "immich.${DOMAIN}" "Immich"
 test_domain "kiosk.${DOMAIN}" "Kitchen Kiosk"
 test_domain "kiosk-api.${DOMAIN}" "Kiosk API" "/api/health"
-test_domain "netalertx.${DOMAIN}" "NetAlertX"
 test_domain "jobs.${DOMAIN}" "Odd Jobs"
 test_domain "owntracks.${DOMAIN}" "OwnTracks"
 test_domain "radmap.${DOMAIN}" "Radmap"
@@ -244,7 +243,6 @@ if [ $FAILED_TESTS -eq 0 ]; then
     echo "  • Immich:       https://immich.${DOMAIN}"
     echo "  • Kiosk:        https://kiosk.${DOMAIN}"
     echo "  • Kiosk API:    https://kiosk-api.${DOMAIN}"
-    echo "  • NetAlertX:    https://netalertx.${DOMAIN}"
     echo "  • Odd Jobs:     https://jobs.${DOMAIN}"
     echo "  • OwnTracks:    https://owntracks.${DOMAIN}"
     echo "  • Radmap:       https://radmap.${DOMAIN}"
