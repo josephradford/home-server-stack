@@ -133,6 +133,19 @@ services:
     networks:
       - homeserver
 
+  unpoller:
+    image: ghcr.io/unpoller/unpoller:v5.5.1
+    container_name: unpoller
+    restart: unless-stopped
+    environment:
+      # Verified against v5.5.1: these names authenticate with an API key.
+      UP_UNIFI_DEFAULT_URL: ${UNIFI_URL:-https://192.168.1.1}
+      UP_UNIFI_DEFAULT_API_KEY: ${UNIFI_API_KEY:-}
+      UP_UNIFI_DEFAULT_VERIFY_SSL: "false"   # the router's certificate is self-signed
+      UP_INFLUXDB_DISABLE: "true"            # Prometheus output only
+    networks:
+      - homeserver
+
 volumes:
   prometheus_data:
   grafana_data:

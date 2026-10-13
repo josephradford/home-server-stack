@@ -8,7 +8,7 @@ A complete self-hosted infrastructure for home automation, AI, and network servi
 
 **Core:** [AdGuard Home](https://github.com/AdguardTeam/AdGuardHome) (DNS/ad-blocking), [Traefik](https://github.com/traefik/traefik) (reverse proxy), OwnTracks Recorder (location)
 
-**Monitoring:** [Grafana](https://github.com/grafana/grafana), [Prometheus](https://github.com/prometheus/prometheus), [Alertmanager](https://github.com/prometheus/alertmanager), Node Exporter, cAdvisor, blackbox-exporter
+**Monitoring:** [Grafana](https://github.com/grafana/grafana), [Prometheus](https://github.com/prometheus/prometheus), [Alertmanager](https://github.com/prometheus/alertmanager), Node Exporter, cAdvisor, blackbox-exporter, [unpoller](https://github.com/unpoller/unpoller) (UDR7 metrics)
 
 **Dashboard:** [Homepage](https://github.com/gethomepage/homepage) + custom API backend
 

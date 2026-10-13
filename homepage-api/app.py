@@ -9,9 +9,10 @@ Provides custom endpoints for:
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 import requests
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 from urllib.parse import parse_qs
+import math
 import os
 import re
 import json
@@ -26,9 +27,6 @@ CORS(app)
 # Configuration from environment variables
 TRANSPORT_NSW_API_KEY = os.getenv('TRANSPORT_NSW_API_KEY')
 TOMTOM_API_KEY = os.getenv('TOMTOM_API_KEY')
-ADGUARD_USERNAME = os.getenv('ADGUARD_USERNAME')
-ADGUARD_PASSWORD = os.getenv('ADGUARD_PASSWORD')
-ADGUARD_URL = os.getenv('ADGUARD_URL', 'http://adguard:80')
 PROMETHEUS_URL = os.getenv('PROMETHEUS_URL', 'http://prometheus:9090')
 SYDNEY_TZ = ZoneInfo('Australia/Sydney')
 COMMUTE_CUTOVER_HOUR = int(os.getenv('TRANSPORT_COMMUTE_CUTOVER_HOUR', '12'))
@@ -742,109 +740,8 @@ def status_health(tier, index):
 
 
 # =============================================================================
-# NETWORK: DEVICES + ISP/LOCAL HEALTH
+# NETWORK: ISP/LOCAL HEALTH
 # =============================================================================
-
-# Devices are taken from AdGuard's query log rather than its client list: the
-# client list only holds ARP/DHCP/hosts entries, and misses devices that are
-# making DNS queries. The log records each query's real client IP.
-DEVICE_WINDOW_MINUTES = 30
-_QUERYLOG_PAGE_SIZE = 500
-_QUERYLOG_MAX_PAGES = 20
-
-
-def _parse_adguard_time(value):
-    """Parse AdGuard's RFC 3339 timestamps (nanosecond fractions, 'Z' suffix)."""
-    match = re.match(r'^([^.]+)(?:\.(\d+))?(Z|[+-]\d{2}:\d{2})$', value)
-    base, fraction, tz = match.groups()
-    tz = '+00:00' if tz == 'Z' else tz
-    fraction = f'.{fraction[:6]}' if fraction else ''
-    return datetime.fromisoformat(f'{base}{fraction}{tz}')
-
-
-def _recent_querylog_clients(window):
-    """Latest query and query count per client IP, for queries within `window`."""
-    cutoff = datetime.now(timezone.utc) - window
-    latest = {}
-    counts = {}
-    older_than = None
-    for _ in range(_QUERYLOG_MAX_PAGES):
-        params = {'limit': _QUERYLOG_PAGE_SIZE}
-        if older_than:
-            params['older_than'] = older_than
-        response = requests.get(
-            f'{ADGUARD_URL}/control/querylog',
-            params=params,
-            auth=(ADGUARD_USERNAME, ADGUARD_PASSWORD),
-            timeout=10
-        )
-        response.raise_for_status()
-        entries = response.json().get('data', [])
-        if not entries:
-            break
-
-        reached_cutoff = False
-        for entry in entries:  # newest first, so the first hit per client is its latest
-            seen = _parse_adguard_time(entry['time'])
-            if seen < cutoff:
-                reached_cutoff = True
-                break
-            ip = entry.get('client')
-            if ip:
-                counts[ip] = counts.get(ip, 0) + 1
-            if ip and ip not in latest:
-                name = (entry.get('client_info') or {}).get('name')
-                latest[ip] = {
-                    'name': name or ip,
-                    'ip': ip,
-                    'last_seen': seen.astimezone(ZoneInfo('Australia/Sydney')).isoformat(),
-                }
-        if reached_cutoff:
-            break
-        older_than = entries[-1]['time']
-
-    for ip, device in latest.items():
-        device['queries'] = counts[ip]
-    return sorted(latest.values(), key=lambda d: d['last_seen'], reverse=True)
-
-
-def _adguard_protection_enabled():
-    response = requests.get(
-        f'{ADGUARD_URL}/control/status',
-        auth=(ADGUARD_USERNAME, ADGUARD_PASSWORD),
-        timeout=10
-    )
-    response.raise_for_status()
-    return bool(response.json().get('protection_enabled'))
-
-
-@app.route('/api/network/devices')
-def network_devices():
-    """
-    Devices that made a DNS query through AdGuard in the last 30 minutes, the
-    two busiest by query count, and whether AdGuard protection is on.
-    Reflects DNS activity, so an idle device will not appear.
-    """
-    try:
-        if not (ADGUARD_USERNAME and ADGUARD_PASSWORD):
-            return jsonify({'error': 'AdGuard credentials not configured'}), 503
-
-        devices = _recent_querylog_clients(timedelta(minutes=DEVICE_WINDOW_MINUTES))
-        top_devices = sorted(devices, key=lambda d: d['queries'], reverse=True)[:2]
-        return jsonify({
-            'devices': devices,
-            'count': len(devices),
-            'top_devices': top_devices,
-            'protection_enabled': _adguard_protection_enabled(),
-            'window_minutes': DEVICE_WINDOW_MINUTES,
-            'updated': datetime.now().isoformat()
-        })
-
-    except requests.exceptions.RequestException as e:
-        return jsonify({'error': f'AdGuard API error: {str(e)}'}), 500
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
 
 def _prometheus_query(query):
     """Run an instant PromQL query, return the `result` list of the response."""
@@ -901,6 +798,64 @@ def network_health():
 
         return jsonify({
             'probes': probes,
+            'updated': datetime.now().isoformat()
+        })
+
+    except requests.exceptions.RequestException as e:
+        return jsonify({'error': f'Prometheus API error: {str(e)}'}), 500
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+# unpoller labels the UDR7 as type "udm". Selecting on it keeps the numbers
+# about the router if APs/switches are ever added to the site.
+_ROUTER_DEVICE_TYPE = 'udm'
+
+
+def _prometheus_scalar(query):
+    """First sample of an instant query as a float, or None when there is no
+    series or the value is not a finite number (Prometheus may return NaN)."""
+    results = _prometheus_query(query)
+    if not results:
+        return None
+    value = float(results[0]['value'][1])
+    return None if math.isnan(value) or math.isinf(value) else value
+
+
+def _round_or_none(value, digits):
+    return None if value is None else round(value, digits)
+
+
+@app.route('/api/network/router')
+def network_router():
+    """
+    UDR7 health from unpoller metrics in Prometheus: CPU, memory, temperature,
+    uptime, WAN throughput and client counts. Any value Prometheus has no
+    data for is null, so the Homepage tile degrades instead of failing.
+    """
+    try:
+        dev = f'type="{_ROUTER_DEVICE_TYPE}"'
+        cpu = _prometheus_scalar(f'max(unpoller_device_cpu_utilization_ratio{{{dev}}}) * 100')
+        memory = _prometheus_scalar(f'max(unpoller_device_memory_utilization_ratio{{{dev}}}) * 100')
+        temperature = _prometheus_scalar(f'max(unpoller_device_temperature_celsius{{{dev}}})')
+        uptime_s = _prometheus_scalar(f'max(unpoller_device_uptime_seconds{{{dev}}})')
+        # The WAN rate metrics are labelled by `port` and have no `type` label, so the
+        # device-type selector must not be applied to them (it would match nothing).
+        wan_down = _prometheus_scalar('sum(unpoller_device_wan_receive_rate_bytes)')
+        wan_up = _prometheus_scalar('sum(unpoller_device_wan_transmit_rate_bytes)')
+        clients = _prometheus_scalar('sum(unpoller_site_users{subsystem=~"lan|wlan"})')
+        vpn_clients = _prometheus_scalar('sum(unpoller_site_users{subsystem="vpn"})')
+
+        return jsonify({
+            'cpu_pct': _round_or_none(cpu, 1),
+            'memory_pct': _round_or_none(memory, 1),
+            'temperature_c': _round_or_none(temperature, 1),
+            'uptime_days': _round_or_none(None if uptime_s is None else uptime_s / 86400, 1),
+            # unpoller reports bytes/second; the tile shows megabits/second.
+            'wan_down_mbps': _round_or_none(None if wan_down is None else wan_down * 8 / 1e6, 1),
+            'wan_up_mbps': _round_or_none(None if wan_up is None else wan_up * 8 / 1e6, 1),
+            'clients': None if clients is None else int(clients),
+            'vpn_clients': None if vpn_clients is None else int(vpn_clients),
             'updated': datetime.now().isoformat()
         })
 
