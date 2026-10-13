@@ -19,3 +19,20 @@ modules:
       validate_answer_rrs:
         fail_if_not_matches_regexp:
           - "example.com.\\t.*\\tIN\\tA\\t.*"
+
+  # DNS lookup of a domain AdGuard blocks: probe_success=1 only if the answer is
+  # 0.0.0.0 (AdGuard's default blocking response). If protection is off or the
+  # filter list no longer covers the domain, it resolves to a real address and
+  # the probe fails. Used for the ad-blocking indicator and AdGuardBlockingOff.
+  dns_blocked:
+    prober: dns
+    timeout: 5s
+    dns:
+      query_name: "doubleclick.net"
+      query_type: "A"
+      preferred_ip_protocol: "ip4"
+      valid_rcodes:
+        - NOERROR
+      validate_answer_rrs:
+        fail_if_not_matches_regexp:
+          - "doubleclick\\.net\\.\\t.*\\tIN\\tA\\t0\\.0\\.0\\.0"

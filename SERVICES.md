@@ -97,9 +97,9 @@ Currently deployed and active services.
 - **Port:** 8080 (internal only)
 
 #### blackbox-exporter
-- **Purpose:** ICMP probes for router + ISP latency/packet-loss (feeds the Homepage "Network Health" widget), and a DNS probe that resolves a real name against AdGuard (`AdGuardDNSFailing` alert)
+- **Purpose:** ICMP probes for router + ISP latency/packet-loss (feeds the Homepage "Network Health" widget), a DNS probe that resolves a real name against AdGuard (`AdGuardDNSFailing` alert), and a DNS probe for a blocked ad domain that expects `0.0.0.0` (feeds the "Ad blocking" row on the Network Health tile and the `AdGuardBlockingOff` warning)
 - **Port:** 9115 (internal only)
-- **Config:** `monitoring/blackbox/blackbox.yml` (probe modules `icmp`, `dns_a`); probe targets are set in `monitoring/prometheus/prometheus.yml`'s `blackbox-icmp` and `blackbox-dns` jobs — update the router IP in `blackbox-icmp` if it differs from the default `192.168.1.1`
+- **Config:** `monitoring/blackbox/blackbox.yml` (probe modules `icmp`, `dns_a`, `dns_blocked`); probe targets are set in `monitoring/prometheus/prometheus.yml`'s `blackbox-icmp`, `blackbox-dns` and `blackbox-dns-blocking` jobs — update the router IP in `blackbox-icmp` if it differs from the default `192.168.1.1`
 
 #### unpoller
 - **Purpose:** Exports UDR7 metrics (gateway CPU/memory/temperature, uptime, WAN throughput, clients, Wi-Fi) to Prometheus. Feeds the UniFi Grafana dashboards and the Homepage "Router" tile (via `homepage-api` `/api/network/router`).

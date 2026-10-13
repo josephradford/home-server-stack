@@ -796,8 +796,15 @@ def network_health():
                 'packet_loss_pct_24h': round(loss_by_instance[instance], 2) if instance in loss_by_instance else None
             }
 
+        # A DNS probe for a known-blocked ad domain: it only succeeds while AdGuard
+        # answers 0.0.0.0, so it reflects blocking actually working (not just the
+        # protection toggle). No series yet -> None (unknown).
+        blocking = _prometheus_scalar('probe_success{job="blackbox-dns-blocking"}')
+        ad_blocking = None if blocking is None else ('on' if blocking >= 1 else 'off')
+
         return jsonify({
             'probes': probes,
+            'ad_blocking': ad_blocking,
             'updated': datetime.now().isoformat()
         })
 

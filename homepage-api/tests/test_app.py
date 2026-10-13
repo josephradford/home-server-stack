@@ -726,7 +726,9 @@ class TestNetworkHealthEndpoint:
         def fake_get(url, params=None, timeout=None):
             mock_response = Mock()
             mock_response.status_code = 200
-            if 'probe_duration_seconds' in params['query']:
+            if 'blackbox-dns-blocking' in params['query']:
+                mock_response.json.return_value = {'status': 'success', 'data': {'result': []}}
+            elif 'probe_duration_seconds' in params['query']:
                 mock_response.json.return_value = {
                     'status': 'success',
                     'data': {'result': [
@@ -755,6 +757,38 @@ class TestNetworkHealthEndpoint:
         assert data['probes']['isp']['packet_loss_pct_24h'] == 0.5
         # No data returned for isp_secondary in this mock -> nulls, not an error
         assert data['probes']['isp_secondary']['latency_ms'] is None
+
+    @staticmethod
+    def _blocking_fake_get(blocking_value):
+        """Prometheus stand-in: only the ad-blocking probe has data (or none if None)."""
+        def fake_get(url, params=None, timeout=None):
+            result = []
+            if 'blackbox-dns-blocking' in params['query'] and blocking_value is not None:
+                result = [{'metric': {'instance': 'adguard:53'}, 'value': [0, blocking_value]}]
+            mock_response = Mock()
+            mock_response.status_code = 200
+            mock_response.json.return_value = {'status': 'success', 'data': {'result': result}}
+            return mock_response
+        return fake_get
+
+    @patch('app.requests.get')
+    def test_ad_blocking_on_when_probe_succeeds(self, mock_get, client):
+        mock_get.side_effect = self._blocking_fake_get('1')
+        assert client.get('/api/network/health').get_json()['ad_blocking'] == 'on'
+
+    @patch('app.requests.get')
+    def test_ad_blocking_off_when_probe_fails(self, mock_get, client):
+        mock_get.side_effect = self._blocking_fake_get('0')
+        assert client.get('/api/network/health').get_json()['ad_blocking'] == 'off'
+
+    @patch('app.requests.get')
+    def test_ad_blocking_unknown_without_probe_data(self, mock_get, client):
+        """No probe series (e.g. Prometheus just restarted): null, not 'off' and not an error."""
+        mock_get.side_effect = self._blocking_fake_get(None)
+
+        response = client.get('/api/network/health')
+        assert response.status_code == 200
+        assert response.get_json()['ad_blocking'] is None
 
     @patch('app.requests.get')
     def test_network_health_prometheus_error(self, mock_get, client):

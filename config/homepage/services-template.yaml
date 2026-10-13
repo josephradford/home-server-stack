@@ -88,7 +88,7 @@
       - Network Health:
           icon: mdi-wan
           href: https://prometheus.{{HOMEPAGE_VAR_DOMAIN}}/graph?g0.expr=probe_icmp_duration_seconds%7Bjob%3D%22blackbox-icmp%22%7D&g0.tab=0
-          description: ISP latency and packet loss (Prometheus)
+          description: ISP latency/loss and whether AdGuard is blocking ads (Prometheus)
           widget:
             type: customapi
             url: http://homepage-api:5000/api/network/health
@@ -100,6 +100,8 @@
               - field: probes.isp.packet_loss_pct_24h
                 label: Loss (24h)
                 suffix: "%"
+              - field: ad_blocking
+                label: Ad blocking
 
       - Router:
           icon: mdi-router-wireless
