@@ -9,7 +9,7 @@ notes no longer apply: n8n and Bede have been removed.
 
 | # | Item | Status |
 |---|------|--------|
-| 1 | `detect-secrets` pre-commit hook | Open |
+| 1 | `detect-secrets` pre-commit hook | Fixed (`.pre-commit-config.yaml` + `.secrets.baseline`) |
 | 2 | n8n env access | Obsolete (n8n removed) |
 | 3 | cAdvisor privileged | Fixed (not privileged) |
 | 4 | Fail2ban host network + `NET_ADMIN` | Accepted risk (needed to manage iptables) |
