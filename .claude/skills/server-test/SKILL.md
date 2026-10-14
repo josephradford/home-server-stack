@@ -1,17 +1,15 @@
 ---
 name: server-test
 description: >
-  SSH into the home-server-stack test server to deploy a branch and
-  troubleshoot the running stack. Use for any request involving the server:
-  deploying/pulling a branch, checking service health, reading logs, or
-  diagnosing issues.
+  SSH into the home server to diagnose the running stack (read-only by
+  default) and deploy merged changes from main. Use for any request involving
+  the server: checking service health, reading logs, or diagnosing issues.
 ---
 
 # Server Test Skill
 
-This skill connects to the home-server-stack test server via SSH, deploys the
-relevant git branch, and runs diagnostic commands to test or troubleshoot the
-stack.
+This skill connects to the home server via SSH and runs diagnostic commands to
+troubleshoot the stack. Production runs `main`; deploy only merged changes.
 
 ## Step 1 — Load connection config
 
@@ -36,36 +34,25 @@ Parse it by reading the file. Extract `SERVER_USER` and `SERVER_HOST`.
 If either is missing or still set to the placeholder values from the example,
 stop and ask the user to fill in the real values.
 
-## Step 2 — Determine the target branch
+## Step 2 — Determine the target
 
-If the user specified a branch name in their request, use that.
-Otherwise, run locally:
-```bash
-git branch --show-current
-```
-Use that branch name. Tell the user which branch you are about to deploy.
+Production tracks `main`. Check what is live (`git branch --show-current` and
+`git log --oneline -3` on the server) rather than choosing a branch to deploy.
 
 ## Step 3 — Connect and deploy
 
-SSH into the server and run all subsequent commands over that connection.
-The stack lives at `~/home-server-stack` on the server.
+The server runs `main` as production, so **never check out a feature branch there**.
+For diagnosis, skip deployment and run read-only commands over SSH. Do not create
+files or copy `.env` on the server without asking.
+
+Deploy only after the PR is merged to `main`, and only with the user's go-ahead:
 
 ```bash
-ssh ${SERVER_USER}@${SERVER_HOST} "
-  set -e
-  cd ~/home-server-stack
-  git fetch origin
-  git checkout <branch>
-  git pull origin <branch>
-  echo '✓ Branch deployed'
-"
+ssh ${SERVER_USER}@${SERVER_HOST} "cd ~/home-server-stack && git pull origin main"
 ```
 
-If the checkout fails because the branch doesn't exist on the remote, tell
-the user to push their branch first:
-```
-git push -u origin <branch>
-```
+Then recreate only the affected services (`docker compose ... up -d <service>`).
+Taking down shared services (e.g. AdGuard, which is home DNS) needs explicit approval.
 
 ## Step 4 — Run initial diagnostics
 
