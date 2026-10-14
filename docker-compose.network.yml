@@ -19,8 +19,8 @@ services:
     command:
       # API and Dashboard
       - "--api.dashboard=true"
-      # API exposed on port 8080 for internal Docker network access (not exposed externally)
-      - "--api.insecure=true"
+      # Dashboard is served only via the authenticated dashboard router (api@internal);
+      # --api.insecure is deliberately off so port 8080 is not an unauthenticated API.
 
       # Docker provider
       - "--providers.docker=true"
@@ -50,7 +50,7 @@ services:
       # Logging
       - "--accesslog=true"
       - "--accesslog.filepath=/var/log/traefik/access.log"
-      - "--log.level=DEBUG"
+      - "--log.level=INFO"
 
     ports:
       - "${SERVER_IP}:80:80"
