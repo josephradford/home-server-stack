@@ -11,7 +11,7 @@ All services are accessible via domain-based routing through Traefik:
 Some services also expose direct ports for emergency/operational access:
 
 2. **Direct Access (Emergency/Operational):** `http://SERVER_IP:PORT`
-   - Used when Traefik is unavailable or for direct metrics scraping
+   - Used when Traefik is unavailable (AdGuard only)
    - Not intended for regular use
 
 ---
@@ -76,15 +76,13 @@ Currently deployed and active services.
 #### Prometheus
 - **Purpose:** Metrics collection and alerting
 - **Access:** https://prometheus.${DOMAIN}
-- **Direct Access:** http://SERVER_IP:9090 (for metrics scraping)
-- **Port:** 9090
+- **Port:** 9090 (container network only; no host port)
 - **Authentication:** None (VPN-protected)
 
 #### Alertmanager
 - **Purpose:** Alert routing and management — delivers by email (`ALERT_SMTP_*` / `ALERT_EMAIL_*` in `.env`)
 - **Access:** https://alerts.${DOMAIN}
-- **Direct Access:** http://SERVER_IP:9093 (for alert routing)
-- **Port:** 9093
+- **Port:** 9093 (container network only; no host port)
 - **Authentication:** None (VPN-protected)
 - **Config:** generated from `monitoring/alertmanager/alertmanager.yml.example` by `scripts/monitoring/configure-alertmanager.sh` (runs automatically via `make setup`/`start`/`update`) — the real file is git-ignored since it holds SMTP credentials
 
@@ -197,8 +195,8 @@ alert fires after 3 days. Design: `docs/superpowers/specs/2026-10-07-odd-jobs-de
 | Homepage | https://homepage.${DOMAIN} | N/A |
 | Homepage API | https://homepage-api.${DOMAIN} | N/A |
 | Grafana | https://grafana.${DOMAIN} | N/A (Traefik only) |
-| Prometheus | https://prometheus.${DOMAIN} | http://IP:9090 |
-| Alertmanager | https://alerts.${DOMAIN} | http://IP:9093 |
+| Prometheus | https://prometheus.${DOMAIN} | N/A (Traefik only) |
+| Alertmanager | https://alerts.${DOMAIN} | N/A (Traefik only) |
 | owntracks-recorder | https://owntracks.${DOMAIN} | N/A |
 | Radmap | https://radmap.${DOMAIN} | N/A |
 | icloudpd | https://icloud.${DOMAIN} | N/A |

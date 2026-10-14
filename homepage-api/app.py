@@ -22,7 +22,9 @@ from weather_au import api as weather_api
 from traffic_scheduler import get_active_routes, is_route_active
 
 app = Flask(__name__)
-CORS(app)
+# Only the Homepage UI origin may call this API from a browser; Homepage's own
+# server-side widget requests are not subject to CORS.
+CORS(app, origins=[f"https://homepage.{os.getenv('DOMAIN', 'localhost')}"])
 
 # Configuration from environment variables
 TRANSPORT_NSW_API_KEY = os.getenv('TRANSPORT_NSW_API_KEY')
