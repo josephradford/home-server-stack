@@ -49,15 +49,13 @@ Self-hosted Docker Compose infrastructure stack: home automation, workflow autom
 - `docker-compose.library.yml` — Ebook library (cwa)
 - `docker-compose.kiosk.yml` — Kitchen kiosk (kiosk-api, kiosk-web; sources in `apps/kitchen-kiosk/`)
 - `docker-compose.radmap.yml` — Radmap (offline NSW topo map PWA; prebuilt GHCR image, tiles in `./data/radmap/tiles`)
-- `docker-compose.netalertx.yml` — Network monitoring (netalertx on host networking, docker-socket-proxy)
 - `docker-compose.jobs.yml` — Odd jobs (odd-jobs: AI-free life-admin jobs: sports fixture calendars at jobs.${DOMAIN} and the daily RSS-to-EPUB reading digest into `data/cwa/ingest`; sources in `apps/odd-jobs/`)
 
 The Makefile combines all of these files by default (see `COMPOSE` in the Makefile
 for the authoritative list).
 
 ### Services Outside the Standard Pattern
-- **NetAlertX** uses `network_mode: host` so ARP scans see the real LAN. It can't join the `homeserver` network, so its Traefik router points at `host.docker.internal:20211` (mapped via `extra_hosts` in `docker-compose.network.yml`), and UFW needs the "Traefik to NetAlertX" rule from `scripts/system/setup-firewall.sh`. Its config lives in `data/netalertx/config/app.conf` (not in git); see `SERVICES.md`.
-- **Polled UIs** (kiosk, NetAlertX, Immich) use the `admin-secure-no-ratelimit` middleware, since `admin-secure`'s rate limit returns 429s for constantly polling clients.
+- **Polled UIs** (kiosk, Immich) use the `admin-secure-no-ratelimit` middleware, since `admin-secure`'s rate limit returns 429s for constantly polling clients.
 - **Odd jobs** is a Python service built locally (`make build`); tests via `make jobs-test`, live source check via `make jobs-probe`. Staleness is alerted by `OddJobsStale` in `monitoring/prometheus/alert_rules.yml`.
 
 ### Domain Routing
