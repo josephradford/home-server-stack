@@ -177,7 +177,7 @@ An alert rule in `monitoring/prometheus/alert_rules.yml` fires if a job has not 
 3. Decide the container port and the internal framework (FastAPI vs Starlette) at plan time.
 ## Amendments made during planning (2026-10-07)
 
-Changes agreed while turning this spec into `docs/superpowers/plans/2026-10-07-odd-jobs.md`. They supersede the text above.
+Changes agreed while turning this spec into an implementation plan (since removed; see git history). They supersede the text above.
 
 - Code lives in `apps/odd-jobs/` (repo convention), not `services/odd-jobs/`. Runtime data is `./data/odd-jobs/`, not `./data/jobs/`.
 - `calendars.yaml` is checked in at `config/odd-jobs/calendars.yaml` and mounted read-only at `/config` (like `config/library/feeds.txt`), not kept in `data/`. A calendar entry may carry an optional `url` (link back to the team page; PlayHQ events use it).
