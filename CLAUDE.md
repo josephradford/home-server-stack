@@ -106,4 +106,6 @@ GitHub Flow: `main` is production. Feature branches (`feature/`, `fix/`, `docs/`
 
 ## Testing Checklist
 
+Secret scanning: `pre-commit install` once (uses `detect-secrets` with `.secrets.baseline`); audit new findings with `detect-secrets audit .secrets.baseline`.
+
 Before submitting: `make validate` passes, services start healthy, no log errors, domain access works, `.env.example` updated for new vars, no secrets committed.
