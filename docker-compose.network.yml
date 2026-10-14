@@ -24,9 +24,6 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock:ro
     networks:
       - dockerproxy
-    read_only: true
-    tmpfs:
-      - /run
     security_opt:
       - no-new-privileges:true
 
