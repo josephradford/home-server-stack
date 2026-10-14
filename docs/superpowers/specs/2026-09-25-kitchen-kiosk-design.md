@@ -9,9 +9,8 @@ calendar events, and photo metadata. Touching the screen reveals panels for radi
 calendar detail, and recipes. The display sleeps on a schedule and/or when nobody's
 home, and always wakes instantly on touch.
 
-Full requirements and rationale live in the source docs the user provided:
-`kitchen-kiosk-requirements.md` and `kitchen-kiosk-brief.md`. This spec translates
-those into the concrete shape for this repo.
+This spec translates the original requirements and brief (since removed; see git
+history) into the concrete shape for this repo.
 
 Out of scope for v1: social media, video streaming, external/internet-facing access,
 Spotify, camera-based presence detection. Deferred to v2: OwnTracks location panel,
