@@ -13,7 +13,7 @@ notes no longer apply: n8n and Bede have been removed.
 | 2 | n8n env access | Obsolete (n8n removed) |
 | 3 | cAdvisor privileged | Fixed (not privileged) |
 | 4 | Fail2ban host network + `NET_ADMIN` | Accepted risk (needed to manage iptables) |
-| 5 | Docker socket mounts | Partly open: traefik, homepage and homepage-api still mount it read-only. A socket proxy was tried and removed in #249 |
+| 5 | Docker socket mounts | Fixed: traefik, homepage and homepage-api use a read-only `docker-socket-proxy` (GET only; no raw socket mounts) |
 | 6 | `:latest` tags | Mostly fixed; `radmap` still uses `:latest` |
 | 7 | Prometheus/Alertmanager on `SERVER_IP` | Fixed in #251 |
 | 8 | Unrestricted CORS | Fixed in #251 |

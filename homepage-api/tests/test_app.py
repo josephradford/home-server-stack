@@ -1128,3 +1128,24 @@ class TestIcloudpdStatusEndpoint:
                + struct.pack('>BxxxI', 2, len(payload2)) + payload2)
         text = _demux_docker_stream(raw)
         assert 'line one' in text and 'line two' in text
+
+
+import app as app_module  # noqa: E402
+
+
+class TestDockerConn:
+    """_docker_conn picks the socket proxy when DOCKER_HOST is set"""
+
+    def test_uses_tcp_when_docker_host_set(self, monkeypatch):
+        monkeypatch.setenv('DOCKER_HOST', 'docker-socket-proxy:2375')
+        conn = app_module._docker_conn()
+        assert (conn.host, conn.port) == ('docker-socket-proxy', 2375)
+
+    def test_accepts_tcp_scheme(self, monkeypatch):
+        monkeypatch.setenv('DOCKER_HOST', 'tcp://proxy:2376')
+        conn = app_module._docker_conn()
+        assert (conn.host, conn.port) == ('proxy', 2376)
+
+    def test_falls_back_to_unix_socket(self, monkeypatch):
+        monkeypatch.delenv('DOCKER_HOST', raising=False)
+        assert app_module._docker_conn().host == 'localhost'
