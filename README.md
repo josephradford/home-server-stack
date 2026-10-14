@@ -126,10 +126,8 @@ All services are accessible via domain names on your local network:
 
 **Note:** Services are accessible via domain names thanks to Traefik reverse proxy and AdGuard Home DNS. Your devices must use AdGuard Home as their DNS server (configured automatically if DHCP points to the server).
 
-**Direct Access (Emergency/Operational):** Some services expose direct ports for specific use cases:
+**Direct Access (Emergency/Operational):** AdGuard Home keeps a direct port for use when Traefik is down. Prometheus and Alertmanager are reachable only through Traefik (use `docker exec prometheus wget -qO- localhost:9090/...` for ad-hoc queries):
 - AdGuard Home: `http://SERVER_IP:8888` (emergency access if Traefik fails)
-- Prometheus: `http://SERVER_IP:9090` (metrics scraping)
-- Alertmanager: `http://SERVER_IP:9093` (alert routing)
 
 These are not intended for regular use - domain-based access via Traefik is recommended. See [SERVICES.md](SERVICES.md) for complete list.
 

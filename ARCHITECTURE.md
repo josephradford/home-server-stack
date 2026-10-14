@@ -634,9 +634,8 @@ tar -czf backup.tar.gz data/ .env
 - **Odd Jobs** - https://jobs.${DOMAIN} (calendars at `/<name>.ics`)
 - **icloudpd** - https://icloud.${DOMAIN}
 
-### Direct Access (monitoring, not exposed externally)
-- **9090** - Prometheus (metrics)
-- **9093** - Alertmanager (alerts)
+### Container-network ports (not published on the host)
+- **9090** / **9093** - Prometheus / Alertmanager (reach via Traefik)
 - **9100** - Node Exporter (host metrics)
 - **9323** - Docker daemon metrics
 - **8080** - cAdvisor (container metrics)
