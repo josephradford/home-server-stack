@@ -131,10 +131,12 @@ services:
     # Collect only Docker containers, every 15s (matches the Prometheus scrape
     # interval), and skip metric groups nothing here uses. Dashboards and alerts
     # use cpu, memory, network, last_seen, start_time and spec_memory_limit.
+    # `disk` matters most: with /var/lib/docker mounted it walks every container's
+    # overlay layers for usage (~14% of a core and ~370MiB of kernel slab vs ~0%).
     command:
       - '--docker_only=true'
       - '--housekeeping_interval=15s'
-      - '--disable_metrics=percpu,sched,tcp,udp,advtcp,hugetlb,referenced_memory,cpu_topology,resctrl'
+      - '--disable_metrics=percpu,sched,tcp,udp,advtcp,hugetlb,referenced_memory,cpu_topology,resctrl,disk,diskIO'
     volumes:
       - /:/rootfs:ro
       - /var/run:/var/run:ro
