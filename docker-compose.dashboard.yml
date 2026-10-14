@@ -26,6 +26,8 @@ services:
       TRANSPORT_STOP_4_FILTER: ${TRANSPORT_STOP_4_FILTER}
       # Router IP (must match the 'router' target in monitoring/prometheus/prometheus.yml)
       ROUTER_IP: ${ROUTER_IP:-192.168.1.1}
+      # Used to build the CORS allow-origin (https://homepage.$DOMAIN)
+      DOMAIN: ${DOMAIN}
     # No port exposure - access via Traefik or internal network only
     restart: unless-stopped
     networks:
@@ -63,7 +65,6 @@ services:
       # Pass through environment variables for configs
       HOMEPAGE_VAR_SERVER_IP: ${SERVER_IP}
       HOMEPAGE_VAR_DOMAIN: ${DOMAIN}
-      DOMAIN: ${DOMAIN}
       HOMEPAGE_VAR_ADGUARD_USER: ${ADGUARD_USERNAME}
       HOMEPAGE_VAR_ADGUARD_PASS: ${ADGUARD_PASSWORD}
       HOMEPAGE_VAR_GRAFANA_USER: ${GRAFANA_USERNAME:-admin}
