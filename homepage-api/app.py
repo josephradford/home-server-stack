@@ -878,20 +878,30 @@ def network_router():
 # DOCKER DAEMON STATUS
 # =============================================================================
 
-def _docker_api(path):
+def _docker_conn():
     """
-    Make a GET request to the Docker daemon via its Unix socket.
-    No docker CLI or SDK required.
+    Connection to the Docker API. If DOCKER_HOST=host:port is set (the read-only
+    docker-socket-proxy), talk HTTP to it; otherwise use the local Unix socket.
     """
     import http.client
     import socket as _socket
+
+    docker_host = os.getenv('DOCKER_HOST', '').replace('tcp://', '')
+    if docker_host:
+        host, _, port = docker_host.partition(':')
+        return http.client.HTTPConnection(host, int(port or 2375), timeout=10)
 
     class _UnixConn(http.client.HTTPConnection):
         def connect(self):
             self.sock = _socket.socket(_socket.AF_UNIX, _socket.SOCK_STREAM)
             self.sock.connect('/var/run/docker.sock')
 
-    conn = _UnixConn('localhost')
+    return _UnixConn('localhost')
+
+
+def _docker_api(path):
+    """GET a Docker API path and return the decoded JSON. No docker CLI or SDK required."""
+    conn = _docker_conn()
     try:
         conn.request('GET', path)
         resp = conn.getresponse()
@@ -961,15 +971,7 @@ def _docker_logs(name, tail=250):
     8-byte header (stream byte, 3 zero bytes, 4-byte big-endian length)
     followed by the payload. Strip the headers.
     """
-    import http.client
-    import socket as _socket
-
-    class _UnixConn(http.client.HTTPConnection):
-        def connect(self):
-            self.sock = _socket.socket(_socket.AF_UNIX, _socket.SOCK_STREAM)
-            self.sock.connect('/var/run/docker.sock')
-
-    conn = _UnixConn('localhost')
+    conn = _docker_conn()
     try:
         conn.request('GET', f'/containers/{name}/logs?stdout=1&stderr=1&timestamps=1&tail={tail}')
         resp = conn.getresponse()

@@ -28,15 +28,17 @@ services:
       ROUTER_IP: ${ROUTER_IP:-192.168.1.1}
       # Used to build the CORS allow-origin (https://homepage.$DOMAIN)
       DOMAIN: ${DOMAIN}
+      # Read-only Docker API via the socket proxy (no raw socket mount)
+      DOCKER_HOST: docker-socket-proxy:2375
     # No port exposure - access via Traefik or internal network only
     restart: unless-stopped
     networks:
       - homeserver
-    group_add:
-      - "988"  # host docker group GID — grants access to /var/run/docker.sock
+      - dockerproxy
+    depends_on:
+      - docker-socket-proxy
     volumes:
       - ./data/homepage-api:/data
-      - /var/run/docker.sock:/var/run/docker.sock:ro
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5000/api/health"]
       interval: 30s
@@ -95,10 +97,12 @@ services:
     # No port exposure - access via Traefik at https://homepage.${DOMAIN}
     volumes:
       - ./data/homepage/config:/app/config
-      - /var/run/docker.sock:/var/run/docker.sock:ro
     restart: unless-stopped
     networks:
       - homeserver
+      - dockerproxy
+    depends_on:
+      - docker-socket-proxy
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.homepage.rule=Host(`homepage.${DOMAIN}`)"

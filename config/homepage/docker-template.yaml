@@ -1,4 +1,5 @@
 ---
-# Docker socket configuration for container monitoring
+# Container monitoring via the read-only docker-socket-proxy (no raw socket mount)
 my-docker:
-  socket: /var/run/docker.sock
+  host: docker-socket-proxy
+  port: 2375
