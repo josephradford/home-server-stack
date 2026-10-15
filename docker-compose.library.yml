@@ -9,7 +9,7 @@
 
 services:
   cwa:
-    image: ghcr.io/crocodilestick/calibre-web-automated:v4.0.6
+    image: ghcr.io/crocodilestick/calibre-web-automated:v4.0.8
     container_name: cwa
     restart: unless-stopped
     networks:
