@@ -147,3 +147,16 @@ def test_seen_state_is_persisted_as_json(tmp_path):
 def test_job_runs_at_configured_time():
     assert DigestJob(run_at=time(5, 0)).run_at == time(5, 0)
     assert DigestJob().name == "digest"
+
+
+def test_epub_has_cover_and_series_metadata(tmp_path):
+    feed = rss("Blog A", [("Post 1", "https://a.example/1", "<p>hello</p>")])
+    ctx = make_ctx(tmp_path, serve({"https://a.example/feed": feed}))
+    DigestJob().run(ctx)
+    [path] = epubs(ctx)
+    with zipfile.ZipFile(path) as z:
+        cover = [n for n in z.namelist() if n.endswith("cover.jpg")]
+        assert cover and z.read(cover[0])[:3] == b"\xff\xd8\xff"  # JPEG
+        opf = z.read("EPUB/content.opf").decode()
+    assert 'name="calibre:series" content="Reading list"' in opf
+    assert 'name="cover"' in opf
