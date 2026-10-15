@@ -3,9 +3,8 @@
 #
 # Test feeds for now — Clarkesworld's RSS turned out to be teaser-only
 # (excerpt + link, no full story text), so it's parked here until the
-# digest script can follow through to the full page. These two ship full
-# post content in their free RSS, so they actually work end to end.
-https://www.astralcodexten.com/feed
+# digest script can follow through to the full page. This one ships full
+# post content in its free RSS, so it actually works end to end.
 https://theconvivialsociety.substack.com/feed
 
 # Southerly (relaunched 2025 at UNSW, after the old southerlyjournal.wordpress.com
