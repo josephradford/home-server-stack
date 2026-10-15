@@ -16,6 +16,7 @@ from lxml.html import fromstring
 
 from oddjobs.core.errors import OddJobsError
 from oddjobs.jobs import JobContext, JobResult
+from oddjobs.jobs.digest_cover import make_cover
 
 log = logging.getLogger("oddjobs.digest")
 
@@ -121,8 +122,9 @@ class DigestJob:
 
         post_count = sum(len(v) for v in by_source.values())
         ctx.ingest_dir.mkdir(parents=True, exist_ok=True)
-        today = datetime.date.today().isoformat()
-        book = self._build_book(today, by_source, truncated, post_count)
+        day = datetime.date.today()
+        today = day.isoformat()
+        book = self._build_book(day, by_source, truncated, post_count)
         _write_atomic(
             ctx.ingest_dir / f"reading-{today}.epub", lambda tmp: epub.write_epub(str(tmp), book)
         )
@@ -131,7 +133,8 @@ class DigestJob:
         return JobResult(detail=f"{post_count} posts from {len(by_source)} feeds{failure_note}")
 
     @staticmethod
-    def _build_book(today, by_source, truncated, post_count) -> epub.EpubBook:
+    def _build_book(day, by_source, truncated, post_count) -> epub.EpubBook:
+        today = day.isoformat()
         book = epub.EpubBook()
         book.set_identifier(f"digest-{today}")
         book.set_title(f"Reading list {today}")
@@ -140,6 +143,9 @@ class DigestJob:
         book.add_metadata("DC", "date", today)
         book.add_metadata("DC", "publisher", "odd-jobs")
         book.add_metadata("DC", "subject", "Reading digest")
+        # Calibre/CWA group books sharing a series name, so the dailies collapse into one shelf entry.
+        book.add_metadata(None, "meta", "", {"name": "calibre:series", "content": "Reading list"})
+        book.set_cover("cover.jpg", make_cover(day, list(by_source), post_count), create_page=False)
         book.add_metadata(
             "DC",
             "description",
