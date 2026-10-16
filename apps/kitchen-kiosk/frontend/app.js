@@ -136,7 +136,17 @@ const KioskApp = (() => {
   let nowPlayingStationName = null;
   let nowPlayingTrackMeta = '';
 
+  // iOS shows the page <title> on the lock screen / Control Centre unless the
+  // Media Session API supplies metadata. Title = station, artist = current track.
+  function updateMediaSession() {
+    if (!('mediaSession' in navigator) || typeof MediaMetadata === 'undefined') return;
+    navigator.mediaSession.metadata = nowPlayingStationName
+      ? new MediaMetadata({ title: nowPlayingStationName, artist: nowPlayingTrackMeta })
+      : null;
+  }
+
   function updateNowPlayingDisplay() {
+    updateMediaSession();
     const el = $('overlay-nowplaying');
     if (!nowPlayingStationName) {
       el.classList.add('hidden');
