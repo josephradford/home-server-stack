@@ -113,6 +113,13 @@ services:
       - "traefik.http.middlewares.dashboard-secure.chain.middlewares=internal-only,security-headers,admin-ratelimit,dashboard-auth"
       - "traefik.http.routers.dashboard.middlewares=dashboard-secure"
 
+      # Internal API for the Homepage Traefik widget (http://traefik:8080/api).
+      # Only on the unpublished `traefik` entrypoint, so reachable from the
+      # Docker network but not the LAN; api.insecure stays off.
+      - "traefik.http.routers.api-internal.rule=PathPrefix(`/api`)"
+      - "traefik.http.routers.api-internal.entrypoints=traefik"
+      - "traefik.http.routers.api-internal.service=api@internal"
+
       # Security Headers Middleware
       - "traefik.http.middlewares.security-headers.headers.frameDeny=true"
       - "traefik.http.middlewares.security-headers.headers.browserXssFilter=true"
