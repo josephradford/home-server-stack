@@ -6,10 +6,10 @@
 
 services:
   radmap:
-    # Pinned by digest (the repo publishes no version tags). Image built 2026-10-03.
+    # Pinned by digest (the repo publishes no version tags). Image built 2026-10-30 (adds Kioloa, Durras regions).
     # To update: docker pull ghcr.io/josephradford/radmap:latest, then replace the
     # digest below with `docker image inspect ... --format '{{index .RepoDigests 0}}'`.
-    image: ghcr.io/josephradford/radmap:latest@sha256:b333e277716cd1f36abe29fb6b0361beab332a37d5586cf9d2e181d5998a6f82
+    image: ghcr.io/josephradford/radmap:latest@sha256:a65f70cda2a77223feb0108e258ccbc099f63fd126c997b41753e0f850b833b5
     container_name: radmap
     restart: unless-stopped
     volumes:
