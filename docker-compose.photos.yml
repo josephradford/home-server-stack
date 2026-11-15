@@ -28,6 +28,7 @@ services:
       TZ: ${TIMEZONE:-UTC}
       ICLOUD_BACKUP_DRIVE_ID: ${ICLOUD_BACKUP_DRIVE_ID}
       ICLOUD_BACKUP_ROOT: ${ICLOUD_BACKUP_ROOT}
+      ICLOUD_SYNC_HOUR: ${ICLOUD_SYNC_HOUR:-1}
     volumes:
       # Bind the parent (/mnt), not the mount point itself, with rslave
       # propagation: a drive that drops and is remounted on the host then
