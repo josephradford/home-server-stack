@@ -25,6 +25,8 @@ services:
       DOMAIN: ${DOMAIN}
       ODD_JOBS_RUN_AT: ${ODD_JOBS_RUN_AT:-04:00}
       ODD_JOBS_DIGEST_RUN_AT: ${ODD_JOBS_DIGEST_RUN_AT:-05:00}
+      INSTAPAPER_USERNAME: ${INSTAPAPER_USERNAME:-}
+      INSTAPAPER_PASSWORD: ${INSTAPAPER_PASSWORD:-}
     volumes:
       - ./data/odd-jobs:/data               # state.db, out/*.ics (the served calendars), digest-seen.json
       - ./config/odd-jobs:/config:ro        # calendars.yaml

@@ -61,6 +61,15 @@ short list by design — the point is a finite nightly batch, not an endless
 feed. Changes take effect on the next `digest` run (or immediately via
 `make library-digest-now`).
 
+### 8. (Optional) Also send posts to Instapaper
+
+Set `INSTAPAPER_USERNAME` and `INSTAPAPER_PASSWORD` in `.env` and recreate odd-jobs
+(`docker compose -f docker-compose.jobs.yml up -d odd-jobs`). Each new post's link is then
+saved to your Instapaper account via the Simple API, in addition to the daily EPUB, and
+Instapaper fetches the full article itself. Use it with the Kobo's Instapaper integration.
+Failures never affect the EPUB; the run detail at `https://jobs.${DOMAIN}` shows the
+sent/failed counts. Leave the username empty to turn it off.
+
 ## Operating
 
 - `make logs-cwa` / `make logs-odd-jobs` — tail logs (the digest logs under odd-jobs; run status is at `https://jobs.${DOMAIN}`).

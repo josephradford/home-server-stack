@@ -1,6 +1,8 @@
 import json
 import zipfile
+from dataclasses import replace
 from datetime import time
+from urllib.parse import parse_qsl
 
 import httpx
 import pytest
@@ -160,3 +162,80 @@ def test_epub_has_cover_and_series_metadata(tmp_path):
         opf = z.read("EPUB/content.opf").decode()
     assert 'name="calibre:series" content="Reading list"' in opf
     assert 'name="cover"' in opf
+
+
+INSTAPAPER_ADD = "https://www.instapaper.com/api/add"
+
+
+def with_instapaper(ctx, handler, creds=("me@example.com", "pw")):
+    return replace(ctx, client=httpx.Client(transport=httpx.MockTransport(handler)), instapaper=creds)
+
+
+def instapaper_handler(feeds, saved, status=201, fail_urls=()):
+    """Serves feeds, and records form posts to Instapaper's Simple API."""
+    feed_handler = serve(feeds)
+
+    def handler(request):
+        if str(request.url) != INSTAPAPER_ADD:
+            return feed_handler(request)
+        form = dict(parse_qsl(request.content.decode()))
+        saved.append(form)
+        return httpx.Response(500 if form["url"] in fail_urls else status)
+
+    return handler
+
+
+def test_posts_are_sent_to_instapaper_as_well_as_the_epub(tmp_path):
+    feeds = {"https://a.example/feed": rss("Blog A", [("Post 1", "https://a.example/1", "x")])}
+    saved = []
+    ctx = with_instapaper(make_ctx(tmp_path, serve(feeds)), instapaper_handler(feeds, saved))
+    result = DigestJob().run(ctx)
+    assert saved == [
+        {"username": "me@example.com", "password": "pw", "url": "https://a.example/1", "title": "Post 1"}
+    ]
+    assert len(epubs(ctx)) == 1
+    assert result.detail == "1 posts from 1 feeds, 1 sent to Instapaper"
+
+
+def test_no_instapaper_calls_without_credentials(tmp_path):
+    feeds = {"https://a.example/feed": rss("Blog A", [("Post 1", "https://a.example/1", "x")])}
+    saved = []
+    ctx = replace(make_ctx(tmp_path, serve(feeds)), client=httpx.Client(
+        transport=httpx.MockTransport(instapaper_handler(feeds, saved))))
+    result = DigestJob().run(ctx)
+    assert saved == []
+    assert "Instapaper" not in result.detail
+
+
+def test_instapaper_failure_does_not_fail_the_digest(tmp_path):
+    items = [("Good", "https://a.example/1", "x"), ("Bad", "https://a.example/2", "x")]
+    feeds = {"https://a.example/feed": rss("Blog A", items)}
+    saved = []
+    handler = instapaper_handler(feeds, saved, fail_urls={"https://a.example/2"})
+    ctx = with_instapaper(make_ctx(tmp_path, serve(feeds)), handler)
+    result = DigestJob().run(ctx)
+    assert len(saved) == 2  # one failure doesn't stop the rest
+    assert len(epubs(ctx)) == 1
+    assert "1 sent to Instapaper, 1 failed" in result.detail
+    assert json.loads((ctx.data_dir / "digest-seen.json").read_text())  # state still saved
+
+
+def test_bad_instapaper_credentials_stop_further_sends(tmp_path):
+    items = [(f"P{i}", f"https://a.example/{i}", "x") for i in range(3)]
+    feeds = {"https://a.example/feed": rss("Blog A", items)}
+    saved = []
+    ctx = with_instapaper(make_ctx(tmp_path, serve(feeds)), instapaper_handler(feeds, saved, status=403))
+    result = DigestJob().run(ctx)
+    assert len(saved) == 1  # a 403 means the credentials are wrong; don't hammer the API
+    assert len(epubs(ctx)) == 1
+    assert "Instapaper credentials rejected" in result.detail
+
+
+def test_nothing_new_sends_nothing_to_instapaper(tmp_path):
+    feeds = {"https://a.example/feed": rss("Blog A", [("Post 1", "https://a.example/1", "x")])}
+    saved = []
+    ctx = with_instapaper(make_ctx(tmp_path, serve(feeds)), instapaper_handler(feeds, saved))
+    DigestJob().run(ctx)
+    saved.clear()
+    assert DigestJob().run(ctx).detail == "Nothing new"
+    assert saved == []

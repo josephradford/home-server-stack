@@ -18,6 +18,7 @@ class JobContext:
     feeds_path: Path | None = None  # digest: one RSS URL per line
     ingest_dir: Path | None = None  # digest: where the EPUB lands (CWA ingest)
     data_dir: Path | None = None  # digest: persistent state (seen items)
+    instapaper: tuple[str, str] | None = None  # digest: (username, password); None disables the push
 
 
 @dataclass(frozen=True)

@@ -20,6 +20,7 @@ from oddjobs.jobs.digest_cover import make_cover
 
 log = logging.getLogger("oddjobs.digest")
 
+INSTAPAPER_ADD_URL = "https://www.instapaper.com/api/add"
 MAX_PER_FEED = 20  # cap per feed per run, so the first run isn't a huge backlog
 
 STYLE = """
@@ -130,7 +131,43 @@ class DigestJob:
         )
         # State is saved only after the EPUB is in place, so a failed write retries next run.
         seen_path.write_text(json.dumps(sorted(seen)))
-        return JobResult(detail=f"{post_count} posts from {len(by_source)} feeds{failure_note}")
+        detail = f"{post_count} posts from {len(by_source)} feeds{failure_note}"
+        if ctx.instapaper:
+            detail += self._send_to_instapaper(ctx, by_source)
+        return JobResult(detail=detail)
+
+    @staticmethod
+    def _send_to_instapaper(ctx: JobContext, by_source) -> str:
+        """Best-effort push of each new post's link to Instapaper's Simple API.
+
+        The EPUB is already written and the seen-state saved, so nothing here can fail the
+        job or cause a repeat; failed links are only counted (they are still in the EPUB).
+        """
+        username, password = ctx.instapaper
+        sent = failed = 0
+        for posts in by_source.values():
+            for title, link, _author, _body in posts:
+                if not link:
+                    continue
+                try:
+                    response = ctx.client.post(
+                        INSTAPAPER_ADD_URL,
+                        data={"username": username, "password": password, "url": link, "title": title},
+                        timeout=30,
+                    )
+                except Exception as e:  # noqa: BLE001 - network trouble must not fail the digest
+                    log.warning("instapaper: %s: %s", link, e)
+                    failed += 1
+                    continue
+                if response.status_code == 403:
+                    log.warning("instapaper: credentials rejected, skipping remaining posts")
+                    return f", Instapaper credentials rejected ({sent} sent)"
+                if response.status_code == 201:
+                    sent += 1
+                else:
+                    log.warning("instapaper: %s returned %s", link, response.status_code)
+                    failed += 1
+        return f", {sent} sent to Instapaper" + (f", {failed} failed" if failed else "")
 
     @staticmethod
     def _build_book(day, by_source, truncated, post_count) -> epub.EpubBook:

@@ -30,6 +30,9 @@ def create_app():
     feeds_path = Path(os.environ.get("ODD_JOBS_FEEDS", "/library-config/feeds.txt"))
     ingest_dir = Path(os.environ.get("ODD_JOBS_INGEST", "/ingest"))
 
+    instapaper_user = os.environ.get("INSTAPAPER_USERNAME", "")
+    instapaper = (instapaper_user, os.environ.get("INSTAPAPER_PASSWORD", "")) if instapaper_user else None
+
     data_dir.mkdir(parents=True, exist_ok=True)
     out_dir = data_dir / "out"
     state = State(data_dir / "state.db")
@@ -41,6 +44,7 @@ def create_app():
         feeds_path=feeds_path,
         ingest_dir=ingest_dir,
         data_dir=data_dir,
+        instapaper=instapaper,
     )
     # The scheduler needs the timezone for "04:00 local"; fall back to the server default.
     try:
