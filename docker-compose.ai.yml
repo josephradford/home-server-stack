@@ -1,0 +1,64 @@
+# Bede: personal AI assistant (scheduled jobs only, first version).
+#
+# bede-core runs the agent loop in-process against a paid model API (OpenRouter by
+# default), so there is no CLI login to expire. Switch model or vendor by changing
+# MODEL in .env. bede-data is the API/SQLite store bede-core reads schedules, task
+# logs and memory from. Neither service is exposed through Traefik.
+#
+# Sources: github.com/josephradford/bede (prebuilt GHCR images; packages must be public).
+# MCP servers (bede-data-mcp, bede-workspace-mcp) are not deployed yet; bede-core
+# runs without them and says which tools were unavailable.
+
+services:
+  bede-data:
+    image: ghcr.io/josephradford/bede-data:latest
+    container_name: bede-data
+    restart: unless-stopped
+    environment:
+      - SQLITE_DB_PATH=/data/sqlite/bede.db
+      - INGEST_WRITE_TOKEN=${INGEST_WRITE_TOKEN:-}
+      - TIMEZONE=${TIMEZONE:-Australia/Sydney}
+    volumes:
+      - ./data/bede/sqlite:/data/sqlite
+    networks:
+      - homeserver
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8001/health')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  bede-core:
+    image: ghcr.io/josephradford/bede-core:latest
+    container_name: bede-core
+    restart: unless-stopped
+    environment:
+      - MODEL=${BEDE_MODEL:-}
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-}
+      - TELEGRAM_BOT_TOKEN=${BEDE_TELEGRAM_BOT_TOKEN:-}
+      - ALLOWED_USER_ID=${BEDE_ALLOWED_USER_ID:-0}
+      - BEDE_DATA_URL=http://bede-data:8001
+      - TIMEZONE=${TIMEZONE:-Australia/Sydney}
+      - VAULT_REPO=${VAULT_REPO:-}
+      - VAULT_PATH=/vault
+      - GIT_AUTHOR_NAME=${GIT_AUTHOR_NAME:-Bede}
+      - GIT_AUTHOR_EMAIL=${GIT_AUTHOR_EMAIL:-bede@localhost}
+    volumes:
+      - ./data/bede/CLAUDE.md:/app/CLAUDE.md:ro
+      - ./data/bede/vault:/vault
+      - ${VAULT_SSH_KEY_PATH:-/dev/null}:/home/bede/.ssh/vault_key:ro
+    networks:
+      - homeserver
+    depends_on:
+      bede-data:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+networks:
+  homeserver:
+    external: true
+    name: home-server-stack_homeserver
