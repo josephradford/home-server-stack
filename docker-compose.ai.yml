@@ -10,6 +10,18 @@
 # runs without them and says which tools were unavailable.
 
 services:
+  # One-shot: Docker creates bind-mount directories as root, but the bede images run
+  # as uid 1000, so SQLite and the vault clone could not write. This creates and
+  # chowns the directories before either service starts. Safe to re-run.
+  bede-init:
+    image: ghcr.io/josephradford/bede-data:latest
+    container_name: bede-init
+    user: root
+    entrypoint: ["sh", "-c", "mkdir -p /d/sqlite /d/vault && chown 1000:1000 /d /d/sqlite /d/vault"]
+    restart: "no"
+    volumes:
+      - ./data/bede:/d
+
   bede-data:
     image: ghcr.io/josephradford/bede-data:latest
     container_name: bede-data
@@ -22,6 +34,9 @@ services:
       - ./data/bede/sqlite:/data/sqlite
     networks:
       - homeserver
+    depends_on:
+      bede-init:
+        condition: service_completed_successfully
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8001/health')"]
       interval: 30s
@@ -50,6 +65,8 @@ services:
     networks:
       - homeserver
     depends_on:
+      bede-init:
+        condition: service_completed_successfully
       bede-data:
         condition: service_healthy
     healthcheck:
