@@ -50,6 +50,7 @@ Self-hosted Docker Compose infrastructure stack: home automation, workflow autom
 - `docker-compose.kiosk.yml` — Kitchen kiosk (kiosk-api, kiosk-web; sources in `apps/kitchen-kiosk/`)
 - `docker-compose.radmap.yml` — Radmap (offline NSW topo map PWA; prebuilt GHCR image, tiles in `./data/radmap/tiles`)
 - `docker-compose.jobs.yml` — Odd jobs (odd-jobs: AI-free life-admin jobs: sports fixture calendars at jobs.${DOMAIN} and the daily RSS-to-EPUB reading digest into `data/cwa/ingest`; sources in `apps/odd-jobs/`)
+- `docker-compose.ai.yml` — Bede AI assistant (bede-data, bede-core: scheduled jobs against a paid model API via OpenRouter; prebuilt GHCR images from `josephradford/bede`, no Traefik route)
 
 The Makefile combines all of these files by default (see `COMPOSE` in the Makefile
 for the authoritative list).

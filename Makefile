@@ -20,13 +20,14 @@
 # - docker-compose.photos.yml: iCloud photo backup (icloudpd)
 # - docker-compose.immich.yml: Immich photo viewer (immich-server, immich-machine-learning, immich-postgres, immich-redis)
 # - docker-compose.library.yml: Ebook library (cwa)
+# - docker-compose.ai.yml: Bede AI assistant (bede-data, bede-core)
 #
 # NOTE: The VPN (WireGuard) runs on the UniFi Dream Router 7, not on this server.
 #
 # COMPOSE_CORE: Core + Network + Monitoring (used for operations that shouldn't restart dashboard or AI)
 # COMPOSE: All services including dashboard and AI (default for most operations)
 COMPOSE_CORE := docker compose -f docker-compose.yml -f docker-compose.network.yml -f docker-compose.monitoring.yml
-COMPOSE := docker compose -f docker-compose.yml -f docker-compose.network.yml -f docker-compose.monitoring.yml -f docker-compose.dashboard.yml -f docker-compose.photos.yml -f docker-compose.location.yml -f docker-compose.immich.yml -f docker-compose.library.yml -f docker-compose.kiosk.yml -f docker-compose.radmap.yml -f docker-compose.jobs.yml
+COMPOSE := docker compose -f docker-compose.yml -f docker-compose.network.yml -f docker-compose.monitoring.yml -f docker-compose.dashboard.yml -f docker-compose.photos.yml -f docker-compose.location.yml -f docker-compose.immich.yml -f docker-compose.library.yml -f docker-compose.kiosk.yml -f docker-compose.radmap.yml -f docker-compose.jobs.yml -f docker-compose.ai.yml
 
 # Default target - show help
 help:
