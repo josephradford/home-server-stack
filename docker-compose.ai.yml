@@ -58,6 +58,11 @@ services:
       - VAULT_PATH=/vault
       - GIT_AUTHOR_NAME=${GIT_AUTHOR_NAME:-Bede}
       - GIT_AUTHOR_EMAIL=${GIT_AUTHOR_EMAIL:-bede@localhost}
+      - MAX_AGENT_STEPS=${MAX_AGENT_STEPS:-15}
+      - AGENT_TIMEOUT_SECONDS=${AGENT_TIMEOUT_SECONDS:-300}
+      - OPENROUTER_DENY_DATA_COLLECTION=${OPENROUTER_DENY_DATA_COLLECTION:-true}
+      - OPENROUTER_ZDR=${OPENROUTER_ZDR:-true}
+      - OPENROUTER_PROVIDER_SORT=${OPENROUTER_PROVIDER_SORT:-price}
     volumes:
       - ./data/bede/CLAUDE.md:/app/CLAUDE.md:ro
       - ./data/bede/vault:/vault
